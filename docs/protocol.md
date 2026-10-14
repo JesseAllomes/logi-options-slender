@@ -115,3 +115,22 @@ Raw output: `.agent/probe/readonly-20261015.txt`.
 
 Still to probe (state-changing, run with Options+ quit): haptic play fn3 vs fn4, divert
 read-back, 0x2150 notification layout.
+
+## Capture model (m8)
+
+Hybrid capture. Middle, Back and Forward are read by the low-level mouse hook (`WM_MBUTTONDOWN/UP`,
+`WM_XBUTTONDOWN/UP`, XBUTTON1 = Back, XBUTTON2 = Forward) and are never HID++-diverted. A bound press
+is swallowed together with its release (paired per button); an unbound press, or one bound to the
+button's own native behaviour, is left to Windows. Injected events are ignored, so our own `SendInput`
+clicks cannot loop. The thumb wheel stays native (`WM_MOUSEHWHEEL`).
+
+Only Gesture (0x00C3), Mode shift (0x00C4) and Sense Panel (0x01A0) are HID++-diverted, and only when
+bound in some profile. Diverts use the temporary flag only (0x03 divert, 0x02 undivert); the
+persistent-divert bit (0x04) is never set. Controls Slender does not want are undiverted on connect
+(clears Options+ leftovers).
+
+Write allowlist, enforced in `HidppDevice` by feature ID before any index lookup (`HidppAllowlist`,
+throws `HidppBlockedRequestException`, nothing is written): 0x0000 fn0-1, 0x0001 fn0-1, 0x0005 fn0-1,
+0x1000 fn0, 0x1004 fn0-1, 0x19B0 fn0-4, 0x19C0 fn0-2 (reads), 0x1B04 fn0-3, 0x2110 fn0-1, 0x2111 fn0-2,
+0x2121 fn0-2, 0x2150 fn0-2, 0x2201 fn0-3. Never: 0x00D0/0x00D1 (firmware), 0x1814/0x1815 (host
+change/pairing), 0x8100 (onboard profiles). Slender.Probe goes through the same layer.
