@@ -15,6 +15,13 @@ public sealed class WindowsHidTransportFactory : IHidppTransportFactory
     public const ushort HidppUsagePage = 0xFF43;
     public const ushort HidppUsage = 0x0202;
     public static readonly ushort[] MxMaster4ProductIds = [0xB042, 0xB048];
+    /// <summary>ERGO K860 over Bluetooth LE (confirmed on device 2026-10-15).</summary>
+    public static readonly ushort[] ErgoK860ProductIds = [0xB359];
+
+    private readonly ushort[] _productIds;
+
+    /// <summary>Selects the MX Master 4 by default; pass <see cref="ErgoK860ProductIds"/> for the keyboard.</summary>
+    public WindowsHidTransportFactory(ushort[]? productIds = null) { _productIds = productIds ?? MxMaster4ProductIds; }
 
     /// <summary>Lists HID collections for a vendor (all vendors when null). Opened with zero access, so it never disturbs the OS.</summary>
     public static IReadOnlyList<HidCollectionInfo> Enumerate(ushort? vendorId = LogitechVendorId)
@@ -72,16 +79,16 @@ public sealed class WindowsHidTransportFactory : IHidppTransportFactory
     }
 
     /// <summary>Ordered candidates: exact usage (0xFF43/0x0202) first, then any vendor page &gt;= 0xFF00, on a matching PID.</summary>
-    public static IEnumerable<HidCollectionInfo> SelectCandidates(IEnumerable<HidCollectionInfo> all)
+    public static IEnumerable<HidCollectionInfo> SelectCandidates(IEnumerable<HidCollectionInfo> all, ushort[]? productIds = null)
     {
-        var mine = all.Where(c => c.VendorId == LogitechVendorId && MxMaster4ProductIds.Contains(c.ProductId)).ToList();
+        var mine = all.Where(c => c.VendorId == LogitechVendorId && (productIds ?? MxMaster4ProductIds).Contains(c.ProductId)).ToList();
         foreach (var c in mine.Where(c => c.UsagePage == HidppUsagePage && c.Usage == HidppUsage)) yield return c;
         foreach (var c in mine.Where(c => c.UsagePage >= 0xFF00 && !(c.UsagePage == HidppUsagePage && c.Usage == HidppUsage))) yield return c;
     }
 
     public IHidppTransport? TryOpen()
     {
-        foreach (var c in SelectCandidates(Enumerate()))
+        foreach (var c in SelectCandidates(Enumerate(), _productIds))
         {
             var h = NativeMethods.CreateFile(c.Path, NativeMethods.GENERIC_READ | NativeMethods.GENERIC_WRITE,
                 NativeMethods.FILE_SHARE_READ | NativeMethods.FILE_SHARE_WRITE, IntPtr.Zero, NativeMethods.OPEN_EXISTING,

@@ -134,3 +134,27 @@ throws `HidppBlockedRequestException`, nothing is written): 0x0000 fn0-1, 0x0001
 0x1000 fn0, 0x1004 fn0-1, 0x19B0 fn0-4, 0x19C0 fn0-2 (reads), 0x1B04 fn0-3, 0x2110 fn0-1, 0x2111 fn0-2,
 0x2121 fn0-2, 0x2150 fn0-2, 0x2201 fn0-3. Never: 0x00D0/0x00D1 (firmware), 0x1814/0x1815 (host
 change/pairing), 0x8100 (onboard profiles). Slender.Probe goes through the same layer.
+
+## ERGO K860 (confirmed on device)
+
+Read-only probe 2026-10-15, Options+ running. Raw output: `.agent/probe/k860-readonly-20261015.txt`
+(`Slender.Probe --device k860`; state-changing flags are refused for the keyboard).
+
+- BLE PID **0xB359**, name "Wireless Keyboard ERGO K860". HID++ collection UsagePage 0xFF43 / Usage 0x0202,
+  20-byte in/out reports (same shape as the MX Master 4). `WindowsHidTransportFactory(ErgoK860ProductIds)` selects it.
+- Device index **0x01** answers. 0xFF answered once and timed out on another run, so the keyboard tries 0x01 first, then 0xFF.
+- 29 features. Present: 0x0001, 0x0003, 0x0005, 0x1D4B, 0x0020, 0x0007, **0x1000 battery** (idx 7), 0x1814, 0x1815,
+  **0x1B04** (idx 10), 0x1C00, **0x40A3 Fn inversion, multi-host** (idx 12), 0x4100, 0x4220, 0x4521, 0x4531, 0x00C2,
+  plus 0x1802/1803/1806/1813/1805/1830/18A1/1DF3/1E00/1EB0/1861/18B0. Absent: 0x1004, 0x19B0, 0x2121, 0x2150, 0x40A0, 0x40A2.
+- Battery: 0x1000 fn0 works (100 %, status 0); no 0x1004.
+- Fn inversion 0x40A3 fn0 getter, request p[0] = host index, reply echoes it: p[1] = inversion state, p[2], p[3] = 1.
+  Host 0 and 0xFF read state 0; hosts 1 and 2 read state 1. fn1 setter shape [host, state] is the Logitech-spec
+  expectation, **unverified** (the probe never writes). Slender writes host 0xFF (current host); `LogiKeyboard.CurrentHost`.
+  State 1 = F-row sends F1..F12 (Fn lock on), also unverified. Only 0x40A3 fn0-1 is on the allowlist.
+- 0x1B04: 24 controls. Divertable (flags bit 0x20): CID 209/210/211 Easy-Switch (0xD1-0xD3, flags 0x64), and
+  0xC7 brightness down, 0xC8 brightness up, 0xE0 task view, 0x100 switch apps, 0x6E show desktop, 0xD4 search, 0xE4 previous,
+  0xE5 play/pause, 0xE6 next, 0xE7 mute, 0xE8 volume down, 0xE9 volume up (all flags 0x7A), 0x101, 0xBF screen capture,
+  0x0A calculator, 0xEA look up, 0x6F lock (flags 0x74), 0xEC, 0xEB (0x64). Not divertable: 0xDE (flags 0x02), 0x34 (0x04).
+  Decimal Options+ ids match these hex CIDs exactly. At probe time every control reported flags 0 (nothing left diverted).
+- Keyboard path: `LogiKeyboard` shares the connect/backoff/divert machinery with `LogiMouse` through `LogiDeviceBase`.
+  Temporary divert flags only (0x03/0x02); every known divertable key not wanted is reset to native on connect.
