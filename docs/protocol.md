@@ -134,3 +134,10 @@ throws `HidppBlockedRequestException`, nothing is written): 0x0000 fn0-1, 0x0001
 0x1000 fn0, 0x1004 fn0-1, 0x19B0 fn0-4, 0x19C0 fn0-2 (reads), 0x1B04 fn0-3, 0x2110 fn0-1, 0x2111 fn0-2,
 0x2121 fn0-2, 0x2150 fn0-2, 0x2201 fn0-3. Never: 0x00D0/0x00D1 (firmware), 0x1814/0x1815 (host
 change/pairing), 0x8100 (onboard profiles). Slender.Probe goes through the same layer.
+
+### Haptics play (2026-10-15, Options+ stopped)
+
+`0x19B0` fn4 [waveform] and fn3 [waveform] are both acknowledged (`11FF0B4B…` / `11FF0B3B…`, no error). The user felt
+identical pulses; whether both functions actually pulse is being confirmed. Slender keeps fn4 (Mouser's choice).
+With Options+ stopped, every control reads back undiverted and the thumb wheel reports mode 0 (native), invert 0;
+Options+ had set invert 1, so the native direction may feel reversed to the user. `Slender.Probe --pulse=<fn>:<waveform>` plays one function three times.

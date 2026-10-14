@@ -131,6 +131,19 @@ if (haptic)
     Console.WriteLine($"  fn3 answered: {r3 != null}");
 }
 
+// --pulse=<fn>:<waveform> plays one haptic function three times, 800 ms apart, so it can be felt and told apart.
+if (args.FirstOrDefault(a => a.StartsWith("--pulse=", StringComparison.Ordinal)) is { } pulseArg
+    && pulseArg["--pulse=".Length..].Split(':') is [var fnText, var waveText]
+    && byte.TryParse(fnText, out var pulseFn) && byte.TryParse(waveText, out var wave))
+{
+    Console.WriteLine($"\n== --pulse fn{pulseFn} waveform {wave} x3 ==");
+    for (var i = 0; i < 3; i++)
+    {
+        await Try(device, $"pulse {i + 1}", FeatureId.Haptics, pulseFn, wave);
+        await Task.Delay(800, ct);
+    }
+}
+
 if (divert)
 {
     Console.WriteLine("\n== --divert-test (CID 00C3) ==");
