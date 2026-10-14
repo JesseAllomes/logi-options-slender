@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=11 -->
+<!-- drainclamp-build: state; schema=1; generation=15 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -29,10 +29,10 @@ Build orchestration -> Opus orchestrates on main (scaffold, contracts, review, m
 | id | goal | files | status | deps |
 |---|---|---|---|---|
 | m1 | protocol + baseline notes: MX Master 4 HID++ feature map (thumbwheel 0x2150, reprog 0x1B04, haptics, battery) from Mouser/MXControl, plus Options+ baseline | docs/protocol.md;docs/baseline.md | done | |
-| m2 | Options+ trim and Excel repair scripts (dry-run default, registry backup, re-enable PERSONAL.XLSB, drop stale LogiExcelAddIn) | scripts/Trim-OptionsPlus.ps1;scripts/Repair-ExcelAddins.ps1;docs/switch-over.md | active | m1 |
+| m2 | Options+ trim and Excel repair scripts (dry-run default, registry backup, re-enable PERSONAL.XLSB, drop stale LogiExcelAddIn) | scripts/Trim-OptionsPlus.ps1;scripts/Repair-ExcelAddins.ps1;docs/switch-over.md | done | m1 |
 | m3 | .NET 8 solution + HID++ core: BLE HID transport, device discovery, feature lookup, fake-transport tests | Slender.slnx;Directory.Build.props;src/Slender.Hidpp;tests/Slender.Tests | active | m1 |
-| m4 | Excel thumb wheel: divert thumbwheel, Excel-foreground detection, sideways scroll via COM, native fallback elsewhere | src/Slender.Engine;tests/Slender.Tests | active | m3 |
-| m5 | custom buttons: divert reprog controls, action engine, per-app profiles incl. Excel actions | src/Slender.Engine;tests/Slender.Tests | pending | m4 |
+| m4 | Excel thumb wheel: divert thumbwheel, Excel-foreground detection, sideways scroll via COM, native fallback elsewhere | src/Slender.Engine;tests/Slender.Tests | done | m3 |
+| m5 | custom buttons: divert reprog controls, action engine, per-app profiles incl. Excel actions | src/Slender.Engine;tests/Slender.Tests | done | m4 |
 | m6 | haptics + Actions Ring | src/Slender.Engine;src/Slender.Tray;tests/Slender.Tests | pending | m5 |
 | m7 | tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback | src/Slender.Tray;docs/switch-over.md;tests/Slender.Tests | pending | m6 |
 <!-- /DC:ROADMAP -->
@@ -48,4 +48,6 @@ Build orchestration -> Opus orchestrates on main (scaffold, contracts, review, m
 
 <!-- DC:LOG -->
 - 2026-10-14T22:21:54+00:00 3cbc90c3 m1 done: docs/baseline.md + docs/protocol.md; .NET 10 scaffold + shared contracts (Hidpp/Engine) committed as worktree base
+- 2026-10-14T22:33:15+00:00 dd0e7bc5 m2 done: Trim-OptionsPlus.ps1 + Repair-ExcelAddins.ps1 (report default, -Apply gated, reg backups) + switch-over.md merged; not yet run for real
+- 2026-10-14T22:34:01+00:00 627db5c1 m4+m5 merged: LL hook, foreground watcher, out-of-process Excel bridge (COM SmallScroll + WM_HSCROLL fallback), actions, profiles; 54 tests green; Excel/device behaviour unconfirmed
 <!-- /DC:LOG -->
