@@ -1,0 +1,148 @@
+using Slender.Engine;
+using Slender.Hidpp;
+using Slender.Tray;
+
+namespace Slender.Tests.Tray;
+
+public sealed class JsonConfigStoreTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "slender-tests", Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+    }
+
+    private JsonConfigStore Store() => new(_dir);
+
+    private string FilePath => Path.Combine(_dir, "config.json");
+
+    [Fact]
+    public void Round_trip_preserves_every_action_variant()
+    {
+        var bindings = new Dictionary<ushort, ActionSpec>
+        {
+            [ControlId.Gesture] = new ActionSpec.Keys("Ctrl+Shift+P"),
+            [ControlId.Middle] = new ActionSpec.MouseButton("Middle"),
+            [ControlId.Back] = new ActionSpec.None(),
+            [ControlId.ModeShift] = new ActionSpec.ActionsRing(),
+        };
+        ushort key = 0x0100;
+        foreach (ExcelCommand command in Enum.GetValues<ExcelCommand>())
+        {
+            bindings[key++] = new ActionSpec.Excel(command);
+        }
+
+        SlenderConfig expected = new(
+            1,
+            [new Profile(null, bindings), new Profile("excel", new Dictionary<ushort, ActionSpec>())],
+            new ExcelSettings(ThumbWheelScrollsColumns: false, ColumnsPerNotch: 4),
+            new HapticSettings(Enabled: false, Level: 0, OnButtonPress: true, OnActionsRing: false),
+            LaunchAtLogin: true);
+
+        Store().Save(expected);
+        SlenderConfig actual = Store().Load();
+
+        AssertSameConfig(expected, actual);
+    }
+
+    [Fact]
+    public void Default_config_round_trips()
+    {
+        Store().Save(SlenderConfig.Default);
+
+        AssertSameConfig(SlenderConfig.Default, Store().Load());
+    }
+
+    [Fact]
+    public void Hex_control_ids_are_written_and_read_back()
+    {
+        var bindings = new Dictionary<ushort, ActionSpec> { [ControlId.Gesture] = new ActionSpec.None() };
+        var config = SlenderConfig.Default with { Profiles = [new Profile(null, bindings)] };
+
+        Store().Save(config);
+
+        string text = File.ReadAllText(FilePath);
+        Assert.Contains("\"0x00C3\"", text);
+        SlenderConfig loaded = Store().Load();
+        Assert.Equal(new ActionSpec.None(), Assert.Single(loaded.Profiles).Bindings[ControlId.Gesture]);
+    }
+
+    [Fact]
+    public void Missing_file_returns_default()
+    {
+        Assert.False(File.Exists(FilePath));
+
+        Assert.Same(SlenderConfig.Default, Store().Load());
+    }
+
+    [Fact]
+    public void Corrupt_file_is_renamed_to_backup_and_default_returned()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "{ this is not json");
+
+        SlenderConfig loaded = Store().Load();
+
+        Assert.Same(SlenderConfig.Default, loaded);
+        Assert.False(File.Exists(FilePath));
+        Assert.Single(Directory.GetFiles(_dir, "config.json.bad-*"));
+    }
+
+    [Theory]
+    [InlineData("""{"version":99,"profiles":[],"excel":{},"haptics":{}}""")]
+    [InlineData("""{"profiles":[],"excel":{},"haptics":{}}""")]
+    [InlineData("""{"version":1,"profiles":[{"appProcess":null,"bindings":{"0xZZZZ":{"type":"none"}}}],"excel":{},"haptics":{}}""")]
+    [InlineData("""{"version":1,"profiles":[{"appProcess":null,"bindings":{"0x0052":{"type":"warpDrive"}}}],"excel":{},"haptics":{}}""")]
+    [InlineData("""{"version":1,"profiles":[{"appProcess":null,"bindings":{"0x0052":{"type":"excel","command":"Nope"}}}],"excel":{},"haptics":{}}""")]
+    public void Unusable_file_is_quarantined_and_default_returned(string json)
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, json);
+
+        SlenderConfig loaded = Store().Load();
+
+        Assert.Same(SlenderConfig.Default, loaded);
+        Assert.False(File.Exists(FilePath));
+        Assert.Single(Directory.GetFiles(_dir, "config.json.bad-*"));
+    }
+
+    [Fact]
+    public void Atomic_save_leaves_no_tmp_file_and_overwrites()
+    {
+        var store = Store();
+        store.Save(SlenderConfig.Default);
+        SlenderConfig second = SlenderConfig.Default with { LaunchAtLogin = true };
+
+        store.Save(second);
+
+        Assert.False(File.Exists(FilePath + ".tmp"));
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+        Assert.True(Store().Load().LaunchAtLogin);
+    }
+
+    private static void AssertSameConfig(SlenderConfig expected, SlenderConfig actual)
+    {
+        Assert.Equal(expected.Version, actual.Version);
+        Assert.Equal(expected.Excel, actual.Excel);
+        Assert.Equal(expected.Haptics, actual.Haptics);
+        Assert.Equal(expected.LaunchAtLogin, actual.LaunchAtLogin);
+        Assert.Equal(expected.Profiles.Count, actual.Profiles.Count);
+
+        for (int i = 0; i < expected.Profiles.Count; i++)
+        {
+            Profile e = expected.Profiles[i];
+            Profile a = actual.Profiles[i];
+            Assert.Equal(e.AppProcess, a.AppProcess);
+            Assert.Equal(e.Bindings.Count, a.Bindings.Count);
+            foreach (KeyValuePair<ushort, ActionSpec> pair in e.Bindings)
+            {
+                Assert.True(a.Bindings.TryGetValue(pair.Key, out ActionSpec? value), $"missing key {pair.Key:X4}");
+                Assert.Equal(pair.Value, value);
+            }
+        }
+    }
+}

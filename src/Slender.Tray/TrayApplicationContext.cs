@@ -1,0 +1,278 @@
+using Slender.Engine;
+using Slender.Hidpp;
+
+namespace Slender.Tray;
+
+/// <summary>
+/// Tray icon, context menu and connection-status plumbing. The caller owns the mouse (starts and
+/// disposes it); this context only subscribes to it. Mouse events arrive on background threads and
+/// are marshalled to the UI thread through a hidden control.
+/// </summary>
+public sealed class TrayApplicationContext : ApplicationContext
+{
+    private static readonly int BatteryIntervalMs = (int)TimeSpan.FromMinutes(5).TotalMilliseconds;
+
+    private readonly IConfigStore _store;
+    private readonly ILogiMouse? _mouse;
+    private readonly StartupRegistration _startup;
+    private readonly Control _uiProxy;
+    private readonly ContextMenuStrip _menu;
+    private readonly ToolStripMenuItem _statusItem;
+    private readonly ToolStripMenuItem _excelItem;
+    private readonly ToolStripMenuItem _hapticsItem;
+    private readonly ToolStripMenuItem _launchItem;
+    private readonly NotifyIcon _tray;
+    private readonly System.Windows.Forms.Timer _batteryTimer;
+    private readonly CancellationTokenSource _lifetime = new();
+
+    private SlenderConfig _config;
+    private bool _connected;
+    private BatteryStatus? _battery;
+    private bool _disposed;
+
+    public TrayApplicationContext(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null)
+    {
+        _store = store ?? throw new ArgumentNullException(nameof(store));
+        _mouse = mouse;
+        _startup = startup ?? StartupRegistration.ForCurrentProcess();
+        _config = store.Load();
+
+        _uiProxy = new Control();
+        _ = _uiProxy.Handle; // create the handle on the UI thread so BeginInvoke works from workers
+
+        _menu = new ContextMenuStrip();
+        _statusItem = new ToolStripMenuItem { Enabled = false };
+        _excelItem = new ToolStripMenuItem("Excel: thumb wheel scrolls columns") { CheckOnClick = true };
+        _excelItem.Click += OnExcelClicked;
+        _hapticsItem = new ToolStripMenuItem("Haptics") { CheckOnClick = true };
+        _hapticsItem.Click += OnHapticsClicked;
+        _launchItem = new ToolStripMenuItem("Launch at login") { CheckOnClick = true };
+        _launchItem.Click += OnLaunchClicked;
+        var settingsItem = new ToolStripMenuItem("Settings…");
+        settingsItem.Click += OnSettingsClicked;
+        var quitItem = new ToolStripMenuItem("Quit");
+        quitItem.Click += (_, _) => ExitThread();
+        _menu.Items.AddRange(new ToolStripItem[]
+        {
+            _statusItem,
+            _excelItem,
+            _hapticsItem,
+            _launchItem,
+            settingsItem,
+            new ToolStripSeparator(),
+            quitItem,
+        });
+
+        _tray = new NotifyIcon
+        {
+            Icon = SystemIcons.Application, // shared system icon; not owned, not disposed
+            Text = "Slender",
+            ContextMenuStrip = _menu,
+        };
+
+        // Timer exists but stays stopped until a mouse is connected.
+        _batteryTimer = new System.Windows.Forms.Timer { Interval = BatteryIntervalMs };
+        _batteryTimer.Tick += (_, _) => _ = RefreshBatteryAsync();
+
+        RefreshChecks();
+        UpdateStatus();
+
+        if (_config.LaunchAtLogin && !_startup.IsEnabled)
+        {
+            try
+            {
+                _startup.Enable(); // refresh the Run value if the exe has moved
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // Non-fatal: the menu still shows the saved preference.
+            }
+        }
+
+        if (_mouse is not null)
+        {
+            _mouse.ConnectionChanged += OnMouseConnectionChanged;
+            SetConnected(_mouse.IsConnected);
+        }
+
+        _tray.Visible = true;
+    }
+
+    /// <summary>Raised on the UI thread after every successful save.</summary>
+    public event EventHandler<SlenderConfig>? ConfigChanged;
+
+    public SlenderConfig Config => _config;
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && !_disposed)
+        {
+            _disposed = true;
+            if (_mouse is not null)
+            {
+                _mouse.ConnectionChanged -= OnMouseConnectionChanged;
+            }
+
+            _batteryTimer.Stop();
+            _batteryTimer.Dispose();
+            _lifetime.Cancel();
+            _lifetime.Dispose();
+            _tray.Visible = false;
+            _tray.Dispose();
+            _menu.Dispose();
+            _uiProxy.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void OnMouseConnectionChanged(object? sender, bool connected) =>
+        Post(() => SetConnected(connected));
+
+    /// <summary>Runs an action on the UI thread. Safe from any thread; dropped after dispose.</summary>
+    private void Post(Action action)
+    {
+        if (_disposed || _uiProxy.IsDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            _uiProxy.BeginInvoke(action);
+        }
+        catch (InvalidOperationException)
+        {
+            // Proxy was disposed between the check and the call.
+        }
+    }
+
+    private void SetConnected(bool connected)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _connected = connected;
+        if (connected)
+        {
+            _batteryTimer.Start();
+            _ = RefreshBatteryAsync();
+        }
+        else
+        {
+            _batteryTimer.Stop();
+            _battery = null;
+        }
+
+        UpdateStatus();
+    }
+
+    private async Task RefreshBatteryAsync()
+    {
+        if (_disposed || !_connected || _mouse is null)
+        {
+            return;
+        }
+
+        try
+        {
+            BatteryStatus? status = await _mouse.GetBatteryAsync(_lifetime.Token);
+            if (_disposed || !_connected)
+            {
+                return;
+            }
+
+            _battery = status ?? _battery;
+            UpdateStatus();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // A failed battery read is not fatal; keep the last known value.
+        }
+    }
+
+    private void UpdateStatus()
+    {
+        _statusItem.Text = !_connected
+            ? "MX Master 4 — not connected"
+            : _battery is { } b
+                ? $"MX Master 4 — connected, {b.Percent}%{(b.Charging ? " charging" : string.Empty)}"
+                : "MX Master 4 — connected";
+    }
+
+    private void RefreshChecks()
+    {
+        _excelItem.Checked = _config.Excel.ThumbWheelScrollsColumns;
+        _hapticsItem.Checked = _config.Haptics.Enabled;
+        _launchItem.Checked = _config.LaunchAtLogin;
+    }
+
+    private void OnExcelClicked(object? sender, EventArgs e) =>
+        ApplyChange(_config with { Excel = _config.Excel with { ThumbWheelScrollsColumns = _excelItem.Checked } });
+
+    private void OnHapticsClicked(object? sender, EventArgs e) =>
+        ApplyChange(_config with { Haptics = _config.Haptics with { Enabled = _hapticsItem.Checked } });
+
+    private void OnLaunchClicked(object? sender, EventArgs e)
+    {
+        bool wanted = _launchItem.Checked;
+        try
+        {
+            if (wanted)
+            {
+                _startup.Enable();
+            }
+            else
+            {
+                _startup.Disable();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            RefreshChecks();
+            ShowError("Could not change the launch-at-login setting.");
+            return;
+        }
+
+        ApplyChange(_config with { LaunchAtLogin = wanted });
+    }
+
+    private void OnSettingsClicked(object? sender, EventArgs e)
+    {
+        // Created on click, disposed on close.
+        using var form = new SettingsForm(_config, ApplyChange);
+        form.ShowDialog();
+    }
+
+    /// <summary>Saves through the store, then raises ConfigChanged. Returns false on a failed save.</summary>
+    private bool ApplyChange(SlenderConfig next)
+    {
+        bool saved = false;
+        try
+        {
+            _store.Save(next);
+            saved = true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowError("Could not save settings: " + e.Message);
+        }
+
+        if (saved)
+        {
+            _config = next;
+            ConfigChanged?.Invoke(this, _config);
+        }
+
+        RefreshChecks();
+        return saved;
+    }
+
+    private void ShowError(string message) =>
+        _tray.ShowBalloonTip(5000, "Slender", message, ToolTipIcon.Warning);
+}

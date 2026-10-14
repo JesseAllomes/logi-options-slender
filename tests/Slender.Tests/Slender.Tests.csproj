@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Slender.Tray\Slender.Tray.csproj" />
     <ProjectReference Include="..\..\src\Slender.Hidpp\Slender.Hidpp.csproj" />
     <ProjectReference Include="..\..\src\Slender.Engine\Slender.Engine.csproj" />
   </ItemGroup>
