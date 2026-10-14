@@ -121,7 +121,7 @@ try {
     $target = if ($installer) { $installer } else { '<installer>' }
     if ($PSCmdlet.ShouldProcess($target, '/uninstall (elevated)')) {
         $p = Start-Process -FilePath $installer -ArgumentList '/uninstall' -Verb RunAs -Wait -PassThru
-        if ($p.ExitCode -ne 0) { throw "Uninstall failed, exit code $($p.ExitCode). Config backup (if any): $backup" }
+        if ($p.ExitCode -notin 0, 3010) { throw "Uninstall failed, exit code $($p.ExitCode). Config backup (if any): $backup" }
     }
 
     # 5. Restore config if the uninstall removed it
@@ -133,7 +133,7 @@ try {
 
     if ($PSCmdlet.ShouldProcess($target, "Install: $($instArgs -join ' ') (elevated)")) {
         $p = Start-Process -FilePath $installer -ArgumentList $instArgs -Verb RunAs -Wait -PassThru
-        if ($p.ExitCode -ne 0) { throw "Install failed, exit code $($p.ExitCode). Config backup (if any): $backup" }
+        if ($p.ExitCode -notin 0, 3010) { throw "Install failed, exit code $($p.ExitCode). Config backup (if any): $backup" }
         if ($backedUp -and -not (Test-Path $ConfigPath)) { Copy-Item -LiteralPath $backup -Destination $ConfigPath -Recurse }
         Write-Host 'Install completed.'
     }
