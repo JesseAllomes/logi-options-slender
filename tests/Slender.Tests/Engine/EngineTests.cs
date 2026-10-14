@@ -285,8 +285,8 @@ public class EngineTests
         var ex = new ActionSpec.Excel(ExcelCommand.NextSheet);
         var r = new Rig(Cfg(null, null, P(null, (ControlId.Forward, def)), P("excel", (ControlId.Forward, ex))));
         r.Fg.ProcessName = "excel";
-        r.Mouse.Press(ControlId.Forward, true);
-        r.Mouse.Press(ControlId.Forward, false);
+        Assert.True(r.Hook.Button(HookButton.Forward, true).Handled);
+        r.Hook.Button(HookButton.Forward, false);
         Assert.Equal([((ActionSpec)ex, true), (ex, false)], r.Exec.Calls);
     }
 
@@ -301,16 +301,95 @@ public class EngineTests
     }
 
     [Theory]
-    [InlineData(ControlId.Back, "Back")]
-    [InlineData(ControlId.Forward, "Forward")]
-    [InlineData(ControlId.Middle, "Middle")]
-    public void DivertedButUnboundButtonsRestoreNativeBehaviour(ushort id, string button)
+    [InlineData(HookButton.Back)]
+    [InlineData(HookButton.Forward)]
+    [InlineData(HookButton.Middle)]
+    public void UnboundHookButtonIsNotHandled(HookButton b)
     {
-        var r = new Rig(Cfg(null, null, P(null), P("excel", (id, new ActionSpec.Keys("F5")))));
+        var r = new Rig(Cfg(null, null, P(null), P("excel", ((ushort)b, new ActionSpec.Keys("F5")))));
         r.Fg.ProcessName = "notepad";
-        r.Mouse.Press(id, true);
-        r.Mouse.Press(id, false);
-        Assert.Equal([((ActionSpec)new ActionSpec.MouseButton(button), true), (new ActionSpec.MouseButton(button), false)], r.Exec.Calls);
+        Assert.False(r.Hook.Button(b, true).Handled);
+        Assert.False(r.Hook.Button(b, false).Handled);
+        Assert.Empty(r.Exec.Calls);
+    }
+
+    [Theory]
+    [InlineData(HookButton.Back, "Back")]
+    [InlineData(HookButton.Forward, "Forward")]
+    [InlineData(HookButton.Middle, "middle")]
+    public void BindingToOwnNativeButtonIsNotHandled(HookButton b, string name)
+    {
+        var r = new Rig(Cfg(null, null, P(null, ((ushort)b, new ActionSpec.MouseButton(name)))));
+        Assert.False(r.Hook.Button(b, true).Handled);
+        Assert.Empty(r.Exec.Calls);
+    }
+
+    [Fact]
+    public void BindingToAnotherMouseButtonIsHandled()
+    {
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.MouseButton("Middle")))));
+        Assert.True(r.Hook.Button(HookButton.Back, true).Handled);
+        Assert.Single(r.Exec.Calls);
+    }
+
+    [Fact]
+    public void ExcelBoundHookButtonIsHandledAndExecutedOnlyInExcel()
+    {
+        var ex = new ActionSpec.Excel(ExcelCommand.NextSheet);
+        var r = new Rig(Cfg(null, null, P(null), P("excel", (ControlId.Forward, ex))));
+        r.Fg.ProcessName = "excel";
+        Assert.True(r.Hook.Button(HookButton.Forward, true).Handled);
+        Assert.False(r.Hook.Button(HookButton.Forward, false).Handled); // hook pairs the release itself
+        Assert.Equal([((ActionSpec)ex, true), (ex, false)], r.Exec.Calls);
+        r.Exec.Calls.Clear();
+        r.Fg.ProcessName = "notepad";
+        Assert.False(r.Hook.Button(HookButton.Forward, true).Handled);
+        Assert.False(r.Hook.Button(HookButton.Forward, false).Handled);
+        Assert.Empty(r.Exec.Calls);
+    }
+
+    [Fact]
+    public void HookReleaseFollowsPressEvenIfForegroundChanged()
+    {
+        var a = new ActionSpec.Keys("F1");
+        var r = new Rig(Cfg(null, null, P(null), P("excel", (ControlId.Back, a))));
+        r.Fg.ProcessName = "excel";
+        r.Hook.Button(HookButton.Back, true);
+        r.Fg.ProcessName = "notepad";
+        r.Hook.Button(HookButton.Back, false);
+        Assert.Equal([((ActionSpec)a, true), (a, false)], r.Exec.Calls);
+        r.Hook.Button(HookButton.Back, false); // stray release: nothing more
+        Assert.Equal(2, r.Exec.Calls.Count);
+    }
+
+    [Fact]
+    public void HookActionsRingRaisesEvent()
+    {
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.Middle, new ActionSpec.ActionsRing()))));
+        var raised = 0;
+        r.Engine.ActionsRingRequested += (_, _) => raised++;
+        Assert.True(r.Hook.Button(HookButton.Middle, true).Handled);
+        r.Hook.Button(HookButton.Middle, false);
+        Assert.Equal(1, raised);
+        Assert.Empty(r.Exec.Calls);
+    }
+
+    [Fact]
+    public void HookButtonExecutorFailureNeverEscapes()
+    {
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.Keys("F1")))));
+        r.Exec.Throw = true;
+        Assert.True(r.Hook.Button(HookButton.Back, true).Handled);
+        Assert.NotEmpty(r.Log.Errors);
+    }
+
+    [Fact]
+    public void StaleHidppEventsForHookButtonsAreIgnored()
+    {
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.Keys("F1")))));
+        r.Mouse.Press(ControlId.Back, true);
+        r.Mouse.Press(ControlId.Back, false);
+        Assert.Empty(r.Exec.Calls);
     }
 
     [Fact]
@@ -324,11 +403,11 @@ public class EngineTests
     [Fact]
     public void ReleaseUsesActionChosenAtPress()
     {
-        var r = new Rig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.MouseButton("Left"))), P("excel", (ControlId.Back, new ActionSpec.MouseButton("Right")))));
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.Gesture, new ActionSpec.MouseButton("Left"))), P("excel", (ControlId.Gesture, new ActionSpec.MouseButton("Right")))));
         r.Fg.ProcessName = "excel";
-        r.Mouse.Press(ControlId.Back, true);
+        r.Mouse.Press(ControlId.Gesture, true);
         r.Fg.ProcessName = "notepad";
-        r.Mouse.Press(ControlId.Back, false);
+        r.Mouse.Press(ControlId.Gesture, false);
         Assert.Equal(new ActionSpec.MouseButton("Right"), r.Exec.Calls[1].Item1);
         Assert.False(r.Exec.Calls[1].Item2);
     }
@@ -349,25 +428,26 @@ public class EngineTests
     public void DivertSetIsUnionOfNonNoneBindings()
     {
         var cfg = Cfg(null, null,
-            P(null, (ControlId.Back, new ActionSpec.Keys("F1")), (ControlId.Middle, new ActionSpec.None())),
-            P("excel", (ControlId.Forward, new ActionSpec.Keys("F2")), (ControlId.Back, new ActionSpec.Keys("F3"))));
-        Assert.Equal(new[] { ControlId.Back, ControlId.Forward }, SlenderEngine.ComputeDivertSet(cfg));
+            P(null, (ControlId.Back, new ActionSpec.Keys("F1")), (ControlId.Middle, new ActionSpec.Keys("F4")),
+                (ControlId.ModeShift, new ActionSpec.None()), (ControlId.SensePanel, new ActionSpec.ActionsRing())),
+            P("excel", (ControlId.Forward, new ActionSpec.Keys("F2")), (ControlId.Gesture, new ActionSpec.Keys("F3"))));
+        Assert.Equal(new[] { ControlId.Gesture, ControlId.SensePanel }, SlenderEngine.ComputeDivertSet(cfg));
         var r = new Rig(cfg);
         WaitFor(() => r.Mouse.DivertCount == 1);
-        Assert.Equal(new[] { ControlId.Back, ControlId.Forward }, r.Mouse.Diverts[0]);
+        Assert.Equal(new[] { ControlId.Gesture, ControlId.SensePanel }, r.Mouse.Diverts[0]);
     }
 
     [Fact]
     public void ApplyConfigRedivertsOnlyWhenSetChanges()
     {
-        var r = new Rig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.Keys("F1")))));
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.ModeShift, new ActionSpec.Keys("F1")))));
         WaitFor(() => r.Mouse.DivertCount == 1);
-        r.Engine.ApplyConfig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.Keys("F9")))));
+        r.Engine.ApplyConfig(Cfg(null, null, P(null, (ControlId.ModeShift, new ActionSpec.Keys("F9")), (ControlId.Back, new ActionSpec.Keys("F5")))));
         Thread.Sleep(100);
-        Assert.Equal(1, r.Mouse.DivertCount);
-        r.Engine.ApplyConfig(Cfg(null, null, P(null, (ControlId.Back, new ActionSpec.Keys("F1")), (ControlId.Gesture, new ActionSpec.Keys("F2")))));
+        Assert.Equal(1, r.Mouse.DivertCount); // key change and hook-only button do not re-divert
+        r.Engine.ApplyConfig(Cfg(null, null, P(null, (ControlId.ModeShift, new ActionSpec.Keys("F1")), (ControlId.Gesture, new ActionSpec.Keys("F2")))));
         WaitFor(() => r.Mouse.DivertCount == 2);
-        Assert.Equal(new[] { ControlId.Back, ControlId.Gesture }, r.Mouse.Diverts[1]);
+        Assert.Equal(new[] { ControlId.Gesture, ControlId.ModeShift }, r.Mouse.Diverts[1]);
     }
 
     [Theory]
@@ -377,8 +457,8 @@ public class EngineTests
     public void HapticOnPressFollowsSettings(bool enabled, bool onPress, int expected)
     {
         var r = new Rig(Cfg(null, new HapticSettings(enabled, 2, onPress, true), P(null, (ControlId.Back, new ActionSpec.Keys("F1")))));
-        r.Mouse.Press(ControlId.Back, true);
-        r.Mouse.Press(ControlId.Back, false);
+        r.Hook.Button(HookButton.Back, true);
+        r.Hook.Button(HookButton.Back, false);
         Assert.Equal(expected, r.Mouse.Haptics.Count);
         if (expected == 1) Assert.Equal((byte)1, r.Mouse.Haptics[0]);
     }
@@ -388,7 +468,7 @@ public class EngineTests
     {
         var r = new Rig(Cfg(null, new HapticSettings(true, 2, true, true), P(null, (ControlId.Back, new ActionSpec.Keys("F1")))));
         r.Mouse.ThrowOnHaptic = true;
-        r.Mouse.Press(ControlId.Back, true);
+        r.Hook.Button(HookButton.Back, true);
         WaitFor(() => { lock (r.Log.Errors) return r.Log.Errors.Count > 0; });
         Assert.Single(r.Exec.Calls);
     }

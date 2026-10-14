@@ -22,7 +22,8 @@ public sealed class SlenderEngine : IDisposable
     private readonly Func<long> _clock;
     private readonly ColumnScrollAccumulator _accumulator = new();
     private readonly object _gate = new();
-    private readonly Dictionary<ushort, ActionSpec> _active = new(); // action used at press, replayed on release
+    private readonly Dictionary<ushort, ActionSpec> _active = new(); // HID++ path: action used at press, replayed on release
+    private readonly Dictionary<ushort, ActionSpec> _hookActive = new(); // hook path: same, for swallowed Middle/Back/Forward
     private readonly CancellationTokenSource _cts = new();
     private volatile SlenderConfig _config;
     private IReadOnlyList<ushort> _diverted = [];
@@ -63,6 +64,7 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ButtonChanged += OnButton;
         _mouse.ConnectionChanged += OnConnection;
         _hook.HorizontalWheel += OnWheel;
+        _hook.ButtonChanged += OnHookButton;
         try { _hook.Start(); }
         catch (Exception ex) { _log.Error("mouse hook failed to start; thumb wheel will not scroll Excel", ex); }
         try { _ = ObserveAsync(_mouse.StartAsync(_cts.Token), "mouse start"); }
@@ -80,15 +82,20 @@ public sealed class SlenderEngine : IDisposable
         if (started) Rediverts(force: false);
     }
 
-    /// <summary>Union of control IDs with a non-None binding in any profile.</summary>
+    /// <summary>
+    /// HID++-diverted controls: only Gesture, Mode shift and Sense Panel, and only when bound (non-None) in some profile.
+    /// Middle/Back/Forward are captured by the mouse hook and never diverted.
+    /// </summary>
     public static IReadOnlyList<ushort> ComputeDivertSet(SlenderConfig config) =>
         config.Profiles
             .SelectMany(p => p.Bindings)
-            .Where(kv => kv.Value is not null and not ActionSpec.None)
+            .Where(kv => kv.Value is not null and not ActionSpec.None && IsHidppControl(kv.Key))
             .Select(kv => kv.Key)
             .Distinct()
             .Order()
             .ToList();
+
+    private static bool IsHidppControl(ushort id) => id is ControlId.Gesture or ControlId.ModeShift or ControlId.SensePanel;
 
     private void Rediverts(bool force)
     {
@@ -119,6 +126,7 @@ public sealed class SlenderEngine : IDisposable
 
     private void OnButton(object? sender, ButtonEvent e)
     {
+        if (!IsHidppControl(e.ControlId)) return; // Middle/Back/Forward come from the hook; ignore stale diverts
         try { _queue.Post(() => HandleButton(e)); }
         catch (Exception ex) { SafeLog("button dispatch failed", ex); }
     }
@@ -155,14 +163,7 @@ public sealed class SlenderEngine : IDisposable
         var profile = ProfileResolver.Resolve(cfg, _foreground.ProcessName);
         if (Bound(profile, control) is { } a) return a;
         if (Bound(ProfileResolver.Default(cfg), control) is { } d) return d;
-        // A diverted control loses its native behaviour, so restore it.
-        return control switch
-        {
-            ControlId.Back => new ActionSpec.MouseButton("Back"),
-            ControlId.Forward => new ActionSpec.MouseButton("Forward"),
-            ControlId.Middle => new ActionSpec.MouseButton("Middle"),
-            _ => new ActionSpec.None(),
-        };
+        return new ActionSpec.None();
     }
 
     private static ActionSpec? Bound(Profile p, ushort control) =>
@@ -182,6 +183,55 @@ public sealed class SlenderEngine : IDisposable
     {
         try { ActionsRingRequested?.Invoke(this, EventArgs.Empty); }
         catch (Exception ex) { _log.Error("ActionsRingRequested handler failed", ex); }
+    }
+
+    // ---- hook buttons (hook thread: O(1), never throws) ----
+
+    private static string NativeName(HookButton b) => b switch
+    {
+        HookButton.Middle => "Middle",
+        HookButton.Back => "Back",
+        _ => "Forward",
+    };
+
+    private void OnHookButton(object? sender, HookButtonEventArgs e)
+    {
+        try
+        {
+            var id = (ushort)e.Button;
+            if (e.Pressed)
+            {
+                var action = ResolveAction(id);
+                if (action is ActionSpec.None) return;
+                if (action is ActionSpec.MouseButton m && string.Equals(m.Button, NativeName(e.Button), StringComparison.OrdinalIgnoreCase))
+                    return; // the button's own behaviour: leave it to Windows
+                lock (_gate) _hookActive[id] = action;
+                e.Handled = true;
+                _queue.Post(() => RunHookAction(action, true));
+            }
+            else
+            {
+                ActionSpec? action;
+                lock (_gate) { if (!_hookActive.Remove(id, out action)) return; }
+                _queue.Post(() => RunHookAction(action, false));
+            }
+        }
+        catch (Exception ex) { SafeLog("hook button handler failed", ex); }
+    }
+
+    private void RunHookAction(ActionSpec action, bool pressed)
+    {
+        try
+        {
+            if (pressed)
+            {
+                MaybeHaptic(action);
+                if (action is ActionSpec.ActionsRing) { RaiseRing(); return; }
+            }
+            else if (action is ActionSpec.ActionsRing) return;
+            _executor.Execute(action, pressed);
+        }
+        catch (Exception ex) { _log.Error("hook button action failed", ex); }
     }
 
     // ---- horizontal wheel (hook thread: O(1), never throws) ----
@@ -250,6 +300,7 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ButtonChanged -= OnButton;
         _mouse.ConnectionChanged -= OnConnection;
         _hook.HorizontalWheel -= OnWheel;
+        _hook.ButtonChanged -= OnHookButton;
         _cts.Cancel();
         _queue.Dispose();
         _cts.Dispose();

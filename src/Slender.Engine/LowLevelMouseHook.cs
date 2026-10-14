@@ -16,6 +16,7 @@ public sealed class LowLevelMouseHook : IInputHook
     private Thread? _thread;
     private uint _threadId;
     private nint _hook;
+    private readonly HookButtonPairing _pairing = new();
     private bool _disposed;
 
     public LowLevelMouseHook(ILog? log = null)
@@ -26,9 +27,7 @@ public sealed class LowLevelMouseHook : IInputHook
 
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
-#pragma warning disable CS0067 // raised once m8 (hybrid button capture) lands
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
-#pragma warning restore CS0067
 
     public void Start()
     {
@@ -78,19 +77,32 @@ public sealed class LowLevelMouseHook : IInputHook
     {
         try
         {
-            if (nCode >= 0 && wParam == NativeMethods.WM_MOUSEHWHEEL)
+            if (nCode >= 0)
             {
-                var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
-                var injected = (data.Flags & (NativeMethods.LLMHF_INJECTED | NativeMethods.LLMHF_LOWER_IL_INJECTED)) != 0;
-                if (!injected)
+                var msg = (int)wParam;
+                if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
-                    var delta = (short)(data.MouseData >> 16);
-                    var handler = HorizontalWheel;
-                    if (handler is not null)
+                    var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                    if (!IsInjected(data))
                     {
-                        var args = new HookWheelEventArgs(delta);
-                        handler(this, args);
-                        if (args.Handled) return 1; // swallow
+                        var delta = (short)(data.MouseData >> 16);
+                        var handler = HorizontalWheel;
+                        if (handler is not null)
+                        {
+                            var args = new HookWheelEventArgs(delta);
+                            handler(this, args);
+                            if (args.Handled) return 1; // swallow
+                        }
+                    }
+                }
+                else if (msg is NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_MBUTTONUP
+                         or NativeMethods.WM_XBUTTONDOWN or NativeMethods.WM_XBUTTONUP)
+                {
+                    var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                    if (!IsInjected(data) && ToButton(msg, data.MouseData) is { } button)
+                    {
+                        var pressed = msg is NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_XBUTTONDOWN;
+                        if (_pairing.Process(button, pressed, ButtonChanged, this)) return 1; // swallow
                     }
                 }
             }
@@ -103,6 +115,15 @@ public sealed class LowLevelMouseHook : IInputHook
         return NativeMethods.CallNextHookEx(0, nCode, wParam, lParam);
     }
 
+    private static bool IsInjected(NativeMethods.MSLLHOOKSTRUCT d) =>
+        (d.Flags & (NativeMethods.LLMHF_INJECTED | NativeMethods.LLMHF_LOWER_IL_INJECTED)) != 0;
+
+    internal static HookButton? ToButton(int message, uint mouseData)
+    {
+        if (message is NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_MBUTTONUP) return HookButton.Middle;
+        return (mouseData >> 16) switch { 1 => HookButton.Back, 2 => HookButton.Forward, _ => null };
+    }
+
     public void Dispose()
     {
         Thread? t;
@@ -113,6 +134,7 @@ public sealed class LowLevelMouseHook : IInputHook
             t = _thread;
         }
         HorizontalWheel = null;
+        ButtonChanged = null;
         if (t is null) return;
         if (_threadId != 0) NativeMethods.PostThreadMessage(_threadId, NativeMethods.WM_QUIT, 0, 0);
         t.Join(1000); // the thread unhooks itself on exit
