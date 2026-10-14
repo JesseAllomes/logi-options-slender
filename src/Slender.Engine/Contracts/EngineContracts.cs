@@ -114,7 +114,7 @@ public sealed record PointerSettings(
     bool SmartShiftEnabled = true,
     int SmartShiftThreshold = 12,
     bool InvertWheel = false,
-    bool InvertThumbWheel = false);
+    bool InvertThumbWheel = true); // true matches the Options+ setting found on this user's MX Master 4 (2026-10-15)
 
 public sealed record KeyboardSettings(bool FnLock = false);
 

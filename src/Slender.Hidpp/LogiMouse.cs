@@ -18,6 +18,8 @@ public sealed class LogiMouseOptions
     public TimeSpan DisposeUndivertBudget { get; init; } = TimeSpan.FromMilliseconds(1500);
     /// <summary>Device indices tried in order by the ping probe (docs/protocol.md: PROBE).</summary>
     public byte[] DeviceIndexCandidates { get; init; } = [0xFF, 0x01];
+    /// <summary>Thumb wheel direction to apply on every connect (0x2150 invert bit); null keeps whatever the device has.</summary>
+    public bool? ThumbWheelInvert { get; init; }
 }
 
 /// <summary>MX Master 4 over HID++ 2.0. Events fire on background threads; handlers must not call back synchronously.</summary>
@@ -48,6 +50,7 @@ public sealed class LogiMouse : ILogiMouse
     private HashSet<ushort> _desiredDiverts = [];
     private readonly HashSet<ushort> _appliedDiverts = [];
     private bool _thumbDesired;
+    private bool? _thumbInvertDesired;
     private bool _thumbApplied;
     private HashSet<ushort> _held = [];
     private volatile Session? _session;
@@ -61,6 +64,7 @@ public sealed class LogiMouse : ILogiMouse
     {
         _factory = factory;
         _options = options ?? new LogiMouseOptions();
+        _thumbInvertDesired = _options.ThumbWheelInvert;
     }
 
     public string Name => "MX Master 4";
@@ -258,7 +262,7 @@ public sealed class LogiMouse : ILogiMouse
             foreach (var cid in KnownDivertableControls)
                 if (Array.IndexOf(desired, cid) < 0)
                     await TrySetDivertAsync(s, cid, false, ct).ConfigureAwait(false);
-            if (await TrySetThumbAsync(s, thumb, ct).ConfigureAwait(false) && thumb)
+            if (await TrySetThumbAsync(s, thumb, _thumbInvertDesired, ct).ConfigureAwait(false) && thumb)
                 lock (_state) _thumbApplied = true;
         }
         finally { _gate.Release(); }
@@ -287,13 +291,13 @@ public sealed class LogiMouse : ILogiMouse
         catch (HidppException) { return false; }
     }
 
-    private static async Task<bool> TrySetThumbAsync(Session s, bool diverted, CancellationToken ct)
+    private static async Task<bool> TrySetThumbAsync(Session s, bool diverted, bool? invertWanted, CancellationToken ct)
     {
         try
         {
-            // Keep the user's invert setting (getConfig p[1] bit0); only the mode changes.
+            // Invert comes from config when set; otherwise keep the device's current bit (getConfig p[1] bit0).
             var current = await s.Device.CallAsync(FeatureId.ThumbWheel, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false);
-            var invert = (byte)(current.Params[1] & 0x01);
+            var invert = invertWanted is { } w ? (byte)(w ? 1 : 0) : (byte)(current.Params[1] & 0x01);
             await s.Device.CallAsync(FeatureId.ThumbWheel, 2, new byte[] { diverted ? (byte)1 : (byte)0, invert, 0 }, ct).ConfigureAwait(false);
             return true;
         }
@@ -329,6 +333,21 @@ public sealed class LogiMouse : ILogiMouse
         finally { _gate.Release(); }
     }
 
+    /// <summary>Sets the thumb wheel direction now (if connected) and on every reconnect.</summary>
+    public async Task SetThumbWheelInvertAsync(bool invert, CancellationToken ct)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            bool diverted;
+            lock (_state) { _thumbInvertDesired = invert; diverted = _thumbDesired; }
+            var s = _session;
+            if (s == null || !_connected) return;
+            await TrySetThumbAsync(s, diverted, invert, ct).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task SetThumbWheelDivertedAsync(bool diverted, CancellationToken ct)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -337,7 +356,7 @@ public sealed class LogiMouse : ILogiMouse
             lock (_state) _thumbDesired = diverted;
             var s = _session;
             if (s == null || !_connected) return;
-            if (await TrySetThumbAsync(s, diverted, ct).ConfigureAwait(false))
+            if (await TrySetThumbAsync(s, diverted, _thumbInvertDesired, ct).ConfigureAwait(false))
                 lock (_state) _thumbApplied = diverted;
         }
         finally { _gate.Release(); }
@@ -468,7 +487,7 @@ public sealed class LogiMouse : ILogiMouse
                     bool thumb;
                     lock (_state) { applied = [.. _appliedDiverts]; thumb = _thumbApplied; }
                     foreach (var cid in applied) await TrySetDivertAsync(s, cid, false, budget.Token).ConfigureAwait(false);
-                    if (thumb) await TrySetThumbAsync(s, false, budget.Token).ConfigureAwait(false);
+                    if (thumb) await TrySetThumbAsync(s, false, _thumbInvertDesired, budget.Token).ConfigureAwait(false);
                 }).Wait(_options.DisposeUndivertBudget + TimeSpan.FromMilliseconds(500));
             }
             catch (Exception ex) { Debug.WriteLine($"LogiMouse dispose undivert: {ex.Message}"); }

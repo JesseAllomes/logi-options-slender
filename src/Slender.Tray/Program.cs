@@ -32,15 +32,21 @@ static class Program
         log.Info("Slender starting");
         IConfigStore store = new JsonConfigStore();
 
-        using var mouse = new LogiMouse(new WindowsHidTransportFactory());
+        var config = store.Load();
+        using var mouse = new LogiMouse(new WindowsHidTransportFactory(),
+            new LogiMouseOptions { ThumbWheelInvert = config.Pointer.InvertThumbWheel });
         using var hook = new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
         using var excel = new ExcelBridge(log);
         var executor = new ActionExecutor(excel, foreground, log);
-        using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, store.Load(), log);
+        using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, config, log);
 
         using var context = new TrayApplicationContext(store, mouse);
-        context.ConfigChanged += (_, config) => engine.ApplyConfig(config);
+        context.ConfigChanged += (_, changed) =>
+        {
+            engine.ApplyConfig(changed);
+            _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
+        };
         engine.Start();
 
         Application.Run(context);

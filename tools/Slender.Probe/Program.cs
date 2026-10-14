@@ -131,6 +131,17 @@ if (haptic)
     Console.WriteLine($"  fn3 answered: {r3 != null}");
 }
 
+// --thumb-invert=0|1 sets the thumb wheel direction bit (0x2150 fn2), keeping the current mode.
+if (args.FirstOrDefault(a => a.StartsWith("--thumb-invert=", StringComparison.Ordinal)) is { } invArg
+    && byte.TryParse(invArg["--thumb-invert=".Length..], out var inv) && inv <= 1)
+{
+    Console.WriteLine($"\n== --thumb-invert {inv} ==");
+    var cfg = await Try(device, "getConfig", FeatureId.ThumbWheel, 1);
+    var mode = cfg?.Params[0] ?? (byte)0;
+    await Try(device, "setConfig", FeatureId.ThumbWheel, 2, mode, inv, 0);
+    await Try(device, "read back", FeatureId.ThumbWheel, 1);
+}
+
 // --pulse=<fn>:<waveform> plays one haptic function three times, 800 ms apart, so it can be felt and told apart.
 if (args.FirstOrDefault(a => a.StartsWith("--pulse=", StringComparison.Ordinal)) is { } pulseArg
     && pulseArg["--pulse=".Length..].Split(':') is [var fnText, var waveText]
