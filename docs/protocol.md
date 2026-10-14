@@ -41,7 +41,7 @@ if byte 0 is 0x10/0x11, skip it.
 | IRoot | 0x0000 | fn0 getFeature [idHi, idLo, 0] → p[0]=index (0 = absent); fn1 ping | index 0 always |
 | Device name | 0x0005 | fn0 → p[0]=length; fn1 [offset] → chunk | |
 | Unified battery | 0x1004 | fn1 → p[0]=level 0–100, p[2]∈{1,2,3,4} charging | fallback 0x1000 fn0. Broadcast: fn0, swId 0 |
-| Haptics | 0x19B0 | fn1 getState → p[0] bit0 enabled, p[1] level 0–100; fn2 setState [1, level]; play waveform [id] = **fn4** (comment says fn3: **PROBE**) | UI level→device {0:25, 1:50, 2:75, 3:100}. Waveforms: 0 default, 1 press, 3 DPI cycle, 7 gesture done |
+| Haptics | 0x19B0 | fn1 getState → p[0] bit0 enabled, p[1] level 0–100; fn2 setState [1, level]; play waveform [id] = **fn4** (confirmed on device; fn3 is silent) | UI level→device {0:25, 1:50, 2:75, 3:100}. Waveforms: 0 default, 1 press, 3 DPI cycle, 7 gesture done |
 | Force sensing | 0x19C0 | fn2 read u16 BE; fn3 set [0, hi, lo] | Sense Panel force |
 | Reprog controls v4 | 0x1B04 | fn0 getCount; fn1 getCidInfo(i) → [0-1] cid, [2-3] task, [4] flags, [5] pos, [6] group, [7] gmask, [8] flags hi; fn2 getCidReporting(cid); fn3 setCidReporting [cidHi, cidLo, flags, 0, 0] | see divert flags below |
 | SmartShift enhanced | 0x2111 | fn1 read → [mode, autoDisengage, force]; fn2 write [mode, threshold, force] | mode 1 free-spin, 2 ratchet; disable = ratchet + 0xFF |
@@ -137,7 +137,7 @@ change/pairing), 0x8100 (onboard profiles). Slender.Probe goes through the same 
 
 ### Haptics play (2026-10-15, Options+ stopped)
 
-`0x19B0` fn4 [waveform] and fn3 [waveform] are both acknowledged (`11FF0B4B…` / `11FF0B3B…`, no error). The user felt
-identical pulses; whether both functions actually pulse is being confirmed. Slender keeps fn4 (Mouser's choice).
+`0x19B0` fn4 [waveform] and fn3 [waveform] are both acknowledged (`11FF0B4B…` / `11FF0B3B…`, no error). Only **fn4
+plays a pulse** (user felt 3 of 6 when both ran; fn3 alone produced nothing). fn3 is accepted but silent. Slender uses fn4.
 With Options+ stopped, every control reads back undiverted and the thumb wheel reports mode 0 (native), invert 0;
 Options+ had set invert 1, so the native direction may feel reversed to the user. `Slender.Probe --pulse=<fn>:<waveform>` plays one function three times.
