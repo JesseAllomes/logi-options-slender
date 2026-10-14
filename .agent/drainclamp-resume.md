@@ -1,5 +1,5 @@
 # DrainClamp resume capsule
-Done: m1, m2, m4, m5
-In progress: m3: .NET 8 solution + HID++ core: BLE HID transport, device discovery, feature lookup, fake-transport tests
+Done: m1, m2, m3, m4, m5
+In progress: m7: tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback
 Next: m6: haptics + Actions Ring
-Generation: 15
+Generation: 17

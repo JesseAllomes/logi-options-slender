@@ -60,6 +60,7 @@ public class LogiMouseTests
     {
         var dev = new FakeDevice();
         dev.Handlers[(FakeDevice.Reprog, 3)] = _ => [];
+        dev.Handlers[(FakeDevice.Thumb, 1)] = _ => [0, 0];
         dev.Handlers[(FakeDevice.Thumb, 2)] = _ => [];
         var t1 = dev.NewTransport();
         var t2 = dev.NewTransport();
@@ -99,7 +100,30 @@ public class LogiMouseTests
             await mouse.SetDivertedControlsAsync([ControlId.Gesture, ControlId.Back], CancellationToken.None);
             await mouse.SetDivertedControlsAsync([ControlId.Gesture], CancellationToken.None);
             var back = t.Writes.Where(w => w[2] == FakeDevice.Reprog && w[5] == (byte)ControlId.Back).Select(w => w[6]).ToArray();
-            Assert.Equal(new byte[] { 0x03, 0x02 }, back);
+            Assert.Equal(new byte[] { 0x02, 0x03, 0x02 }, back); // connect resets to native, then divert, then undivert
+        }
+    }
+
+    [Fact]
+    public async Task Connect_resets_leftover_diverts_and_thumb_wheel_keeping_invert()
+    {
+        // Options+ leaves controls and the thumb wheel diverted (seen on device 2026-10-15).
+        var (mouse, _, t, _) = Create(d =>
+        {
+            d.Handlers[(FakeDevice.Reprog, 3)] = _ => [];
+            d.Handlers[(FakeDevice.Thumb, 1)] = _ => [0x01, 0x01]; // diverted, inverted
+            d.Handlers[(FakeDevice.Thumb, 2)] = _ => [];
+        });
+        using (mouse)
+        {
+            await mouse.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => mouse.IsConnected);
+            await Wait.UntilAsync(() => t.Writes.Any(w => w[2] == FakeDevice.Thumb && w[3] >> 4 == 2));
+
+            foreach (var cid in new[] { ControlId.Middle, ControlId.Back, ControlId.Forward, ControlId.Gesture, ControlId.ModeShift, ControlId.SensePanel })
+                Assert.Contains(t.Writes, w => w[2] == FakeDevice.Reprog && w[3] >> 4 == 3
+                    && w[4] == (byte)(cid >> 8) && w[5] == (byte)cid && w[6] == 0x02);
+            Assert.Contains(t.Writes, w => w[2] == FakeDevice.Thumb && w[3] >> 4 == 2 && w[4] == 0 && w[5] == 1);
         }
     }
 

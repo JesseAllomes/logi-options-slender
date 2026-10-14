@@ -29,6 +29,10 @@ public sealed class LogiMouse : ILogiMouse
     private const byte DivertFlags = 0x03;
     private const byte UndivertFlags = 0x02;
 
+    /// <summary>MX Master 4 controls that can be diverted (0x1B04 flags 0x31, confirmed on device 2026-10-15).</summary>
+    private static readonly ushort[] KnownDivertableControls =
+        [ControlId.Middle, ControlId.Back, ControlId.Forward, ControlId.Gesture, ControlId.ModeShift, ControlId.SensePanel];
+
     private sealed class Session(HidppChannel channel, HidppDevice device)
     {
         public HidppChannel Channel { get; } = channel;
@@ -249,7 +253,12 @@ public sealed class LogiMouse : ILogiMouse
             foreach (var cid in desired)
                 if (await TrySetDivertAsync(s, cid, true, ct).ConfigureAwait(false))
                     lock (_state) _appliedDiverts.Add(cid);
-            if (thumb && await TrySetThumbAsync(s, true, ct).ConfigureAwait(false))
+            // Another driver (Options+) may have left controls and the thumb wheel diverted; a diverted
+            // control we do not handle is dead, so put everything we do not want back to native.
+            foreach (var cid in KnownDivertableControls)
+                if (Array.IndexOf(desired, cid) < 0)
+                    await TrySetDivertAsync(s, cid, false, ct).ConfigureAwait(false);
+            if (await TrySetThumbAsync(s, thumb, ct).ConfigureAwait(false) && thumb)
                 lock (_state) _thumbApplied = true;
         }
         finally { _gate.Release(); }
@@ -282,7 +291,10 @@ public sealed class LogiMouse : ILogiMouse
     {
         try
         {
-            await s.Device.CallAsync(FeatureId.ThumbWheel, 2, new byte[] { diverted ? (byte)1 : (byte)0, 0, 0 }, ct).ConfigureAwait(false);
+            // Keep the user's invert setting (getConfig p[1] bit0); only the mode changes.
+            var current = await s.Device.CallAsync(FeatureId.ThumbWheel, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false);
+            var invert = (byte)(current.Params[1] & 0x01);
+            await s.Device.CallAsync(FeatureId.ThumbWheel, 2, new byte[] { diverted ? (byte)1 : (byte)0, invert, 0 }, ct).ConfigureAwait(false);
             return true;
         }
         catch (HidppException) { return false; }
