@@ -91,3 +91,27 @@ Excel-specific code. For Excel, Slender's plan:
    it and scroll columns through Excel COM (`ActiveWindow.SmallScroll ToRight/ToLeft`), with the
    delta accumulated to whole columns. Needs no divert, so it works even alongside Options+.
 2. Optional path: divert 0x2150 for raw rotation and tap/touch gestures (after the probe).
+
+## Confirmed on device (2026-10-15, read-only probe, Options+ running)
+
+Raw output: `.agent/probe/readonly-20261015.txt`.
+
+- BLE PID **0xB042**. HID++ collection UsagePage 0xFF43 / Usage 0x0202, 20-byte in/out reports.
+  Windows reads **include** the 0x11 report-ID byte.
+- Device index **0xFF** answers (0x01 answers too). Slender uses 0xFF.
+- 45 features. Relevant indices: 0x1004 → 9, 0x19B0 → 11, 0x19C0 → 12, 0x1B04 → 13,
+  0x2111 → 17, 0x2121 → 18, 0x2150 → 19, 0x2201 → 20. No 0x2110.
+- 0x1B04 controls: 0x0050 left, 0x0051 right (not divertable), 0x0052 middle, 0x0053 back,
+  0x0056 forward, 0x00C3 gesture, 0x00C4 mode shift, 0x01A0 Sense Panel (all divertable,
+  flags 0x31), 0x00D7 virtual gesture (flags 0xA0). **No 0x00FD DPI switch on MX4.**
+- Options+ currently diverts 0x0053, 0x0056, 0x00C3, 0x00C4 and 0x01A0 (getCidReporting byte 2 = 0x01).
+- 0x2150 getInfo: native resolution 20, diverted resolution 120, caps 0x03 (timestamp + touch,
+  no proximity, no single tap), time unit 1000. getConfig: **mode 1 (diverted by Options+)**,
+  invert 1. So with Options+ running, the thumb wheel never reaches Windows as
+  `WM_MOUSEHWHEEL`. Options+ reads it over HID++ and drives Excel through its add-in.
+- 0x2121 mode 0x01: bit0 set, so Options+ also diverts the main wheel. Slender must clear it.
+- 0x19B0: enabled, level 45.
+- Battery 0x1004 fn1: 65 %, not charging.
+
+Still to probe (state-changing, run with Options+ quit): haptic play fn3 vs fn4, divert
+read-back, 0x2150 notification layout.
