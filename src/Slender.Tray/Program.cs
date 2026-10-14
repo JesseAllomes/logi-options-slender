@@ -1,16 +1,28 @@
+using Slender.Engine;
+using Slender.Hidpp;
+
 namespace Slender.Tray;
 
 static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
     [STAThread]
     static void Main()
     {
-        // To customize application configuration such as set high DPI settings or default font,
-        // see https://aka.ms/applicationconfiguration.
+        using var singleInstance = new SingleInstance();
+        if (!singleInstance.IsFirstInstance)
+        {
+            return;
+        }
+
         ApplicationConfiguration.Initialize();
-        Application.Run(new Form1());
-    }    
+
+        IConfigStore store = new JsonConfigStore();
+
+        // WIRE: engine. Create the MX Master 4 driver and Slender.Engine here, start the mouse,
+        // and pass it in below. Stays null until the engine is wired.
+        ILogiMouse? mouse = null;
+
+        using var context = new TrayApplicationContext(store, mouse);
+        Application.Run(context);
+    }
 }
