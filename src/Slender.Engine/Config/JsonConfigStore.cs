@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Slender.Engine;
 
-namespace Slender.Tray;
+
+namespace Slender.Engine.Config;
 
 /// <summary>
 /// config.json under %APPDATA%\Slender. Missing file gives the default config. A corrupt or
@@ -13,7 +13,7 @@ namespace Slender.Tray;
 public sealed class JsonConfigStore : IConfigStore
 {
     /// <summary>Schema version written and accepted. Matches SlenderConfig.Default.Version.</summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = SlenderConfig.CurrentVersion;
 
     private const string FileName = "config.json";
 
@@ -88,7 +88,7 @@ public sealed class JsonConfigStore : IConfigStore
     {
         ConfigDto dto = JsonSerializer.Deserialize<ConfigDto>(text, Options)
             ?? throw new FormatException("Config file is empty.");
-        if (dto.Version != CurrentVersion)
+        if (dto.Version is < 1 or > CurrentVersion)
         {
             throw new FormatException($"Unsupported config version {dto.Version}.");
         }

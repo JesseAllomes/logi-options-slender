@@ -26,6 +26,10 @@ public sealed class LowLevelMouseHook : IInputHook
 
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
+#pragma warning disable CS0067 // raised once m8 (hybrid button capture) lands
+    public event EventHandler<HookButtonEventArgs>? ButtonChanged;
+#pragma warning restore CS0067
+
     public void Start()
     {
         lock (_gate)

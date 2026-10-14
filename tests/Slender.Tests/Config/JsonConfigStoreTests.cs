@@ -1,8 +1,8 @@
 using Slender.Engine;
 using Slender.Hidpp;
-using Slender.Tray;
+using Slender.Engine.Config;
 
-namespace Slender.Tests.Tray;
+namespace Slender.Tests.Config;
 
 public sealed class JsonConfigStoreTests : IDisposable
 {
@@ -37,7 +37,7 @@ public sealed class JsonConfigStoreTests : IDisposable
         }
 
         SlenderConfig expected = new(
-            1,
+            SlenderConfig.CurrentVersion,
             [new Profile(null, bindings), new Profile("excel", new Dictionary<ushort, ActionSpec>())],
             new ExcelSettings(ThumbWheelScrollsColumns: false, ColumnsPerNotch: 4),
             new HapticSettings(Enabled: false, Level: 0, OnButtonPress: true, OnActionsRing: false),

@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Slender.Engine;
 
-namespace Slender.Tray;
+
+namespace Slender.Engine.Config;
 
 /// <summary>Serializes ActionSpec with a "type" discriminator. Unknown types throw FormatException.</summary>
 public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>

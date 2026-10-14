@@ -52,6 +52,13 @@ internal sealed class FakeHook : IInputHook
         HorizontalWheel?.Invoke(this, a);
         return a;
     }
+    public event EventHandler<HookButtonEventArgs>? ButtonChanged;
+    public HookButtonEventArgs Button(HookButton button, bool pressed)
+    {
+        var a = new HookButtonEventArgs(button, pressed);
+        ButtonChanged?.Invoke(this, a);
+        return a;
+    }
 }
 
 internal sealed class FakeForeground : IForegroundApp

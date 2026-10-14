@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=17 -->
+<!-- drainclamp-build: state; schema=1; generation=19 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -17,12 +17,16 @@ Optimisation vectors: single process, no Electron/Qt; engine idle-sleeps on HID 
 Direction -> hybrid: trim official Options+ now, build a new native app from the 3 repos, retire Options+ only after feature parity (user)
 Excel features to replicate, in priority -> 1 thumb wheel sideways scroll in Excel, 2 Excel-specific custom buttons, 3 haptics/Actions Ring (user)
 Stack -> C# / .NET (user); target .NET 10 LTS, not .NET 8 (8 leaves support 2026-11-10); SDK installed per-user via official dotnet-install.ps1, no admin (agent correction)
-Target device -> MX Master 4 over Bluetooth only; keyboard/receiver support out of scope unless asked (agent default from observed hardware)
+Devices -> MX Master 4 (BLE B042) and ERGO K860 keyboard (BLE B359) both in scope; keyboard = top-row key customisation, Fn lock, Easy-Switch (user)
 Upstreams -> reference only in .agent/upstream; port logic with attribution (MIT/Apache-2.0), never execute their scripts or binaries (agent default)
 Options+ and Slender never own HID++ at the same time; switch-over needs a documented rollback (Mouser README constraint)
 Options+ reinstall, Excel registry/Resiliency edits and process kills run only after explicit user approval at run time; scripts back up registry first (security boundary)
 Project lives in C:/Users/user/Projects/personal, local only, never OneDrive (user memory)
 Build orchestration -> Opus orchestrates on main (scaffold, contracts, review, merge, m6); Sonnet/Haiku subagents build parts in separate git worktrees/branches, merged by Opus (user)
+Button capture -> hybrid: LL hook for middle/back/forward + thumb wheel; temporary HID++ divert (0x03, never persist bit 0x04) only for gesture/Sense Panel/mode shift when bound; firmware remap deferred (spec: temporary, resets on config reset) (user + docs)
+HID++ safety -> allowlist of writable features/functions in code; never touch DFU 0x00D1, host/pairing 0x1814/0x1815, onboard profiles (agent, user asked about device risk)
+Settings UI -> WinUI 3 separate process launched from tray, exits on close; design via product-ui prototype loop, user prefers mix of round-1 directions 1+2+3 with real device renders (user)
+Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/LogiOptionsPlus/depots) into %LOCALAPPDATA%/Slender; never committed (agent, licensing)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -35,6 +39,9 @@ Build orchestration -> Opus orchestrates on main (scaffold, contracts, review, m
 | m5 | custom buttons: divert reprog controls, action engine, per-app profiles incl. Excel actions | src/Slender.Engine;tests/Slender.Tests | done | m4 |
 | m6 | haptics + Actions Ring | src/Slender.Engine;src/Slender.Tray;tests/Slender.Tests | pending | m5 |
 | m7 | tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback | src/Slender.Tray;docs/switch-over.md;tests/Slender.Tests | active | m6 |
+| m8 | hybrid button capture + HID++ write allowlist | src/Slender.Engine;src/Slender.Hidpp;tests/Slender.Tests | pending | m3 |
+| m9 | keyboard support (ERGO K860): top-row keys, Fn lock | src/Slender.Hidpp;src/Slender.Engine;tests/Slender.Tests | pending | m8 |
+| m10 | WinUI 3 settings app (product-ui locked design) | src/Slender.Settings;.grok/product-ui | pending | m8 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
