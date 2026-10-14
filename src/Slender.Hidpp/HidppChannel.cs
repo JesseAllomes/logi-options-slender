@@ -149,7 +149,7 @@ public sealed class HidppChannel : IDisposable
     }
 
     /// <summary>Sends a request and awaits the matching response. Throws <see cref="HidppTimeoutException"/> / <see cref="HidppErrorException"/>.</summary>
-    public Task<HidppMessage> RequestAsync(byte deviceIndex, byte featureIndex, byte function, ReadOnlyMemory<byte> parameters,
+    internal Task<HidppMessage> RequestAsync(byte deviceIndex, byte featureIndex, byte function, ReadOnlyMemory<byte> parameters,
         CancellationToken ct, int? maxRetries = null, TimeSpan? timeout = null)
     {
         GuardNotReaderThread(); // thrown synchronously, not captured in the task
@@ -194,7 +194,7 @@ public sealed class HidppChannel : IDisposable
     }
 
     /// <summary>Writes a request without waiting for the response (the response surfaces as a notification).</summary>
-    public ValueTask SendAsync(byte deviceIndex, byte featureIndex, byte function, ReadOnlyMemory<byte> parameters, CancellationToken ct)
+    internal ValueTask SendAsync(byte deviceIndex, byte featureIndex, byte function, ReadOnlyMemory<byte> parameters, CancellationToken ct)
     {
         GuardNotReaderThread();
         ObjectDisposedException.ThrowIf(_disposed, this);
