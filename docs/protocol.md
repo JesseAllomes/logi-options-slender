@@ -165,3 +165,12 @@ Read-only probe 2026-10-15, Options+ running. Raw output: `.agent/probe/k860-rea
   Decimal Options+ ids match these hex CIDs exactly. At probe time every control reported flags 0 (nothing left diverted).
 - Keyboard path: `LogiKeyboard` shares the connect/backoff/divert machinery with `LogiMouse` through `LogiDeviceBase`.
   Temporary divert flags only (0x03/0x02); every known divertable key not wanted is reset to native on connect.
+
+### SmartShift and wheel resolution (read 2026-10-15, Options+ stopped)
+
+- 0x2111 fn1 → `01 16 64`: mode 1 (free-spin at that moment), auto-disengage threshold 22, force 100. Options+'s values
+  survive in the mouse; the mode-shift button toggles ratchet/free-spin in firmware (not diverted).
+- Slender applies SmartShift from `Pointer.SmartShiftEnabled/SmartShiftThreshold` on every connect: read-modify-write,
+  keeps mode and force, threshold 0xFF = off, skips the write when unchanged. Default threshold 22 (this user's value).
+- 0x2121 fn1 → mode 0x00: native target, **hi-res off**. Under Options+ it was 0x01 (wheel routed to Options+ for its own
+  smooth scrolling). `Pointer.SmoothScroll` (default off) will set bit1 for native high-resolution wheel reports.

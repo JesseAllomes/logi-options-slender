@@ -125,6 +125,21 @@ if (tc != null) Console.WriteLine($"  mode {tc.Params[0]} invert {tc.Params[1]}"
 Console.WriteLine("\n== 0x2121 hi-res wheel ==");
 await Try(device, "getMode (fn1)", FeatureId.HiResWheel, 1);
 
+Console.WriteLine("\n== 0x2111 SmartShift ==");
+var ss = await Try(device, "get (fn1)", FeatureId.SmartShiftEnhanced, 1);
+if (ss != null) Console.WriteLine($"  mode {ss.Params[0]} (1 free-spin, 2 ratchet) autoDisengage {ss.Params[1]} (0xFF = off) force {ss.Params[2]}");
+
+// --smartshift=<mode>:<threshold> writes 0x2111 fn2 [mode, threshold, current force] and reads it back.
+if (args.FirstOrDefault(a => a.StartsWith("--smartshift=", StringComparison.Ordinal)) is { } ssArg
+    && ssArg["--smartshift=".Length..].Split(':') is [var mText, var tText]
+    && byte.TryParse(mText, out var ssMode) && byte.TryParse(tText, out var ssThreshold))
+{
+    Console.WriteLine($"\n== --smartshift mode {ssMode} threshold {ssThreshold} ==");
+    await Try(device, "set (fn2)", FeatureId.SmartShiftEnhanced, 2, ssMode, ssThreshold, ss?.Params[2] ?? (byte)100);
+    var back = await Try(device, "read back", FeatureId.SmartShiftEnhanced, 1);
+    if (back != null) Console.WriteLine($"  mode {back.Params[0]} autoDisengage {back.Params[1]} force {back.Params[2]}");
+}
+
 Console.WriteLine("\n== Battery ==");
 var bat = await Try(device, "0x1004 fn1", FeatureId.UnifiedBattery, 1)
           ?? await Try(device, "0x1000 fn0", FeatureId.Battery, 0);

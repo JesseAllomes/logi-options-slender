@@ -112,9 +112,10 @@ public sealed record ExcelSettings(bool ThumbWheelScrollsColumns = true, int Col
 public sealed record PointerSettings(
     int? Dpi = null,
     bool SmartShiftEnabled = true,
-    int SmartShiftThreshold = 12,
+    int SmartShiftThreshold = 22, // matches the value Options+ left on this user's MX Master 4 (2026-10-15)
     bool InvertWheel = false,
-    bool InvertThumbWheel = true); // true matches the Options+ setting found on this user's MX Master 4 (2026-10-15)
+    bool InvertThumbWheel = true, // true matches the Options+ setting found on this user's MX Master 4 (2026-10-15)
+    bool SmoothScroll = false); // 0x2121 hi-res native reports; off until the user opts in
 
 public sealed record KeyboardSettings(bool FnLock = false);
 

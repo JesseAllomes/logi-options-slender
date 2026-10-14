@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=23 -->
+<!-- drainclamp-build: state; schema=1; generation=25 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -40,7 +40,7 @@ Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/Lo
 | m6 | haptics + Actions Ring | src/Slender.Engine;src/Slender.Tray;tests/Slender.Tests | pending | m5 |
 | m7 | tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback | src/Slender.Tray;docs/switch-over.md;tests/Slender.Tests | active | m6 |
 | m8 | hybrid button capture + HID++ write allowlist | src/Slender.Engine;src/Slender.Hidpp;tests/Slender.Tests | done | m3 |
-| m9 | keyboard support (ERGO K860): top-row keys, Fn lock | src/Slender.Hidpp;src/Slender.Engine;tests/Slender.Tests | pending | m8 |
+| m9 | keyboard support (ERGO K860): top-row keys, Fn lock | src/Slender.Hidpp;src/Slender.Engine;tests/Slender.Tests | done | m8 |
 | m10 | WinUI 3 settings app (product-ui locked design) | src/Slender.Settings;.grok/product-ui | active | m8 |
 <!-- /DC:ROADMAP -->
 
@@ -60,4 +60,5 @@ Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/Lo
 - 2026-10-14T22:43:00+00:00 0631fb3c m3 merged + read-only probe confirmed BLE PID B042/idx 0xFF/CIDs; fixed: connect now undiverts Options+ leftovers + thumb wheel native; engine wired into tray; 102 tests
 - 2026-10-14T23:32:04+00:00 6fabb77f Settings UI locked (round 4); contracts v2 (hook buttons, config v2, status) at 7187832; m8 + m10 building in worktrees -m8/-m10
 - 2026-10-14T23:36:33+00:00 22f79d82 m8 merged: hook captures middle/back/forward, HID++ divert only gesture/modeshift/sense, allowlist enforced in HidppDevice; raw channel sends made internal; 134 tests
+- 2026-10-14T23:56:42+00:00 c3ee0158 Live test: Options+ service stopped (until reboot); haptic play = fn4 confirmed; thumb wheel invert applied from config (default on); m9 keyboard merged (151 tests); keyboard router not yet wired into tray
 <!-- /DC:LOG -->

@@ -34,7 +34,11 @@ static class Program
 
         var config = store.Load();
         using var mouse = new LogiMouse(new WindowsHidTransportFactory(),
-            new LogiMouseOptions { ThumbWheelInvert = config.Pointer.InvertThumbWheel });
+            new LogiMouseOptions
+            {
+                ThumbWheelInvert = config.Pointer.InvertThumbWheel,
+                SmartShift = new SmartShiftSetting(config.Pointer.SmartShiftEnabled, (byte)config.Pointer.SmartShiftThreshold),
+            });
         using var hook = new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
         using var excel = new ExcelBridge(log);
@@ -46,6 +50,7 @@ static class Program
         {
             engine.ApplyConfig(changed);
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
+            _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
         };
         engine.Start();
 

@@ -4,7 +4,12 @@ public sealed class LogiMouseOptions : LogiDeviceOptions
 {
     /// <summary>Thumb wheel direction to apply on every connect (0x2150 invert bit); null keeps whatever the device has.</summary>
     public bool? ThumbWheelInvert { get; init; }
+    /// <summary>SmartShift auto free-spin to apply on every connect (0x2111); null keeps whatever the device has.</summary>
+    public SmartShiftSetting? SmartShift { get; init; }
 }
+
+/// <summary>SmartShift: Enabled = auto switch to free-spin when the wheel is flicked; Threshold 1-50 (Options+ sensitivity).</summary>
+public readonly record struct SmartShiftSetting(bool Enabled, byte Threshold);
 
 /// <summary>MX Master 4 over HID++ 2.0. Events fire on background threads; handlers must not call back synchronously.</summary>
 public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
@@ -19,11 +24,13 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
     private bool _thumbDesired;
     private bool _thumbApplied;
     private bool? _thumbInvertDesired;
+    private SmartShiftSetting? _smartShiftDesired;
 
     public LogiMouse(IHidppTransportFactory factory, LogiMouseOptions? options = null)
         : base(factory, options ?? new LogiMouseOptions())
     {
         _thumbInvertDesired = (options ?? new LogiMouseOptions()).ThumbWheelInvert;
+        _smartShiftDesired = (options ?? new LogiMouseOptions()).SmartShift;
     }
 
     public override string Name => "MX Master 4";
@@ -45,9 +52,42 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
     {
         bool thumb;
         bool? invert;
-        lock (State) { thumb = _thumbDesired; invert = _thumbInvertDesired; }
+        SmartShiftSetting? smartShift;
+        lock (State) { thumb = _thumbDesired; invert = _thumbInvertDesired; smartShift = _smartShiftDesired; }
         if (await TrySetThumbAsync(s, thumb, invert, ct).ConfigureAwait(false) && thumb)
             lock (State) _thumbApplied = true;
+        if (smartShift is { } ss) await TrySetSmartShiftAsync(s, ss, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 0x2111 read-modify-write: keeps the current wheel mode and force, sets the auto-disengage threshold
+    /// (0xFF = SmartShift off). Layout per docs/protocol.md; read on device 2026-10-15: [mode 1, threshold 22, force 100].
+    /// </summary>
+    private static async Task<bool> TrySetSmartShiftAsync(Session s, SmartShiftSetting setting, CancellationToken ct)
+    {
+        try
+        {
+            var p = (await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params;
+            var threshold = setting.Enabled ? Math.Clamp(setting.Threshold, (byte)1, (byte)50) : (byte)0xFF;
+            if (p[1] == threshold) return true;
+            await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 2, new byte[] { p[0], threshold, p[2] }, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (HidppException) { return false; }
+    }
+
+    /// <summary>Sets SmartShift now (if connected) and on every reconnect.</summary>
+    public async Task SetSmartShiftAsync(SmartShiftSetting setting, CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            lock (State) _smartShiftDesired = setting;
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return;
+            await TrySetSmartShiftAsync(s, setting, ct).ConfigureAwait(false);
+        }
+        finally { Gate.Release(); }
     }
 
     /// <summary>0x2121 read-modify-write: clear bit0 (native HID target) as Mouser does. Survives process exit on device.</summary>
