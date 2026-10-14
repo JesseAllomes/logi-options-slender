@@ -1,0 +1,46 @@
+{
+  "chunks": {
+    "m1": [
+      {
+        "done": true,
+        "done_at": "2026-10-14T22:21:53+00:00",
+        "est_min": 25,
+        "goal": "HID++ feature map for MX Master 4 from Mouser + MXControl",
+        "id": "c1",
+        "note": "docs/protocol.md written from scout report; PROBE items: BLE dev index, divert bits, haptic fn3/4, thumbwheel event layout, MX4 PID/CIDs",
+        "targets": [
+          "docs/protocol.md",
+          ".agent/upstream/MouseControl/core/hid_gesture.py",
+          ".agent/upstream/MouseControl/core/logi_devices.py",
+          ".agent/upstream/MXControl/Sources/MXControlHIDPP"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-14T22:14:03+00:00",
+        "est_min": 15,
+        "goal": "Options+ baseline + Excel add-in findings + trim flags",
+        "id": "c2",
+        "note": "docs/baseline.md: RAM 700MB, two Logi VSTO Excel add-ins, PERSONAL.XLSB disabled, installer flags + trim profile",
+        "targets": [
+          "docs/baseline.md",
+          ".agent/upstream/logi-options-plus-mini/logi-options-plus-mini.ps1"
+        ]
+      }
+    ]
+  },
+  "errors": [],
+  "rev": 4,
+  "schema": 1,
+  "time": [
+    {
+      "end": "2026-10-14T22:21:53+00:00",
+      "id": "s1",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-14T22:14:03+00:00"
+    }
+  ],
+  "todos": [],
+  "tokens": null
+}
