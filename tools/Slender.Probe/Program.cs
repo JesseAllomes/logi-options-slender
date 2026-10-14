@@ -4,13 +4,22 @@ using Slender.Hidpp.Transport;
 // Slender.Probe: read-only HID++ explorer for the MX Master 4. Prints raw hex for everything.
 // Opt-in flags change device state and restore it afterwards: --haptic-test, --divert-test, --thumbwheel-test.
 
+string deviceArg = args.SkipWhile(a => a != "--device").Skip(1).FirstOrDefault() ?? "mx4";
+bool k860 = deviceArg.Equals("k860", StringComparison.OrdinalIgnoreCase);
+ushort[] pids = k860 ? WindowsHidTransportFactory.ErgoK860ProductIds : WindowsHidTransportFactory.MxMaster4ProductIds;
 bool haptic = args.Contains("--haptic-test");
 bool divert = args.Contains("--divert-test");
 bool thumb = args.Contains("--thumbwheel-test");
 if (args.Contains("--help") || args.Contains("-h"))
 {
-    Console.WriteLine("Slender.Probe [--haptic-test] [--divert-test] [--thumbwheel-test]\nDefault is read-only.");
+    Console.WriteLine("Slender.Probe [--device mx4|k860] [--haptic-test] [--divert-test] [--thumbwheel-test]\nDefault is read-only.");
     return 0;
+}
+
+if (k860 && (haptic || divert || thumb))
+{
+    Console.WriteLine("State-changing flags are not allowed against the keyboard.");
+    return 1;
 }
 
 static string Hex(ReadOnlySpan<byte> b) => Convert.ToHexString(b);
@@ -19,15 +28,15 @@ Console.WriteLine("== HID collections (VID 046D) ==");
 var all = WindowsHidTransportFactory.Enumerate();
 foreach (var c in all)
 {
-    bool mx = WindowsHidTransportFactory.MxMaster4ProductIds.Contains(c.ProductId);
-    Console.WriteLine($"VID {c.VendorId:X4} PID {c.ProductId:X4} UP {c.UsagePage:X4} U {c.Usage:X4} in {c.InputLength} out {c.OutputLength} feat {c.FeatureLength}{(mx ? " [MX4 PID]" : "")}\n  {c.Path}");
+    bool mx = pids.Contains(c.ProductId);
+    Console.WriteLine($"VID {c.VendorId:X4} PID {c.ProductId:X4} UP {c.UsagePage:X4} U {c.Usage:X4} in {c.InputLength} out {c.OutputLength} feat {c.FeatureLength}{(mx ? " [selected PID]" : "")}\n  {c.Path}");
 }
 if (all.Count == 0) Console.WriteLine("(none)");
 
-var transport = new WindowsHidTransportFactory().TryOpen();
+var transport = new WindowsHidTransportFactory(pids).TryOpen();
 if (transport == null)
 {
-    Console.WriteLine("No MX Master 4 HID++ collection could be opened.");
+    Console.WriteLine("No HID++ collection could be opened for the selected device.");
     return 2;
 }
 
@@ -186,6 +195,37 @@ if (thumb)
     {
         callCt = CancellationToken.None;
         await Try(device, "restore native", FeatureId.ThumbWheel, 2, 0, 0, 0);
+    }
+}
+
+if (k860)
+{
+    Console.WriteLine("\n== Device name (0x0005) ==");
+    var nl = await Try(device, "getNameLength (fn0)", FeatureId.DeviceName, 0);
+    if (nl != null)
+    {
+        var sb = new System.Text.StringBuilder();
+        int len = nl.Params[0];
+        for (int off = 0; off < len; off += 16)
+        {
+            var chunk = await Try(device, $"getName (fn1) offset {off}", FeatureId.DeviceName, 1, (byte)off);
+            if (chunk == null) break;
+            sb.Append(System.Text.Encoding.ASCII.GetString(chunk.Params[..Math.Min(16, len - off)]));
+        }
+        Console.WriteLine($"  name: {sb}");
+    }
+
+    Console.WriteLine("\n== Fn inversion (read-only getters) ==");
+    foreach (var fid in new[] { KeyboardFeatureId.FnInversion, KeyboardFeatureId.FnInversionWithDefaultState, KeyboardFeatureId.FnInversionMultiHost })
+    {
+        var fidx = await device.GetFeatureIndexAsync(fid, ct);
+        Console.WriteLine($"0x{fid:X4} -> {(fidx is { } fv ? $"index {fv}" : "absent")}");
+        if (fidx == null) continue;
+        foreach (byte hostParam in new byte[] { 0x00, 0xFF, 0x01, 0x02 })
+        {
+            var g = await Try(device, $"0x{fid:X4} fn0 getter (host param {hostParam:X2})", fid, 0, hostParam);
+            if (g != null) Console.WriteLine($"  params: {Hex(g.Params[..6])}");
+        }
     }
 }
 

@@ -36,6 +36,8 @@ public static class HidppAllowlist
         [0x2121] = 2,
         [0x2150] = 2,
         [0x2201] = 3,
+        // ERGO K860 Fn inversion (multi-host variant, the only one the keyboard exposes): fn0 get, fn1 set. Keyboard path only.
+        [0x40A3] = 1,
     };
 
     public static bool IsAllowed(ushort featureId, byte function) =>
