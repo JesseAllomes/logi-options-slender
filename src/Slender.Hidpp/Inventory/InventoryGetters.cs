@@ -259,23 +259,17 @@ public static class InventoryGetters
                 (_, r) => D(("host", r[0]), ("inverted", r[1] != 0), ("p2", r[2]), ("p3", r[3])),
                 [[0xFF], [0], [1], [2]]),
 
-            // ---- 0x4521 / 0x4522 disable keys
+            // 0x4522, 0x4530, 0x4220 and 0x1990 are listed only: no public source names their functions, and "fn0 is a
+            // getter" is a convention, not a guarantee (orchestrator review, 2026-10-15).
+            // ---- 0x4521 disable keys
             new(0x4521, 0, "getCapabilities", solaarS + " DisableKeyboardKeys (key mask)", documented, DecodeDisableKeys),
             new(0x4521, 1, "getDisabledKeys", solaarS + " DisableKeyboardKeys (read_fnid 0x10)", documented, DecodeDisableKeys),
-            new(0x4522, 0, "getCapabilities", "Logitech x4522 DisableKeysByUsage draft spec (Solaar names the feature only)", inferred,
-                (_, r) => RawOnly(r)),
 
             // ---- keyboard platform / layout / lock keys
-            new(0x4530, 0, "getPlatform", "Logitech x4530 DualPlatform spec (Solaar names the feature only)", inferred,
-                (_, r) => D(("value", r[0]), ("raw", Hex(r, 0, 4)))),
             new(0x4540, 0, "getKeyboardLayout", solaarH + " keyboard_layout (KEYBOARD_LAYOUT_2)", documented,
                 (_, r) => D(("layout", r[0]))),
-            new(0x4220, 0, "getLockKeyState", "Logitech x4220 LockKeyState spec (Solaar names the feature only)", inferred,
-                (_, r) => D(("mask", $"0x{r[0]:X2}"), ("raw", Hex(r, 0, 4)))),
 
             // ---- lighting
-            new(0x1990, 0, "getIllumination", "Logitech x1990 Illumination spec", inferred,
-                (_, r) => D(("on", (r[0] & 1) != 0), ("raw", Hex(r, 0, 4)))),
             new(0x1982, 0, "getBacklightConfig", solaarS + " Backlight2 (read_fnid 0x00)", documented, (_, r) => RawOnly(r)),
 
             // ---- gaming
