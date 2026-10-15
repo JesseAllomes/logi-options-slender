@@ -168,7 +168,7 @@ public sealed partial class MainWindow
             button.Click += (_, _) => _config.Update(c =>
             {
                 bool off = c.Haptics.Enabled && c.Haptics.Level == 0 && level == 0; // tapping the only lit notch turns haptics off
-                return c with { Haptics = c.Haptics with { Enabled = !off, Level = level } };
+                return c with { Haptics = c.Haptics with { Enabled = !off, Level = level, Strength = (level + 1) * 25 } };
             });
             row.Children.Add(button);
         }
@@ -211,7 +211,7 @@ public sealed partial class MainWindow
                 _fnLockToggle.IsOn = c.Keyboard.FnLock;
             }
 
-            int lit = c.Haptics.Enabled ? c.Haptics.Level + 1 : 0;
+            int lit = c.Haptics.Enabled ? HapticSettings.NotchFor(c.Haptics.EffectiveStrength) + 1 : 0;
             for (int i = 0; i < _notchBars.Count; i++)
             {
                 _notchBars[i].Fill = i < lit ? Ui.Mark : Ui.Brush("Paper3ActiveBrush");

@@ -48,6 +48,7 @@ public sealed class TrayApplication : IDisposable
     private bool _connected;
     private BatteryStatus? _battery;
     private int? _dpi;
+    private MouseValues? _mouseValues;
     private bool _keyboardConnected;
     private BatteryStatus? _keyboardBattery;
     private readonly BatteryAlertState _batteryAlerts = new();
@@ -71,7 +72,7 @@ public sealed class TrayApplication : IDisposable
             () => new StatusSnapshot(
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
                 _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi,
-                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false),
+                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -621,12 +622,14 @@ public sealed class TrayApplication : IDisposable
             StartTimer(TimerBattery, BatteryIntervalMs);
             _ = RefreshBatteryAsync();
             _ = RefreshDpiAsync();
+            _ = RefreshMouseValuesAsync();
         }
         else
         {
             StopTimer(TimerBattery);
             _battery = null;
             _dpi = null;
+            _mouseValues = null;
         }
 
         UpdateStatus();
@@ -719,6 +722,48 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Re-reads the device DPI after Slender changed it, so status.json stays current.</summary>
     public void RefreshDpi() => Post(() => _ = RefreshDpiAsync());
+
+    /// <summary>Re-reads wheel resistance, Sense Panel force and haptic strength after a change or connect, so status.json stays current.</summary>
+    public void RefreshMouseValues() => Post(() => _ = RefreshMouseValuesAsync());
+
+    private async Task RefreshMouseValuesAsync()
+    {
+        if (_disposed || !_connected || _mouse is null)
+        {
+            return;
+        }
+
+        try
+        {
+            int? resistance = await _mouse.GetWheelResistanceAsync(_lifetime.Token);
+            int? force = await _mouse.GetSensePanelForceAsync(_lifetime.Token);
+            int? haptic = await _mouse.GetHapticStrengthAsync(_lifetime.Token);
+            int? baseline = _mouse.SensePanelBaseline;
+            Post(() =>
+            {
+                if (!_connected)
+                {
+                    return;
+                }
+
+                _mouseValues = new MouseValues(resistance, force, baseline, haptic);
+                // Remember the first force reading: the safe band for the Sense Panel slider is built on it.
+                if (baseline is { } b && _config.Pointer.SensePanelBaseline is null)
+                {
+                    ApplyChange(_config with { Pointer = _config.Pointer with { SensePanelBaseline = b } });
+                }
+
+                _status.Changed();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // A failed read is not fatal; Settings just shows no device value.
+        }
+    }
 
     private async Task RefreshDpiAsync()
     {

@@ -28,11 +28,13 @@ public static class HidppAllowlist
         [0x0005] = 1,
         [0x1000] = 0,
         [0x1004] = 1,
+        // Haptics: fn1 getState, fn2 setState [enabled, level 0-100] (haptic strength), fn4 play waveform. fn3 is silent.
         [0x19B0] = 4,
-        [0x19C0] = 2, // reads only
+        // Force sensing (Sense Panel): fn2 read; fn3 set force threshold [0, hi, lo] (m26). fn0/fn1 stay unused.
+        [0x19C0] = 3,
         [0x1B04] = 3,
         [0x2110] = 1,
-        [0x2111] = 2,
+        [0x2111] = 2, // SmartShift enhanced: fn1 get, fn2 set [mode, autoDisengage, torque] (wheel resistance = torque, m26)
         [0x2121] = 2,
         [0x2150] = 2,
         [0x2201] = 3,

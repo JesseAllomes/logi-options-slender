@@ -101,6 +101,10 @@ static class Program
                 SmartShift = new SmartShiftSetting(config.Pointer.SmartShiftEnabled, (byte)config.Pointer.SmartShiftThreshold),
                 SmoothScroll = config.Pointer.SmoothScroll,
                 Dpi = config.Pointer.Dpi,
+                WheelResistance = config.Pointer.WheelResistance,
+                SensePanelForce = config.Pointer.SensePanelForce,
+                SensePanelBaseline = config.Pointer.SensePanelBaseline,
+                HapticStrength = config.Haptics.EffectiveStrength,
             });
         using IInputHook hook = noDevices ? new InertHook() : new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
@@ -156,6 +160,7 @@ static class Program
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);
             _ = mouse.SetDpiAsync(changed.Pointer.Dpi, CancellationToken.None).ContinueWith(_ => app.RefreshDpi(), TaskScheduler.Default);
+            _ = ApplyMouseFeel(mouse, changed).ContinueWith(_ => app.RefreshMouseValues(), TaskScheduler.Default);
         };
         app.Run();
         log.Info("Slender stopping");
@@ -165,5 +170,13 @@ static class Program
         }
 
         return app.RestartRequested;
+    }
+
+    /// <summary>Wheel resistance, Sense Panel force and haptic strength (m26): applied now and re-applied on every connect; null leaves the device alone.</summary>
+    private static async Task ApplyMouseFeel(LogiMouse mouse, SlenderConfig config)
+    {
+        await mouse.SetWheelResistanceAsync(config.Pointer.WheelResistance, CancellationToken.None).ConfigureAwait(false);
+        await mouse.SetSensePanelForceAsync(config.Pointer.SensePanelForce, CancellationToken.None).ConfigureAwait(false);
+        await mouse.SetHapticStrengthAsync(config.Haptics.EffectiveStrength, CancellationToken.None).ConfigureAwait(false);
     }
 }

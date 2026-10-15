@@ -158,7 +158,7 @@ public sealed class ConfigV2Tests : IDisposable
 
         PointerSettings pointer = Store().Load().Pointer;
 
-        Assert.Equal(100, pointer.Dpi);
+        Assert.Equal(200, pointer.Dpi);
         Assert.Equal(255, pointer.SmartShiftThreshold);
     }
 
