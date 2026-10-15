@@ -115,7 +115,21 @@ public sealed class JsonConfigStore : IConfigStore
         {
             Pointer = ToPointer(dto.Pointer),
             Keyboard = new KeyboardSettings(dto.Keyboard?.FnLock ?? false),
+            BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
         };
+    }
+
+    private static BatteryAlertSettings ToBatteryAlerts(BatteryAlertsDto? b)
+    {
+        if (b is null)
+        {
+            return new BatteryAlertSettings();
+        }
+
+        return new BatteryAlertSettings(
+            b.Enabled,
+            Math.Clamp(b.MouseThresholdPercent, 1, 99),
+            Math.Clamp(b.KeyboardThresholdPercent, 1, 99));
     }
 
     private static PointerSettings ToPointer(PointerDto? p)
@@ -176,6 +190,12 @@ public sealed class JsonConfigStore : IConfigStore
                 InvertThumbWheel = config.Pointer.InvertThumbWheel,
             },
             Keyboard = new KeyboardDto { FnLock = config.Keyboard.FnLock },
+            BatteryAlerts = new BatteryAlertsDto
+            {
+                Enabled = config.BatteryAlerts.Enabled,
+                MouseThresholdPercent = config.BatteryAlerts.MouseThresholdPercent,
+                KeyboardThresholdPercent = config.BatteryAlerts.KeyboardThresholdPercent,
+            },
             Profiles = new List<ProfileDto>(config.Profiles.Count),
         };
 
@@ -258,6 +278,14 @@ public sealed class JsonConfigStore : IConfigStore
         public HapticsDto? Haptics { get; set; }
         public PointerDto? Pointer { get; set; }
         public KeyboardDto? Keyboard { get; set; }
+        public BatteryAlertsDto? BatteryAlerts { get; set; }
+    }
+
+    internal sealed class BatteryAlertsDto
+    {
+        public bool Enabled { get; set; } = true;
+        public int MouseThresholdPercent { get; set; } = 15;
+        public int KeyboardThresholdPercent { get; set; } = 10;
     }
 
     internal sealed class PointerDto
