@@ -82,4 +82,7 @@ public interface ILogiMouse : IDisposable
     Task PlayHapticAsync(byte waveform, CancellationToken ct);
 
     Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct);
+
+    /// <summary>Current sensor DPI (0x2201 read); null when disconnected or unsupported.</summary>
+    Task<int?> GetDpiAsync(CancellationToken ct) => Task.FromResult<int?>(null);
 }

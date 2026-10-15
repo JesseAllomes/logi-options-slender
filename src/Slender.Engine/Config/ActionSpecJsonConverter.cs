@@ -26,6 +26,7 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "actionsRing" => new ActionSpec.ActionsRing(),
             "launch" => new ActionSpec.Launch(ReadString(root, "target"), ReadOptionalString(root, "arguments")),
             "disabled" => new ActionSpec.Disabled(),
+            "brightness" => new ActionSpec.Brightness(ReadInt(root, "step")),
             _ => throw new FormatException($"Unknown action type '{type}'."),
         };
     }
@@ -61,6 +62,10 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.Disabled:
                 writer.WriteString("type", "disabled");
                 break;
+            case ActionSpec.Brightness brightness:
+                writer.WriteString("type", "brightness");
+                writer.WriteNumber("step", brightness.StepPercent);
+                break;
             default:
                 throw new NotSupportedException($"Unsupported action {value.GetType().Name}.");
         }
@@ -76,6 +81,16 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
         }
 
         throw new FormatException($"Missing string property '{name}'.");
+    }
+
+    private static int ReadInt(JsonElement obj, string name)
+    {
+        if (obj.TryGetProperty(name, out JsonElement el) && el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out int v))
+        {
+            return v;
+        }
+
+        throw new FormatException($"Missing integer property '{name}'.");
     }
 
     private static string? ReadOptionalString(JsonElement obj, string name) =>

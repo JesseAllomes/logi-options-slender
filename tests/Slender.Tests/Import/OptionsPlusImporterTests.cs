@@ -85,10 +85,8 @@ public class OptionsPlusImporterTests
         Assert.Equal(new ActionSpec.Keys("Win+Tab"), k[224]);
         Assert.Equal(new ActionSpec.Keys("Menu"), k[234]);
         Assert.Equal(new ActionSpec.Keys("Alt+Tab"), k[256]);
-        Assert.False(k.ContainsKey(199));
-        Assert.False(k.ContainsKey(200));
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("c199") && n.Contains("BRIGHTNESS_DOWN"));
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("c200") && n.Contains("BRIGHTNESS_UP"));
+        Assert.Equal(new ActionSpec.Brightness(-10), k[199]);
+        Assert.Equal(new ActionSpec.Brightness(10), k[200]);
     }
 
     [Fact]

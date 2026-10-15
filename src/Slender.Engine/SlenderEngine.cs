@@ -27,6 +27,7 @@ public sealed class SlenderEngine : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private volatile SlenderConfig _config;
     private IReadOnlyList<ushort> _diverted = [];
+    private CancellationTokenSource? _foregroundDebounce;
     private Task _divertChain = Task.CompletedTask;
     private bool _started, _disposed;
 
@@ -65,6 +66,7 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ConnectionChanged += OnConnection;
         _hook.HorizontalWheel += OnWheel;
         _hook.ButtonChanged += OnHookButton;
+        _foreground.Changed += OnForegroundChanged;
         try { _hook.Start(); }
         catch (Exception ex) { _log.Error("mouse hook failed to start; thumb wheel will not scroll Excel", ex); }
         try { _ = ObserveAsync(_mouse.StartAsync(_cts.Token), "mouse start"); }
@@ -83,23 +85,74 @@ public sealed class SlenderEngine : IDisposable
     }
 
     /// <summary>
-    /// HID++-diverted controls: only Gesture, Mode shift and Sense Panel, and only when bound (non-None) in some profile.
-    /// Middle/Back/Forward are captured by the mouse hook and never diverted.
+    /// HID++-diverted controls over every profile (the union): only Gesture, Mode shift and Sense Panel, and only when bound
+    /// (non-None) in some profile, or Gesture when a swipe is bound. Middle/Back/Forward are captured by the mouse hook and
+    /// never diverted. The live set is per foreground app, see the overload with a process name.
     /// </summary>
-    public static IReadOnlyList<ushort> ComputeDivertSet(SlenderConfig config) =>
-        config.Profiles
+    public static IReadOnlyList<ushort> ComputeDivertSet(SlenderConfig config)
+    {
+        var set = config.Profiles
             .SelectMany(p => p.Bindings)
             .Where(kv => kv.Value is not null and not ActionSpec.None && IsHidppControl(kv.Key))
             .Select(kv => kv.Key)
-            .Distinct()
-            .Order()
-            .ToList();
+            .ToHashSet();
+        if (config.Profiles.Any(p => p.GestureSwipes.Values.Any(a => a is not null and not ActionSpec.None))) set.Add(ControlId.Gesture);
+        return [.. set.Order()];
+    }
+
+    /// <summary>
+    /// The controls to divert while <paramref name="process"/> is in front. A control is diverted only when its effective
+    /// binding is not None: the app's own entry wins (an explicit None leaves the control native, e.g. mode shift keeps toggling
+    /// ratchet/free-spin), else the default profile's. The gesture button is also diverted when any swipe is bound for the effective profile.
+    /// </summary>
+    public static IReadOnlyList<ushort> ComputeDivertSet(SlenderConfig config, string? process)
+    {
+        var profile = ProfileResolver.Resolve(config, process);
+        var def = ProfileResolver.Default(config);
+        var set = new SortedSet<ushort>();
+        foreach (var id in new[] { ControlId.Gesture, ControlId.ModeShift, ControlId.SensePanel })
+        {
+            var effective = profile.Bindings.TryGetValue(id, out var own) && own is not null ? own : Bound(def, id);
+            if (effective is not null and not ActionSpec.None) set.Add(id);
+        }
+        foreach (var dir in Enum.GetValues<GestureDirection>())
+        {
+            var effective = profile.GestureSwipes.TryGetValue(dir, out var own) && own is not null ? own
+                : def.GestureSwipes.TryGetValue(dir, out var d) ? d : null;
+            if (effective is not null and not ActionSpec.None) { set.Add(ControlId.Gesture); break; }
+        }
+        return [.. set];
+    }
 
     private static bool IsHidppControl(ushort id) => id is ControlId.Gesture or ControlId.ModeShift or ControlId.SensePanel;
 
+    /// <summary>Quiet period after a foreground change before the divert set is recomputed; rapid switches collapse into one. Tests set 0.</summary>
+    internal int ForegroundDebounceMs { get; set; } = 150;
+
+    private void OnForegroundChanged(object? sender, string? process)
+    {
+        try
+        {
+            if (ForegroundDebounceMs <= 0) { Rediverts(force: false); return; }
+            var cts = new CancellationTokenSource();
+            lock (_gate)
+            {
+                if (_disposed) return;
+                _foregroundDebounce?.Cancel();
+                _foregroundDebounce = cts;
+            }
+            _ = Task.Delay(ForegroundDebounceMs, cts.Token).ContinueWith(t =>
+            {
+                try { if (!t.IsCanceled && !_disposed) Rediverts(force: false); }
+                catch (Exception ex) { SafeLog("foreground divert failed", ex); }
+            }, TaskScheduler.Default);
+        }
+        catch (Exception ex) { SafeLog("foreground change handler failed", ex); }
+    }
+
     private void Rediverts(bool force)
     {
-        var set = ComputeDivertSet(_config);
+        var set = ComputeDivertSet(_config, _foreground.ProcessName);
         lock (_gate)
         {
             if (!force && _diverted.SequenceEqual(set)) return;
@@ -348,6 +401,8 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ConnectionChanged -= OnConnection;
         _hook.HorizontalWheel -= OnWheel;
         _hook.ButtonChanged -= OnHookButton;
+        _foreground.Changed -= OnForegroundChanged;
+        lock (_gate) _foregroundDebounce?.Cancel();
         _cts.Cancel();
         _queue.Dispose();
         _cts.Dispose();

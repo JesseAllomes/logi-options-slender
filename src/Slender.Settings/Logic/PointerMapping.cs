@@ -19,5 +19,8 @@ public static class PointerMapping
 
     public static string DpiText(int? dpi) => dpi is null ? "Default" : $"{dpi} DPI";
 
+    /// <summary>Readout while the speed is Default: the mouse's own speed when the tray has reported it.</summary>
+    public static string DefaultText(int? deviceDpi) => deviceDpi is { } d ? $"Default ({d} DPI)" : "Default";
+
     public static int ClampThreshold(double value) => Math.Clamp((int)Math.Round(value), ThresholdMin, ThresholdMax);
 }

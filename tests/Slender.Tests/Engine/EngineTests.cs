@@ -494,7 +494,7 @@ public class EngineTests
         Assert.Equal(new[] { ControlId.Gesture, ControlId.SensePanel }, SlenderEngine.ComputeDivertSet(cfg));
         var r = new Rig(cfg);
         WaitFor(() => r.Mouse.DivertCount == 1);
-        Assert.Equal(new[] { ControlId.Gesture, ControlId.SensePanel }, r.Mouse.Diverts[0]);
+        Assert.Equal(new[] { ControlId.SensePanel }, r.Mouse.Diverts[0]); // live set follows the foreground app (none: default profile only)
     }
 
     [Fact]

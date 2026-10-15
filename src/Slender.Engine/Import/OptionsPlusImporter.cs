@@ -324,7 +324,7 @@ public static partial class OptionsPlusImporter
             {
                 JsonNode? active = card["mouseSettings"]?["pointerSpeed"]?["active"];
                 string speed = active is null ? "no pointer speed" : $"pointer speed {Num(active["value"])} (Options+ DPI level {Num(active["dpiLevel"])})";
-                notes.Add(new(ImportNoteKind.Unmapped, where, $"{speed}: Options+ stores a relative speed, not a DPI value, so Pointer.Dpi was left as it was ({(current.Pointer.Dpi is { } d ? d + " DPI" : "device default")})."));
+                notes.Add(new(ImportNoteKind.Unmapped, where, $"{speed}: Options+ stores a relative speed, not a DPI value, so Pointer.Dpi was left as it was ({(current.Pointer.Dpi is { } d ? d + " DPI" : "device default")}).{PointerSpeedHint}"));
             }
             else if (mouse && rest == "mouse_scroll_wheel_settings")
             {
@@ -479,7 +479,7 @@ public static partial class OptionsPlusImporter
                     "TASK_VIEW" => Ok(new ActionSpec.Keys("Win+Tab")),
                     "SWITCH_APPS" => Ok(new ActionSpec.Keys("Alt+Tab")),
                     "APP_MENU" => Ok(new ActionSpec.Keys("Menu")),
-                    "BRIGHTNESS_UP" or "BRIGHTNESS_DOWN" => Fail($"System action {system}: Windows has no brightness key chord that Slender can send."),
+                    "BRIGHTNESS_UP" or "BRIGHTNESS_DOWN" => MapBrightness(system),
                     _ => Fail($"System action '{system}' has no Slender equivalent."),
                 };
             case "QUICK_LAUNCH":

@@ -87,6 +87,8 @@ public abstract record ActionSpec
     public sealed record Launch(string Target, string? Arguments = null) : ActionSpec;
     /// <summary>Turns the control off: the press is swallowed and nothing runs (unlike None, which passes the native input through).</summary>
     public sealed record Disabled : ActionSpec;
+    /// <summary>Changes the brightness of the monitor under the cursor by StepPercent points (negative = dimmer).</summary>
+    public sealed record Brightness(int StepPercent) : ActionSpec;
 }
 
 /// <summary>Executes actions in the foreground app.</summary>
@@ -186,7 +188,11 @@ public interface IConfigStore
 }
 
 /// <summary>One device as the tray last saw it.</summary>
-public sealed record DeviceState(string Id, string Name, bool Connected, int? BatteryPercent, bool Charging, string? BatteryText = null);
+public sealed record DeviceState(string Id, string Name, bool Connected, int? BatteryPercent, bool Charging, string? BatteryText = null)
+{
+    /// <summary>Current pointer speed read from the mouse (0x2201); null when unknown or not a mouse.</summary>
+    public int? Dpi { get; init; }
+}
 
 /// <summary>
 /// Written by the tray to %LOCALAPPDATA%\Slender\status.json whenever it changes (atomic replace); read by the settings app.

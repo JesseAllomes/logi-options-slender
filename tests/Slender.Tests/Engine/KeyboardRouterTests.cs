@@ -74,7 +74,7 @@ public class KeyboardRouterTests
     public async Task ApplyConfig_reapplies_fn_lock_only_on_change_and_diverts_only_when_set_changes()
     {
         var a = P(null, (KeyboardId.Mute, new ActionSpec.Keys("F1")));
-        var (r, kb, _, _, _) = Make(Cfg(false, a));
+        var (r, kb, fg, _, _) = Make(Cfg(false, a));
         using (r)
         {
             r.Start();
@@ -91,6 +91,9 @@ public class KeyboardRouterTests
             Assert.Equal(1, kb.DivertCount);
 
             r.ApplyConfig(Cfg(true, a, P("excel", (KeyboardId.Lock, new ActionSpec.Keys("F2")))));
+            await Task.Delay(50);
+            Assert.Equal(1, kb.DivertCount); // Lock is only bound in excel; not in front yet
+            fg.Switch("excel");
             await Wait.UntilAsync(() => kb.DivertCount == 2);
             Assert.Equal(new[] { KeyboardId.Lock, KeyboardId.Mute }, kb.Diverts[1]);
             Assert.Equal(2, kb.FnCount);

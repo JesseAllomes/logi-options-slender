@@ -46,6 +46,7 @@ public sealed class TrayApplication : IDisposable
     private SlenderConfig _config;
     private bool _connected;
     private BatteryStatus? _battery;
+    private int? _dpi;
     private bool _keyboardConnected;
     private BatteryStatus? _keyboardBattery;
     private readonly BatteryAlertState _batteryAlerts = new();
@@ -66,7 +67,7 @@ public sealed class TrayApplication : IDisposable
         _status = new StatusPublisher(
             () => new StatusSnapshot(
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
-                _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused),
+                _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -543,11 +544,13 @@ public sealed class TrayApplication : IDisposable
         {
             StartTimer(TimerBattery, BatteryIntervalMs);
             _ = RefreshBatteryAsync();
+            _ = RefreshDpiAsync();
         }
         else
         {
             StopTimer(TimerBattery);
             _battery = null;
+            _dpi = null;
         }
 
         UpdateStatus();
@@ -635,6 +638,36 @@ public sealed class TrayApplication : IDisposable
             _paused = paused;
             UpdateStatus();
             _status.Changed();
+        }
+    }
+
+    private async Task RefreshDpiAsync()
+    {
+        if (_disposed || !_connected || _mouse is null)
+        {
+            return;
+        }
+
+        try
+        {
+            int? dpi = await _mouse.GetDpiAsync(_lifetime.Token);
+            Post(() =>
+            {
+                if (!_connected || dpi is null)
+                {
+                    return;
+                }
+
+                _dpi = dpi;
+                _status.Changed();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // A failed DPI read is not fatal; the settings app just shows no current speed.
         }
     }
 

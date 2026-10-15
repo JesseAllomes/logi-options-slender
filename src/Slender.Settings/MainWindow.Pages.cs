@@ -142,13 +142,15 @@ public sealed partial class MainWindow
         AddRow("Invert main wheel", "Spin the wheel toward you to scroll up.",
             PageToggle("Invert main wheel", c.Pointer.InvertWheel, on => Edit(p => p with { InvertWheel = on })));
 
-        Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? PointerMapping.DpiShown,
+        int? deviceDpi = _status.Device("mx-master-4")?.Dpi; // what the mouse reports now (status.json); shown while the speed is Default
+        int restDpi = deviceDpi is { } dd ? PointerMapping.SnapDpi(dd) : PointerMapping.DpiShown;
+        Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? restDpi,
             v => { }, v => PointerMapping.DpiText(PointerMapping.SnapDpi(v)), out TextBlock dpiText);
-        dpiText.Width = 84;
+        dpiText.Width = 120;
         bool setting = false;
         void ShowDefault(bool isDefault)
         {
-            dpiText.Text = isDefault ? "Default" : PointerMapping.DpiText(PointerMapping.SnapDpi(dpi.Value));
+            dpiText.Text = isDefault ? PointerMapping.DefaultText(deviceDpi) : PointerMapping.DpiText(PointerMapping.SnapDpi(dpi.Value));
             dpiText.Opacity = isDefault ? 0.6 : 1;
         }
 
@@ -168,7 +170,7 @@ public sealed partial class MainWindow
         reset.Click += (_, _) =>
         {
             setting = true;
-            dpi.Value = PointerMapping.DpiShown;
+            dpi.Value = restDpi;
             setting = false;
             ShowDefault(true);
             Edit(p => p with { Dpi = null });

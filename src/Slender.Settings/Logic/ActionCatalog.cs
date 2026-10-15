@@ -119,6 +119,7 @@ public static class ActionCatalog
         ActionSpec.ActionsRing => new ActionLabel("Actions Ring", []),
         ActionSpec.Launch launch => new ActionLabel(LaunchName(launch.Target), []),
         ActionSpec.Disabled => new ActionLabel("Off", []),
+        ActionSpec.Brightness b => new ActionLabel(b.StepPercent < 0 ? "Brightness down" : "Brightness up", []),
         _ => new ActionLabel("Not assigned", []),
     };
 
@@ -185,6 +186,13 @@ public static class ActionCatalog
         new("Turn off", new ActionSpec.Disabled()),
     ];
 
+    /// <summary>Changes the brightness of the monitor under the cursor (laptop panel or DDC/CI external) by 10 points per press.</summary>
+    public static IReadOnlyList<ActionOption> BrightnessOptions { get; } =
+    [
+        new("Brightness up", new ActionSpec.Brightness(10)),
+        new("Brightness down", new ActionSpec.Brightness(-10)),
+    ];
+
     public static IReadOnlyList<ActionOption> RingOptions { get; } =
     [
         new("Show Actions Ring", new ActionSpec.ActionsRing()),
@@ -220,6 +228,8 @@ public static class ActionCatalog
         new("Mute", new ActionSpec.Keys("VolumeMute")),
         new("Volume down", new ActionSpec.Keys("VolumeDown")),
         new("Volume up", new ActionSpec.Keys("VolumeUp")),
+        new("Brightness down", new ActionSpec.Brightness(-10)),
+        new("Brightness up", new ActionSpec.Brightness(10)),
     ];
 }
 

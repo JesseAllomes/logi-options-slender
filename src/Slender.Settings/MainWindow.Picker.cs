@@ -64,7 +64,8 @@ public sealed partial class MainWindow
             ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
-            ActionSpec.Launch or ActionSpec.Disabled => "more",
+            ActionSpec.Brightness when _kind == DeviceKind.Keyboard => "media",
+            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness => "more",
             _ => "default",
         };
 
@@ -160,7 +161,7 @@ public sealed partial class MainWindow
     /// </summary>
     private (FrameworkElement Content, FrameworkElement? Focus) MoreTab(ControlInfo info, ActionSpec? own, Action<ActionSpec?> commit)
     {
-        (FrameworkElement off, FrameworkElement? focus) = OptionList(ActionCatalog.OffOptions, own, commit);
+        (FrameworkElement off, FrameworkElement? focus) = OptionList([.. ActionCatalog.OffOptions, .. ActionCatalog.BrightnessOptions], own, commit);
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(off);
         if (info.Id == DeviceIds.ThumbWheelPseudoId)
