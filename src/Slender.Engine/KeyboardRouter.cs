@@ -208,10 +208,18 @@ public sealed class KeyboardRouter : IDisposable
                 if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
                 if (action is ActionSpec.None) return;
             }
+            if (action is ActionSpec.ToggleThumbWheelMode)
+            {
+                if (e.Pressed) ThumbWheelToggleRequested?.Invoke(this, EventArgs.Empty);
+                return;
+            }
             _executor.Execute(action, e.Pressed);
         }
         catch (Exception ex) { _log.Error("key handling failed", ex); }
     }
+
+    /// <summary>A key bound to "Switch thumb wheel mode" went down; the engine owns the mode (raised on the router's worker thread).</summary>
+    public event EventHandler? ThumbWheelToggleRequested;
 
     /// <summary>A key bound to the Actions Ring went down or up (raised on the router's worker thread).</summary>
     public event EventHandler<RingTriggerEventArgs>? RingTrigger;

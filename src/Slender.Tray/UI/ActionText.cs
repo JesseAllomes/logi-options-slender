@@ -16,6 +16,7 @@ public static class ActionText
         ActionSpec.Disabled => "Off",
         ActionSpec.Brightness b => b.StepPercent >= 0 ? "Brightness up" : "Brightness down",
         ActionSpec.Text t => $"Type: {t.Value}",
+        ActionSpec.ToggleThumbWheelMode => "Switch thumb wheel mode",
         _ => action.GetType().Name,
     };
 }

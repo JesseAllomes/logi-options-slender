@@ -262,9 +262,12 @@ public sealed partial class MainWindow : Window
         return keys;
     }
 
+    /// <summary>Pages whose content depends on the app chosen in the strip.</summary>
+    private bool AppPage => _page is Page.Device or Page.Ring or Page.Pointer;
+
     private void StepApp(int delta)
     {
-        if (_page is not (Page.Device or Page.Ring))
+        if (!AppPage)
         {
             return;
         }
@@ -277,7 +280,7 @@ public sealed partial class MainWindow : Window
     private void SelectAppByIndex(int index)
     {
         List<string?> keys = AppKeys();
-        if (_page is Page.Device or Page.Ring && index < keys.Count)
+        if (AppPage && index < keys.Count)
         {
             SelectApp(keys[index]);
         }
@@ -399,6 +402,10 @@ public sealed partial class MainWindow : Window
         {
             RefreshRing();
         }
+        else if (_page == Page.Pointer)
+        {
+            RefreshDualThumb();
+        }
 
         RefreshCompare();
     }
@@ -437,7 +444,7 @@ public sealed partial class MainWindow : Window
         HeadingPanel.Visibility = device ? Visibility.Visible : Visibility.Collapsed;
         PageScroll.Visibility = device ? Visibility.Collapsed : Visibility.Visible;
         BottomBar.Visibility = device ? Visibility.Visible : Visibility.Collapsed;
-        bool strip = device || _page == Page.Ring; // the ring's slots depend on the app chosen in the strip
+        bool strip = AppPage; // the ring's slots and the dual thumb wheel depend on the app chosen in the strip
         StripBorder.Opacity = strip ? 1 : 0.35;
         StripPanel.IsHitTestVisible = strip;
     }
@@ -456,7 +463,7 @@ public sealed partial class MainWindow : Window
 
     private void SelectApp(string? app)
     {
-        if (_page is not (Page.Device or Page.Ring))
+        if (!AppPage)
         {
             _page = Page.Device;
         }
