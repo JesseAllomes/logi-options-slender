@@ -1,0 +1,1659 @@
+{
+  "device": "mx-master-4-2b042",
+  "generatedAt": "2026-10-15 21:31:40 \u002B11:00",
+  "swId": 12,
+  "deviceIndex": 1,
+  "hidCollection": "UP FF43 U 0202 in 20 out 20",
+  "productId": 45122,
+  "protocolVersion": "4.5",
+  "deviceName": "MX Master 4",
+  "deviceType": "mouse",
+  "friendlyName": "MX Master 4",
+  "featureCount": 45,
+  "requestsSent": 92,
+  "errorCount": 0,
+  "firmware": [
+    {
+      "entity": 0,
+      "kind": "bootloader",
+      "name": "LD",
+      "version": "04.00",
+      "build": "0000",
+      "active": false
+    },
+    {
+      "entity": 1,
+      "kind": "firmware",
+      "name": "RBM",
+      "version": "27.02",
+      "build": "0017",
+      "active": false
+    },
+    {
+      "entity": 2,
+      "kind": "firmware",
+      "name": "RBM",
+      "version": "27.03",
+      "build": "0019",
+      "active": true
+    },
+    {
+      "entity": 3,
+      "kind": "hardware",
+      "name": "HW",
+      "version": "00.00",
+      "build": "0000",
+      "active": false
+    }
+  ],
+  "features": [
+    {
+      "index": 0,
+      "id": 0,
+      "idHex": "0x0000",
+      "name": "IRoot",
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "read in the IRoot/IFeatureSet enumeration phase",
+      "calls": [
+        {
+          "getter": "ping",
+          "function": 1,
+          "requestHex": "00005A",
+          "status": "ok",
+          "replyHex": "04055A00000000000000000000000000",
+          "decoded": {
+            "major": 4,
+            "minor": 5,
+            "echo": 90
+          }
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": 1,
+      "idHex": "0x0001",
+      "name": "IFeatureSet",
+      "version": 2,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "read in the IRoot/IFeatureSet enumeration phase",
+      "calls": [
+        {
+          "getter": "IRoot.getFeature(0x0001)",
+          "function": 0,
+          "requestHex": "000100",
+          "status": "ok",
+          "replyHex": "01000200000000000000000000000000",
+          "decoded": {
+            "index": 1,
+            "typeFlags": 0,
+            "version": 2
+          }
+        },
+        {
+          "getter": "IFeatureSet.getCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "2D000000000000000000000000000000",
+          "decoded": {
+            "count": 45
+          }
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": 3,
+      "idHex": "0x0003",
+      "name": "DeviceFwVersion",
+      "version": 8,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getEntityCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "047ACD2C770002B04200000000000100",
+          "decoded": {
+            "entityCount": 4,
+            "raw": "047ACD2C"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "014C440004000000000000642BA1A100",
+          "decoded": {
+            "kind": "bootloader",
+            "name": "LD",
+            "version": "04.00",
+            "build": "0000",
+            "active": false,
+            "extra": "0000642BA1A100"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #1",
+          "function": 1,
+          "requestHex": "01",
+          "status": "ok",
+          "replyHex": "0052424D2702001700B0423886094C00",
+          "decoded": {
+            "kind": "firmware",
+            "name": "RBM",
+            "version": "27.02",
+            "build": "0017",
+            "active": false,
+            "extra": "B0423886094C00"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #2",
+          "function": 1,
+          "requestHex": "02",
+          "status": "ok",
+          "replyHex": "0052424D2703001905B04203CE08D800",
+          "decoded": {
+            "kind": "firmware",
+            "name": "RBM",
+            "version": "27.03",
+            "build": "0019",
+            "active": true,
+            "extra": "B04203CE08D800"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #3",
+          "function": 1,
+          "requestHex": "03",
+          "status": "ok",
+          "replyHex": "02485700000000000000000000000000",
+          "decoded": {
+            "kind": "hardware",
+            "name": "HW",
+            "version": "00.00",
+            "build": "0000",
+            "active": false,
+            "extra": "00000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": 5,
+      "idHex": "0x0005",
+      "name": "DeviceName",
+      "version": 5,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getNameCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "0B000000000000000000000000000000",
+          "decoded": {
+            "length": 11
+          }
+        },
+        {
+          "getter": "getName(offset) @0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "4D58204D617374657220340000000000",
+          "decoded": {
+            "chunk": "MX Master 4"
+          }
+        },
+        {
+          "getter": "getType",
+          "function": 2,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "03000000000000000000000000000000",
+          "decoded": {
+            "type": 3,
+            "name": "mouse"
+          }
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "id": 7499,
+      "idHex": "0x1D4B",
+      "name": "WirelessDeviceStatus",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 5,
+      "id": 32,
+      "idHex": "0x0020",
+      "name": "ConfigChange",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 6,
+      "id": 33,
+      "idHex": "0x0021",
+      "name": "CryptoId",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 7,
+      "id": 7,
+      "idHex": "0x0007",
+      "name": "DeviceFriendlyName",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getFriendlyNameLen",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "0B0E0B00000000000000000000000000",
+          "decoded": {
+            "length": 11,
+            "maxLength": 14,
+            "defaultLength": 11
+          }
+        },
+        {
+          "getter": "getFriendlyName(offset) @0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "004D58204D6173746572203400000000",
+          "decoded": {
+            "chunk": "MX Master 4"
+          }
+        },
+        {
+          "getter": "getDefaultName(offset) @0",
+          "function": 2,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "004D58204D6173746572203400000000",
+          "decoded": {
+            "chunk": "MX Master 4"
+          }
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "id": 17,
+      "idHex": "0x0011",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 9,
+      "id": 4100,
+      "idHex": "0x1004",
+      "name": "UnifiedBattery",
+      "version": 5,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getCapabilities",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "0F030000000000000000000000000000",
+          "decoded": {
+            "supportedLevels": [
+              "critical",
+              "low",
+              "good",
+              "full"
+            ],
+            "flagsRaw": "0x03",
+            "raw": "0F0300000000"
+          }
+        },
+        {
+          "getter": "getStatus",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "3C080000000000000000000000000000",
+          "decoded": {
+            "percent": 60,
+            "level": [
+              "full"
+            ],
+            "charging": "discharging",
+            "externalPower": 0
+          }
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "id": 5889,
+      "idHex": "0x1701",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 11,
+      "id": 6576,
+      "idHex": "0x19B0",
+      "name": "Haptic",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "optionsPlusNote": "Options\u002B slot mx-master-4-2b042_haptic_settings",
+      "calls": [
+        {
+          "getter": "getState",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "012D0000000000000000000000000000",
+          "decoded": {
+            "enabled": true,
+            "level": 45
+          }
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "id": 6592,
+      "idHex": "0x19C0",
+      "name": "ForceSensingButton",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "optionsPlusNote": "Options\u002B slot mx-master-4-2b042_force_sensing_settings",
+      "calls": [
+        {
+          "getter": "readForce",
+          "function": 2,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "0F2F0000000000000000000000000000",
+          "decoded": {
+            "value": 3887,
+            "raw": "0F2F0000"
+          }
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "id": 6916,
+      "idHex": "0x1B04",
+      "name": "ReprogControlsV4",
+      "version": 6,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getControlCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "09000000000000000000000000000000",
+          "decoded": {
+            "count": 9
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "00500038010001000400000000000000",
+          "decoded": {
+            "cid": "0x0050",
+            "task": "0x0038",
+            "flags": 1025,
+            "flagNames": [
+              "mouse",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 1,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #1",
+          "function": 1,
+          "requestHex": "01",
+          "status": "ok",
+          "replyHex": "00510039010001000400000000000000",
+          "decoded": {
+            "cid": "0x0051",
+            "task": "0x0039",
+            "flags": 1025,
+            "flagNames": [
+              "mouse",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 1,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #2",
+          "function": 1,
+          "requestHex": "02",
+          "status": "ok",
+          "replyHex": "0052003A310002030500000000000000",
+          "decoded": {
+            "cid": "0x0052",
+            "task": "0x003A",
+            "flags": 1329,
+            "flagNames": [
+              "mouse",
+              "reprogrammable",
+              "divertable",
+              "raw-xy",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 2,
+            "groupMask": 3
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #3",
+          "function": 1,
+          "requestHex": "03",
+          "status": "ok",
+          "replyHex": "0053003C310002030500000000000000",
+          "decoded": {
+            "cid": "0x0053",
+            "task": "0x003C",
+            "flags": 1329,
+            "flagNames": [
+              "mouse",
+              "reprogrammable",
+              "divertable",
+              "raw-xy",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 2,
+            "groupMask": 3
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #4",
+          "function": 1,
+          "requestHex": "04",
+          "status": "ok",
+          "replyHex": "0056003E310002030500000000000000",
+          "decoded": {
+            "cid": "0x0056",
+            "task": "0x003E",
+            "flags": 1329,
+            "flagNames": [
+              "mouse",
+              "reprogrammable",
+              "divertable",
+              "raw-xy",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 2,
+            "groupMask": 3
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #5",
+          "function": 1,
+          "requestHex": "05",
+          "status": "ok",
+          "replyHex": "00C3009C310002030500000000000000",
+          "decoded": {
+            "cid": "0x00C3",
+            "task": "0x009C",
+            "flags": 1329,
+            "flagNames": [
+              "mouse",
+              "reprogrammable",
+              "divertable",
+              "raw-xy",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 2,
+            "groupMask": 3
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #6",
+          "function": 1,
+          "requestHex": "06",
+          "status": "ok",
+          "replyHex": "00C4009D310002030500000000000000",
+          "decoded": {
+            "cid": "0x00C4",
+            "task": "0x009D",
+            "flags": 1329,
+            "flagNames": [
+              "mouse",
+              "reprogrammable",
+              "divertable",
+              "raw-xy",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 2,
+            "groupMask": 3
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #7",
+          "function": 1,
+          "requestHex": "07",
+          "status": "ok",
+          "replyHex": "01A00109310002030500000000000000",
+          "decoded": {
+            "cid": "0x01A0",
+            "task": "0x0109",
+            "flags": 1329,
+            "flagNames": [
+              "mouse",
+              "reprogrammable",
+              "divertable",
+              "raw-xy",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 2,
+            "groupMask": 3
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #8",
+          "function": 1,
+          "requestHex": "08",
+          "status": "ok",
+          "replyHex": "00D700B4A00003000300000000000000",
+          "decoded": {
+            "cid": "0x00D7",
+            "task": "0x00B4",
+            "flags": 928,
+            "flagNames": [
+              "divertable",
+              "virtual",
+              "raw-xy",
+              "force-raw-xy"
+            ],
+            "position": 0,
+            "group": 3,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0050",
+          "function": 2,
+          "requestHex": "0050",
+          "status": "ok",
+          "replyHex": "00500000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0050",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0051",
+          "function": 2,
+          "requestHex": "0051",
+          "status": "ok",
+          "replyHex": "00510000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0051",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0052",
+          "function": 2,
+          "requestHex": "0052",
+          "status": "ok",
+          "replyHex": "00520000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0052",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0053",
+          "function": 2,
+          "requestHex": "0053",
+          "status": "ok",
+          "replyHex": "00530000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0053",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0056",
+          "function": 2,
+          "requestHex": "0056",
+          "status": "ok",
+          "replyHex": "00560000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0056",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00C3",
+          "function": 2,
+          "requestHex": "00C3",
+          "status": "ok",
+          "replyHex": "00C30100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00C3",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00C4",
+          "function": 2,
+          "requestHex": "00C4",
+          "status": "ok",
+          "replyHex": "00C40100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00C4",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 01A0",
+          "function": 2,
+          "requestHex": "01A0",
+          "status": "ok",
+          "replyHex": "01A00100000000000000000000000000",
+          "decoded": {
+            "cid": "0x01A0",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00D7",
+          "function": 2,
+          "requestHex": "00D7",
+          "status": "ok",
+          "replyHex": "00D70000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00D7",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "id": 6164,
+      "idHex": "0x1814",
+      "name": "ChangeHost",
+      "version": 2,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "optionsPlusNote": "Options\u002B slot mx-master-4-2b042_easy_switch_1",
+      "calls": []
+    },
+    {
+      "index": 15,
+      "id": 6165,
+      "idHex": "0x1815",
+      "name": "HostsInfo",
+      "version": 2,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 16,
+      "id": 8784,
+      "idHex": "0x2250",
+      "name": "unknown",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 17,
+      "id": 8465,
+      "idHex": "0x2111",
+      "name": "SmartShiftEnhanced",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getCapabilities",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "010A4B0E000000000000000000000000",
+          "decoded": {
+            "flags": "0x01",
+            "tunableTorque": true,
+            "defaultAutoDisengage": 10,
+            "defaultTunableTorque": 75,
+            "maxForce": 14
+          }
+        },
+        {
+          "getter": "getRatchetControlMode",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "02176400000000000000000000000000",
+          "decoded": {
+            "mode": "ratchet",
+            "autoDisengage": 23,
+            "force": 100
+          }
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "id": 8481,
+      "idHex": "0x2121",
+      "name": "HiResWheel",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "optionsPlusNote": "Options\u002B slot mx-master-4-2b042_mouse_scroll_wheel_settings",
+      "calls": [
+        {
+          "getter": "getWheelCapability",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "0F1C1818000000000000000000000000",
+          "decoded": {
+            "multiplier": 15,
+            "flags": "0x1C",
+            "hasInvert": true,
+            "hasRatchetSwitch": true
+          }
+        },
+        {
+          "getter": "getWheelMode",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "00000000000000000000000000000000",
+          "decoded": {
+            "flags": "0x00",
+            "diverted": false,
+            "hiRes": false,
+            "inverted": false
+          }
+        },
+        {
+          "getter": "getRatchetSwitchStatus",
+          "function": 2,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "00000000000000000000000000000000",
+          "decoded": {
+            "ratchet": 0
+          }
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "id": 8528,
+      "idHex": "0x2150",
+      "name": "ThumbWheel",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "optionsPlusNote": "Options\u002B slot mx-master-4-2b042_thumb_wheel_adapter",
+      "calls": [
+        {
+          "getter": "getInfo",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "00140078000303E80000000000000000",
+          "decoded": {
+            "nativeResolution": 20,
+            "divertedResolution": 120,
+            "defaultDirection": 0,
+            "caps": [
+              "timestamp",
+              "touch"
+            ],
+            "timeUnit": 1000
+          }
+        },
+        {
+          "getter": "getConfig",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "00010000000000000000000000000000",
+          "decoded": {
+            "mode": "native",
+            "inverted": true
+          }
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "id": 8705,
+      "idHex": "0x2201",
+      "name": "AdjustableDpi",
+      "version": 2,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "optionsPlusNote": "Options\u002B slot mx-master-4-2b042_mouse_settings",
+      "calls": [
+        {
+          "getter": "getSensorCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "01000000000000000000000000000000",
+          "decoded": {
+            "count": 1
+          }
+        },
+        {
+          "getter": "getSensorDpiList(sensor) #0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "0000C8E0321F40000000000000000000",
+          "decoded": {
+            "sensor": 0,
+            "discrete": [],
+            "ranges": [
+              "200-8000 step 50"
+            ],
+            "raw": "0000C8E0321F40000000000000000000"
+          }
+        },
+        {
+          "getter": "getSensorDpi(sensor) #0",
+          "function": 2,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "00080203E80000000000000000000000",
+          "decoded": {
+            "sensor": 0,
+            "dpi": 2050,
+            "defaultDpi": 1000,
+            "tail": "000000"
+          }
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "id": 8785,
+      "idHex": "0x2251",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 22,
+      "id": 209,
+      "idHex": "0x00D1",
+      "name": "Dfu2",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 23,
+      "id": 6146,
+      "idHex": "0x1802",
+      "name": "DeviceReset",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 24,
+      "id": 6147,
+      "idHex": "0x1803",
+      "name": "GpioAccess",
+      "version": 1,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 25,
+      "id": 6151,
+      "idHex": "0x1807",
+      "name": "unknown",
+      "version": 4,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 26,
+      "id": 6166,
+      "idHex": "0x1816",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 27,
+      "id": 6149,
+      "idHex": "0x1805",
+      "name": "OobState",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 28,
+      "id": 6192,
+      "idHex": "0x1830",
+      "name": "PowerModes",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 29,
+      "id": 6289,
+      "idHex": "0x1891",
+      "name": "unknown",
+      "version": 9,
+      "typeFlagsRaw": 104,
+      "flags": [
+        "hidden",
+        "engineering",
+        "compliance-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 30,
+      "id": 6305,
+      "idHex": "0x18A1",
+      "name": "LedSwControl",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 31,
+      "id": 7680,
+      "idHex": "0x1E00",
+      "name": "EnableHiddenFeatures",
+      "version": 0,
+      "typeFlagsRaw": 64,
+      "flags": [
+        "hidden"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 32,
+      "id": 7682,
+      "idHex": "0x1E02",
+      "name": "EngineeringTest (0x1E block)",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 33,
+      "id": 7714,
+      "idHex": "0x1E22",
+      "name": "EngineeringTest (0x1E block)",
+      "version": 1,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 34,
+      "id": 7728,
+      "idHex": "0x1E30",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 35,
+      "id": 5634,
+      "idHex": "0x1602",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 36,
+      "id": 7856,
+      "idHex": "0x1EB0",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 37,
+      "id": 6241,
+      "idHex": "0x1861",
+      "name": "unknown",
+      "version": 1,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 38,
+      "id": 37381,
+      "idHex": "0x9205",
+      "name": "unknown",
+      "version": 1,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 39,
+      "id": 37377,
+      "idHex": "0x9201",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 40,
+      "id": 37632,
+      "idHex": "0x9300",
+      "name": "unknown",
+      "version": 1,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 41,
+      "id": 37889,
+      "idHex": "0x9401",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 42,
+      "id": 37890,
+      "idHex": "0x9402",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 43,
+      "id": 36865,
+      "idHex": "0x9001",
+      "name": "unknown",
+      "version": 1,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 44,
+      "id": 6321,
+      "idHex": "0x18B1",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 45,
+      "id": 6336,
+      "idHex": "0x18C0",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 112,
+      "flags": [
+        "hidden",
+        "engineering",
+        "manufacturing-deactivatable"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    }
+  ],
+  "cids": [
+    {
+      "cid": 80,
+      "cidHex": "0x0050",
+      "task": 56,
+      "flags": 1025,
+      "flagNames": [
+        "mouse",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 1,
+      "groupMask": 0,
+      "name": "Left Click",
+      "reporting": {
+        "cid": "0x0050",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 81,
+      "cidHex": "0x0051",
+      "task": 57,
+      "flags": 1025,
+      "flagNames": [
+        "mouse",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 1,
+      "groupMask": 0,
+      "name": "Right Click",
+      "reporting": {
+        "cid": "0x0051",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 82,
+      "cidHex": "0x0052",
+      "task": 58,
+      "flags": 1329,
+      "flagNames": [
+        "mouse",
+        "reprogrammable",
+        "divertable",
+        "raw-xy",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 2,
+      "groupMask": 3,
+      "name": "Middle Button",
+      "optionsPlusLabel": "Middle Button",
+      "reporting": {
+        "cid": "0x0052",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 83,
+      "cidHex": "0x0053",
+      "task": 60,
+      "flags": 1329,
+      "flagNames": [
+        "mouse",
+        "reprogrammable",
+        "divertable",
+        "raw-xy",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 2,
+      "groupMask": 3,
+      "name": "Back Button",
+      "optionsPlusLabel": "Back Button",
+      "reporting": {
+        "cid": "0x0053",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 86,
+      "cidHex": "0x0056",
+      "task": 62,
+      "flags": 1329,
+      "flagNames": [
+        "mouse",
+        "reprogrammable",
+        "divertable",
+        "raw-xy",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 2,
+      "groupMask": 3,
+      "name": "Forward Button",
+      "optionsPlusLabel": "Forward Button",
+      "reporting": {
+        "cid": "0x0056",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 195,
+      "cidHex": "0x00C3",
+      "task": 156,
+      "flags": 1329,
+      "flagNames": [
+        "mouse",
+        "reprogrammable",
+        "divertable",
+        "raw-xy",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 2,
+      "groupMask": 3,
+      "name": "Mouse Gesture Button",
+      "optionsPlusLabel": "Gesture Button",
+      "reporting": {
+        "cid": "0x00C3",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 196,
+      "cidHex": "0x00C4",
+      "task": 157,
+      "flags": 1329,
+      "flagNames": [
+        "mouse",
+        "reprogrammable",
+        "divertable",
+        "raw-xy",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 2,
+      "groupMask": 3,
+      "name": "Smart Shift",
+      "optionsPlusLabel": "Modeshift Button",
+      "reporting": {
+        "cid": "0x00C4",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 416,
+      "cidHex": "0x01A0",
+      "task": 265,
+      "flags": 1329,
+      "flagNames": [
+        "mouse",
+        "reprogrammable",
+        "divertable",
+        "raw-xy",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 2,
+      "groupMask": 3,
+      "name": "Sense Panel",
+      "optionsPlusLabel": "Assignment Name Show Radial Menu",
+      "reporting": {
+        "cid": "0x01A0",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 215,
+      "cidHex": "0x00D7",
+      "task": 180,
+      "flags": 928,
+      "flagNames": [
+        "divertable",
+        "virtual",
+        "raw-xy",
+        "force-raw-xy"
+      ],
+      "position": 0,
+      "group": 3,
+      "groupMask": 0,
+      "name": "Virtual Gesture Button",
+      "reporting": {
+        "cid": "0x00D7",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    }
+  ],
+  "optionsPlusSlots": [
+    "mx-master-4-2b042-click (Gesture Click Button)",
+    "mx-master-4-2b042-down (Gesture Down Button)",
+    "mx-master-4-2b042-left (Gesture Left Button)",
+    "mx-master-4-2b042-right (Gesture Right Button)",
+    "mx-master-4-2b042-up (Gesture Up Button)",
+    "mx-master-4-2b042_easy_switch_1 (Easyswitch 1)",
+    "mx-master-4-2b042_easy_switch_2 (Easyswitch 2)",
+    "mx-master-4-2b042_easy_switch_3 (Easyswitch 3)",
+    "mx-master-4-2b042_force_sensing_settings (Button Sensitivity)",
+    "mx-master-4-2b042_haptic_settings",
+    "mx-master-4-2b042_haptic_settings (Haptic Feedback)",
+    "mx-master-4-2b042_host_change (Easyswitch Host Change Button)",
+    "mx-master-4-2b042_mouse_scroll_wheel_settings (Scroll Wheel Settings)",
+    "mx-master-4-2b042_mouse_settings",
+    "mx-master-4-2b042_mouse_settings (Pointer Settings)",
+    "mx-master-4-2b042_mouse_thumb_wheel_settings (Thumbwheel Settings)",
+    "mx-master-4-2b042_mouse_wheel_settings",
+    "mx-master-4-2b042_thumb_wheel_adapter (Thumbwheel)"
+  ]
+}

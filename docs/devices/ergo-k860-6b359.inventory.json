@@ -1,0 +1,2406 @@
+{
+  "device": "ergo-k860-6b359",
+  "generatedAt": "2026-10-15 21:31:43 \u002B11:00",
+  "swId": 12,
+  "deviceIndex": 1,
+  "hidCollection": "UP FF43 U 0202 in 20 out 20",
+  "productId": 45913,
+  "protocolVersion": "4.5",
+  "deviceName": "Wireless Keyboard ERGO K860",
+  "deviceType": "keyboard",
+  "friendlyName": "ERGO K860",
+  "featureCount": 29,
+  "requestsSent": 119,
+  "errorCount": 0,
+  "firmware": [
+    {
+      "entity": 0,
+      "kind": "bootloader",
+      "name": "BL1",
+      "version": "09.00",
+      "build": "0010",
+      "active": false
+    },
+    {
+      "entity": 1,
+      "kind": "firmware",
+      "name": "MPK",
+      "version": "10.00",
+      "build": "0010",
+      "active": true
+    },
+    {
+      "entity": 2,
+      "kind": "unknown(5)",
+      "name": "",
+      "version": "00.00",
+      "build": "00B8",
+      "active": false
+    }
+  ],
+  "features": [
+    {
+      "index": 0,
+      "id": 0,
+      "idHex": "0x0000",
+      "name": "IRoot",
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "read in the IRoot/IFeatureSet enumeration phase",
+      "calls": [
+        {
+          "getter": "ping",
+          "function": 1,
+          "requestHex": "00005A",
+          "status": "ok",
+          "replyHex": "04055A00000000000000000000000000",
+          "decoded": {
+            "major": 4,
+            "minor": 5,
+            "echo": 90
+          }
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": 1,
+      "idHex": "0x0001",
+      "name": "IFeatureSet",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "read in the IRoot/IFeatureSet enumeration phase",
+      "calls": [
+        {
+          "getter": "IRoot.getFeature(0x0001)",
+          "function": 0,
+          "requestHex": "000100",
+          "status": "ok",
+          "replyHex": "01000100000000000000000000000000",
+          "decoded": {
+            "index": 1,
+            "typeFlags": 0,
+            "version": 1
+          }
+        },
+        {
+          "getter": "IFeatureSet.getCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "1D000000000000000000000000000000",
+          "decoded": {
+            "count": 29
+          }
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": 3,
+      "idHex": "0x0003",
+      "name": "DeviceFwVersion",
+      "version": 2,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getEntityCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "03B371D5AF0006B35940880000000000",
+          "decoded": {
+            "entityCount": 3,
+            "raw": "03B371D5"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "01424C3109000010000000EC099C7F01",
+          "decoded": {
+            "kind": "bootloader",
+            "name": "BL1",
+            "version": "09.00",
+            "build": "0010",
+            "active": false,
+            "extra": "0000EC099C7F01"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #1",
+          "function": 1,
+          "requestHex": "01",
+          "status": "ok",
+          "replyHex": "004D504B1000001001B359EC099C7F01",
+          "decoded": {
+            "kind": "firmware",
+            "name": "MPK",
+            "version": "10.00",
+            "build": "0010",
+            "active": true,
+            "extra": "B359EC099C7F01"
+          }
+        },
+        {
+          "getter": "getFwInfo(entity) #2",
+          "function": 1,
+          "requestHex": "02",
+          "status": "ok",
+          "replyHex": "05000000000000B80000000000000000",
+          "decoded": {
+            "kind": "unknown(5)",
+            "name": "",
+            "version": "00.00",
+            "build": "00B8",
+            "active": false,
+            "extra": "00000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": 5,
+      "idHex": "0x0005",
+      "name": "DeviceName",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getNameCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "1B000000000000000000000000000000",
+          "decoded": {
+            "length": 27
+          }
+        },
+        {
+          "getter": "getName(offset) @0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "576972656C657373204B6579626F6172",
+          "decoded": {
+            "chunk": "Wireless Keyboar"
+          }
+        },
+        {
+          "getter": "getName(offset) @16",
+          "function": 1,
+          "requestHex": "10",
+          "status": "ok",
+          "replyHex": "64204552474F204B3836300000000000",
+          "decoded": {
+            "chunk": "d ERGO K860"
+          }
+        },
+        {
+          "getter": "getType",
+          "function": 2,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "00000000000000000000000000000000",
+          "decoded": {
+            "type": 0,
+            "name": "keyboard"
+          }
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "id": 7499,
+      "idHex": "0x1D4B",
+      "name": "WirelessDeviceStatus",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 5,
+      "id": 32,
+      "idHex": "0x0020",
+      "name": "ConfigChange",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 6,
+      "id": 7,
+      "idHex": "0x0007",
+      "name": "DeviceFriendlyName",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getFriendlyNameLen",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "09120900000000000000000000000000",
+          "decoded": {
+            "length": 9,
+            "maxLength": 18,
+            "defaultLength": 9
+          }
+        },
+        {
+          "getter": "getFriendlyName(offset) @0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "004552474F204B383630000000000000",
+          "decoded": {
+            "chunk": "ERGO K860"
+          }
+        },
+        {
+          "getter": "getDefaultName(offset) @0",
+          "function": 2,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "004552474F204B383630000000000000",
+          "decoded": {
+            "chunk": "ERGO K860"
+          }
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "id": 4096,
+      "idHex": "0x1000",
+      "name": "BatteryStatus",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getBatteryLevelStatus",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "64320000000000000000000000000000",
+          "decoded": {
+            "dischargePercent": 100,
+            "nextLevelPercent": 50,
+            "status": "discharging"
+          }
+        },
+        {
+          "getter": "getBatteryCapability",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "0400C078050000000000000000000000",
+          "decoded": {
+            "levels": 4,
+            "flags": 0,
+            "raw": "0400C0780500"
+          }
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "id": 6164,
+      "idHex": "0x1814",
+      "name": "ChangeHost",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 9,
+      "id": 6165,
+      "idHex": "0x1815",
+      "name": "HostsInfo",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 10,
+      "id": 6916,
+      "idHex": "0x1B04",
+      "name": "ReprogControlsV4",
+      "version": 4,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getControlCount",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "18000000000000000000000000000000",
+          "decoded": {
+            "count": 24
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #0",
+          "function": 1,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "00D100AE640000000400000000000000",
+          "decoded": {
+            "cid": "0x00D1",
+            "task": "0x00AE",
+            "flags": 1124,
+            "flagNames": [
+              "nonstandard",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #1",
+          "function": 1,
+          "requestHex": "01",
+          "status": "ok",
+          "replyHex": "00D200AF640000000400000000000000",
+          "decoded": {
+            "cid": "0x00D2",
+            "task": "0x00AF",
+            "flags": 1124,
+            "flagNames": [
+              "nonstandard",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #2",
+          "function": 1,
+          "requestHex": "02",
+          "status": "ok",
+          "replyHex": "00D300B0640000000400000000000000",
+          "decoded": {
+            "cid": "0x00D3",
+            "task": "0x00B0",
+            "flags": 1124,
+            "flagNames": [
+              "nonstandard",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #3",
+          "function": 1,
+          "requestHex": "03",
+          "status": "ok",
+          "replyHex": "00C700A37A0100000400000000000000",
+          "decoded": {
+            "cid": "0x00C7",
+            "task": "0x00A3",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 1,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #4",
+          "function": 1,
+          "requestHex": "04",
+          "status": "ok",
+          "replyHex": "00C800A47A0200000400000000000000",
+          "decoded": {
+            "cid": "0x00C8",
+            "task": "0x00A4",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 2,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #5",
+          "function": 1,
+          "requestHex": "05",
+          "status": "ok",
+          "replyHex": "00E000BF7A0300000400000000000000",
+          "decoded": {
+            "cid": "0x00E0",
+            "task": "0x00BF",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 3,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #6",
+          "function": 1,
+          "requestHex": "06",
+          "status": "ok",
+          "replyHex": "010000D57A0400000400000000000000",
+          "decoded": {
+            "cid": "0x0100",
+            "task": "0x00D5",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 4,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #7",
+          "function": 1,
+          "requestHex": "07",
+          "status": "ok",
+          "replyHex": "006E00437A0500000400000000000000",
+          "decoded": {
+            "cid": "0x006E",
+            "task": "0x0043",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 5,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #8",
+          "function": 1,
+          "requestHex": "08",
+          "status": "ok",
+          "replyHex": "00D400B17A0600000400000000000000",
+          "decoded": {
+            "cid": "0x00D4",
+            "task": "0x00B1",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 6,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #9",
+          "function": 1,
+          "requestHex": "09",
+          "status": "ok",
+          "replyHex": "00E400067A0700000400000000000000",
+          "decoded": {
+            "cid": "0x00E4",
+            "task": "0x0006",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 7,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #10",
+          "function": 1,
+          "requestHex": "0A",
+          "status": "ok",
+          "replyHex": "00E500047A0800000400000000000000",
+          "decoded": {
+            "cid": "0x00E5",
+            "task": "0x0004",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 8,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #11",
+          "function": 1,
+          "requestHex": "0B",
+          "status": "ok",
+          "replyHex": "00E600057A0900000400000000000000",
+          "decoded": {
+            "cid": "0x00E6",
+            "task": "0x0005",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 9,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #12",
+          "function": 1,
+          "requestHex": "0C",
+          "status": "ok",
+          "replyHex": "00E700037A0A00000400000000000000",
+          "decoded": {
+            "cid": "0x00E7",
+            "task": "0x0003",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 10,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #13",
+          "function": 1,
+          "requestHex": "0D",
+          "status": "ok",
+          "replyHex": "00E800027A0B00000400000000000000",
+          "decoded": {
+            "cid": "0x00E8",
+            "task": "0x0002",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 11,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #14",
+          "function": 1,
+          "requestHex": "0E",
+          "status": "ok",
+          "replyHex": "00E900017A0C00000400000000000000",
+          "decoded": {
+            "cid": "0x00E9",
+            "task": "0x0001",
+            "flags": 1146,
+            "flagNames": [
+              "fkey",
+              "fn-sensitive",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 12,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #15",
+          "function": 1,
+          "requestHex": "0F",
+          "status": "ok",
+          "replyHex": "010100D6740000000400000000000000",
+          "decoded": {
+            "cid": "0x0101",
+            "task": "0x00D6",
+            "flags": 1140,
+            "flagNames": [
+              "nonstandard",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #16",
+          "function": 1,
+          "requestHex": "10",
+          "status": "ok",
+          "replyHex": "00BF009B740000000400000000000000",
+          "decoded": {
+            "cid": "0x00BF",
+            "task": "0x009B",
+            "flags": 1140,
+            "flagNames": [
+              "nonstandard",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #17",
+          "function": 1,
+          "requestHex": "11",
+          "status": "ok",
+          "replyHex": "000A000A740000000400000000000000",
+          "decoded": {
+            "cid": "0x000A",
+            "task": "0x000A",
+            "flags": 1140,
+            "flagNames": [
+              "nonstandard",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #18",
+          "function": 1,
+          "requestHex": "12",
+          "status": "ok",
+          "replyHex": "00EA00C3740000000400000000000000",
+          "decoded": {
+            "cid": "0x00EA",
+            "task": "0x00C3",
+            "flags": 1140,
+            "flagNames": [
+              "nonstandard",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #19",
+          "function": 1,
+          "requestHex": "13",
+          "status": "ok",
+          "replyHex": "006F0044740000000400000000000000",
+          "decoded": {
+            "cid": "0x006F",
+            "task": "0x0044",
+            "flags": 1140,
+            "flagNames": [
+              "nonstandard",
+              "reprogrammable",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #20",
+          "function": 1,
+          "requestHex": "14",
+          "status": "ok",
+          "replyHex": "00EC00B8640000000400000000000000",
+          "decoded": {
+            "cid": "0x00EC",
+            "task": "0x00B8",
+            "flags": 1124,
+            "flagNames": [
+              "nonstandard",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #21",
+          "function": 1,
+          "requestHex": "15",
+          "status": "ok",
+          "replyHex": "00EB00B6640000000400000000000000",
+          "decoded": {
+            "cid": "0x00EB",
+            "task": "0x00B6",
+            "flags": 1124,
+            "flagNames": [
+              "nonstandard",
+              "divertable",
+              "persistent-divert",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #22",
+          "function": 1,
+          "requestHex": "16",
+          "status": "ok",
+          "replyHex": "00DE0062020000000400000000000000",
+          "decoded": {
+            "cid": "0x00DE",
+            "task": "0x0062",
+            "flags": 1026,
+            "flagNames": [
+              "fkey",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #23",
+          "function": 1,
+          "requestHex": "17",
+          "status": "ok",
+          "replyHex": "00340062040000000400000000000000",
+          "decoded": {
+            "cid": "0x0034",
+            "task": "0x0062",
+            "flags": 1028,
+            "flagNames": [
+              "nonstandard",
+              "analytics-key-events"
+            ],
+            "position": 0,
+            "group": 0,
+            "groupMask": 0
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00D1",
+          "function": 2,
+          "requestHex": "00D1",
+          "status": "ok",
+          "replyHex": "00D10000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00D1",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00D2",
+          "function": 2,
+          "requestHex": "00D2",
+          "status": "ok",
+          "replyHex": "00D20000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00D2",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00D3",
+          "function": 2,
+          "requestHex": "00D3",
+          "status": "ok",
+          "replyHex": "00D30000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00D3",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00C7",
+          "function": 2,
+          "requestHex": "00C7",
+          "status": "ok",
+          "replyHex": "00C70100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00C7",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00C8",
+          "function": 2,
+          "requestHex": "00C8",
+          "status": "ok",
+          "replyHex": "00C80100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00C8",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E0",
+          "function": 2,
+          "requestHex": "00E0",
+          "status": "ok",
+          "replyHex": "00E00100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E0",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0100",
+          "function": 2,
+          "requestHex": "0100",
+          "status": "ok",
+          "replyHex": "01000100000000000000000000000000",
+          "decoded": {
+            "cid": "0x0100",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 006E",
+          "function": 2,
+          "requestHex": "006E",
+          "status": "ok",
+          "replyHex": "006E0100000000000000000000000000",
+          "decoded": {
+            "cid": "0x006E",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00D4",
+          "function": 2,
+          "requestHex": "00D4",
+          "status": "ok",
+          "replyHex": "00D40100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00D4",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E4",
+          "function": 2,
+          "requestHex": "00E4",
+          "status": "ok",
+          "replyHex": "00E40100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E4",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E5",
+          "function": 2,
+          "requestHex": "00E5",
+          "status": "ok",
+          "replyHex": "00E50100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E5",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E6",
+          "function": 2,
+          "requestHex": "00E6",
+          "status": "ok",
+          "replyHex": "00E60100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E6",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E7",
+          "function": 2,
+          "requestHex": "00E7",
+          "status": "ok",
+          "replyHex": "00E70100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E7",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E8",
+          "function": 2,
+          "requestHex": "00E8",
+          "status": "ok",
+          "replyHex": "00E80100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E8",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00E9",
+          "function": 2,
+          "requestHex": "00E9",
+          "status": "ok",
+          "replyHex": "00E90100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E9",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0101",
+          "function": 2,
+          "requestHex": "0101",
+          "status": "ok",
+          "replyHex": "01010000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0101",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00BF",
+          "function": 2,
+          "requestHex": "00BF",
+          "status": "ok",
+          "replyHex": "00BF0100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00BF",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 000A",
+          "function": 2,
+          "requestHex": "000A",
+          "status": "ok",
+          "replyHex": "000A0100000000000000000000000000",
+          "decoded": {
+            "cid": "0x000A",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00EA",
+          "function": 2,
+          "requestHex": "00EA",
+          "status": "ok",
+          "replyHex": "00EA0100000000000000000000000000",
+          "decoded": {
+            "cid": "0x00EA",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 006F",
+          "function": 2,
+          "requestHex": "006F",
+          "status": "ok",
+          "replyHex": "006F0100000000000000000000000000",
+          "decoded": {
+            "cid": "0x006F",
+            "mappedTo": "0x0000",
+            "flags": 1,
+            "flagNames": [
+              "diverted"
+            ]
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00EC",
+          "function": 2,
+          "requestHex": "00EC",
+          "status": "ok",
+          "replyHex": "00EC0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00EC",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00EB",
+          "function": 2,
+          "requestHex": "00EB",
+          "status": "ok",
+          "replyHex": "00EB0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00EB",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 00DE",
+          "function": 2,
+          "requestHex": "00DE",
+          "status": "ok",
+          "replyHex": "00DE0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00DE",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        },
+        {
+          "getter": "getCidReporting(cid) 0034",
+          "function": 2,
+          "requestHex": "0034",
+          "status": "ok",
+          "replyHex": "00340000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0034",
+            "mappedTo": "0x0000",
+            "flags": 0,
+            "flagNames": []
+          }
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "id": 7168,
+      "idHex": "0x1C00",
+      "name": "PersistentRemappableAction",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getCapabilities",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "01410000000000000000000000000000",
+          "decoded": {
+            "flags": "0x0141"
+          }
+        },
+        {
+          "getter": "getCount",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "11030000000000000000000000000000",
+          "decoded": {
+            "count": 17
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #0",
+          "function": 2,
+          "requestHex": "00FF",
+          "status": "ok",
+          "replyHex": "00C70000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00C7"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #1",
+          "function": 2,
+          "requestHex": "01FF",
+          "status": "ok",
+          "replyHex": "00C80000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00C8"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #2",
+          "function": 2,
+          "requestHex": "02FF",
+          "status": "ok",
+          "replyHex": "00E00000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E0"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #3",
+          "function": 2,
+          "requestHex": "03FF",
+          "status": "ok",
+          "replyHex": "00E10000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E1"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #4",
+          "function": 2,
+          "requestHex": "04FF",
+          "status": "ok",
+          "replyHex": "006E0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x006E"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #5",
+          "function": 2,
+          "requestHex": "05FF",
+          "status": "ok",
+          "replyHex": "00D50000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00D5"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #6",
+          "function": 2,
+          "requestHex": "06FF",
+          "status": "ok",
+          "replyHex": "00E40000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E4"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #7",
+          "function": 2,
+          "requestHex": "07FF",
+          "status": "ok",
+          "replyHex": "00E50000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E5"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #8",
+          "function": 2,
+          "requestHex": "08FF",
+          "status": "ok",
+          "replyHex": "00E60000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E6"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #9",
+          "function": 2,
+          "requestHex": "09FF",
+          "status": "ok",
+          "replyHex": "00E70000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E7"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #10",
+          "function": 2,
+          "requestHex": "0AFF",
+          "status": "ok",
+          "replyHex": "00E80000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E8"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #11",
+          "function": 2,
+          "requestHex": "0BFF",
+          "status": "ok",
+          "replyHex": "00E90000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00E9"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #12",
+          "function": 2,
+          "requestHex": "0CFF",
+          "status": "ok",
+          "replyHex": "01010000000000000000000000000000",
+          "decoded": {
+            "cid": "0x0101"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #13",
+          "function": 2,
+          "requestHex": "0DFF",
+          "status": "ok",
+          "replyHex": "00BF0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00BF"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #14",
+          "function": 2,
+          "requestHex": "0EFF",
+          "status": "ok",
+          "replyHex": "000A0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x000A"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #15",
+          "function": 2,
+          "requestHex": "0FFF",
+          "status": "ok",
+          "replyHex": "00EA0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x00EA"
+          }
+        },
+        {
+          "getter": "getCidInfo(index) #16",
+          "function": 2,
+          "requestHex": "10FF",
+          "status": "ok",
+          "replyHex": "006F0000000000000000000000000000",
+          "decoded": {
+            "cid": "0x006F"
+          }
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "id": 16547,
+      "idHex": "0x40A3",
+      "name": "FnInversionMultiHost",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getFnInversion(host) [FF]",
+          "function": 0,
+          "requestHex": "FF",
+          "status": "ok",
+          "replyHex": "FF000101000000000000000000000000",
+          "decoded": {
+            "host": 255,
+            "inverted": false,
+            "p2": 1,
+            "p3": 1
+          }
+        },
+        {
+          "getter": "getFnInversion(host) [00]",
+          "function": 0,
+          "requestHex": "00",
+          "status": "ok",
+          "replyHex": "00000101000000000000000000000000",
+          "decoded": {
+            "host": 0,
+            "inverted": false,
+            "p2": 1,
+            "p3": 1
+          }
+        },
+        {
+          "getter": "getFnInversion(host) [01]",
+          "function": 0,
+          "requestHex": "01",
+          "status": "ok",
+          "replyHex": "01010101000000000000000000000000",
+          "decoded": {
+            "host": 1,
+            "inverted": true,
+            "p2": 1,
+            "p3": 1
+          }
+        },
+        {
+          "getter": "getFnInversion(host) [02]",
+          "function": 0,
+          "requestHex": "02",
+          "status": "ok",
+          "replyHex": "02010101000000000000000000000000",
+          "decoded": {
+            "host": 2,
+            "inverted": true,
+            "p2": 1,
+            "p3": 1
+          }
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "id": 16640,
+      "idHex": "0x4100",
+      "name": "Encryption",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 14,
+      "id": 16928,
+      "idHex": "0x4220",
+      "name": "LockKeyState",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 15,
+      "id": 17697,
+      "idHex": "0x4521",
+      "name": "DisableKeys",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": true,
+      "disposition": "called",
+      "reason": "vetted read-only getters",
+      "calls": [
+        {
+          "getter": "getCapabilities",
+          "function": 0,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "1F000000000000000000000000000000",
+          "decoded": {
+            "mask": "0x1F",
+            "keys": [
+              "caps lock",
+              "num lock",
+              "scroll lock",
+              "insert",
+              "win"
+            ]
+          }
+        },
+        {
+          "getter": "getDisabledKeys",
+          "function": 1,
+          "requestHex": "",
+          "status": "ok",
+          "replyHex": "00000000000000000000000000000000",
+          "decoded": {
+            "mask": "0x00",
+            "keys": []
+          }
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "id": 17713,
+      "idHex": "0x4531",
+      "name": "MultiPlatform",
+      "version": 1,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "no vetted read-only getter in the table",
+      "calls": []
+    },
+    {
+      "index": 17,
+      "id": 194,
+      "idHex": "0x00C2",
+      "name": "DfuControlSigned",
+      "version": 0,
+      "typeFlagsRaw": 0,
+      "flags": [],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 18,
+      "id": 6146,
+      "idHex": "0x1802",
+      "name": "DeviceReset",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 19,
+      "id": 6147,
+      "idHex": "0x1803",
+      "name": "GpioAccess",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 20,
+      "id": 6150,
+      "idHex": "0x1806",
+      "name": "ConfigDeviceProps",
+      "version": 5,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 21,
+      "id": 6163,
+      "idHex": "0x1813",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 22,
+      "id": 6149,
+      "idHex": "0x1805",
+      "name": "OobState",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 23,
+      "id": 6192,
+      "idHex": "0x1830",
+      "name": "PowerModes",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 24,
+      "id": 6305,
+      "idHex": "0x18A1",
+      "name": "LedSwControl",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 25,
+      "id": 7667,
+      "idHex": "0x1DF3",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 26,
+      "id": 7680,
+      "idHex": "0x1E00",
+      "name": "EnableHiddenFeatures",
+      "version": 0,
+      "typeFlagsRaw": 64,
+      "flags": [
+        "hidden"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "on the never-call list (firmware/reset/host/profile/engineering class)",
+      "calls": []
+    },
+    {
+      "index": 27,
+      "id": 7856,
+      "idHex": "0x1EB0",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 28,
+      "id": 6241,
+      "idHex": "0x1861",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    },
+    {
+      "index": 29,
+      "id": 6320,
+      "idHex": "0x18B0",
+      "name": "unknown",
+      "version": 0,
+      "typeFlagsRaw": 96,
+      "flags": [
+        "hidden",
+        "engineering"
+      ],
+      "called": false,
+      "disposition": "listed-only",
+      "reason": "flagged engineering/manufacturing",
+      "calls": []
+    }
+  ],
+  "cids": [
+    {
+      "cid": 209,
+      "cidHex": "0x00D1",
+      "task": 174,
+      "flags": 1124,
+      "flagNames": [
+        "nonstandard",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "name": "Host Switch Channel 1",
+      "optionsPlusLabel": "Easy Switch 1",
+      "reporting": {
+        "cid": "0x00D1",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 210,
+      "cidHex": "0x00D2",
+      "task": 175,
+      "flags": 1124,
+      "flagNames": [
+        "nonstandard",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "name": "Host Switch Channel 2",
+      "optionsPlusLabel": "Easy Switch 2",
+      "reporting": {
+        "cid": "0x00D2",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 211,
+      "cidHex": "0x00D3",
+      "task": 176,
+      "flags": 1124,
+      "flagNames": [
+        "nonstandard",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "name": "Host Switch Channel 3",
+      "optionsPlusLabel": "Easy Switch 3",
+      "reporting": {
+        "cid": "0x00D3",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 199,
+      "cidHex": "0x00C7",
+      "task": 163,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 1,
+      "group": 0,
+      "groupMask": 0,
+      "name": "Brightness Down",
+      "optionsPlusLabel": "Brightness Down",
+      "reporting": {
+        "cid": "0x00C7",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 200,
+      "cidHex": "0x00C8",
+      "task": 164,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 2,
+      "group": 0,
+      "groupMask": 0,
+      "name": "Brightness Up",
+      "optionsPlusLabel": "Brightness Up",
+      "reporting": {
+        "cid": "0x00C8",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 224,
+      "cidHex": "0x00E0",
+      "task": 191,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 3,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Mission Control",
+      "reporting": {
+        "cid": "0x00E0",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 256,
+      "cidHex": "0x0100",
+      "task": 213,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 4,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Switch Applications",
+      "reporting": {
+        "cid": "0x0100",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 110,
+      "cidHex": "0x006E",
+      "task": 67,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 5,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Show Desktop",
+      "reporting": {
+        "cid": "0x006E",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 212,
+      "cidHex": "0x00D4",
+      "task": 177,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 6,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Search",
+      "reporting": {
+        "cid": "0x00D4",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 228,
+      "cidHex": "0x00E4",
+      "task": 6,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 7,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Previous",
+      "reporting": {
+        "cid": "0x00E4",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 229,
+      "cidHex": "0x00E5",
+      "task": 4,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 8,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Play Pause",
+      "reporting": {
+        "cid": "0x00E5",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 230,
+      "cidHex": "0x00E6",
+      "task": 5,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 9,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Next",
+      "reporting": {
+        "cid": "0x00E6",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 231,
+      "cidHex": "0x00E7",
+      "task": 3,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 10,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Mute",
+      "reporting": {
+        "cid": "0x00E7",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 232,
+      "cidHex": "0x00E8",
+      "task": 2,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 11,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Volume Down",
+      "reporting": {
+        "cid": "0x00E8",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 233,
+      "cidHex": "0x00E9",
+      "task": 1,
+      "flags": 1146,
+      "flagNames": [
+        "fkey",
+        "fn-sensitive",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 12,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Volume Up",
+      "reporting": {
+        "cid": "0x00E9",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 257,
+      "cidHex": "0x0101",
+      "task": 214,
+      "flags": 1140,
+      "flagNames": [
+        "nonstandard",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "reporting": {
+        "cid": "0x0101",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 191,
+      "cidHex": "0x00BF",
+      "task": 155,
+      "flags": 1140,
+      "flagNames": [
+        "nonstandard",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Screen Capture",
+      "reporting": {
+        "cid": "0x00BF",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 10,
+      "cidHex": "0x000A",
+      "task": 10,
+      "flags": 1140,
+      "flagNames": [
+        "nonstandard",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Calculator",
+      "reporting": {
+        "cid": "0x000A",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 234,
+      "cidHex": "0x00EA",
+      "task": 195,
+      "flags": 1140,
+      "flagNames": [
+        "nonstandard",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Look Up",
+      "reporting": {
+        "cid": "0x00EA",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 111,
+      "cidHex": "0x006F",
+      "task": 68,
+      "flags": 1140,
+      "flagNames": [
+        "nonstandard",
+        "reprogrammable",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Brightness Up",
+      "reporting": {
+        "cid": "0x006F",
+        "mappedTo": "0x0000",
+        "flags": 1,
+        "flagNames": [
+          "diverted"
+        ]
+      }
+    },
+    {
+      "cid": 236,
+      "cidHex": "0x00EC",
+      "task": 184,
+      "flags": 1124,
+      "flagNames": [
+        "nonstandard",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "reporting": {
+        "cid": "0x00EC",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 235,
+      "cidHex": "0x00EB",
+      "task": 182,
+      "flags": 1124,
+      "flagNames": [
+        "nonstandard",
+        "divertable",
+        "persistent-divert",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "reporting": {
+        "cid": "0x00EB",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 222,
+      "cidHex": "0x00DE",
+      "task": 98,
+      "flags": 1026,
+      "flagNames": [
+        "fkey",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "optionsPlusLabel": "Escape",
+      "reporting": {
+        "cid": "0x00DE",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    },
+    {
+      "cid": 52,
+      "cidHex": "0x0034",
+      "task": 98,
+      "flags": 1028,
+      "flagNames": [
+        "nonstandard",
+        "analytics-key-events"
+      ],
+      "position": 0,
+      "group": 0,
+      "groupMask": 0,
+      "reporting": {
+        "cid": "0x0034",
+        "mappedTo": "0x0000",
+        "flags": 0,
+        "flagNames": []
+      }
+    }
+  ],
+  "optionsPlusSlots": []
+}
