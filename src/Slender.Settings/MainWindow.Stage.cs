@@ -516,7 +516,7 @@ public sealed partial class MainWindow
         }
         else if (action is null)
         {
-            row.Children.Add(Ui.Text(_app is null ? info.NativeText : info.NativeText + " · same as All apps", 13, _app is null ? Ui.Ink : Ui.Muted));
+            row.Children.Add(Ui.Text(_app is null ? info.NativeText : info.NativeText + (ProfileOps.IsPassThrough(_config.Config, _app, _kind, info.Id) ? string.Empty : " · same as All apps"), 13, _app is null ? Ui.Ink : Ui.Muted));
         }
         else
         {

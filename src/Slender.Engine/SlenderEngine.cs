@@ -161,7 +161,8 @@ public sealed class SlenderEngine : IDisposable
     {
         var cfg = _config;
         var profile = ProfileResolver.Resolve(cfg, _foreground.ProcessName);
-        if (Bound(profile, control) is { } a) return a;
+        // An explicit None in a per-app profile means "native / pass through": it wins over the default profile's binding.
+        if (profile.Bindings.TryGetValue(control, out var own) && own is not null) return own;
         if (Bound(ProfileResolver.Default(cfg), control) is { } d) return d;
         return new ActionSpec.None();
     }

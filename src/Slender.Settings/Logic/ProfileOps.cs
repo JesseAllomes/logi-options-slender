@@ -18,9 +18,29 @@ public static class ProfileOps
         return p is not null && Map(p, kind).TryGetValue(id, out ActionSpec? a) && a is not ActionSpec.None ? a : null;
     }
 
-    /// <summary>What the control does in this app. Inherited is true when the app has no binding of its own.</summary>
+    /// <summary>
+    /// True when an app profile holds an explicit None for the control: the button's own function applies there and the
+    /// All apps binding is ignored. (The settings UI never writes it; it comes from an Options+ import.)
+    /// </summary>
+    public static bool IsPassThrough(SlenderConfig config, string? appProcess, DeviceKind kind, ushort id)
+    {
+        if (appProcess is null)
+        {
+            return false;
+        }
+
+        Profile? p = Find(config, appProcess);
+        return p is not null && Map(p, kind).TryGetValue(id, out ActionSpec? a) && a is ActionSpec.None;
+    }
+
+    /// <summary>What the control does in this app. Inherited is true when the app has no binding of its own. Explicit pass-through gives no action.</summary>
     public static (ActionSpec? Action, bool Inherited) Effective(SlenderConfig config, string? appProcess, DeviceKind kind, ushort id)
     {
+        if (IsPassThrough(config, appProcess, kind, id))
+        {
+            return (null, false);
+        }
+
         ActionSpec? own = Own(config, appProcess, kind, id);
         if (own is not null)
         {
@@ -45,7 +65,8 @@ public static class ProfileOps
         }
 
         HashSet<ushort> known = ControlCatalog.For(kind).Select(c => c.Id).ToHashSet();
-        return Map(p, kind).Count(kv => known.Contains(kv.Key) && kv.Value is not ActionSpec.None);
+        // In an app profile an explicit None is a change from All apps (pass through); in All apps it is just unassigned.
+        return Map(p, kind).Count(kv => known.Contains(kv.Key) && (kv.Value is not ActionSpec.None || appProcess is not null));
     }
 
     /// <summary>Sets (or, with a null action, clears) one binding. Creates the profile if it does not exist.</summary>

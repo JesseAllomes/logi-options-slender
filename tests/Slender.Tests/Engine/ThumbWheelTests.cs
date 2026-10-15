@@ -75,14 +75,15 @@ public class ThumbWheelBindingTests
     }
 
     [Fact]
-    public void App_profile_overrides_default_and_none_falls_back_to_excel_behaviour()
+    public void Explicit_none_in_app_ignores_default_and_uses_native_behaviour()
     {
         var cfg = Cfg(P(null, new ActionSpec.Keys("Tab")), P("excel", new ActionSpec.None()));
         var r = new Rig(cfg);
         r.Fg.ProcessName = "excel";
-        // excel profile None -> default's binding applies
+        // excel profile None -> pass through: the default's Tab binding is ignored, Excel column scroll applies
         r.Hook.Wheel(120);
-        Assert.Equal(["Tab"], Chords(r));
+        Assert.Empty(r.Exec.Calls);
+        Assert.Equal([((nint)42, 1)], r.Excel.Scrolls);
 
         var r2 = new Rig(Cfg(P(null, new ActionSpec.None())));
         r2.Fg.ProcessName = "excel";

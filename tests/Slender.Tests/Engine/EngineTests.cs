@@ -79,6 +79,42 @@ public class ChordParserTests
     [InlineData("F25")]
     public void Rejects(string? chord) => Assert.False(ChordParser.TryParse(chord, out _));
 
+    [Theory]
+    [InlineData("Enter, Ctrl+W", 2)]
+    [InlineData("Enter,Ctrl+W,Tab", 3)]
+    [InlineData("Ctrl+Shift+P", 1)]
+    public void ParsesSequences(string sequence, int steps)
+    {
+        Assert.True(ChordParser.TryParseSequence(sequence, out var parsed));
+        Assert.Equal(steps, parsed.Count);
+    }
+
+    [Fact]
+    public void SequenceKeepsEachChordsKeys()
+    {
+        Assert.True(ChordParser.TryParseSequence("Enter, Ctrl+W", out var s));
+        Assert.Equal(new[] { 0x0D }, s[0].Select(k => (int)k.Vk));
+        Assert.Equal(new[] { 0xA2, 0x57 }, s[1].Select(k => (int)k.Vk));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Enter,")]
+    [InlineData(",Enter")]
+    [InlineData("Enter, Banana")]
+    [InlineData("Ctrl, W")]
+    public void RejectsBadSequences(string sequence) => Assert.False(ChordParser.TryParseSequence(sequence, out _));
+
+    [Fact]
+    public void SingleChordParserRejectsSequences() => Assert.False(ChordParser.TryParse("Enter, Ctrl+W", out _));
+
+    [Fact]
+    public void WheelPairSyntaxIsUnaffected()
+    {
+        Assert.Equal(("VolumeUp", "VolumeDown"), SlenderEngine.SplitWheelChord("VolumeUp|VolumeDown"));
+        Assert.Equal(("Enter, Ctrl+W", "Tab"), SlenderEngine.SplitWheelChord("Enter, Ctrl+W|Tab"));
+    }
+
     [Fact]
     public void NavigationKeysAreExtended()
     {
@@ -345,6 +381,30 @@ public class EngineTests
         r.Fg.ProcessName = "notepad";
         Assert.False(r.Hook.Button(HookButton.Forward, true).Handled);
         Assert.False(r.Hook.Button(HookButton.Forward, false).Handled);
+        Assert.Empty(r.Exec.Calls);
+    }
+
+    [Fact]
+    public void ExplicitNoneInAppPassesButtonThroughDespiteDefaultBinding()
+    {
+        var def = new ActionSpec.Keys("F2");
+        var r = new Rig(Cfg(null, null, P(null, (ControlId.Forward, def), (ControlId.Back, def)), P("teams", (ControlId.Forward, new ActionSpec.None()))));
+        r.Fg.ProcessName = "teams";
+        Assert.False(r.Hook.Button(HookButton.Forward, true).Handled); // explicit None: native button
+        Assert.False(r.Hook.Button(HookButton.Forward, false).Handled);
+        Assert.True(r.Hook.Button(HookButton.Back, true).Handled);     // absent: follows the default
+        Assert.Equal([((ActionSpec)def, true)], r.Exec.Calls);
+    }
+
+    [Fact]
+    public void ExplicitNoneKeepsDefaultBoundControlDiverted()
+    {
+        var cfg = Cfg(null, null, P(null, (ControlId.ModeShift, new ActionSpec.Keys("F2"))), P("teams", (ControlId.ModeShift, new ActionSpec.None())));
+        Assert.Equal(new[] { ControlId.ModeShift }, SlenderEngine.ComputeDivertSet(cfg));
+        var r = new Rig(cfg);
+        r.Fg.ProcessName = "teams";
+        r.Mouse.Press(ControlId.ModeShift, true);
+        r.Mouse.Press(ControlId.ModeShift, false);
         Assert.Empty(r.Exec.Calls);
     }
 

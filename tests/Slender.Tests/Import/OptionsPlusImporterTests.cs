@@ -60,10 +60,11 @@ public class OptionsPlusImporterTests
     }
 
     [Fact]
-    public void TeamsModeShiftCannotOverrideDefaultAndIsReported()
+    public void TeamsModeShiftIsExplicitPassThrough()
     {
-        Assert.False(App("ms-teams").Bindings.ContainsKey(ControlId.ModeShift));
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("Teams") && n.Contains("c196") && n.Contains("built-in behaviour"));
+        // The default profile opens chatgpt.com on mode shift; Teams restores the native ratchet toggle.
+        Assert.Equal(new ActionSpec.None(), App("ms-teams").Bindings[ControlId.ModeShift]);
+        Assert.DoesNotContain(Notes(ImportNoteKind.Unmapped), n => n.Contains("Teams") && n.Contains("c196"));
     }
 
     [Fact]
@@ -126,13 +127,32 @@ public class OptionsPlusImporterTests
     }
 
     [Fact]
-    public void SequenceMacroIsReportedWithSteps()
+    public void KeyboardSequenceMacroBecomesChordSequence()
     {
         // Acrobat's forward button points at "Enter and close tab": Num Enter, wait 3000 ms, Ctrl+W.
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n =>
-            n.Contains("Adobe Acrobat") && n.Contains("c86") && n.Contains("Num Enter") && n.Contains("wait 3000 ms") && n.Contains("Ctrl+W"));
-        Assert.False(App("acrobat").Bindings.ContainsKey(ControlId.Forward));
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("Adobe Acrobat") && n.Contains("default profile's binding"));
+        Assert.Equal(new ActionSpec.Keys("Enter, Ctrl+W"), App("acrobat").Bindings[ControlId.Forward]);
+        Assert.Contains(Notes(ImportNoteKind.Approximated), n => n.Contains("Adobe Acrobat") && n.Contains("c86") && n.Contains("Enter, Ctrl+W") && n.Contains("delays were dropped"));
+        Assert.DoesNotContain(Notes(ImportNoteKind.Unmapped), n => n.Contains("Adobe Acrobat") && n.Contains("c86"));
+    }
+
+    [Fact]
+    public void SequenceWithMouseStepStaysInReport()
+    {
+        const string settings = """
+        {"profile_keys":["profile-d"],"applications":{"applications":[]},
+         "profile-d":{"applicationId":"d","name":"PROFILE_NAME_DEFAULT","assignments":[
+           {"slotId":"mx-master-4-2b042_c86","card":{"attribute":"MACRO_REF","id":"m1","name":"Click then copy"}}]}}
+        """;
+        const string macros = """
+        {"macro_infos":{"macroInfos":[{"id":"m1","name":"Click then copy","cards":[
+          {"macro":{"type":"INPUT_SEQUENCE","inputSequence":{"componentLists":[{"components":[{"mouse":{"hidUsage":1,"isDown":true}}]}]}}},
+          {"macro":{"type":"INPUT_SEQUENCE","inputSequence":{"componentLists":[
+            {"components":[{"keyboard":{"displayName":"C","hidUsage":6,"isDown":true}}]},
+            {"components":[{"keyboard":{"displayName":"C","hidUsage":6}}]}]}}}]}]}}
+        """;
+        var r = OptionsPlusImporter.Import(settings, macros, SlenderConfig.Default);
+        Assert.False(r.Config.Profiles.Single(p => p.AppProcess is null).Bindings.ContainsKey(ControlId.Forward));
+        Assert.Contains(r.Notes, n => n.Kind == ImportNoteKind.Unmapped && n.Message.Contains("Click then copy"));
     }
 
     [Fact]

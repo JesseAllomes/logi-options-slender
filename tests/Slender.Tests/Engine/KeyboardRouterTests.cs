@@ -110,9 +110,10 @@ public class KeyboardRouterTests
             r.Start();
             fg.ProcessName = "excel";
             kb.Key(KeyboardId.Mute, true); kb.Key(KeyboardId.Mute, false);
-            kb.Key(KeyboardId.Lock, true); kb.Key(KeyboardId.Lock, false); // None in excel -> default's action
+            kb.Key(KeyboardId.Lock, true); kb.Key(KeyboardId.Lock, false); // explicit None in excel -> pass through, nothing runs
             fg.ProcessName = "notepad";
             kb.Key(KeyboardId.Mute, true); kb.Key(KeyboardId.Mute, false);
+            kb.Key(KeyboardId.Lock, true); kb.Key(KeyboardId.Lock, false); // absent in notepad -> default's action
             Assert.Equal(new (ActionSpec, bool)[]
             {
                 (xl, true), (xl, false), (def, true), (def, false), (def, true), (def, false),

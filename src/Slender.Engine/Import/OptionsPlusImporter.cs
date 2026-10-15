@@ -228,12 +228,8 @@ public static partial class OptionsPlusImporter
         if (native)
         {
             if (!hasBase) return; // nothing to override; the control keeps its native behaviour
-            if (action is ActionSpec.None)
-            {
-                notes.Add(new(ImportNoteKind.Unmapped, where, "Options+ restores the control's built-in behaviour here, but a Slender profile cannot override the default profile with 'none'; the default binding applies."));
-                return;
-            }
-            target[cid] = action; // an explicit native button overrides the default profile's custom binding
+            // An explicit None (or native button) overrides the default profile's custom binding: native / pass through.
+            target[cid] = action;
             return;
         }
         if (baseline is not null && baseline.TryGetValue(cid, out var inherited) && inherited.Equals(action)) return; // same as default: inherit
@@ -515,9 +511,20 @@ public static partial class OptionsPlusImporter
         MacroLibrary.Macro? m = macros.Find(id, name);
         if (m is null) return Fail($"Macro '{name}' ({id}) was not found in macros.db (or macros.db was not supplied).");
         if (m.Steps.Count == 0) return Fail($"Macro '{m.Name}' contains no key steps.");
-        if (m.Steps.Count == 1 && m.Steps[0].Key is { } key && HidKeys.TryChord(key, m.Steps[0].Modifiers, out string chord, out string? approx))
-            return Ok(new ActionSpec.Keys(chord), approx);
-        return Fail($"Macro '{m.Name}' is a sequence ({m.Describe()}); Slender's Keys action sends a single chord and has no sequences or delays.");
+        // Keyboard-only macros become a comma-separated chord sequence ("Enter, Ctrl+W"); delays are dropped.
+        var chords = new List<string>();
+        var approx = new List<string>();
+        foreach (var step in m.Steps)
+        {
+            if (step.Key is not { } key || !HidKeys.TryChord(key, step.Modifiers, out string chord, out string? a))
+                return Fail($"Macro '{m.Name}' is a sequence ({m.Describe()}) with a step that is not a single key chord (mouse or other input); Slender's Keys action only sends keyboard chords.");
+            chords.Add(chord);
+            if (a is not null) approx.Add(a);
+        }
+        string joined = string.Join(", ", chords);
+        if (m.Steps.Count > 1 && m.All.Any(s => s.DelayMs > 0))
+            approx.Add($"Macro '{m.Name}' became the key sequence '{joined}'; its delays were dropped and the keys are sent about 30 ms apart.");
+        return Ok(new ActionSpec.Keys(joined), approx.Count > 0 ? string.Join(" ", approx) : null);
     }
 
     private static Conv ConvertKeystroke(JsonObject? ks)

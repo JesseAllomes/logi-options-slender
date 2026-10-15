@@ -13,7 +13,7 @@ internal static class HidKeys
             [45] = "Minus", [46] = "Equals", [49] = "Backslash", [51] = "Semicolon", [53] = "Backtick",
             [54] = "Comma", [55] = "Period", [56] = "Slash",
             [70] = "PrintScreen", [73] = "Insert", [74] = "Home", [75] = "PageUp", [76] = "Delete", [77] = "End", [78] = "PageDown",
-            [79] = "Right", [80] = "Left", [81] = "Down", [82] = "Up", [101] = "Menu",
+            [88] = "Enter", [79] = "Right", [80] = "Left", [81] = "Down", [82] = "Up", [101] = "Menu",
         };
         for (int i = 0; i < 26; i++) d[4 + i] = ((char)('A' + i)).ToString();
         for (int i = 0; i < 9; i++) d[30 + i] = ((char)('1' + i)).ToString();
@@ -57,7 +57,12 @@ internal static class HidKeys
         }
         chord = string.Join('+', mods.Values.Append(key));
         if (!ChordParser.TryParse(chord, out _)) return false;
-        if (right) approximation = $"Right-hand modifier keys became their left-hand equivalents in '{chord}'.";
+        if (code == 88) approximation = $"Keypad Enter became Enter in '{chord}'.";
+        if (right)
+        {
+            string note = $"Right-hand modifier keys became their left-hand equivalents in '{chord}'.";
+            approximation = approximation is null ? note : approximation + " " + note;
+        }
         return true;
     }
 
