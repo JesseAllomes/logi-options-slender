@@ -49,8 +49,41 @@ public static class HidppAllowlist
         [PersistentRemapId.Feature] = PersistentRemapId.FnReset,
     };
 
+    /// <summary>
+    /// The only controls whose 0x1B04 setCidReporting may carry the raw XY bits (flags bit4 value, bit5 valid): the gesture button
+    /// 0x00C3 and its virtual twin 0x00D7. Raw XY makes the mouse report movement deltas instead of moving the cursor while the
+    /// control is held, so it is confined to the gesture path. The persistent bits (0x04/0x08), force raw XY (0x40/0x80) and any
+    /// remap target (params 3-4) stay blocked for every control.
+    /// </summary>
+    public static readonly IReadOnlySet<ushort> RawXyControls = new HashSet<ushort> { 0x00C3, 0x00D7 };
+
+    private const byte DivertBits = 0x03, RawXyBits = 0x30;
+
     public static bool IsAllowed(ushort featureId, byte function) =>
         MaxFunction.TryGetValue(featureId, out var max) && function <= max;
+
+    /// <summary>
+    /// Payload rule on top of <see cref="IsAllowed"/>: 0x1B04 fn3 (setCidReporting) may only set the temporary divert bits, plus the
+    /// raw XY bits for <see cref="RawXyControls"/>. Other requests are judged by feature and function alone.
+    /// </summary>
+    public static bool IsAllowed(ushort featureId, byte function, ReadOnlySpan<byte> parameters)
+    {
+        if (!IsAllowed(featureId, function)) return false;
+        if (featureId != 0x1B04 || function != 3) return true;
+        if (parameters.Length < 3) return false;
+        ushort cid = (ushort)((parameters[0] << 8) | parameters[1]);
+        byte flags = parameters[2];
+        if ((flags & ~(DivertBits | RawXyBits)) != 0) return false; // persist, force raw XY, anything unknown
+        if ((flags & RawXyBits) != 0 && !RawXyControls.Contains(cid)) return false;
+        for (int i = 3; i < parameters.Length; i++) if (parameters[i] != 0) return false; // no remap target
+        return true;
+    }
+
+    /// <summary>Throws <see cref="HidppBlockedRequestException"/> unless the request (including its payload) is allowlisted.</summary>
+    public static void EnsureAllowed(ushort featureId, byte function, ReadOnlySpan<byte> parameters)
+    {
+        if (!IsAllowed(featureId, function, parameters)) throw new HidppBlockedRequestException(featureId, function);
+    }
 
     /// <summary>Throws <see cref="HidppBlockedRequestException"/> unless the request is allowlisted.</summary>
     public static void EnsureAllowed(ushort featureId, byte function)

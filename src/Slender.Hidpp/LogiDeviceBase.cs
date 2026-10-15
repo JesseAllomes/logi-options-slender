@@ -29,6 +29,9 @@ public abstract class LogiDeviceBase : IDisposable
 {
     private const byte DivertFlags = 0x03;   // temporary divert only; never the persistent bit (0x04)
     private const byte UndivertFlags = 0x02;
+    // Raw XY (gesture button only, see HidppAllowlist): bit4 raw XY + bit5 its valid bit. 0x33 = divert + raw XY, 0x22 = undivert + raw XY off.
+    private const byte DivertRawXyFlags = 0x33;
+    private const byte UndivertRawXyFlags = 0x22;
 
     /// <summary>One open channel plus its device index.</summary>
     protected sealed class Session(HidppChannel channel, HidppDevice device)
@@ -43,6 +46,8 @@ public abstract class LogiDeviceBase : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private HashSet<ushort> _desiredDiverts = [];
     private readonly HashSet<ushort> _appliedDiverts = [];
+    private HashSet<ushort> _desiredRawXy = [];
+    private readonly HashSet<ushort> _appliedRawXy = []; // subset of _appliedDiverts whose divert also carries raw XY
     private HashSet<ushort> _held = [];
     private volatile Session? _session;
     private volatile bool _connected;
@@ -241,6 +246,7 @@ public abstract class LogiDeviceBase : IDisposable
         lock (State)
         {
             _appliedDiverts.Clear();
+            _appliedRawXy.Clear();
             ResetAppliedState();
         }
         ReleaseHeldControls();
@@ -264,15 +270,17 @@ public abstract class LogiDeviceBase : IDisposable
             await ApplyBeforeDivertsAsync(s, ct).ConfigureAwait(false);
 
             ushort[] desired;
+            HashSet<ushort> rawWanted;
             lock (State)
             {
                 _appliedDiverts.Clear();
+                _appliedRawXy.Clear();
                 ResetAppliedState();
                 desired = [.. _desiredDiverts];
+                rawWanted = [.. _desiredRawXy];
             }
             foreach (var cid in desired)
-                if (await TrySetDivertAsync(s, cid, true, ct).ConfigureAwait(false))
-                    lock (State) _appliedDiverts.Add(cid);
+                await ApplyDivertAsync(s, cid, rawWanted.Contains(cid), ct).ConfigureAwait(false);
             // Another driver (Options+) may have left controls diverted; a diverted control we do not handle is
             // dead, so put everything we do not want back to native.
             foreach (var cid in KnownDivertableControls)
@@ -284,21 +292,48 @@ public abstract class LogiDeviceBase : IDisposable
         finally { Gate.Release(); }
     }
 
-    protected static async Task<bool> TrySetDivertAsync(Session s, ushort cid, bool divert, CancellationToken ct)
+    protected static async Task<bool> TrySetDivertAsync(Session s, ushort cid, bool divert, CancellationToken ct, bool rawXy = false)
     {
+        // Undiverting a raw-XY-capable control also clears raw XY (valid bit set, value 0), so a raw divert can never be left behind.
+        var flags = divert ? (rawXy ? DivertRawXyFlags : DivertFlags)
+            : HidppAllowlist.RawXyControls.Contains(cid) ? UndivertRawXyFlags : UndivertFlags;
         try
         {
             await s.Device.CallAsync(FeatureId.ReprogControlsV4, 3,
-                new byte[] { (byte)(cid >> 8), (byte)cid, divert ? DivertFlags : UndivertFlags, 0, 0 }, ct).ConfigureAwait(false);
+                new byte[] { (byte)(cid >> 8), (byte)cid, flags, 0, 0 }, ct).ConfigureAwait(false);
             return true;
         }
         catch (HidppException) { return false; }
     }
 
+    /// <summary>
+    /// Diverts one control, with raw XY when wanted and allowed. A failed raw-XY divert falls back to the plain divert so the
+    /// button still works (the engine then uses the mouse-hook gesture path). Records the applied state.
+    /// </summary>
+    private async Task ApplyDivertAsync(Session s, ushort cid, bool rawXy, CancellationToken ct)
+    {
+        rawXy &= HidppAllowlist.RawXyControls.Contains(cid);
+        if (rawXy && await TrySetDivertAsync(s, cid, true, ct, rawXy: true).ConfigureAwait(false))
+        {
+            lock (State) { _appliedDiverts.Add(cid); _appliedRawXy.Add(cid); }
+        }
+        else if (await TrySetDivertAsync(s, cid, true, ct).ConfigureAwait(false))
+        {
+            lock (State) { _appliedDiverts.Add(cid); _appliedRawXy.Remove(cid); }
+        }
+    }
+
+    /// <summary>True while the control is diverted WITH raw XY on the current connection (its movement arrives as raw XY events).</summary>
+    public bool IsRawXyActive(ushort controlId)
+    {
+        lock (State) return _connected && _appliedRawXy.Contains(controlId);
+    }
+
     /// <summary>Records the desired set and applies the difference when connected (otherwise applied on (re)connect).</summary>
-    protected async Task SetDivertedCoreAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct)
+    protected async Task SetDivertedCoreAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct, IReadOnlyCollection<ushort>? rawXyControlIds = null)
     {
         var wanted = new HashSet<ushort>(controlIds);
+        var rawWanted = new HashSet<ushort>((rawXyControlIds ?? []).Where(c => wanted.Contains(c) && HidppAllowlist.RawXyControls.Contains(c)));
         await Gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -306,21 +341,20 @@ public abstract class LogiDeviceBase : IDisposable
             lock (State)
             {
                 _desiredDiverts = wanted;
+                _desiredRawXy = rawWanted;
                 toUndivert = [.. _appliedDiverts.Where(c => !wanted.Contains(c))];
-                toDivert = [.. wanted.Where(c => !_appliedDiverts.Contains(c))];
+                // Also re-divert a control whose raw-XY state must change (plain <-> raw XY).
+                toDivert = [.. wanted.Where(c => !_appliedDiverts.Contains(c) || _appliedRawXy.Contains(c) != rawWanted.Contains(c))];
             }
             var s = _session;
             if (s == null || !_connected) return;
             foreach (var cid in toUndivert)
             {
                 if (await TrySetDivertAsync(s, cid, false, ct).ConfigureAwait(false))
-                    lock (State) _appliedDiverts.Remove(cid);
+                    lock (State) { _appliedDiverts.Remove(cid); _appliedRawXy.Remove(cid); }
             }
             foreach (var cid in toDivert)
-            {
-                if (await TrySetDivertAsync(s, cid, true, ct).ConfigureAwait(false))
-                    lock (State) _appliedDiverts.Add(cid);
-            }
+                await ApplyDivertAsync(s, cid, rawWanted.Contains(cid), ct).ConfigureAwait(false);
         }
         finally { Gate.Release(); }
     }
@@ -355,6 +389,8 @@ public abstract class LogiDeviceBase : IDisposable
 
         if (s.Device.TryGetCachedIndex(FeatureId.ReprogControlsV4, out var reprog) && msg.FeatureIndex == reprog && msg.Function == 0)
             HandleControls(ParseDivertedControls(msg));
+        else if (reprog != 0 && msg.FeatureIndex == reprog && msg.Function == 1)
+            RaiseRawXy(ParseRawXy(msg));
         else
             HandleOtherNotification(s, msg);
     }
@@ -372,6 +408,22 @@ public abstract class LogiDeviceBase : IDisposable
         }
         return set;
     }
+
+    /// <summary>0x1B04 event 1 (divertedRawMouseXY): p[0-1] dx int16 BE, p[2-3] dy int16 BE; positive dy = down. Layout per docs/protocol.md.</summary>
+    public static RawXyEvent ParseRawXy(HidppMessage msg)
+    {
+        var p = msg.Params;
+        return new RawXyEvent((short)((p[0] << 8) | p[1]), (short)((p[2] << 8) | p[3]));
+    }
+
+    private void RaiseRawXy(RawXyEvent e)
+    {
+        try { DispatchRawXy(e); }
+        catch (Exception ex) { Debug.WriteLine($"{Name} raw XY handler threw: {ex.Message}"); }
+    }
+
+    /// <summary>Raw XY deltas while a raw-XY-diverted control is held. Default: ignored.</summary>
+    protected virtual void DispatchRawXy(RawXyEvent e) { }
 
     private void HandleControls(HashSet<ushort> now)
     {

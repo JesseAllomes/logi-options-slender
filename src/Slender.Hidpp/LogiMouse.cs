@@ -61,10 +61,13 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
 
     public event EventHandler<ButtonEvent>? ButtonChanged;
     public event EventHandler<ThumbWheelEvent>? ThumbWheelMoved;
+    public event EventHandler<RawXyEvent>? RawXyMoved;
 
     protected override IReadOnlyCollection<ushort> KnownDivertableControls => KnownDivertable;
 
     protected override void DispatchControl(ButtonEvent e) => ButtonChanged?.Invoke(this, e);
+
+    protected override void DispatchRawXy(RawXyEvent e) => RawXyMoved?.Invoke(this, e);
 
     protected override void ResetAppliedState() => _thumbApplied = false;
 
@@ -391,6 +394,9 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
 
     public Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct) =>
         SetDivertedCoreAsync(controlIds, ct);
+
+    public Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, IReadOnlyCollection<ushort> rawXyControlIds, CancellationToken ct) =>
+        SetDivertedCoreAsync(controlIds, ct, rawXyControlIds);
 
     /// <summary>Sets the thumb wheel direction now (if connected) and on every reconnect.</summary>
     public async Task SetThumbWheelInvertAsync(bool invert, CancellationToken ct)

@@ -58,7 +58,7 @@ public sealed class HidppDevice
 
     public async Task<HidppMessage> CallAsync(ushort featureId, byte function, ReadOnlyMemory<byte> parameters, CancellationToken ct)
     {
-        HidppAllowlist.EnsureAllowed(featureId, function); // before any index lookup or write
+        HidppAllowlist.EnsureAllowed(featureId, function, parameters.Span); // before any index lookup or write
         var idx = await GetFeatureIndexAsync(featureId, ct).ConfigureAwait(false)
             ?? throw new HidppFeatureNotSupportedException(featureId);
         return await Channel.RequestAsync(DeviceIndex, idx, function, parameters, ct).ConfigureAwait(false);
@@ -67,7 +67,7 @@ public sealed class HidppDevice
     /// <summary>Fire-and-forget call. Returns false when the feature is absent.</summary>
     public async Task<bool> SendAsync(ushort featureId, byte function, ReadOnlyMemory<byte> parameters, CancellationToken ct)
     {
-        HidppAllowlist.EnsureAllowed(featureId, function);
+        HidppAllowlist.EnsureAllowed(featureId, function, parameters.Span);
         var idx = await GetFeatureIndexAsync(featureId, ct).ConfigureAwait(false);
         if (idx is null) return false;
         await Channel.SendAsync(DeviceIndex, idx.Value, function, parameters, ct).ConfigureAwait(false);

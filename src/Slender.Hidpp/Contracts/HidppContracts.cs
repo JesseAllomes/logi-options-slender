@@ -55,6 +55,9 @@ public readonly record struct ButtonEvent(ushort ControlId, bool Pressed);
 /// <summary>Diverted thumb wheel report. Rotation is signed, positive = right.</summary>
 public readonly record struct ThumbWheelEvent(int Rotation, bool Touch, bool Proximity, bool SingleTap);
 
+/// <summary>0x1B04 divertedRawMouseXY: movement since the last report while a raw-XY-diverted control is held (device counts; +dy = down).</summary>
+public readonly record struct RawXyEvent(int Dx, int Dy);
+
 public readonly record struct BatteryStatus(int Percent, bool Charging);
 
 /// <summary>
@@ -70,11 +73,24 @@ public interface ILogiMouse : IDisposable
     event EventHandler<ButtonEvent>? ButtonChanged;
     event EventHandler<ThumbWheelEvent>? ThumbWheelMoved;
 
+    /// <summary>Raw movement deltas while a raw-XY-diverted control (the gesture button) is held.</summary>
+    event EventHandler<RawXyEvent>? RawXyMoved { add { } remove { } }
+
     /// <summary>Starts the connect/reconnect loop. Re-applies diverts after every reconnect.</summary>
     Task StartAsync(CancellationToken ct);
 
     /// <summary>Replaces the set of diverted controls (others are undiverted).</summary>
     Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct);
+
+    /// <summary>
+    /// Like <see cref="SetDivertedControlsAsync(IReadOnlyCollection{ushort}, CancellationToken)"/>, but the controls in
+    /// <paramref name="rawXyControlIds"/> (gesture button only) are diverted with raw XY. Falls back to a plain divert when refused.
+    /// </summary>
+    Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, IReadOnlyCollection<ushort> rawXyControlIds, CancellationToken ct) =>
+        SetDivertedControlsAsync(controlIds, ct);
+
+    /// <summary>True while the control is diverted with raw XY on this connection, i.e. its movement arrives as <see cref="RawXyMoved"/>.</summary>
+    bool IsRawXyActive(ushort controlId) => false;
 
     Task SetThumbWheelDivertedAsync(bool diverted, CancellationToken ct);
 
