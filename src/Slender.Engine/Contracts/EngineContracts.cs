@@ -109,6 +109,28 @@ public sealed record Profile(string? AppProcess, IReadOnlyDictionary<ushort, Act
 
     /// <summary>Full path of the app's executable, used to extract its icon; null = resolve from the running process.</summary>
     public string? ExePath { get; init; }
+
+    /// <summary>
+    /// Gesture button held while the mouse moves. Missing directions follow the default profile; a release without
+    /// movement runs Bindings[ControlId.Gesture] as before.
+    /// </summary>
+    public IReadOnlyDictionary<GestureDirection, ActionSpec> GestureSwipes { get; init; } = new Dictionary<GestureDirection, ActionSpec>();
+
+    /// <summary>
+    /// Actions Ring slots, clockwise from the top (RingSlotCount entries; ActionSpec.None = empty slot).
+    /// Null = follow the default profile.
+    /// </summary>
+    public IReadOnlyList<ActionSpec>? RingSlots { get; init; }
+
+    public const int RingSlotCount = 8;
+}
+
+public enum GestureDirection
+{
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnButtonPress = false, bool OnActionsRing = true);

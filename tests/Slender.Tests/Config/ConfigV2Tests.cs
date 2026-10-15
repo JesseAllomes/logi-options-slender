@@ -60,6 +60,35 @@ public sealed class ConfigV2Tests : IDisposable
     }
 
     [Fact]
+    public void Gesture_swipes_and_ring_slots_round_trip()
+    {
+        var ring = new List<ActionSpec> { new ActionSpec.Keys("Ctrl+C"), new ActionSpec.Launch("calc.exe") };
+        SlenderConfig config = SlenderConfig.Default with
+        {
+            Profiles =
+            [
+                new Profile(null, new Dictionary<ushort, ActionSpec>())
+                {
+                    GestureSwipes = new Dictionary<GestureDirection, ActionSpec> { [GestureDirection.Down] = new ActionSpec.Keys("Win+D") },
+                    RingSlots = ring,
+                },
+                new Profile("excel", new Dictionary<ushort, ActionSpec>()),
+            ],
+        };
+
+        Store().Save(config);
+        SlenderConfig loaded = Store().Load();
+
+        Profile def = loaded.Profiles[0];
+        Assert.Equal(new ActionSpec.Keys("Win+D"), def.GestureSwipes[GestureDirection.Down]);
+        Assert.Equal(Profile.RingSlotCount, def.RingSlots!.Count); // padded to the fixed layout
+        Assert.Equal(new ActionSpec.Launch("calc.exe"), def.RingSlots[1]);
+        Assert.Equal(new ActionSpec.None(), def.RingSlots[7]);
+        Assert.Empty(loaded.Profiles[1].GestureSwipes);
+        Assert.Null(loaded.Profiles[1].RingSlots); // follows the default profile
+    }
+
+    [Fact]
     public void Null_dpi_round_trips_as_null()
     {
         Store().Save(SlenderConfig.Default);

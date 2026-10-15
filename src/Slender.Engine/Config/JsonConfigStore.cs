@@ -101,6 +101,8 @@ public sealed class JsonConfigStore : IConfigStore
                 KeyBindings = p.KeyBindings is null ? new Dictionary<ushort, ActionSpec>() : ParseBindings(p.KeyBindings),
                 DisplayName = string.IsNullOrWhiteSpace(p.DisplayName) ? null : p.DisplayName,
                 ExePath = string.IsNullOrWhiteSpace(p.ExePath) ? null : p.ExePath,
+                GestureSwipes = ParseSwipes(p.GestureSwipes),
+                RingSlots = p.RingSlots is null ? null : NormaliseRing(p.RingSlots),
             });
         }
 
@@ -145,6 +147,39 @@ public sealed class JsonConfigStore : IConfigStore
             Math.Clamp(p.SmartShiftThreshold, 1, 255),
             p.InvertWheel,
             p.InvertThumbWheel);
+    }
+
+    private static Dictionary<GestureDirection, ActionSpec> ParseSwipes(Dictionary<string, ActionSpec>? raw)
+    {
+        var swipes = new Dictionary<GestureDirection, ActionSpec>();
+        if (raw is null)
+        {
+            return swipes;
+        }
+
+        foreach (KeyValuePair<string, ActionSpec> pair in raw)
+        {
+            if (!Enum.TryParse(pair.Key, ignoreCase: true, out GestureDirection direction))
+            {
+                throw new FormatException($"Unknown gesture direction '{pair.Key}'.");
+            }
+
+            swipes[direction] = pair.Value;
+        }
+
+        return swipes;
+    }
+
+    /// <summary>Pads or trims to Profile.RingSlotCount so the ring always has a fixed layout.</summary>
+    private static List<ActionSpec> NormaliseRing(List<ActionSpec> slots)
+    {
+        var ring = slots.Take(Profile.RingSlotCount).ToList();
+        while (ring.Count < Profile.RingSlotCount)
+        {
+            ring.Add(new ActionSpec.None());
+        }
+
+        return ring;
     }
 
     private static Dictionary<ushort, ActionSpec> ParseBindings(Dictionary<string, ActionSpec>? raw)
@@ -220,6 +255,10 @@ public sealed class JsonConfigStore : IConfigStore
                 ExePath = profile.ExePath,
                 Bindings = bindings,
                 KeyBindings = keyBindings,
+                GestureSwipes = profile.GestureSwipes.Count == 0
+                    ? null
+                    : profile.GestureSwipes.ToDictionary(kv => kv.Key.ToString().ToLowerInvariant(), kv => kv.Value),
+                RingSlots = profile.RingSlots?.ToList(),
             });
         }
 
@@ -309,6 +348,8 @@ public sealed class JsonConfigStore : IConfigStore
         public string? ExePath { get; set; }
         public Dictionary<string, ActionSpec>? Bindings { get; set; }
         public Dictionary<string, ActionSpec>? KeyBindings { get; set; }
+        public Dictionary<string, ActionSpec>? GestureSwipes { get; set; }
+        public List<ActionSpec>? RingSlots { get; set; }
     }
 
     internal sealed class ExcelDto
