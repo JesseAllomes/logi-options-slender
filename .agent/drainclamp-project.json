@@ -244,8 +244,42 @@
       }
     ]
   },
-  "errors": [],
-  "rev": 37,
+  "errors": [
+    {
+      "at": "2026-10-15T05:14:32+00:00",
+      "cause": "",
+      "chunk": "",
+      "fix": "own DoubleCollection per shape + per-slot try/catch (2fbd4e4)",
+      "fixed_at": "2026-10-15T05:27:40+00:00",
+      "id": "e1",
+      "milestone": "m13",
+      "status": "fixed",
+      "summary": "Settings ring preview vanishes on folder slot: shared DoubleCollection in StrokeDashArray (settings.log ArgumentException)"
+    },
+    {
+      "at": "2026-10-15T05:14:33+00:00",
+      "cause": "",
+      "chunk": "",
+      "fix": "PluginServiceRingImporter reads Loupedeck72 ProfileInfo.json, folders, icons (2fbd4e4)",
+      "fixed_at": "2026-10-15T05:27:40+00:00",
+      "id": "e2",
+      "milestone": "m13",
+      "status": "fixed",
+      "summary": "Import missed the real Actions Ring: it lives in Logi Plugin Service ProfileInfo.json (Loupedeck72), not settings.db"
+    },
+    {
+      "at": "2026-10-15T05:14:33+00:00",
+      "cause": "",
+      "chunk": "",
+      "fix": "recorder captures at picker root, focuses on Loaded (713e601)",
+      "fixed_at": "2026-10-15T05:27:40+00:00",
+      "id": "e3",
+      "milestone": "m13",
+      "status": "fixed",
+      "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
+    }
+  ],
+  "rev": 43,
   "schema": 1,
   "time": [
     {

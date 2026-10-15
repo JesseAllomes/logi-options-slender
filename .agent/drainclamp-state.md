@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=48 -->
+<!-- drainclamp-build: state; schema=1; generation=49 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -98,4 +98,5 @@ Builder worktrees -> only under logi-options-slender/.worktrees/<name> (ignored 
 - 2026-10-15T03:55:44+00:00 75bd84c4 m21 gestures + m22 brightness/DPI/per-app divert merged (601d1d7, 554 tests); m20 ring prototypes round 1 shown, waiting for pick
 - 2026-10-15T04:29:13+00:00 72b3ac42 m20 Actions Ring merged (6e486cf, 661 tests): 3 switchable styles, folders, appearance page, import; SlenderSetup 1.1.0 built; next = user installs and runs m13/c2 live pass covering m17-m22 + ring
 - 2026-10-15T04:56:47+00:00 030f8f86 In-app updates merged (73bf370, 687 tests); SlenderSetup 1.1.1 built with baked releases source; user installs once, later updates arrive in-app
+- 2026-10-15T05:27:40+00:00 401e20f1 Live-test fixes merged (0ec5761, 703 tests): ring preview crash, plugin-service ring import, key recorder; SlenderSetup 1.1.2 built as first in-app update
 <!-- /DC:LOG -->
