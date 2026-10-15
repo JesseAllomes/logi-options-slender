@@ -9,13 +9,14 @@ using Slender.Settings.Views;
 
 namespace Slender.Settings;
 
-/// <summary>The gear pages: Point and scroll, Haptics, General. Plain rows: label and help on the left, control on the right.</summary>
+/// <summary>The gear pages: Point and scroll, Haptics, Actions Ring (MainWindow.Ring.cs), General. Plain rows: label and help on the left, control on the right.</summary>
 public sealed partial class MainWindow
 {
     private void BuildPage()
     {
         PagePanel.Children.Clear();
         PagePanel.Spacing = 0;
+        PagePanel.MaxWidth = 660;
 
         PagePanel.Children.Add(Ui.Text("Settings", 24, Ui.Ink, Ui.Heading));
         ((TextBlock)PagePanel.Children[0]).Margin = new Thickness(0, 0, 0, 14);
@@ -23,6 +24,7 @@ public sealed partial class MainWindow
         var bar = new SelectorBar { Margin = new Thickness(-8, 0, 0, 10) };
         bar.Items.Add(new SelectorBarItem { Text = "Point & scroll", Tag = Page.Pointer });
         bar.Items.Add(new SelectorBarItem { Text = "Haptics", Tag = Page.Haptics });
+        bar.Items.Add(new SelectorBarItem { Text = "Actions Ring", Tag = Page.Ring });
         bar.Items.Add(new SelectorBarItem { Text = "General", Tag = Page.General });
         bar.SelectedItem = bar.Items.First(i => (Page)i.Tag == _page);
         bar.SelectionChanged += (s, _) =>
@@ -42,6 +44,9 @@ public sealed partial class MainWindow
                 break;
             case Page.Haptics:
                 BuildHapticsPage();
+                break;
+            case Page.Ring:
+                BuildRingPage();
                 break;
             default:
                 BuildGeneralPage();

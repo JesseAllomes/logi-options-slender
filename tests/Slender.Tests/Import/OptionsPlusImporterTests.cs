@@ -215,12 +215,81 @@ public class OptionsPlusImporterTests
     }
 
     [Fact]
-    public void RadialMenuItemsAndMechanicalDevicesAreReported()
+    public void RadialMenuItemsBecomeTheDefaultRingAndMechanicalDevicesAreReported()
     {
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("c408") && n.Contains("Ctrl+X"));
-        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("c415") && n.Contains("folder"));
+        Assert.DoesNotContain(Notes(ImportNoteKind.Unmapped), n => n.Contains("c408") || n.Contains("c415"));
         Assert.Equal(4, Result.Notes.Count(n => n.Kind == ImportNoteKind.Skipped && n.Where.StartsWith("mx-mechanical-")));
         Assert.DoesNotContain(Result.Config.Profiles.SelectMany(p => p.Bindings.Keys), k => k is >= 408 and <= 415);
+
+        IReadOnlyList<RingSlot> ring = Default.RingSlots!;
+        Assert.Equal(8, ring.Count);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+X"), ring[0].Action);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+C"), ring[1].Action);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+V"), ring[2].Action);
+        Assert.Equal(new ActionSpec.MouseButton("Forward"), ring[3].Action);
+        Assert.Equal(new ActionSpec.MouseButton("Back"), ring[4].Action);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+Z"), ring[5].Action);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+Y"), ring[6].Action);
+        Assert.True(ring[7].IsFolder);
+        Assert.Equal("Folder", ring[7].Name);
+        Assert.All(ring[7].Folder!, s => Assert.True(s.IsEmpty));
+        Assert.All(Result.Config.Profiles.Where(p => p.AppProcess is not null), p => Assert.Null(p.RingSlots));
+    }
+
+    private static string RingJson(string folderCard) => """
+        {"profile_keys":["p"],"p":{"applicationId":"420fd454-0c36-499d-bde4-146823b16147","name":"PROFILE_NAME_DEFAULT","assignments":[
+          {"slotId":"radial-menu-virtual-device-10000000_c409","card":{"attribute":"MACRO_PLAYBACK","id":"x","name":"ASSIGNMENT_NAME_PASTE","macro":{"type":"KEYSTROKE","keystroke":{"code":25,"modifiers":[224]}}}},
+          {"slotId":"radial-menu-virtual-device-10000000_c415","card":
+        """ + folderCard + "}]}}";
+
+    private static ImportResult ImportRing(string folderCard) =>
+        OptionsPlusImporter.Import(RingJson(folderCard), null, SlenderConfig.Default);
+
+    [Fact]
+    public void FolderChildrenAndCustomNameAreImportedInOrder()
+    {
+        ImportResult r = ImportRing("""
+            {"attribute":"FOLDER","id":"card_global_presets_folder","name":"AI Actions","nestedCardsOrder":["b","a"],"nestedCards":{
+              "a":{"attribute":"MACRO_PLAYBACK","id":"a","macro":{"type":"OPEN_WEB_PAGE","openWebPage":{"url":"https://a.example/"}}},
+              "b":{"attribute":"MACRO_PLAYBACK","id":"b","macro":{"type":"MEDIA","media":{"usage":"MUTE"}}}}}
+            """);
+
+        RingSlot[] ring = [.. r.Config.Profiles.Single(p => p.AppProcess is null).RingSlots!];
+        Assert.Equal(new ActionSpec.Keys("Ctrl+V"), ring[1].Action);
+        Assert.True(ring[0].IsEmpty);
+        RingSlot folder = ring[7];
+        Assert.Equal("AI Actions", folder.Name);
+        Assert.Equal(8, folder.Folder!.Count);
+        Assert.Equal(new ActionSpec.Keys("VolumeMute"), folder.Folder[0].Action);
+        Assert.Equal(new ActionSpec.Launch("https://a.example/"), folder.Folder[1].Action);
+        Assert.True(folder.Folder[2].IsEmpty);
+    }
+
+    [Fact]
+    public void AnUnmappableRingChildIsReportedAndLeftEmpty()
+    {
+        ImportResult r = ImportRing("""
+            {"attribute":"FOLDER","name":"ASSIGNMENT_NAME_FOLDER","nestedCards":{
+              "a":{"attribute":"MACRO_PLAYBACK","id":"a","macro":{"type":"PLUGIN_THING"}}}}
+            """);
+
+        RingSlot folder = r.Config.Profiles.Single(p => p.AppProcess is null).RingSlots![7];
+        Assert.Equal("Folder", folder.Name);
+        Assert.True(folder.Folder![0].IsEmpty);
+        Assert.Contains(r.Notes, n => n.Kind == ImportNoteKind.Unmapped && n.Where.Contains("c415") && n.Message.Contains("left empty"));
+    }
+
+    [Fact]
+    public void ProfilesWithoutRingAssignmentsKeepTheirRing()
+    {
+        var current = SlenderConfig.Default with
+        {
+            Profiles = [.. SlenderConfig.Default.Profiles, new Profile("notepad", new Dictionary<ushort, ActionSpec>()) { RingSlots = [.. Enumerable.Repeat(RingSlot.Empty, 8)] }],
+        };
+        ImportResult r = OptionsPlusImporter.Import(RingJson("""{"attribute":"FOLDER","name":"ASSIGNMENT_NAME_FOLDER"}"""), null, current);
+
+        Assert.NotNull(r.Config.Profiles.Single(p => p.AppProcess == "notepad").RingSlots);
+        Assert.Null(r.Config.Profiles.Single(p => p.AppProcess == "excel").RingSlots);
     }
 
     [Fact]

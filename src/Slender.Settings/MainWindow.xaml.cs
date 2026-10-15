@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
         Device,
         Pointer,
         Haptics,
+        Ring,
         General,
     }
 
@@ -115,7 +116,7 @@ public sealed partial class MainWindow : Window
 
         if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_PAGE") is { } start)
         {
-            _page = start.ToLowerInvariant() switch { "pointer" => Page.Pointer, "haptics" => Page.Haptics, "general" => Page.General, _ => _page }; // test hook
+            _page = start.ToLowerInvariant() switch { "pointer" => Page.Pointer, "haptics" => Page.Haptics, "ring" => Page.Ring, "general" => Page.General, _ => _page }; // test hook
         }
 
         _ready = true;
@@ -263,7 +264,7 @@ public sealed partial class MainWindow : Window
 
     private void StepApp(int delta)
     {
-        if (_page != Page.Device)
+        if (_page is not (Page.Device or Page.Ring))
         {
             return;
         }
@@ -276,7 +277,7 @@ public sealed partial class MainWindow : Window
     private void SelectAppByIndex(int index)
     {
         List<string?> keys = AppKeys();
-        if (_page == Page.Device && index < keys.Count)
+        if (_page is Page.Device or Page.Ring && index < keys.Count)
         {
             SelectApp(keys[index]);
         }
@@ -394,6 +395,10 @@ public sealed partial class MainWindow : Window
         {
             RefreshStageLabels();
         }
+        else if (_page == Page.Ring)
+        {
+            RefreshRing();
+        }
 
         RefreshCompare();
     }
@@ -423,8 +428,9 @@ public sealed partial class MainWindow : Window
         HeadingPanel.Visibility = device ? Visibility.Visible : Visibility.Collapsed;
         PageScroll.Visibility = device ? Visibility.Collapsed : Visibility.Visible;
         BottomBar.Visibility = device ? Visibility.Visible : Visibility.Collapsed;
-        StripBorder.Opacity = device ? 1 : 0.35;
-        StripPanel.IsHitTestVisible = device;
+        bool strip = device || _page == Page.Ring; // the ring's slots depend on the app chosen in the strip
+        StripBorder.Opacity = strip ? 1 : 0.35;
+        StripPanel.IsHitTestVisible = strip;
     }
 
     private void SelectDevice(DeviceKind kind)
@@ -441,11 +447,12 @@ public sealed partial class MainWindow : Window
 
     private void SelectApp(string? app)
     {
-        if (_page != Page.Device)
+        if (_page is not (Page.Device or Page.Ring))
         {
             _page = Page.Device;
         }
 
+        _ringFolder = null;
         _app = app;
         RebuildAll();
     }
