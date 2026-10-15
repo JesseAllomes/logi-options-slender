@@ -178,7 +178,8 @@ public sealed partial class MainWindow
         for (int i = 0; i < swipes.Count; i++)
         {
             var swipeItem = new StageItem { Info = swipes[i], LabelWidth = cell };
-            swipeItem.Label = MakeLabelButton(swipeItem, cell);
+            swipeItem.Position = new Point(stripLeft + i * (cell + 8) + cell / 2, h - LabelHeight / 2 - 6);
+            swipeItem.Label =MakeLabelButton(swipeItem, cell);
             Canvas.SetLeft(swipeItem.Label, stripLeft + i * (cell + 8));
             Canvas.SetTop(swipeItem.Label, h - LabelHeight - 6);
             StageCanvas.Children.Add(swipeItem.Label);

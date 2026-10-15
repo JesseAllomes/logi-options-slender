@@ -194,4 +194,38 @@ public class OptionsPlusImportFlowTests : IDisposable
         Assert.False(ProfileOps.IsPassThrough(cleared, "ms-teams", DeviceKind.Mouse, Slender.Hidpp.ControlId.ModeShift));
         Assert.True(ProfileOps.Effective(cleared, "ms-teams", DeviceKind.Mouse, Slender.Hidpp.ControlId.ModeShift).Inherited);
     }
+
+    [Fact]
+    public void Unreadable_action_image_gives_no_icon()
+    {
+        var icons = new PluginServiceIcons(Path.Combine(_dir, "assets", "ring"), _ => throw new IOException("locked"));
+        var profile = new Slender.Engine.Import.PluginServiceProfile("@_x", "X", "{}", Path.Combine(_dir, "orig"));
+
+        Assert.Null(icons.For(profile, "x"));
+        Assert.False(icons.HasPending);
+    }
+
+    [Fact]
+    public void Icon_save_skips_quietly_when_the_folder_cannot_be_made()
+    {
+        string ring = Path.Combine(_dir, "ring");
+        File.WriteAllText(ring, "keep");
+        try
+        {
+            var icons = new PluginServiceIcons(ring, _ => [1, 2, 3]);
+            var profile = new Slender.Engine.Import.PluginServiceProfile("@_x", "X", "{}", Path.Combine(_dir, "orig"));
+
+            Assert.NotNull(icons.For(profile, "act"));
+            Assert.True(icons.HasPending);
+
+            icons.Save();
+
+            Assert.True(File.Exists(ring));
+            Assert.Equal("keep", File.ReadAllText(ring));
+        }
+        finally
+        {
+            if (File.Exists(ring)) File.Delete(ring);
+        }
+    }
 }

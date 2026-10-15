@@ -46,6 +46,12 @@ public sealed partial class MainWindow
 
         /// <summary>Opens at this point of the anchor instead of under it (the ring anchors to its preview, whose slots are redrawn).</summary>
         public Windows.Foundation.Point? At { get; init; }
+
+        /// <summary>App profiles only: the "Normal ... in app" option that stores an explicit None (pass-through).</summary>
+        public string? PassThroughText { get; init; }
+
+        /// <summary>True when the control already holds an explicit None in this app, so the pass-through option is the chosen one.</summary>
+        public bool IsPassThrough { get; init; }
     }
 
     /// <summary>
@@ -87,7 +93,11 @@ public sealed partial class MainWindow
 
         ShowPickerCore(anchor, new PickerSpec(
             target is null ? info.Name : $"{info.Name} in {appName}", tabs, initial, own, defaultText, info.Id == DeviceIds.ThumbWheelPseudoId,
-            action => _config.Update(c => ProfileOps.SetBinding(c, target, _kind, info.Id, action))));
+            action => _config.Update(c => ProfileOps.SetBinding(c, target, _kind, info.Id, action)))
+        {
+            PassThroughText = target is null ? null : $"Normal {info.NativeText} in {appName}",
+            IsPassThrough = target is not null && ProfileOps.IsPassThrough(_config.Config, target, _kind, info.Id),
+        });
     }
 
     private void ShowPickerCore(FrameworkElement anchor, PickerSpec spec)
@@ -195,8 +205,17 @@ public sealed partial class MainWindow
             case "media":
                 return OptionList(ActionCatalog.KeyboardMediaOptions, own, commit);
             default:
-                var option = new ActionOption(spec.DefaultText, new ActionSpec.None());
-                return OptionList([option], own is null ? new ActionSpec.None() : null, a => commit(null));
+                // Option actions here are only markers: None = "same as All apps / device default" (commits null),
+                // Disabled = "normal function in this app" (commits an explicit None, the pass-through).
+                var sameAs = new ActionOption(spec.DefaultText, new ActionSpec.None());
+                if (spec.PassThroughText is null)
+                {
+                    return OptionList([sameAs], own is null ? new ActionSpec.None() : null, a => commit(null));
+                }
+
+                var passThrough = new ActionOption(spec.PassThroughText, new ActionSpec.Disabled());
+                ActionSpec? chosen = spec.IsPassThrough ? new ActionSpec.Disabled() : own is null ? new ActionSpec.None() : null;
+                return OptionList([sameAs, passThrough], chosen, a => commit(a is ActionSpec.Disabled ? new ActionSpec.None() : null));
         }
     }
 
@@ -226,7 +245,8 @@ public sealed partial class MainWindow
             string text = box.Text.Trim().Trim('"');
             if (text.Length > 0)
             {
-                commit(new ActionSpec.Launch(text));
+                string? args = own is ActionSpec.Launch l && string.Equals(l.Target, text, StringComparison.Ordinal) ? l.Arguments : null;
+                commit(new ActionSpec.Launch(text, args));
             }
         }
 
@@ -236,7 +256,10 @@ public sealed partial class MainWindow
             if (e.Key == VirtualKey.Enter)
             {
                 e.Handled = true;
-                Save();
+                if (save.IsEnabled)
+                {
+                    Save();
+                }
             }
         };
         browse.Click += async (_, _) =>

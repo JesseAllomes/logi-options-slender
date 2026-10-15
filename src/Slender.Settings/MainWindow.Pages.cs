@@ -147,15 +147,15 @@ public sealed partial class MainWindow
         AddRow("Invert main wheel", "Spin the wheel toward you to scroll up.",
             PageToggle("Invert main wheel", c.Pointer.InvertWheel, on => Edit(p => p with { InvertWheel = on })));
 
-        int? deviceDpi = _status.Device("mx-master-4")?.Dpi; // what the mouse reports now (status.json); shown while the speed is Default
-        int restDpi = deviceDpi is { } dd ? PointerMapping.SnapDpi(dd) : PointerMapping.DpiShown;
-        Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? restDpi,
+        int? DeviceDpi() => _status.Device("mx-master-4")?.Dpi; // what the mouse reports now (status.json); shown while the speed is Default
+        int RestDpi() => DeviceDpi() is { } dd ? PointerMapping.SnapDpi(dd) : PointerMapping.DpiShown;
+        Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? RestDpi(),
             v => { }, v => PointerMapping.DpiText(PointerMapping.SnapDpi(v)), out TextBlock dpiText);
         dpiText.Width = 120;
         bool setting = false;
         void ShowDefault(bool isDefault)
         {
-            dpiText.Text = isDefault ? PointerMapping.DefaultText(deviceDpi) : PointerMapping.DpiText(PointerMapping.SnapDpi(dpi.Value));
+            dpiText.Text = isDefault ? PointerMapping.DefaultText(DeviceDpi()) : PointerMapping.DpiText(PointerMapping.SnapDpi(dpi.Value));
             dpiText.Opacity = isDefault ? 0.6 : 1;
         }
 
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
         reset.Click += (_, _) =>
         {
             setting = true;
-            dpi.Value = restDpi;
+            dpi.Value = RestDpi();
             setting = false;
             ShowDefault(true);
             Edit(p => p with { Dpi = null });
@@ -184,6 +184,19 @@ public sealed partial class MainWindow
         dpiRow.Children.Add(dpi);
         dpiRow.Children.Add(dpiText);
         dpiRow.Children.Add(reset);
+        void OnDpiStatus()
+        {
+            if (_config.Config.Pointer.Dpi is null)
+            {
+                setting = true;
+                dpi.Value = RestDpi();
+                setting = false;
+                ShowDefault(true);
+            }
+        }
+
+        _status.Changed += OnDpiStatus;
+        dpiRow.Unloaded += (_, _) => _status.Changed -= OnDpiStatus;
         AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
 
         AddSection("EXCEL");
