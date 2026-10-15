@@ -378,4 +378,68 @@ public class RingSessionTests
         r.Session.OnWheel(60, 210);
         Assert.Equal(2, r.Adjusted.Count);
     }
+
+    [Fact]
+    public void ThumbWheelEightStepsGoFullCircle()
+    {
+        var r = new Rec();
+        r.Session.OnThumbWheel(120, 10);
+        Assert.Equal(0, r.Session.Selected);
+        for (var i = 1; i <= 8; i++) r.Session.OnThumbWheel(120, 10 + i);
+        Assert.Equal(0, r.Session.Selected);
+        Assert.Equal(9, r.Haptics.Count(h => h == RingHaptic.Tick));
+        Assert.True(r.Session.IsOpen);
+    }
+
+    [Fact]
+    public void ThumbWheelHiResDeltasSumToOneStep()
+    {
+        var r = new Rec();
+        r.Session.OnThumbWheel(120, 1); // slot 0
+        for (var i = 0; i < 8; i++) r.Session.OnThumbWheel(15, 2 + i);
+        Assert.Equal(1, r.Session.Selected);
+    }
+
+    [Fact]
+    public void ThumbWheelBackFromSlotZeroGoesToSeven()
+    {
+        var r = new Rec();
+        r.Session.OnThumbWheel(120, 1);
+        Assert.Equal(0, r.Session.Selected);
+        r.Session.OnThumbWheel(-120, 2);
+        Assert.Equal(7, r.Session.Selected);
+    }
+
+    [Fact]
+    public void ThumbSteerThenHoldReleaseRunsTheHighlightedSlot()
+    {
+        var r = new Rec(Eight(i => Keys("F" + (i + 1))));
+        r.Session.OnThumbWheel(120, 50);
+        r.Session.OnThumbWheel(120, 60);
+        r.Session.OnTrigger(false, 100); // quick release, but thumb-steered: not a tap
+        Assert.Single(r.Ran);
+        Assert.Equal(new ActionSpec.Keys("F2"), r.Ran[0]);
+        Assert.Equal([RingCloseReason.Ran], r.Closed);
+    }
+
+    [Fact]
+    public void ThumbWheelStepsFolderSlotsInsideAFolder()
+    {
+        var children = Eight(i => i == 2 ? Keys("Ctrl+3", "Three") : RingSlot.Empty);
+        var slots = Eight(i => i == 7 ? new RingSlot(new ActionSpec.None()) { Name = "Work", Folder = children } : Keys("F" + (i + 1)));
+        var r = new Rec(slots);
+        r.Session.OnTrigger(false, 100);
+        var (x, y) = At(7);
+        r.Session.OnClick(true, x, y, 200);
+        Assert.True(r.Session.InFolder);
+        r.Session.OnThumbWheel(-120, 300);
+        var start = r.Session.Selected;
+        Assert.NotNull(start);
+        r.Session.OnThumbWheel(120, 310);
+        Assert.Equal((start + 1) % 8, r.Session.Selected);
+        Assert.True(r.Session.InFolder);
+        while (r.Session.Selected != 2) r.Session.OnThumbWheel(120, 320);
+        r.Session.OnKey(RingKey.Enter, 400);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+3"), Assert.Single(r.Ran));
+    }
 }
