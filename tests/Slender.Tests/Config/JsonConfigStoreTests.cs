@@ -145,4 +145,21 @@ public sealed class JsonConfigStoreTests : IDisposable
             }
         }
     }
+
+    [Fact]
+    public void Battery_alerts_round_trip()
+    {
+        JsonConfigStore store = Store();
+        SlenderConfig config = store.Load() with { BatteryAlerts = new BatteryAlertSettings(false, 20, 5) };
+        store.Save(config);
+        Assert.Equal(new BatteryAlertSettings(false, 20, 5), Store().Load().BatteryAlerts);
+    }
+
+    [Fact]
+    public void Config_without_battery_alerts_loads_defaults()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "{ \"version\": 2, \"launchAtLogin\": false }");
+        Assert.Equal(new BatteryAlertSettings(), Store().Load().BatteryAlerts);
+    }
 }

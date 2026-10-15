@@ -8,7 +8,8 @@ internal static unsafe class Win32
     public const uint WM_DESTROY = 0x0002, WM_NULL = 0x0000, WM_TIMER = 0x0113, WM_COMMAND = 0x0111, WM_CONTEXTMENU = 0x007B;
     public const uint WM_LBUTTONUP = 0x0202, WM_RBUTTONUP = 0x0205, WM_APP = 0x8000;
     public const uint NIM_ADD = 0, NIM_MODIFY = 1, NIM_DELETE = 2;
-    public const uint NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4;
+    public const uint NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4, NIF_INFO = 0x10;
+    public const uint NIIF_WARNING = 2;
     public const uint MF_STRING = 0, MF_GRAYED = 1, MF_CHECKED = 8, MF_SEPARATOR = 0x800;
     public const uint TPM_RIGHTBUTTON = 2, TPM_BOTTOMALIGN = 0x20, TPM_RETURNCMD = 0x100;
     public const uint IMAGE_ICON = 1, LR_DEFAULTCOLOR = 0;

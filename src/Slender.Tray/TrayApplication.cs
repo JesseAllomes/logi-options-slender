@@ -48,6 +48,7 @@ public sealed class TrayApplication : IDisposable
     private BatteryStatus? _battery;
     private bool _keyboardConnected;
     private BatteryStatus? _keyboardBattery;
+    private readonly BatteryAlertState _batteryAlerts = new();
     private bool _paused;
     private bool _disposed;
     private string _statusText = string.Empty;
@@ -402,6 +403,31 @@ public sealed class TrayApplication : IDisposable
         _iconAdded = Win32.Shell_NotifyIconW(Win32.NIM_ADD, &nid) != 0;
     }
 
+    private unsafe void ShowBalloon(string title, string text)
+    {
+        if (!_iconAdded || _hwnd == 0)
+        {
+            return;
+        }
+
+        Win32.NOTIFYICONDATAW nid = IconData();
+        nid.uFlags |= Win32.NIF_INFO;
+        nid.dwInfoFlags = Win32.NIIF_WARNING;
+        title.AsSpan(0, Math.Min(title.Length, 63)).CopyTo(new Span<char>(nid.szInfoTitle, 64));
+        text.AsSpan(0, Math.Min(text.Length, 255)).CopyTo(new Span<char>(nid.szInfo, 256));
+        Win32.Shell_NotifyIconW(Win32.NIM_MODIFY, &nid);
+    }
+
+    private void CheckBatteryAlert(string deviceId, string name, BatteryStatus? battery, int threshold)
+    {
+        bool fire = _batteryAlerts.ShouldNotify(
+            deviceId, battery?.Percent, battery?.Charging ?? false, true, threshold, _config.BatteryAlerts.Enabled);
+        if (fire)
+        {
+            ShowBalloon("Slender", $"{name} battery low ({battery!.Value.Percent}%) - plug in to charge");
+        }
+    }
+
     private unsafe void RemoveIcon()
     {
         if (!_iconAdded || _hwnd == 0)
@@ -572,6 +598,7 @@ public sealed class TrayApplication : IDisposable
                 }
 
                 _keyboardBattery = status ?? _keyboardBattery;
+                CheckBatteryAlert("keyboard", "ERGO K860", _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent);
                 UpdateStatus();
                 _status.Changed();
             });
@@ -629,6 +656,7 @@ public sealed class TrayApplication : IDisposable
                 }
 
                 _battery = status ?? _battery;
+                CheckBatteryAlert("mouse", "MX Master 4", _battery, _config.BatteryAlerts.MouseThresholdPercent);
                 UpdateStatus();
                 _status.Changed();
             });
