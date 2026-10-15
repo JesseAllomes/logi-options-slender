@@ -98,15 +98,20 @@ public static class RingSlotText
         };
     }
 
-    /// <summary>The file whose icon the slot shows: "file:path", or a Launch target that is an exe or shortcut when no icon is set. Null otherwise.</summary>
+    /// <summary>
+    /// The file whose icon the slot shows: "file:path", or a Launch target that is an exe or shortcut when no icon is set. Null otherwise.
+    /// Network paths are never probed.
+    /// </summary>
     public static string? IconFile(RingSlot slot)
     {
+        string? path = null;
         if (slot.Icon is { Length: > 0 } icon)
-            return icon.StartsWith("file:", StringComparison.OrdinalIgnoreCase) && icon.Length > 5 ? icon[5..] : null;
-        if (!slot.IsFolder && slot.Action is ActionSpec.Launch l && !IsUrl(l.Target)
+            path = icon.StartsWith("file:", StringComparison.OrdinalIgnoreCase) && icon.Length > 5 ? icon[5..] : null;
+        else if (!slot.IsFolder && slot.Action is ActionSpec.Launch l && !IsUrl(l.Target)
             && (l.Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || l.Target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)))
-            return l.Target;
-        return null;
+            path = l.Target;
+        if (path is null || path.StartsWith(@"\\", StringComparison.Ordinal) || !Path.IsPathFullyQualified(path)) return null;
+        return path;
     }
 
     /// <summary>Cuts text to about <paramref name="maxChars"/> characters with an ellipsis.</summary>

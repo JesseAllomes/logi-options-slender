@@ -344,7 +344,7 @@ public static class PluginServiceRingImporter
 
     private abstract record Step
     {
-        public sealed record Open(ActionSpec.Launch Launch) : Step;
+        public sealed record Open(ActionSpec.Launch Launch, string? Note = null) : Step;
         public sealed record Key(string Chord) : Step;
         public sealed record Type(string Text) : Step;
         public sealed record Sleep : Step;
@@ -377,7 +377,7 @@ public static class PluginServiceRingImporter
         {
             return real[0] switch
             {
-                Step.Open o => new Conv(o.Launch, null, Join(approx)),
+                Step.Open o => new Conv(o.Launch, null, Join(o.Note is null ? approx : [.. approx, o.Note])),
                 Step.Key k => new Conv(new ActionSpec.Keys(k.Chord), null, Join(approx)),
                 Step.Type t => new Conv(new ActionSpec.Text(t.Text), null, Join(approx)),
                 _ => new Conv(null, "No Slender equivalent."),
@@ -393,6 +393,7 @@ public static class PluginServiceRingImporter
 
         if (real[0] is Step.Open first && !real.Skip(1).Any(s => s is Step.Other))
         {
+            if (first.Note is not null) approx.Add(first.Note);
             approx.Add($"Only the first step (open {first.Launch.Target}) was imported; Slender runs one action per slot, so the {real.Count - 1} following step(s) ({Describe(real.Skip(1))}) were dropped.");
             return new Conv(first.Launch, null, Join(approx));
         }
@@ -449,7 +450,9 @@ public static class PluginServiceRingImporter
         string? args = withArguments && parts.Length > 1 && parts[1].Trim().Length > 0 ? parts[1].Trim() : null;
         if (target.Length == 0) return new Step.Other("open with no target");
         if (IsMacPath(target)) return new Step.Other($"macOS path '{target}'");
-        return new Step.Open(new ActionSpec.Launch(target, args));
+        string? workDir = withArguments && parts.Length > 2 && parts[2].Trim().Length > 0 ? parts[2].Trim() : null;
+        string? note = workDir is null ? null : $"Working folder '{workDir}' is not supported; the app starts in its own folder.";
+        return new Step.Open(new ActionSpec.Launch(target, args), note);
     }
 
     private static bool IsMacPath(string target) =>

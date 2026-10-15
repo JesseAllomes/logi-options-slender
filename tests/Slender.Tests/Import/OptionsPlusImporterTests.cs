@@ -324,6 +324,59 @@ public class OptionsPlusImporterTests
     }
 
     [Fact]
+    public void Macro_name_that_is_only_a_prefix_of_the_card_is_not_matched()
+    {
+        static MacroLibrary Library(string name) => MacroLibrary.Parse(
+            """{"macro_infos":{"macroInfos":[{"id":"m1","name":"NAME","cards":[]}]}}""".Replace("NAME", name), []);
+
+        Assert.Null(Library("Enter").Find("unknown", "Enter and close tab (Ado"));
+        Assert.NotNull(Library("Enter and close tab (Adobe)").Find("unknown", "Enter and close tab (Ado"));
+    }
+
+    [Fact]
+    public void Radial_slot_outside_the_ring_is_reported()
+    {
+        const string settings = """
+        {"profile_keys":["profile-d"],"applications":{"applications":[]},
+         "profile-d":{"applicationId":"d","name":"PROFILE_NAME_DEFAULT","assignments":[
+           {"slotId":"radial-menu-virtual-device-10000000_c416","card":{"attribute":"MACRO_PLAYBACK","id":"x","name":"X","macro":{"type":"KEYSTROKE","keystroke":{"code":25,"modifiers":[224]}}}}]}}
+        """;
+        var r = OptionsPlusImporter.Import(settings, null, SlenderConfig.Default);
+        Assert.Single(r.Notes, n => n.Kind == ImportNoteKind.Unmapped && n.Message.Contains("c416"));
+    }
+
+    [Fact]
+    public void Folder_with_more_than_eight_children_keeps_eight_and_reports_the_rest()
+    {
+        const string template = """{"attribute":"MACRO_PLAYBACK","id":"iN","name":"ItemN","macro":{"type":"KEYSTROKE","keystroke":{"code":CODE,"modifiers":[224]}}}""";
+        string nested = string.Join(",", Enumerable.Range(1, 9).Select(i =>
+            "\"i" + i + "\":" + template.Replace("iN", "i" + i).Replace("ItemN", "Item" + i).Replace("CODE", (3 + i).ToString())));
+        string order = string.Join(",", Enumerable.Range(1, 9).Select(i => "\"i" + i + "\""));
+        ImportResult r = ImportRing("{\"attribute\":\"FOLDER\",\"name\":\"Big\",\"nestedCardsOrder\":[" + order + "],\"nestedCards\":{" + nested + "}}");
+
+        RingSlot folder = r.Config.Profiles.Single(p => p.AppProcess is null).RingSlots![7];
+        Assert.Equal(8, folder.Folder!.Count);
+        Assert.Equal(new ActionSpec.Keys("Ctrl+A"), folder.Folder[0].Action);
+        ImportNote note = Assert.Single(r.Notes, n => n.Kind == ImportNoteKind.Unmapped && n.Message.Contains("Slender folders hold"));
+        Assert.Contains("item9", note.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Continuous_horizontal_gesture_item_is_reported()
+    {
+        const string settings = """
+        {"profile_keys":["profile-d"],"applications":{"applications":[]},
+         "profile-d":{"applicationId":"d","name":"PROFILE_NAME_DEFAULT","assignments":[
+           {"slotId":"mx-master-4-2b042_c195","card":{"attribute":"ONE_OF","id":"g","selectedNestedCard":"custom_gesture","nestedCards":{
+             "custom_gesture":{"attribute":"MACRO_PLAYBACK","id":"custom_gesture","nestedCards":{
+               "up":{"attribute":"MACRO_PLAYBACK","id":"u","macro":{"type":"KEYSTROKE","keystroke":{"code":25,"modifiers":[224]}}},
+               "horizontal":{"attribute":"MACRO_PLAYBACK","id":"h","macro":{"type":"KEYSTROKE","keystroke":{"code":25,"modifiers":[224]}}}}}}}}]}}
+        """;
+        var r = OptionsPlusImporter.Import(settings, null, SlenderConfig.Default);
+        Assert.Contains(r.Notes, n => n.Kind == ImportNoteKind.Unmapped && n.Where.EndsWith(" horizontal", StringComparison.Ordinal) && n.Message.Contains("continuous horizontal"));
+    }
+
+    [Fact]
     public void MissingDefaultProfileLeavesConfigUntouched()
     {
         var r = OptionsPlusImporter.Import("""{"profile_keys":[]}""", null, SlenderConfig.Default);

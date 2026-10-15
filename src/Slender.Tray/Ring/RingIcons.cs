@@ -195,6 +195,7 @@ internal sealed class RingIconCache : IDisposable
     {
         if (_icons.TryGetValue(path, out var cached)) return cached;
         nint bitmap = 0;
+        if (!File.Exists(path)) { _icons[path] = 0; return 0; } // a missing local file is probed once
         if (FileIcons.Load(path, px) is { } pixels) bitmap = _canvas.CreateBitmap(px, px, pixels);
         _icons[path] = bitmap;
         return bitmap;

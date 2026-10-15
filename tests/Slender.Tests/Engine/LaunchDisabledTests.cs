@@ -105,4 +105,31 @@ public class LaunchDisabledTests
         var cfg = SlenderConfig.Default with { Profiles = [p] };
         Assert.Equal(new[] { KeyboardId.Mute }, KeyboardRouter.ComputeDivertSet(cfg));
     }
+
+    [Fact]
+    public void Empty_launch_target_is_logged_and_not_opened()
+    {
+        var shell = new FakeShell();
+        var log = new ListLog();
+        var ex = new ActionExecutor(new FakeExcel(), new FakeForeground(), log, shell);
+        ex.Execute(new ActionSpec.Launch(""), true);
+        ex.Execute(new ActionSpec.Launch("   "), true);
+        Assert.Empty(shell.Opened);
+        Assert.Equal(2, log.Errors.Count(e => e.Contains("launch target is empty")));
+    }
+
+    [Fact]
+    public void Sequence_stops_at_the_first_failed_step()
+    {
+        var log = new ListLog();
+        var sends = new List<IReadOnlyList<KeyStroke>>();
+        var ex = new ActionExecutor(new FakeExcel(), new FakeForeground(), log, sendChord: keys =>
+        {
+            sends.Add(keys);
+            return sends.Count != 2;
+        });
+        ex.Execute(new ActionSpec.Keys("Enter, Ctrl+W, Esc"), true);
+        Assert.Equal(2, sends.Count);
+        Assert.Contains(log.Errors, e => e.Contains("SendInput failed"));
+    }
 }

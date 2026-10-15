@@ -56,6 +56,7 @@ public sealed class UpdateCoordinator : IDisposable
     public const string NotSetUpText = "Updates aren't set up on this copy of Slender";
     public const string CloseSettingsText = "Close Slender Settings first, then choose Restart to update again";
     public const string ApplyFailedText = "Couldn't restart to update. It installs when Slender next exits";
+    public const string BusyText = "Already checking for updates";
 
     public static string ReadyText(string version) => $"Slender {version} is ready. Click to restart and update.";
 
@@ -170,7 +171,8 @@ public sealed class UpdateCoordinator : IDisposable
 
         if (Interlocked.CompareExchange(ref _busy, 1, 0) != 0)
         {
-            return; // a check or download is already running
+            if (onDemand) _notify(UpdateNoticeKind.Info, BusyText); // a check or download is already running
+            return;
         }
 
         try
@@ -253,8 +255,14 @@ public sealed class UpdateCoordinator : IDisposable
         }
     }
 
-    /// <summary>Called as the tray exits: an update nobody restarted for installs silently now.</summary>
-    public void ApplyOnExitIfReady()
+    /// <summary>Called as the tray exits: blocks until <see cref="ApplyOnExitIfReadyAsync"/> is done.</summary>
+    public void ApplyOnExitIfReady() => ApplyOnExitIfReadyAsync().GetAwaiter().GetResult();
+
+    /// <summary>
+    /// Called as the tray exits: an update nobody restarted for installs silently now.
+    /// Asks Settings to close first so the install folder is free.
+    /// </summary>
+    public async Task ApplyOnExitIfReadyAsync()
     {
         if (!_ready)
         {
@@ -263,6 +271,11 @@ public sealed class UpdateCoordinator : IDisposable
 
         try
         {
+            if (_settings.IsRunning() && !await _settings.CloseAsync(SettingsCloseTimeout).ConfigureAwait(false))
+            {
+                _log.Info("Settings still running; the update applies when it closes");
+            }
+
             _backend.ApplyOnExit();
         }
         catch (Exception e) when (e is not OutOfMemoryException)

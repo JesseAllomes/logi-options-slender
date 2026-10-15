@@ -122,19 +122,19 @@ public static class OptionsPlusImportFlow
 
     private static ImportPreview Failed(ImportStatus status, string message) => new(status, message, null, 0, 0, []);
 
-    /// <summary>Profiles whose bindings differ from <paramref name="before"/>, and how many bindings those profiles hold.</summary>
+    /// <summary>Profiles whose bindings, ring or gesture swipes differ from <paramref name="before"/>, and how many bindings and swipes those profiles hold.</summary>
     public static (int Profiles, int Bindings) CountChanges(SlenderConfig before, SlenderConfig after)
     {
         int profiles = 0, bindings = 0;
         foreach (Profile p in after.Profiles)
         {
             Profile? old = before.Profiles.FirstOrDefault(o => string.Equals(o.AppProcess, p.AppProcess, StringComparison.OrdinalIgnoreCase));
-            if (old is not null && Same(old.Bindings, p.Bindings) && Same(old.KeyBindings, p.KeyBindings) && SameRing(old.RingSlots, p.RingSlots))
+            if (old is not null && Same(old.Bindings, p.Bindings) && Same(old.KeyBindings, p.KeyBindings) && SameRing(old.RingSlots, p.RingSlots) && SameSwipes(old.GestureSwipes, p.GestureSwipes))
             {
                 continue;
             }
 
-            int count = p.Bindings.Count + p.KeyBindings.Count + RingCount(p.RingSlots);
+            int count = p.Bindings.Count + p.KeyBindings.Count + RingCount(p.RingSlots) + p.GestureSwipes.Count;
             if (count == 0)
             {
                 continue;
@@ -146,6 +146,9 @@ public static class OptionsPlusImportFlow
 
         return (profiles, bindings);
     }
+
+    private static bool SameSwipes(IReadOnlyDictionary<GestureDirection, ActionSpec> a, IReadOnlyDictionary<GestureDirection, ActionSpec> b) =>
+        a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out ActionSpec? other) && Equals(kv.Value, other));
 
     private static bool SameRing(IReadOnlyList<RingSlot>? a, IReadOnlyList<RingSlot>? b) =>
         a is null || b is null ? a is null && b is null : a.Count == b.Count && a.Zip(b).All(p => SameSlot(p.First, p.Second));

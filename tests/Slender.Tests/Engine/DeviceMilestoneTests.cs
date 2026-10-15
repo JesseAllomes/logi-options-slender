@@ -130,10 +130,18 @@ public class PerAppDivertTests
 
 public class BrightnessTests
 {
-    private sealed class FakeDevice(Dictionary<nint, int> levels, nint monitor, List<string> calls, bool supported = true) : IBrightnessDevice
+    private sealed class FakeDevice(Dictionary<nint, int> levels, nint monitor, List<string> calls, bool supported = true, bool acceptSet = true) : IBrightnessDevice
     {
         public bool TryGet(out int percent) { percent = levels.GetValueOrDefault(monitor); calls.Add("get"); return supported; }
-        public bool TrySet(int percent) { levels[monitor] = percent; calls.Add("set" + percent); return true; }
+
+        public bool TrySet(int percent)
+        {
+            calls.Add("set" + percent);
+            if (!acceptSet) return false;
+            levels[monitor] = percent;
+            return true;
+        }
+
         public void Dispose() { }
     }
 
@@ -185,6 +193,75 @@ public class BrightnessTests
         queued!();
         Assert.Equal(80, m.Levels[1]);
         Assert.Single(m.Calls, "set80");
+    }
+
+    private sealed class ConfigurableMonitors : IMonitorProvider
+    {
+        public bool Supported = true, AcceptSet = true;
+        public Dictionary<nint, int> Levels = new() { [1] = 50 };
+        public List<string> Calls = [];
+        public nint MonitorAtCursor() => 1;
+        public IBrightnessDevice? Open(nint monitor) => new FakeDevice(Levels, monitor, Calls, Supported, AcceptSet);
+    }
+
+    private sealed class InfoLog : ILog
+    {
+        public List<string> Lines = [];
+        public void Info(string message) => Lines.Add(message);
+        public void Error(string message, Exception? exception = null) => Lines.Add(message);
+    }
+
+    [Fact]
+    public void Refused_set_is_logged_and_not_retried()
+    {
+        var m = new ConfigurableMonitors { AcceptSet = false };
+        var log = new InfoLog();
+        var c = new BrightnessController(m, log, w => w());
+        c.Adjust(10);
+        Assert.Equal(50, m.Levels[1]);
+        Assert.Contains(log.Lines, l => l.Contains("refused brightness"));
+        c.Adjust(10);
+        Assert.Equal(2, m.Calls.Count(x => x == "set60")); // the monitor is not marked unsupported
+    }
+
+    [Fact]
+    public void Failed_read_is_retried_after_thirty_seconds()
+    {
+        var m = new ConfigurableMonitors { Supported = false };
+        var log = new InfoLog();
+        long now = 0;
+        var c = new BrightnessController(m, log, w => w(), () => now);
+
+        c.Adjust(10); // t = 0: the monitor does not answer
+        Assert.Equal(["get"], m.Calls);
+        Assert.Single(log.Lines);
+
+        m.Supported = true;
+        now = 10_000;
+        c.Adjust(10); // still inside the 30 s back-off: not even asked
+        Assert.Equal(["get"], m.Calls);
+        Assert.Equal(50, m.Levels[1]);
+
+        now = 31_000;
+        c.Adjust(10);
+        Assert.Equal(["get", "get", "set60"], m.Calls);
+        Assert.Equal(60, m.Levels[1]);
+    }
+
+    [Fact]
+    public void Brightness_entry_without_step_is_rejected()
+    {
+        static ActionSpec Read(string json)
+        {
+            var reader = new System.Text.Json.Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(json));
+            reader.Read();
+            return new ActionSpecJsonConverter().Read(ref reader, typeof(ActionSpec), new System.Text.Json.JsonSerializerOptions());
+        }
+
+        var missing = Assert.Throws<FormatException>(() => Read("""{"type":"brightness"}"""));
+        Assert.Contains("step", missing.Message);
+        var wrongType = Assert.Throws<FormatException>(() => Read("""{"type":"brightness","step":"ten"}"""));
+        Assert.Contains("step", wrongType.Message);
     }
 
     [Fact]

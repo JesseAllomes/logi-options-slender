@@ -81,10 +81,10 @@ internal sealed class MacroLibrary
     public Macro? Find(string? id, string? name)
     {
         if (id is not null && _macros.FirstOrDefault(m => m.Id == id) is { } byId) return byId;
-        // Card names can be truncated ("Enter and close tab (Ado"); fall back to a unique prefix match.
+        // Card names can be truncated ("Enter and close tab (Ado"); accept a macro whose full name starts with the card name, never the reverse.
         if (!string.IsNullOrEmpty(name))
         {
-            var hits = _macros.Where(m => m.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase) || name.StartsWith(m.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            var hits = _macros.Where(m => name.Length >= 4 && m.Name.Length >= name.Length && m.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase)).ToList();
             if (hits.Count == 1) return hits[0];
         }
         return null;

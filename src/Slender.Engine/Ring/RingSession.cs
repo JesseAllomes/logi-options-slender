@@ -36,6 +36,7 @@ public sealed class RingSession
     private RingSlot? _folder;
     private int? _pointerSlot;
     private bool _hasPointer, _sawSlot;
+    private int _wheelRemainder;
 
     /// <summary>Opens with the trigger held (the normal case: the ring opens on press).</summary>
     public RingSession(IReadOnlyList<RingSlot> slots, RingMetrics metrics, long now)
@@ -45,6 +46,7 @@ public sealed class RingSession
         _metrics = metrics;
         _pressAt = now;
         _lastInput = now;
+        _wheelRemainder = 0;
         Phase = RingPhase.Holding;
     }
 
@@ -93,8 +95,8 @@ public sealed class RingSession
             Raise();
             return;
         }
-        // Hold: release on a slot runs it, release in the centre cancels.
-        if (Selected is { } s) Activate(s);
+        // Hold: release on a slot the pointer moved to runs it; release without movement, or in the centre, cancels.
+        if (_sawSlot && Selected is { } s) Activate(s);
         else Close(RingCloseReason.Cancelled);
     }
 
@@ -145,14 +147,20 @@ public sealed class RingSession
         }
     }
 
-    /// <summary>Mouse wheel over the ring: repeats an adjustable slot (up = first action), otherwise nothing.</summary>
+    /// <summary>
+    /// Mouse wheel over the ring: repeats an adjustable slot (up = first action), otherwise nothing.
+    /// Deltas accumulate to whole 120-unit notches so hi-res wheels step once per notch.
+    /// </summary>
     public void OnWheel(int delta, long now)
     {
         if (!IsOpen) return;
         _lastInput = now;
         if (Selected is not { } s || Slots[s].IsFolder || RingWheel.TryPair(Slots[s].Action) is not { } pair) return;
-        var notches = Math.Clamp(Math.Abs(delta) / 120, 1, 10);
-        var action = delta > 0 ? pair.Up : pair.Down;
+        _wheelRemainder += delta;
+        var notches = Math.Clamp(Math.Abs(_wheelRemainder) / 120, 0, 10);
+        if (notches == 0) return;
+        var action = _wheelRemainder > 0 ? pair.Up : pair.Down;
+        _wheelRemainder -= Math.Sign(_wheelRemainder) * notches * 120;
         for (var i = 0; i < notches && IsOpen; i++) Adjust?.Invoke(this, action);
     }
 
@@ -211,6 +219,7 @@ public sealed class RingSession
     {
         if (Selected == slot) return;
         Selected = slot;
+        _wheelRemainder = 0;
         if (tick && slot is { } s && !Slots[s].IsEmpty) Haptic?.Invoke(this, RingHaptic.Tick);
         Raise();
     }

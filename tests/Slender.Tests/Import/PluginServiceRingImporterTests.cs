@@ -197,4 +197,22 @@ public class PluginServiceRingImporterTests
     {
         Assert.Empty(PluginServiceStore.Read(Path.Combine(Path.GetTempPath(), "slender-no-store-" + Guid.NewGuid().ToString("N"))));
     }
+
+    [Fact]
+    public void Launch_with_working_folder_imports_and_reports_it()
+    {
+        const string json = """
+        {"macroCommands":[{"name":"M1","displayName":"Run","actions":["$@Generic___@ExecuteApplication___C:\\tools\\run.exe||--cfg x||D:\\work"]}],
+         "layout":{"layoutModes":[{"homeWorkspaceName":"w","workspaces":[{"name":"w","pressPages":[{"controls":[
+           {"controlId":0,"pressAction":"$@Generic___@Macro___M1"}]}]}]}]}}
+        """;
+        var notes = new List<ImportNote>();
+        SlenderConfig config = PluginServiceRingImporter.Apply(
+            [new PluginServiceProfile("@_defaultwin", "All apps", json, "")], SlenderConfig.Default, notes);
+
+        RingSlot slot = config.Profiles.Single(p => p.AppProcess is null).RingSlots![0];
+        Assert.Equal(new ActionSpec.Launch(@"C:\tools\run.exe", "--cfg x"), slot.Action);
+        ImportNote note = Assert.Single(notes, n => n.Kind == ImportNoteKind.Approximated);
+        Assert.Contains(@"D:\work", note.Message);
+    }
 }

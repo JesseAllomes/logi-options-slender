@@ -26,23 +26,28 @@ public interface IBrightnessController
 /// <summary>
 /// Brightness up/down. DDC/CI takes 50-100 ms per call, so presses are summed per monitor while a call is in flight and
 /// applied as one read-modify-write afterwards (key repeat cannot build a queue). Unsupported monitors are logged once
-/// and ignored.
+/// and ignored for 30 s, then tried again.
 /// </summary>
 public sealed class BrightnessController : IBrightnessController
 {
+    /// <summary>How long a monitor that did not answer is ignored before it is tried again.</summary>
+    public const long UnsupportedRetryMs = 30_000;
+
     private readonly IMonitorProvider _monitors;
     private readonly ILog _log;
     private readonly Action<Action> _run;
+    private readonly Func<long> _clock;
     private readonly object _gate = new();
     private readonly Dictionary<nint, int> _pending = new();
-    private readonly HashSet<nint> _unsupported = new();
+    private readonly Dictionary<nint, long> _unsupportedUntil = new();
     private bool _running;
 
-    public BrightnessController(IMonitorProvider monitors, ILog? log = null, Action<Action>? run = null)
+    public BrightnessController(IMonitorProvider monitors, ILog? log = null, Action<Action>? run = null, Func<long>? clock = null)
     {
         _monitors = monitors;
         _log = log ?? NullLog.Instance;
         _run = run ?? (work => ThreadPool.UnsafeQueueUserWorkItem(_ => work(), null));
+        _clock = clock ?? (() => Environment.TickCount64);
     }
 
     public void Adjust(int stepPercent)
@@ -82,14 +87,15 @@ public sealed class BrightnessController : IBrightnessController
     {
         try
         {
-            if (_unsupported.Contains(monitor)) return;
+            if (_unsupportedUntil.TryGetValue(monitor, out var until) && _clock() < until) return;
             using var device = _monitors.Open(monitor);
             if (device is null || !device.TryGet(out var current))
             {
-                _unsupported.Add(monitor);
-                _log.Info($"brightness: monitor 0x{monitor:X} does not support brightness control; ignoring");
+                _unsupportedUntil[monitor] = _clock() + UnsupportedRetryMs;
+                _log.Info($"brightness: monitor 0x{monitor:X} does not support brightness control (or did not answer); retrying in 30 s");
                 return;
             }
+            _unsupportedUntil.Remove(monitor);
             var target = Math.Clamp(current + delta, 0, 100);
             if (target != current && !device.TrySet(target))
                 _log.Info($"brightness: monitor 0x{monitor:X} refused brightness {target}");

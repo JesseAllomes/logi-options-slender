@@ -117,14 +117,18 @@ internal sealed unsafe class WindowsMonitorBrightness : IMonitorProvider
             _levels = levels[..(int)n];
             var current = new byte[3]; // DISPLAY_BRIGHTNESS: policy, AC level, DC level
             if (!IoctlOut(_handle, QueryDisplay, current, out n) || n < 3) return false;
-            percent = current[1];
+            // DISPLAY_BRIGHTNESS: [0] policy, [1] AC level, [2] DC level. Read the level of the power source in use.
+            percent = OnBattery() ? current[2] : current[1];
             return true;
         }
 
         public bool TrySet(int percent)
         {
             var level = _levels.Length == 0 ? (byte)percent : _levels.MinBy(l => Math.Abs(l - percent));
-            var value = new byte[] { 3 /* DISPLAYPOLICY_BOTH */, level, level };
+            // Policy values: 1 = DISPLAYPOLICY_AC, 2 = DISPLAYPOLICY_DC, 3 = DISPLAYPOLICY_BOTH. Write only the active source.
+            var value = OnBattery()
+                ? new byte[] { 2 /* DISPLAYPOLICY_DC */, 0, level }
+                : new byte[] { 1 /* DISPLAYPOLICY_AC */, level, 0 };
             return IoctlIn(_handle, SetDisplay, value);
         }
 
@@ -192,6 +196,17 @@ internal sealed unsafe class WindowsMonitorBrightness : IMonitorProvider
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern nint CreateFileW(string name, uint access, uint share, nint security, uint disposition, uint flags, nint template);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SYSTEM_POWER_STATUS
+    {
+        public byte ACLineStatus, BatteryFlag, BatteryLifePercent, SystemStatusFlag;
+        public uint BatteryLifeTime, BatteryFullLifeTime;
+    }
+
+    [DllImport("kernel32.dll")] private static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS s);
+
+    private static bool OnBattery() => GetSystemPowerStatus(out var s) && s.ACLineStatus == 0;
+
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
     [DllImport("kernel32.dll")]
     private static extern bool DeviceIoControl(nint h, uint code, byte* inBuf, uint inSize, byte* outBuf, uint outSize, out uint returned, nint overlapped);

@@ -154,6 +154,7 @@ public static partial class OptionsPlusImporter
             {
                 where = $"{profile.DisplayName} / {device} c{cid}" + (isMouse ? $" ({MouseControlName(cid)})" : label.Length > 0 ? $" ({label})" : "");
                 if (!isRadial) ConvertButton(card, cid, isMouse, where, state, isMouse ? defaultMouse : defaultKeys, isMouse ? mouse : keys);
+                else if (cid is < 408 or > 415) notes.Add(new(ImportNoteKind.Unmapped, where, $"Actions ring entry c{cid} is outside the 8 ring slots; not imported: {Compact(card)}"));
             }
             else if (isRadial)
             {

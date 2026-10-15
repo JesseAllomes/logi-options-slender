@@ -161,6 +161,22 @@ public sealed class ConfigV2Tests : IDisposable
         Assert.Equal(100, pointer.Dpi);
         Assert.Equal(255, pointer.SmartShiftThreshold);
     }
+
+    [Fact]
+    public void Unknown_gesture_direction_is_rejected_on_load()
+    {
+        Store().Save(SlenderConfig.Default);
+        File.WriteAllText(FilePath, """
+            { "version": 2, "profiles": [ { "appProcess": null, "bindings": {},
+              "gestureSwipes": { "diagonal": { "type": "keys", "chord": "F5" } } } ] }
+            """);
+
+        SlenderConfig loaded = Store().Load();
+
+        Assert.Equal(SlenderConfig.Default.Profiles.Count, loaded.Profiles.Count); // FormatException is quarantined
+        Assert.False(File.Exists(FilePath));
+        Assert.Single(Directory.GetFiles(_dir, "config.json.bad-*"));
+    }
 }
 
 public sealed class StatusJsonTests : IDisposable

@@ -26,9 +26,12 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly IShellLauncher _shell;
     private readonly IBrightnessController _brightness;
     private readonly ITextSender _text;
+    private readonly Func<IReadOnlyList<KeyStroke>, bool> _sendChord;
 
-    public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null, ITextSender? text = null)
+    public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null, ITextSender? text = null,
+        Func<IReadOnlyList<KeyStroke>, bool>? sendChord = null)
     {
+        _sendChord = sendChord ?? KeyInjector.SendChord;
         _text = text ?? new SendInputTextSender();
         _shell = shell ?? new ShellLauncher();
         _brightness = brightness ?? new BrightnessController(new WindowsMonitorBrightness(), log);
@@ -48,7 +51,7 @@ public sealed class ActionExecutor : IActionExecutor
         for (var i = 0; i < steps.Count; i++)
         {
             if (i > 0) Thread.Sleep(SequenceGapMs);
-            if (!KeyInjector.SendChord(steps[i])) { _log.Error($"SendInput failed for '{chord}'"); return; }
+            if (!_sendChord(steps[i])) { _log.Error($"SendInput failed for '{chord}'"); return; }
         }
     }
 

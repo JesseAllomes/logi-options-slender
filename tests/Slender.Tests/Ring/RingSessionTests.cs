@@ -347,4 +347,35 @@ public class RingSessionTests
         Assert.Empty(r.Adjusted);
         Assert.True(r.Session.IsOpen);
     }
+
+    [Fact]
+    public void Hold_released_without_movement_cancels_even_over_a_slot()
+    {
+        var r = new Rec();
+        r.Point(0, 0); // baseline lands on a slot
+        r.Session.OnTrigger(false, RingSession.TapMaxMs + 100);
+        Assert.Empty(r.Ran);
+        Assert.Equal([RingCloseReason.Cancelled], r.Closed);
+
+        r = new Rec();
+        r.Point(0, 0);
+        r.Point(1, 50); // a later sample onto a slot
+        r.Session.OnTrigger(false, RingSession.TapMaxMs + 100);
+        Assert.Equal([new ActionSpec.Keys("Ctrl+C")], r.Ran);
+    }
+
+    [Fact]
+    public void Hires_wheel_deltas_accumulate_to_one_step_per_notch()
+    {
+        var slots = Eight(i => i == 0 ? Keys("VolumeUp|VolumeDown") : Keys("F" + i));
+        var r = new Rec(slots);
+        r.Session.OnTrigger(false, 100);
+        r.Point(0, 110);
+        for (var i = 0; i < 8; i++) r.Session.OnWheel(15, 120 + i);
+        Assert.Equal([new ActionSpec.Keys("VolumeUp")], r.Adjusted);
+        r.Session.OnWheel(-120, 200);
+        Assert.Equal([new ActionSpec.Keys("VolumeUp"), new ActionSpec.Keys("VolumeDown")], r.Adjusted);
+        r.Session.OnWheel(60, 210);
+        Assert.Equal(2, r.Adjusted.Count);
+    }
 }

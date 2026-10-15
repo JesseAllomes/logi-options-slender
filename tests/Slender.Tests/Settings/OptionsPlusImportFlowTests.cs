@@ -128,6 +128,19 @@ public class OptionsPlusImportFlowTests : IDisposable
     }
 
     [Fact]
+    public void Swipes_count_as_changes_in_the_preview()
+    {
+        SlenderConfig before = SlenderConfig.Default;
+        SlenderConfig after = before with
+        {
+            Profiles = [.. before.Profiles.Select(p => p.AppProcess is null
+                ? p with { GestureSwipes = new Dictionary<GestureDirection, ActionSpec> { [GestureDirection.Up] = new ActionSpec.Keys("Win+Tab") } }
+                : p)],
+        };
+        Assert.Equal((1, 1), OptionsPlusImportFlow.CountChanges(before, after));
+    }
+
+    [Fact]
     public void BackupCopiesConfigWithTimestampAndNeverOverwrites()
     {
         string config = Path.Combine(_dir, "config.json");

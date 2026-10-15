@@ -256,7 +256,8 @@ public sealed class UpdateCoordinatorTests
         h.Backend.CheckGate.SetResult("1.1.1");
         await first;
         Assert.Equal(1, h.Backend.Downloads);
-        Assert.Single(h.Notices);
+        // The on-demand check while busy says so; the scheduled one stays silent.
+        Assert.Equal([(UpdateNoticeKind.Info, UpdateCoordinator.BusyText), (UpdateNoticeKind.Ready, "Slender 1.1.1 is ready. Click to restart and update.")], h.Notices);
     }
 
     [Fact]
@@ -344,6 +345,24 @@ public sealed class UpdateCoordinatorTests
         await c.CheckNowAsync();
         c.ApplyOnExitIfReady();
         Assert.Equal(1, h.Backend.ApplyOnExits);
+    }
+
+    [Fact]
+    public async Task Exit_apply_asks_settings_to_close_first()
+    {
+        var h = new Harness { Backend = { Found = "1.1.1" }, Settings = { Running = true } };
+        using UpdateCoordinator c = h.Create();
+        await c.CheckNowAsync();
+        await c.ApplyOnExitIfReadyAsync();
+        Assert.Equal(1, h.Settings.CloseCalls);
+        Assert.Equal(1, h.Backend.ApplyOnExits);
+
+        var h2 = new Harness { Backend = { Found = "1.1.1" } };
+        using UpdateCoordinator c2 = h2.Create();
+        await c2.CheckNowAsync();
+        await c2.ApplyOnExitIfReadyAsync();
+        Assert.Equal(0, h2.Settings.CloseCalls);
+        Assert.Equal(1, h2.Backend.ApplyOnExits);
     }
 
     [Fact]
