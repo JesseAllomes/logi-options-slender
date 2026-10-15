@@ -6,6 +6,17 @@ namespace Slender.Engine;
 /// <summary>Connection and battery state for the tray.</summary>
 public sealed record EngineStatus(bool Connected, int? BatteryPercent, bool Charging);
 
+/// <summary>A thumb wheel mode flip. Label is the text to show; empty = describe <see cref="Role"/> (Forward/Back) in the UI.</summary>
+public sealed class ThumbWheelModeEventArgs(string app, bool second, ThumbWheelSecond? role, string label) : EventArgs
+{
+    public string App { get; } = app;
+    /// <summary>True = now in the second role.</summary>
+    public bool Second { get; } = second;
+    /// <summary>The app's second role; null when it has none.</summary>
+    public ThumbWheelSecond? Role { get; } = role;
+    public string Label { get; } = label;
+}
+
 /// <summary>
 /// Wires mouse buttons, the horizontal-wheel hook, foreground tracking and actions together. Nothing here
 /// throws across a hook/HID thread: handlers catch and log. Heavy work runs on a bounded worker.
@@ -22,6 +33,8 @@ public sealed class SlenderEngine : IDisposable
     private readonly IWorkQueue _queue;
     private readonly Func<long> _clock;
     private readonly ColumnScrollAccumulator _accumulator = new();
+    private readonly ColumnScrollAccumulator _secondAccumulator = new();
+    private readonly Dictionary<string, bool> _secondMode = new(StringComparer.OrdinalIgnoreCase); // dual thumb wheel: per app, this run only
     private readonly GestureTracker _gesture = new();
     private readonly object _gate = new();
     private readonly Dictionary<ushort, ActionSpec> _active = new(); // HID++ path: action used at press, replayed on release
@@ -58,6 +71,9 @@ public sealed class SlenderEngine : IDisposable
     /// <summary>The ring trigger control went down (Pressed) or up. Raised on the engine thread.</summary>
     public event EventHandler<RingTriggerEventArgs>? RingTrigger;
     public event EventHandler<EngineStatus>? StatusChanged;
+
+    /// <summary>The thumb wheel mode of the foreground app was flipped, or a flip was refused (no second role). Raised on the engine queue.</summary>
+    public event EventHandler<ThumbWheelModeEventArgs>? ThumbWheelModeChanged;
 
     public SlenderConfig Config => _config;
 
@@ -236,7 +252,7 @@ public sealed class SlenderEngine : IDisposable
                 if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
                 if (action is ActionSpec.None) return;
             }
-            _executor.Execute(action, e.Pressed);
+            Run(action, e.Pressed);
         }
         catch (Exception ex) { _log.Error("button handling failed", ex); }
     }
@@ -257,7 +273,7 @@ public sealed class SlenderEngine : IDisposable
     private void MaybeHaptic(ActionSpec action)
     {
         var h = _config.Haptics;
-        if (!h.Enabled || action is ActionSpec.Disabled) return;
+        if (!h.Enabled || action is ActionSpec.Disabled or ActionSpec.ToggleThumbWheelMode) return; // a flip has its own bump
         var want = action is ActionSpec.ActionsRing ? h.OnActionsRing : h.OnButtonPress;
         if (!want) return;
         try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
@@ -286,8 +302,8 @@ public sealed class SlenderEngine : IDisposable
             {
                 try
                 {
-                    _executor.Execute(action, true);
-                    _executor.Execute(action, false);
+                    Run(action, true);
+                    Run(action, false);
                 }
                 catch (Exception ex) { _log.Error("ring action failed", ex); }
             });
@@ -390,8 +406,8 @@ public sealed class SlenderEngine : IDisposable
     {
         MaybeHaptic(action);
         if (action is ActionSpec.ActionsRing) { RaiseRing(true); RaiseRing(false); return; } // a swipe is a tap: the ring stays open
-        _executor.Execute(action, true);
-        _executor.Execute(action, false);
+        Run(action, true);
+        Run(action, false);
     }
 
     // ---- hook buttons (hook thread: O(1), never throws) ----
@@ -438,7 +454,7 @@ public sealed class SlenderEngine : IDisposable
                 if (action is ActionSpec.ActionsRing) { RaiseRing(true); return; }
             }
             else if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
-            _executor.Execute(action, pressed);
+            Run(action, pressed);
         }
         catch (Exception ex) { _log.Error("hook button action failed", ex); }
     }
@@ -454,6 +470,13 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             var cfg = _config;
+            if (ActiveSecond() is { } second)
+            {
+                e.Handled = true; // the second role owns the wheel: the native horizontal scroll never happens
+                var steps = _secondAccumulator.Add(e.Delta, 1, _clock());
+                if (steps != 0) _queue.Post(() => RunSecond(second, steps));
+                return;
+            }
             var bound = ResolveAction(ThumbWheelBindingId);
             if (bound is ActionSpec.Disabled)
             {
@@ -482,6 +505,97 @@ public sealed class SlenderEngine : IDisposable
             });
         }
         catch (Exception ex) { SafeLog("wheel handler failed", ex); }
+    }
+
+    // ---- dual thumb wheel ----
+
+    private static string ModeKey(string? process) => string.IsNullOrEmpty(process) ? string.Empty : Path.GetFileNameWithoutExtension(process);
+
+    /// <summary>The second role to run now: the foreground app is flipped and still has one. A flipped app whose setting went away falls back to normal.</summary>
+    private ThumbWheelSecond? ActiveSecond()
+    {
+        var process = _foreground.ProcessName;
+        var key = ModeKey(process);
+        lock (_gate)
+        {
+            if (_secondMode.Count == 0 || !_secondMode.TryGetValue(key, out var on) || !on) return null;
+            var second = ThumbWheelModes.SecondFor(_config, process);
+            if (second is null) _secondMode.Remove(key);
+            return second;
+        }
+    }
+
+    /// <summary>Whether the app (default: the foreground app) is currently in its second thumb wheel mode.</summary>
+    public bool IsThumbWheelSecond(string? process = null)
+    {
+        lock (_gate) return _secondMode.TryGetValue(ModeKey(process ?? _foreground.ProcessName), out var on) && on;
+    }
+
+    /// <summary>Flips the foreground app's thumb wheel mode; with no second role there it only gives feedback.</summary>
+    public void ToggleThumbWheelMode()
+    {
+        try
+        {
+            var process = _foreground.ProcessName;
+            var key = ModeKey(process);
+            var second = ThumbWheelModes.SecondFor(_config, process);
+            bool now;
+            lock (_gate)
+            {
+                if (second is null) { _secondMode.Remove(key); now = false; }
+                else { now = !(_secondMode.TryGetValue(key, out var was) && was); _secondMode[key] = now; }
+            }
+            var app = key.Length == 0 ? "this app" : char.ToUpperInvariant(key[0]) + key[1..];
+            if (second is null)
+            {
+                RaiseMode(new ThumbWheelModeEventArgs(app, false, null, $"No second role in {app}"));
+                return;
+            }
+            _secondAccumulator.Reset();
+            PlayFlipHaptic();
+            RaiseMode(new ThumbWheelModeEventArgs(app, now, second, !now ? "Side scroll" : second == ThumbWheelModes.Tabs ? "Tabs" : string.Empty));
+        }
+        catch (Exception ex) { _log.Error("thumb wheel mode toggle failed", ex); }
+    }
+
+    private void RaiseMode(ThumbWheelModeEventArgs args)
+    {
+        try { ThumbWheelModeChanged?.Invoke(this, args); }
+        catch (Exception ex) { _log.Error("thumb wheel mode handler failed", ex); }
+    }
+
+    private void PlayFlipHaptic()
+    {
+        var h = _config.Haptics;
+        if (!h.Enabled || !h.OnButtonPress) return;
+        try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
+        catch (Exception ex) { _log.Error("haptic failed", ex); }
+    }
+
+    private void RunSecond(ThumbWheelSecond second, int notches)
+    {
+        try
+        {
+            var action = notches > 0 ? second.Forward : second.Back;
+            if (action is ActionSpec.None or ActionSpec.Disabled or ActionSpec.ToggleThumbWheelMode or ActionSpec.ActionsRing) return;
+            for (var i = Math.Min(Math.Abs(notches), MaxNotchesPerEvent); i > 0; i--)
+            {
+                _executor.Execute(action, true);
+                _executor.Execute(action, false);
+            }
+        }
+        catch (Exception ex) { _log.Error("second thumb wheel action failed", ex); }
+    }
+
+    /// <summary>Executes an action; ToggleThumbWheelMode (press only) is the engine's own.</summary>
+    private void Run(ActionSpec action, bool pressed)
+    {
+        if (action is ActionSpec.ToggleThumbWheelMode)
+        {
+            if (pressed) ToggleThumbWheelMode();
+            return;
+        }
+        _executor.Execute(action, pressed);
     }
 
     private void RunWheelKeys(string chord, int notches)

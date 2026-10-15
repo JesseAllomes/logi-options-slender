@@ -148,7 +148,7 @@ public sealed partial class MainWindow
 
     private Button StripTile(Profile? profile, string name, string? process, int index)
     {
-        bool selected = string.Equals(process, _app, StringComparison.OrdinalIgnoreCase) && _page is Page.Device or Page.Ring;
+        bool selected = string.Equals(process, _app, StringComparison.OrdinalIgnoreCase) && AppPage;
         FrameworkElement icon;
         if (profile is null)
         {

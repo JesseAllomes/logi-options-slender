@@ -138,6 +138,10 @@ static class Program
         EventHandler<RingTriggerEventArgs> onTrigger = (_, e) => app.PostToUi(() => ring.OnTrigger(e.Pressed));
         engine.RingTrigger += onTrigger;
         keys.RingTrigger += onTrigger;
+        // Dual thumb wheel: the top button (engine or keyboard) flips the app's mode; a short label near the cursor says which.
+        using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
+        engine.ThumbWheelModeChanged += (_, e) => app.PostToUi(() => toast.Show(ThumbWheelToast.TextFor(e)));
+        keys.ThumbWheelToggleRequested += (_, _) => engine.ToggleThumbWheelMode();
         engine.StatusChanged += (_, status) =>
         {
             if (!status.Connected) app.PostToUi(() => ring.Close(RingCloseReason.DeviceLost));

@@ -61,7 +61,7 @@ public sealed partial class MainWindow
         PagePanel.Children.Add(t);
     }
 
-    private void AddRow(string title, string? help, FrameworkElement control)
+    private void AddRow(string title, string? help, FrameworkElement control, Panel? into = null)
     {
         var grid = new Grid { Padding = new Thickness(0, 12, 0, 12), ColumnSpacing = 24 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -83,7 +83,7 @@ public sealed partial class MainWindow
         var wrap = new StackPanel();
         wrap.Children.Add(grid);
         wrap.Children.Add(new Border { Height = 1, Background = Ui.Rule, Opacity = 0.6 });
-        PagePanel.Children.Add(wrap);
+        (into ?? PagePanel).Children.Add(wrap);
     }
 
     private ToggleSwitch PageToggle(string name, bool value, Action<bool> changed)
@@ -205,6 +205,8 @@ public sealed partial class MainWindow
         Slider columns = PageSlider("Columns per notch", 1, 10, 1, c.Excel.ColumnsPerNotch,
             v => _config.Update(x => x with { Excel = x.Excel with { ColumnsPerNotch = (int)v } }), v => $"{(int)v}", out TextBlock columnsText);
         AddRow("Columns per notch", null, WithReadout(columns, columnsText));
+
+        BuildDualThumbSection();
     }
 
     private void BuildHapticsPage()

@@ -121,6 +121,7 @@ public static class ActionCatalog
         ActionSpec.Disabled => new ActionLabel("Off", []),
         ActionSpec.Brightness b => new ActionLabel(b.StepPercent < 0 ? "Brightness down" : "Brightness up", []),
         ActionSpec.Text t => new ActionLabel(TextName(t.Value), []),
+        ActionSpec.ToggleThumbWheelMode => new ActionLabel("Switch thumb wheel mode", []),
         _ => new ActionLabel("Not assigned", []),
     };
 
@@ -192,6 +193,12 @@ public static class ActionCatalog
         new("Middle click", new ActionSpec.MouseButton("Middle")),
         new("Back", new ActionSpec.MouseButton("Back")),
         new("Forward", new ActionSpec.MouseButton("Forward")),
+    ];
+
+    /// <summary>Flips the thumb wheel between its normal job and the app's second role (shown on the Mouse tab).</summary>
+    public static IReadOnlyList<ActionOption> ThumbModeOptions { get; } =
+    [
+        new("Switch thumb wheel mode", new ActionSpec.ToggleThumbWheelMode()),
     ];
 
     public static IReadOnlyList<ActionOption> ExcelOptions { get; } =
