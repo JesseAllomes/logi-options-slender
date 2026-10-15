@@ -122,6 +122,7 @@ public static class ActionCatalog
         ActionSpec.Brightness b => new ActionLabel(b.StepPercent < 0 ? "Brightness down" : "Brightness up", []),
         ActionSpec.Text t => new ActionLabel(TextName(t.Value), []),
         ActionSpec.ToggleThumbWheelMode => new ActionLabel("Switch thumb wheel mode", []),
+        ActionSpec.TapHold th => new ActionLabel(TapHoldName(th), []),
         _ => new ActionLabel("Not assigned", []),
     };
 
@@ -178,6 +179,73 @@ public static class ActionCatalog
         "Forward" => "Forward",
         _ => button,
     };
+
+    /// <summary>"Press: Back · Hold: Actions Ring". An unset half reads "Nothing".</summary>
+    public static string TapHoldName(ActionSpec.TapHold th) => $"Press: {TapHoldPart(th.Tap)} · Hold: {TapHoldPart(th.Hold)}";
+
+    private static string TapHoldPart(ActionSpec action) => action is ActionSpec.None ? "Nothing" : Plain(action);
+
+    /// <summary>
+    /// Press / Hold is offered on buttons and keys, not on the gesture button (it already uses hold for swipes), the thumb wheel
+    /// or a swipe direction.
+    /// </summary>
+    public static bool CanTapHold(DeviceKind kind, ushort controlId) =>
+        kind == DeviceKind.Keyboard || (controlId != Slender.Hidpp.ControlId.Gesture
+            && controlId != DeviceIds.ThumbWheelPseudoId && !DeviceIds.TryGetSwipe(controlId, out _));
+
+    /// <summary>Builds a Press / Hold action; false when either half is itself a Press / Hold (not allowed) or null.</summary>
+    public static bool TryBuildTapHold(ActionSpec? tap, ActionSpec? hold, out ActionSpec.TapHold result)
+    {
+        result = null!;
+        if (tap is null || hold is null || tap is ActionSpec.TapHold || hold is ActionSpec.TapHold)
+        {
+            return false;
+        }
+
+        result = new ActionSpec.TapHold(tap, hold);
+        return true;
+    }
+
+    /// <summary>The preset for a control such as the Sense Panel: the chosen quick press, and a hold that opens the Actions Ring.</summary>
+    public static ActionSpec.TapHold HoldOpensRing(ActionSpec tap) => new(tap is ActionSpec.TapHold ? new ActionSpec.None() : tap, new ActionSpec.ActionsRing());
+
+    /// <summary>A typed shortcut as a Keys action; false when the engine cannot send it.</summary>
+    public static bool TryParseShortcut(string? text, out ActionSpec.Keys keys)
+    {
+        keys = null!;
+        string chord = (text ?? string.Empty).Trim();
+        if (chord.Length == 0 || !ChordParser.TryParse(chord, out _))
+        {
+            return false;
+        }
+
+        keys = new ActionSpec.Keys(chord);
+        return true;
+    }
+
+    /// <summary>
+    /// What either half of a Press / Hold can be: nothing, the ring, mouse buttons, Excel, brightness, the thumb wheel switch and,
+    /// on the keyboard, the app and media shortcuts. Typed shortcuts are added by the picker. Never a Press / Hold.
+    /// </summary>
+    public static IReadOnlyList<ActionOption> TapHoldChoices(DeviceKind kind)
+    {
+        var list = new List<ActionOption> { new("Nothing", new ActionSpec.None()) };
+        list.AddRange(RingOptions);
+        list.AddRange(MouseOptions);
+        list.AddRange(ThumbModeOptions);
+        if (kind == DeviceKind.Keyboard)
+        {
+            list.AddRange(KeyboardAppOptions);
+            list.AddRange(KeyboardMediaOptions);
+        }
+        else
+        {
+            list.AddRange(ExcelOptions);
+            list.AddRange(BrightnessOptions);
+        }
+
+        return list;
+    }
 
     /// <summary>Single-line text, for tooltips and automation names.</summary>
     public static string Plain(ActionSpec action)

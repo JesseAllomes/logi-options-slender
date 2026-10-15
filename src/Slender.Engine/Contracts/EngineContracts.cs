@@ -129,6 +129,16 @@ public abstract record ActionSpec
     /// nothing in an app whose dual thumb wheel is off. The mode is remembered per app until flipped back, while Slender runs.
     /// </summary>
     public sealed record ToggleThumbWheelMode : ActionSpec;
+    /// <summary>
+    /// One control, two actions: a release before <see cref="HoldMs"/> runs <paramref name="Tap"/> (press then release);
+    /// still down at <see cref="HoldMs"/> starts <paramref name="Hold"/> as a press, released with the physical release.
+    /// Neither may itself be a TapHold, and a TapHold is not allowed in a ring slot, a gesture swipe or the thumb wheel.
+    /// </summary>
+    public sealed record TapHold(ActionSpec Tap, ActionSpec Hold) : ActionSpec
+    {
+        /// <summary>How long a press must last before it counts as a hold.</summary>
+        public const int HoldMs = 350;
+    }
 }
 
 /// <summary>Executes actions in the foreground app.</summary>
@@ -318,7 +328,10 @@ public static class SlenderPaths
 }
 
 /// <summary>The control bound to the Actions Ring went down or up.</summary>
-public sealed class RingTriggerEventArgs(bool pressed) : EventArgs
+public sealed class RingTriggerEventArgs(bool pressed, bool holdOnly = false) : EventArgs
 {
     public bool Pressed { get; } = pressed;
+
+    /// <summary>The press came from a TapHold hold: the ring opens in hold mode only (a quick release cancels instead of leaving it open).</summary>
+    public bool HoldOnly { get; } = holdOnly;
 }

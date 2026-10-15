@@ -22,6 +22,7 @@ Research date 2026-10-15. Status tags: CONFIRMED (source cited) or UNCERTAIN.
 - Two selection gestures: (1) press and release the panel, ring stays open, hover a bubble, left-click; (2) press and hold, hover a bubble, release on it. CONFIRMED (S3).
 - MX Creative Console: bottom-right Dialpad button (changeable); Craft keyboard Crown press. CONFIRMED (S1, L3).
 - Other devices: DPI button can be set to Show Actions Ring; MX Master 3S, MX Keys S/Mini, MX Anywhere 3S, MX Mechanical, MX Keypad listed as compatible. CONFIRMED (S6, L3).
+- Slender extension (m28, not in Options+): `ActionSpec.TapHold(Tap, Hold)` on any button or key (not the gesture button or thumb wheel), e.g. Sense Panel: quick press runs one action, holding 350 ms (a haptic tick) starts Hold. With Hold = Actions Ring the ring opens in hold-only mode at the threshold: releasing on a slot runs it, releasing anywhere else cancels. A ring "tap" (stay open) never happens through Press / Hold; it applies only to a plain Actions Ring binding. Not allowed inside a ring slot. Settings: More tab, "Press / Hold".
 - Smart Actions can bind a trigger to a ring slot ("Select slot"/"Confirm slot"; string "Actions Ring, {SLOT_NAME}{NESTED_SLOT} is used", so nested folder slots are addressable). CONFIRMED (L1 strings).
 - Ring appears at the cursor ("at the tip of your cursor"). CONFIRMED (L1 onboarding strings). Whether it is clamped to screen edges: UNCERTAIN.
 - Dedicated fixed keyboard shortcut: none found. A keyboard key can be assigned Show Actions Ring (recommendation list). UNCERTAIN beyond that.

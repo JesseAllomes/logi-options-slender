@@ -32,6 +32,7 @@ public sealed class SlenderEngine : IDisposable
     private readonly ILog _log;
     private readonly IWorkQueue _queue;
     private readonly Func<long> _clock;
+    private readonly TapHoldTracker _tapHold;
     private readonly ColumnScrollAccumulator _accumulator = new();
     private readonly ColumnScrollAccumulator _secondAccumulator = new();
     private readonly Dictionary<string, bool> _secondMode = new(StringComparer.OrdinalIgnoreCase); // dual thumb wheel: per app, this run only
@@ -52,7 +53,7 @@ public sealed class SlenderEngine : IDisposable
         : this(mouse, hook, foreground, excel, executor, config, log, null, null) { }
 
     internal SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
-        IActionExecutor executor, SlenderConfig config, ILog? log, IWorkQueue? queue, Func<long>? clock)
+        IActionExecutor executor, SlenderConfig config, ILog? log, IWorkQueue? queue, Func<long>? clock, IHoldTimer? holdTimer = null)
     {
         _mouse = mouse;
         _hook = hook;
@@ -63,6 +64,7 @@ public sealed class SlenderEngine : IDisposable
         _log = log ?? NullLog.Instance;
         _queue = queue ?? new BoundedWorker("Slender.Engine", 256, sta: false, _log);
         _clock = clock ?? (() => Environment.TickCount64);
+        _tapHold = new TapHoldTracker(holdTimer ?? new ThreadingHoldTimer(), _queue, _log);
     }
 
     /// <summary>Raised on press of an ActionsRing control (the tray opens the ring). Press and release are both on <see cref="RingTrigger"/>.</summary>
@@ -240,6 +242,7 @@ public sealed class SlenderEngine : IDisposable
                 action = ResolveAction(e.ControlId);
                 lock (_gate) _active[e.ControlId] = action;
                 if (action is ActionSpec.None) return;
+                if (action is ActionSpec.TapHold th) { _tapHold.Press(e.ControlId, th, StartHold); return; }
                 MaybeHaptic(action);
                 if (action is ActionSpec.ActionsRing) { RaiseRing(true); return; }
             }
@@ -249,6 +252,7 @@ public sealed class SlenderEngine : IDisposable
                 {
                     if (!_active.Remove(e.ControlId, out action!)) return;
                 }
+                if (action is ActionSpec.TapHold) { EndTapHold(e.ControlId); return; }
                 if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
                 if (action is ActionSpec.None) return;
             }
@@ -280,12 +284,49 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("haptic failed", ex); }
     }
 
-    private void RaiseRing(bool pressed)
+    // ---- tap / hold (engine queue) ----
+
+    /// <summary>Hold threshold reached while still down: a tick, then the hold action starts as a press (its release is the physical one).</summary>
+    private void StartHold(ActionSpec.TapHold th)
+    {
+        PlayFlipHaptic();
+        if (th.Hold is ActionSpec.None) return;
+        if (th.Hold is ActionSpec.ActionsRing) RaiseRing(true, holdOnly: true); // the quick press already ran Tap: the ring never sees a tap from this path
+        else Run(th.Hold, true);
+    }
+
+    private void StopHold(ActionSpec hold)
+    {
+        if (hold is ActionSpec.None) return;
+        if (hold is ActionSpec.ActionsRing) RaiseRing(false);
+        else Run(hold, false);
+    }
+
+    /// <summary>Physical release: ends a started hold, otherwise it was a quick press and the tap runs once.</summary>
+    private void EndTapHold(ushort id)
+    {
+        try
+        {
+            if (!_tapHold.TryRelease(id, out var th, out var held)) return;
+            if (held) StopHold(th.Hold);
+            else if (th.Tap is not ActionSpec.None) RunGestureAction(th.Tap);
+        }
+        catch (Exception ex) { _log.Error("tap/hold release failed", ex); }
+    }
+
+    /// <summary>The control can never report a release (device gone): end a started hold; a pending press does nothing.</summary>
+    private void AbortTapHold(ushort id)
+    {
+        try { if (_tapHold.TryRelease(id, out var th, out var held) && held) StopHold(th.Hold); }
+        catch (Exception ex) { _log.Error("tap/hold abort failed", ex); }
+    }
+
+    private void RaiseRing(bool pressed, bool holdOnly = false)
     {
         try
         {
             if (pressed) ActionsRingRequested?.Invoke(this, EventArgs.Empty);
-            RingTrigger?.Invoke(this, new RingTriggerEventArgs(pressed));
+            RingTrigger?.Invoke(this, new RingTriggerEventArgs(pressed, holdOnly));
         }
         catch (Exception ex) { _log.Error("ring trigger handler failed", ex); }
     }
@@ -296,6 +337,7 @@ public sealed class SlenderEngine : IDisposable
     /// </summary>
     public void RunRingAction(ActionSpec action)
     {
+        if (action is ActionSpec.TapHold) return; // not allowed in a ring slot
         try
         {
             _queue.Post(() =>
@@ -404,6 +446,7 @@ public sealed class SlenderEngine : IDisposable
 
     private void RunGestureAction(ActionSpec action)
     {
+        if (action is ActionSpec.TapHold th) action = th.Tap; // not offered on swipes; a hand-edited config runs its quick press
         MaybeHaptic(action);
         if (action is ActionSpec.ActionsRing) { RaiseRing(true); RaiseRing(false); return; } // a swipe is a tap: the ring stays open
         Run(action, true);
@@ -432,22 +475,28 @@ public sealed class SlenderEngine : IDisposable
                     return; // the button's own behaviour: leave it to Windows
                 lock (_gate) _hookActive[id] = action;
                 e.Handled = true;
-                _queue.Post(() => RunHookAction(action, true));
+                _queue.Post(() => RunHookAction(id, action, true));
             }
             else
             {
                 ActionSpec? action;
                 lock (_gate) { if (!_hookActive.Remove(id, out action)) return; }
-                _queue.Post(() => RunHookAction(action, false));
+                _queue.Post(() => RunHookAction(id, action, false));
             }
         }
         catch (Exception ex) { SafeLog("hook button handler failed", ex); }
     }
 
-    private void RunHookAction(ActionSpec action, bool pressed)
+    private void RunHookAction(ushort id, ActionSpec action, bool pressed)
     {
         try
         {
+            if (action is ActionSpec.TapHold th)
+            {
+                if (pressed) _tapHold.Press(id, th, StartHold);
+                else EndTapHold(id);
+                return;
+            }
             if (pressed)
             {
                 MaybeHaptic(action);
@@ -637,12 +686,13 @@ public sealed class SlenderEngine : IDisposable
                 // The device is gone: its held controls will never report a release, so release their actions now.
                 KeyValuePair<ushort, ActionSpec>[] held;
                 lock (_gate) { held = [.. _active]; _active.Clear(); }
-                foreach (var (_, action) in held)
+                foreach (var (key, action) in held)
                 {
                     if (action is ActionSpec.None) continue;
                     try
                     {
-                        if (action is ActionSpec.ActionsRing) RaiseRing(false);
+                        if (action is ActionSpec.TapHold) { var id = key; _queue.Post(() => AbortTapHold(id)); }
+                        else if (action is ActionSpec.ActionsRing) RaiseRing(false);
                         else _queue.Post(() => ReleaseHeld(action));
                     }
                     catch (Exception ex) { SafeLog("held control release failed", ex); }
@@ -699,6 +749,7 @@ public sealed class SlenderEngine : IDisposable
         lock (_gate) _foregroundDebounce?.Cancel();
         _cts.Cancel();
         _queue.Dispose();
+        _tapHold.Dispose();
         _cts.Dispose();
     }
 }

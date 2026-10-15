@@ -135,7 +135,7 @@ static class Program
 
         // Actions Ring overlay: window and drawing resources exist only while it is open (docs/actions-ring-optionsplus.md).
         using var ring = new RingController(() => engine.Config, foreground, hook, engine.RunRingAction, engine.PlayRingHaptic, app.PostToUi, log);
-        EventHandler<RingTriggerEventArgs> onTrigger = (_, e) => app.PostToUi(() => ring.OnTrigger(e.Pressed));
+        EventHandler<RingTriggerEventArgs> onTrigger = (_, e) => app.PostToUi(() => ring.OnTrigger(e.Pressed, e.HoldOnly));
         engine.RingTrigger += onTrigger;
         keys.RingTrigger += onTrigger;
         // Dual thumb wheel: the top button (engine or keyboard) flips the app's mode; a short label near the cursor says which.
