@@ -52,6 +52,12 @@ public sealed partial class MainWindow
 
         /// <summary>True when the control already holds an explicit None in this app, so the pass-through option is the chosen one.</summary>
         public bool IsPassThrough { get; init; }
+
+        /// <summary>The More tab offers "Press / Hold" (buttons and keys, not the gesture button, a swipe or the thumb wheel).</summary>
+        public bool AllowTapHold { get; init; }
+
+        /// <summary>The Sense Panel: Press / Hold shows the one-click "Hold opens the Actions Ring" preset.</summary>
+        public bool SensePanel { get; init; }
     }
 
     /// <summary>
@@ -76,7 +82,7 @@ public sealed partial class MainWindow
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
             ActionSpec.Brightness when _kind == DeviceKind.Keyboard => "media",
-            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text => "more",
+            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text or ActionSpec.TapHold => "more",
             _ => "default",
         };
 
@@ -97,6 +103,8 @@ public sealed partial class MainWindow
         {
             PassThroughText = target is null ? null : $"Normal {info.NativeText} in {appName}",
             IsPassThrough = target is not null && ProfileOps.IsPassThrough(_config.Config, target, _kind, info.Id),
+            AllowTapHold = ActionCatalog.CanTapHold(_kind, info.Id),
+            SensePanel = _kind == DeviceKind.Mouse && info.Id == Slender.Hidpp.ControlId.SensePanel,
         });
     }
 
@@ -199,7 +207,7 @@ public sealed partial class MainWindow
             case "ring":
                 return OptionList(ActionCatalog.RingOptions, own, commit);
             case "more":
-                return MoreTab(spec.ThumbWheel, own, commit);
+                return MoreTab(spec.ThumbWheel, own, commit, spec.AllowTapHold, spec.SensePanel);
             case "app":
                 return OptionList(ActionCatalog.KeyboardAppOptions, own, commit);
             case "media":
@@ -223,7 +231,7 @@ public sealed partial class MainWindow
     /// "Turn off" plus (not for the thumb wheel) "Open app or file...". A .lnk is launched as is, so Windows resolves it and keeps
     /// its arguments. A URL, folder or Store app ("shell:AppsFolder\AUMID") can be typed instead of browsed.
     /// </summary>
-    private (FrameworkElement Content, FrameworkElement? Focus) MoreTab(bool thumbWheel, ActionSpec? own, Action<ActionSpec?> commit)
+    private (FrameworkElement Content, FrameworkElement? Focus) MoreTab(bool thumbWheel, ActionSpec? own, Action<ActionSpec?> commit, bool allowTapHold = false, bool sensePanel = false)
     {
         (FrameworkElement off, FrameworkElement? focus) = OptionList([.. ActionCatalog.OffOptions, .. ActionCatalog.BrightnessOptions], own, commit);
         var panel = new StackPanel { Spacing = 10 };
@@ -280,7 +288,124 @@ public sealed partial class MainWindow
         panel.Children.Add(box);
         panel.Children.Add(row);
         panel.Children.Add(TypeTextEditor(own as ActionSpec.Text, commit));
+        if (allowTapHold)
+        {
+            panel.Children.Add(TapHoldEditor(own as ActionSpec.TapHold, sensePanel, commit));
+        }
+
         return (panel, focus);
+    }
+
+    /// <summary>
+    /// "Press / Hold": a quick press runs one action; holding for 350 ms runs another (released with the button). Each half is a
+    /// list of actions plus a box for a typed shortcut; neither can itself be a Press / Hold.
+    /// </summary>
+    private FrameworkElement TapHoldEditor(ActionSpec.TapHold? current, bool sensePanel, Action<ActionSpec?> commit)
+    {
+        Action refresh = () => { };
+        (FrameworkElement quickPanel, Func<ActionSpec?> quick, _) = TapHoldHalf("Quick press", current?.Tap, () => refresh());
+        (FrameworkElement holdPanel, Func<ActionSpec?> hold, Action<ActionSpec> setHold) = TapHoldHalf($"Hold ({ActionSpec.TapHold.HoldMs} ms)", current?.Hold, () => refresh());
+        var save = new Button { Content = "Save", Style = Ui.Res<Style>("PrimaryPillStyle"), IsEnabled = false };
+
+        refresh = () => save.IsEnabled = ActionCatalog.TryBuildTapHold(quick(), hold(), out ActionSpec.TapHold built) && !built.Equals(current);
+        save.Click += (_, _) =>
+        {
+            if (ActionCatalog.TryBuildTapHold(quick(), hold(), out ActionSpec.TapHold built))
+            {
+                commit(built);
+            }
+        };
+
+        var inner = new StackPanel { Spacing = 8 };
+        inner.Children.Add(quickPanel);
+        inner.Children.Add(holdPanel);
+        if (sensePanel)
+        {
+            var preset = new Button { Content = "Hold opens the Actions Ring", Style = Ui.Res<Style>("QuietButtonStyle") };
+            preset.Click += (_, _) =>
+            {
+                setHold(new ActionSpec.ActionsRing());
+                refresh();
+            };
+            inner.Children.Add(preset);
+        }
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        row.Children.Add(save);
+        inner.Children.Add(row);
+        return new Expander
+        {
+            Header = "Press / Hold",
+            IsExpanded = current is not null,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            Content = inner,
+        };
+    }
+
+    /// <summary>One half of a Press / Hold: a list of actions and a typed-shortcut box. The getter is null while the typed shortcut is invalid.</summary>
+    private (FrameworkElement Panel, Func<ActionSpec?> Get, Action<ActionSpec> Set) TapHoldHalf(string title, ActionSpec? current, Action changed)
+    {
+        var options = new List<ActionOption>(ActionCatalog.TapHoldChoices(_kind));
+        string typed = string.Empty;
+        ActionSpec chosen = current ?? new ActionSpec.None();
+        if (chosen is ActionSpec.Keys k && !options.Any(o => o.Action.Equals(chosen)))
+        {
+            typed = k.Chord;
+        }
+        else if (chosen is not ActionSpec.TapHold && !options.Any(o => o.Action.Equals(chosen)))
+        {
+            options.Insert(0, new ActionOption("Current: " + ActionCatalog.Plain(chosen), chosen)); // keeps a Launch or Type text the user set elsewhere
+        }
+
+        var combo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (ActionOption o in options)
+        {
+            combo.Items.Add(o.Title);
+        }
+
+        int index = options.FindIndex(o => o.Action.Equals(chosen));
+        combo.SelectedIndex = typed.Length > 0 ? 0 : Math.Max(0, index);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(combo, title);
+        var box = new TextBox { PlaceholderText = "Or type a shortcut, e.g. Ctrl+Shift+P", Text = typed };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, title + " shortcut");
+
+        ActionSpec? Get()
+        {
+            if (box.Text.Trim().Length > 0)
+            {
+                return ActionCatalog.TryParseShortcut(box.Text, out ActionSpec.Keys keys) ? keys : null;
+            }
+
+            return combo.SelectedIndex >= 0 && combo.SelectedIndex < options.Count ? options[combo.SelectedIndex].Action : null;
+        }
+
+        var panel = new StackPanel { Spacing = 4 };
+        combo.SelectionChanged += (_, _) =>
+        {
+            if (box.Text.Length > 0)
+            {
+                box.Text = string.Empty; // picking from the list replaces a typed shortcut
+            }
+
+            changed();
+        };
+        box.TextChanged += (_, _) => changed();
+        panel.Children.Add(Ui.Text(title, 12, Ui.Muted));
+        panel.Children.Add(combo);
+        panel.Children.Add(box);
+
+        void Set(ActionSpec action)
+        {
+            box.Text = string.Empty;
+            int i = options.FindIndex(o => o.Action.Equals(action));
+            if (i >= 0)
+            {
+                combo.SelectedIndex = i;
+            }
+        }
+
+        return (panel, Get, Set);
     }
 
     /// <summary>"Type text...": a multi-line box; the saved text is typed into the foreground app. Ctrl+Enter saves.</summary>

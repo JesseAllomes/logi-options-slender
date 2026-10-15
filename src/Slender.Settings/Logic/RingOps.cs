@@ -194,6 +194,11 @@ public static class RingOps
     /// <summary>Replaces the slot at the path. A folder cannot go inside a folder: such a write is ignored.</summary>
     public static SlenderConfig SetSlot(SlenderConfig config, string? app, RingPath path, RingSlot slot)
     {
+        if (slot.Action is ActionSpec.TapHold)
+        {
+            return config; // Press / Hold is not allowed inside a ring slot
+        }
+
         List<RingSlot> slots = Padded(Slots(config, app));
         if (path.Slot < 0 || path.Slot >= slots.Count)
         {

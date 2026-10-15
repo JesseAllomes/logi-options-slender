@@ -84,6 +84,11 @@ public static class ProfileOps
     /// <summary>Sets (or, with a null action, clears) one binding. Creates the profile if it does not exist.</summary>
     public static SlenderConfig SetBinding(SlenderConfig config, string? appProcess, DeviceKind kind, ushort id, ActionSpec? action)
     {
+        if (action is ActionSpec.TapHold && !ActionCatalog.CanTapHold(kind, id))
+        {
+            return config; // not offered on the gesture button, a swipe or the thumb wheel
+        }
+
         var profiles = config.Profiles.ToList();
         int index = profiles.FindIndex(p => string.Equals(p.AppProcess, appProcess, StringComparison.OrdinalIgnoreCase));
         Profile profile;

@@ -36,11 +36,16 @@ public sealed class RingSession
     private RingSlot? _folder;
     private int? _pointerSlot;
     private bool _hasPointer, _sawSlot;
+    private readonly bool _holdOnly; // opened by a TapHold hold: the release never counts as a tap
     private int _wheelRemainder, _thumbRemainder;
 
-    /// <summary>Opens with the trigger held (the normal case: the ring opens on press).</summary>
-    public RingSession(IReadOnlyList<RingSlot> slots, RingMetrics metrics, long now)
+    /// <summary>
+    /// Opens with the trigger held (the normal case: the ring opens on press). <paramref name="holdOnly"/> = the ring was
+    /// opened by a hold (TapHold), so releasing never leaves it open: a slot runs, anything else cancels.
+    /// </summary>
+    public RingSession(IReadOnlyList<RingSlot> slots, RingMetrics metrics, long now, bool holdOnly = false)
     {
+        _holdOnly = holdOnly;
         _root = RingSource.Normalize(slots);
         Slots = _root;
         _metrics = metrics;
@@ -90,7 +95,7 @@ public sealed class RingSession
             return;
         }
         if (Phase != RingPhase.Holding) return;
-        if (now - _pressAt < TapMaxMs && !_sawSlot)
+        if (!_holdOnly && now - _pressAt < TapMaxMs && !_sawSlot)
         {
             Phase = RingPhase.Open; // tap: stay open for hover + click
             Raise();

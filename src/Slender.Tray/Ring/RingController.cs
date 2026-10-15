@@ -64,7 +64,7 @@ public sealed unsafe class RingController : IDisposable
     public bool IsOpen => _session?.IsOpen == true;
 
     /// <summary>The ring trigger went down or up. A press while closed opens the ring; while open it goes to the state machine.</summary>
-    public void OnTrigger(bool pressed)
+    public void OnTrigger(bool pressed, bool holdOnly = false)
     {
         if (_disposed) return;
         using var dpi = new RingNative.DpiScope();
@@ -75,7 +75,7 @@ public sealed unsafe class RingController : IDisposable
                 open.OnTrigger(pressed, Now);
                 return;
             }
-            if (pressed) Open();
+            if (pressed) Open(holdOnly);
         }
         catch (Exception ex)
         {
@@ -103,7 +103,7 @@ public sealed unsafe class RingController : IDisposable
 
     // ---- open ----
 
-    private void Open()
+    private void Open(bool holdOnly)
     {
         var cfg = _config();
         _appearance = cfg.Ring;
@@ -127,7 +127,7 @@ public sealed unsafe class RingController : IDisposable
         _iconPx = Math.Max(16, (int)Math.Round(26 * _metrics.Scale * _scale));
         _alpha = (byte)Math.Round(Math.Clamp(_appearance.OpacityPercent, 10, 100) * 255 / 100.0);
 
-        var session = new RingSession(source.Slots, _metrics, Now);
+        var session = new RingSession(source.Slots, _metrics, Now, holdOnly);
         _session = session;
         session.Changed += OnSessionChanged;
         session.Haptic += (_, kind) => _haptic(kind);

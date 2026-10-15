@@ -16,6 +16,7 @@ public sealed class KeyboardRouter : IDisposable
     private readonly ILog _log;
     private readonly IWorkQueue _queue;
     private readonly Func<long> _clock;
+    private readonly TapHoldTracker _tapHold;
     private readonly object _gate = new();
     private readonly Dictionary<ushort, ActionSpec> _active = new(); // action used at press, replayed on release
     private readonly CancellationTokenSource _cts = new();
@@ -31,7 +32,7 @@ public sealed class KeyboardRouter : IDisposable
         : this(keyboard, foreground, executor, config, log, null) { }
 
     internal KeyboardRouter(ILogiKeyboard keyboard, IForegroundApp foreground, IActionExecutor executor,
-        SlenderConfig config, ILog? log, IWorkQueue? queue, Func<long>? clock = null)
+        SlenderConfig config, ILog? log, IWorkQueue? queue, Func<long>? clock = null, IHoldTimer? holdTimer = null)
     {
         _clock = clock ?? (() => Environment.TickCount64);
         _keyboard = keyboard;
@@ -40,6 +41,7 @@ public sealed class KeyboardRouter : IDisposable
         _config = config;
         _log = log ?? NullLog.Instance;
         _queue = queue ?? new BoundedWorker("Slender.Keyboard", 256, sta: false, _log);
+        _tapHold = new TapHoldTracker(holdTimer ?? new ThreadingHoldTimer(), _queue, _log);
     }
 
     public SlenderConfig Config => _config;
@@ -196,6 +198,7 @@ public sealed class KeyboardRouter : IDisposable
             {
                 action = Resolve(e.ControlId);
                 lock (_gate) _active[e.ControlId] = action;
+                if (action is ActionSpec.TapHold th) { _tapHold.Press(e.ControlId, th, StartHold); return; }
                 if (action is ActionSpec.ActionsRing) { RaiseRing(true); return; }
                 if (action is ActionSpec.None) return;
             }
@@ -205,17 +208,47 @@ public sealed class KeyboardRouter : IDisposable
                 {
                     if (!_active.Remove(e.ControlId, out action!)) return;
                 }
+                if (action is ActionSpec.TapHold) { EndTapHold(e.ControlId); return; }
                 if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
                 if (action is ActionSpec.None) return;
             }
-            if (action is ActionSpec.ToggleThumbWheelMode)
-            {
-                if (e.Pressed) ThumbWheelToggleRequested?.Invoke(this, EventArgs.Empty);
-                return;
-            }
-            _executor.Execute(action, e.Pressed);
+            RunAction(action, e.Pressed);
         }
         catch (Exception ex) { _log.Error("key handling failed", ex); }
+    }
+
+    private void RunAction(ActionSpec action, bool pressed)
+    {
+        if (action is ActionSpec.ToggleThumbWheelMode)
+        {
+            if (pressed) ThumbWheelToggleRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+        _executor.Execute(action, pressed);
+    }
+
+    /// <summary>Hold threshold reached while the key is still down: the hold action starts as a press (the keyboard has no haptics).</summary>
+    private void StartHold(ActionSpec.TapHold th)
+    {
+        if (th.Hold is ActionSpec.None) return;
+        if (th.Hold is ActionSpec.ActionsRing) RaiseRing(true, holdOnly: true);
+        else RunAction(th.Hold, true);
+    }
+
+    /// <summary>Physical release: ends a started hold, otherwise it was a quick press and the tap runs once.</summary>
+    private void EndTapHold(ushort key)
+    {
+        if (!_tapHold.TryRelease(key, out var th, out var held)) return;
+        var action = held ? th.Hold : th.Tap;
+        if (action is ActionSpec.None) return;
+        if (action is ActionSpec.ActionsRing)
+        {
+            if (!held) RaiseRing(true); // a quick press: the ring opens and stays open
+            RaiseRing(false);
+            return;
+        }
+        if (!held) RunAction(action, true);
+        RunAction(action, false);
     }
 
     /// <summary>A key bound to "Switch thumb wheel mode" went down; the engine owns the mode (raised on the router's worker thread).</summary>
@@ -224,9 +257,9 @@ public sealed class KeyboardRouter : IDisposable
     /// <summary>A key bound to the Actions Ring went down or up (raised on the router's worker thread).</summary>
     public event EventHandler<RingTriggerEventArgs>? RingTrigger;
 
-    private void RaiseRing(bool pressed)
+    private void RaiseRing(bool pressed, bool holdOnly = false)
     {
-        try { RingTrigger?.Invoke(this, new RingTriggerEventArgs(pressed)); }
+        try { RingTrigger?.Invoke(this, new RingTriggerEventArgs(pressed, holdOnly)); }
         catch (Exception ex) { _log.Error("ring trigger handler failed", ex); }
     }
 
@@ -255,6 +288,7 @@ public sealed class KeyboardRouter : IDisposable
         lock (_gate) _foregroundDebounce?.Cancel();
         _cts.Cancel();
         _queue.Dispose();
+        _tapHold.Dispose();
         _cts.Dispose();
     }
 }

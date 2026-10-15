@@ -10,7 +10,11 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
     public override ActionSpec Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-        JsonElement root = doc.RootElement;
+        return Parse(doc.RootElement, allowTapHold: true);
+    }
+
+    private static ActionSpec Parse(JsonElement root, bool allowTapHold)
+    {
         if (root.ValueKind != JsonValueKind.Object)
         {
             throw new FormatException("Action must be a JSON object.");
@@ -29,11 +33,15 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "brightness" => new ActionSpec.Brightness(ReadInt(root, "step")),
             "text" => new ActionSpec.Text(ReadString(root, "value")),
             "toggleThumbWheel" => new ActionSpec.ToggleThumbWheelMode(),
+            "tapHold" when allowTapHold => new ActionSpec.TapHold(ReadNested(root, "tap"), ReadNested(root, "hold")),
+            "tapHold" => throw new FormatException("A tapHold action cannot contain another tapHold."),
             _ => throw new FormatException($"Unknown action type '{type}'."),
         };
     }
 
-    public override void Write(Utf8JsonWriter writer, ActionSpec value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, ActionSpec value, JsonSerializerOptions options) => WriteAction(writer, value, allowTapHold: true);
+
+    private static void WriteAction(Utf8JsonWriter writer, ActionSpec value, bool allowTapHold)
     {
         writer.WriteStartObject();
         switch (value)
@@ -75,11 +83,29 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.ToggleThumbWheelMode:
                 writer.WriteString("type", "toggleThumbWheel");
                 break;
+            case ActionSpec.TapHold tapHold:
+                if (!allowTapHold) throw new NotSupportedException("A tapHold action cannot contain another tapHold.");
+                writer.WriteString("type", "tapHold");
+                writer.WritePropertyName("tap");
+                WriteAction(writer, tapHold.Tap, allowTapHold: false);
+                writer.WritePropertyName("hold");
+                WriteAction(writer, tapHold.Hold, allowTapHold: false);
+                break;
             default:
                 throw new NotSupportedException($"Unsupported action {value.GetType().Name}.");
         }
 
         writer.WriteEndObject();
+    }
+
+    private static ActionSpec ReadNested(JsonElement obj, string name)
+    {
+        if (obj.TryGetProperty(name, out JsonElement el))
+        {
+            return Parse(el, allowTapHold: false);
+        }
+
+        throw new FormatException($"Missing action property '{name}'.");
     }
 
     private static string ReadString(JsonElement obj, string name)
