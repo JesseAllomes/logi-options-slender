@@ -125,6 +125,20 @@ if (tc != null) Console.WriteLine($"  mode {tc.Params[0]} invert {tc.Params[1]}"
 Console.WriteLine("\n== 0x2121 hi-res wheel ==");
 await Try(device, "getMode (fn1)", FeatureId.HiResWheel, 1);
 
+Console.WriteLine("\n== 0x2201 DPI ==");
+var dpi = await Try(device, "getSensorDpi (fn2)", FeatureId.AdjustableDpi, 2, 0);
+if (dpi != null) Console.WriteLine($"  dpi {(dpi.Params[1] << 8) | dpi.Params[2]} (default {(dpi.Params[3] << 8) | dpi.Params[4]})");
+
+// --dpi=<n> writes 0x2201 fn3 [sensor 0, hi, lo] and reads it back.
+if (args.FirstOrDefault(a => a.StartsWith("--dpi=", StringComparison.Ordinal)) is { } dpiArg
+    && ushort.TryParse(dpiArg["--dpi=".Length..], out var newDpi) && newDpi is >= 200 and <= 8000)
+{
+    Console.WriteLine($"\n== --dpi {newDpi} ==");
+    await Try(device, "setSensorDpi (fn3)", FeatureId.AdjustableDpi, 3, 0, (byte)(newDpi >> 8), (byte)newDpi);
+    var back = await Try(device, "read back", FeatureId.AdjustableDpi, 2, 0);
+    if (back != null) Console.WriteLine($"  dpi {(back.Params[1] << 8) | back.Params[2]}");
+}
+
 Console.WriteLine("\n== 0x2111 SmartShift ==");
 var ss = await Try(device, "get (fn1)", FeatureId.SmartShiftEnhanced, 1);
 if (ss != null) Console.WriteLine($"  mode {ss.Params[0]} (1 free-spin, 2 ratchet) autoDisengage {ss.Params[1]} (0xFF = off) force {ss.Params[2]}");

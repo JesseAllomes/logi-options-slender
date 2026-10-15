@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=27 -->
+<!-- drainclamp-build: state; schema=1; generation=28 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -27,6 +27,9 @@ Button capture -> hybrid: LL hook for middle/back/forward + thumb wheel; tempora
 HID++ safety -> allowlist of writable features/functions in code; never touch DFU 0x00D1, host/pairing 0x1814/0x1815, onboard profiles (agent, user asked about device risk)
 Settings UI -> WinUI 3 separate process launched from tray, exits on close; design via product-ui prototype loop, user prefers mix of round-1 directions 1+2+3 with real device renders (user)
 Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/LogiOptionsPlus/depots) into %LOCALAPPDATA%/Slender; never committed (agent, licensing)
+Distribution -> one all-in-one SlenderSetup.exe (Velopack, per-user, no admin, self-update) replacing the PowerShell installer (user)
+Sync -> sign-in with personal Microsoft account; settings stored in the user's own OneDrive app folder (Files.ReadWrite.AppFolder), no server; public-client app registration on the user's personal account; no secrets in repo (user)
+Onboard -> K860 global key remaps stored on the keyboard via 0x1C00 (allowlist writes keyboard-only); mouse power-cycle test decides which device settings are trusted to persist (user)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
