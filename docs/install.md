@@ -1,20 +1,14 @@
 # Install
 
-Slender installs per user, no admin rights. PowerShell 7 and the .NET 10 SDK (to build) are required; the tray itself needs the .NET 10 desktop runtime.
+Slender installs per user, no admin rights, from one file: `SlenderSetup.exe`.
 
 ## Install
 
-From the repo root:
+1. Build it once (needs the .NET 10 SDK and PowerShell 7): `.\scripts\Build-Setup.ps1` produces `artifacts\SlenderSetup.exe` (`-Version 1.0.1` sets the version).
+2. Run `SlenderSetup.exe`. It installs to `%LOCALAPPDATA%\SlenderApp`, adds a Start menu shortcut "Slender", installs the .NET 10 desktop runtime if it is missing, and starts the tray. No admin prompt.
+3. Optional: turn on **Launch at login** in Settings, General (or the tray menu). It is the same `Slender` Run value either way, and uninstalling removes it.
 
-```powershell
-.\scripts\Install-Slender.ps1                 # plan only
-.\scripts\Install-Slender.ps1 -Apply -WhatIf  # preview each step
-.\scripts\Install-Slender.ps1 -Apply -LaunchAtLogin
-```
-
-`-Apply` publishes the tray (framework-dependent, win-x64, Release) and the settings app (self-contained) into one folder, `%LOCALAPPDATA%\Programs\Slender`, so `Slender.Tray.exe` and `Slender.Settings.exe` sit side by side. It adds a Start menu shortcut "Slender", optionally the launch-at-login entry (`-LaunchAtLogin`, the same `Slender` Run value the tray menu toggles), then starts the tray (`-NoStart` to skip).
-
-If Slender is already running from the install folder the script refuses. Pass `-RestartRunning` to let it stop Slender.Tray/Slender.Settings first. It never stops Logi Options+.
+Setup keeps its own folder, so it never touches `%APPDATA%\Slender` (config) or `%LOCALAPPDATA%\Slender` (status, logs, sync state).
 
 ## Options+ guard
 
@@ -22,23 +16,34 @@ If Options+ is running, the tray still starts but the mouse and keyboard engines
 
 ## Update
 
-Pull or edit the source, then re-run the installer with `-Apply -RestartRunning`. Config is untouched.
+Run a newer `SlenderSetup.exe` over the top, or let Slender update itself: set `"updateSource"` in `slender.sync.json` to a folder holding the contents of `artifacts\releases` (or a GitHub repository URL). Updates download in the background and install the next time Slender exits. With no `updateSource` nothing is checked. Config is untouched. See `docs/sync.md`.
 
 ## Uninstall
 
-```powershell
-.\scripts\Uninstall-Slender.ps1 -Apply -StopRunning
-.\scripts\Uninstall-Slender.ps1 -Apply -StopRunning -RemoveConfig   # also deletes config and data
-```
+Windows Settings, Apps, Installed apps, Slender, Uninstall. Config and data are kept; delete `%APPDATA%\Slender` and `%LOCALAPPDATA%\Slender` by hand to remove them too.
 
-Removes the shortcut, the Run value and the install folder. Config is kept unless `-RemoveConfig`.
+## Sign-in and settings sync
+
+Optional. Sign in with a personal Microsoft account in Settings, General, Sync to keep `config.json` the same on every PC. One-time setup: `docs/sync.md`.
+
+## Fallback: PowerShell scripts
+
+The older scripts still work where the installer cannot be used. They install to a different folder (`%LOCALAPPDATA%\Programs\Slender`) with no self-update, so do not use both on one PC.
+
+```powershell
+.\scripts\Install-Slender.ps1                 # plan only
+.\scripts\Install-Slender.ps1 -Apply -LaunchAtLogin
+.\scripts\Install-Slender.ps1 -Apply -RestartRunning   # update: stops a running copy first
+.\scripts\Uninstall-Slender.ps1 -Apply -StopRunning    # add -RemoveConfig to also delete config and data
+```
 
 ## Where things live
 
 | What | Where |
 | --- | --- |
-| Program files | `%LOCALAPPDATA%\Programs\Slender` |
-| Start menu shortcut | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Slender.lnk` |
+| Program files | `%LOCALAPPDATA%\SlenderApp` (installer), `%LOCALAPPDATA%\Programs\Slender` (scripts) |
+| Start menu shortcut | Start menu, "Slender" |
 | Launch at login | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value `Slender` |
 | Config | `%APPDATA%\Slender\config.json` |
-| Status, logs, backups | `%LOCALAPPDATA%\Slender` (`status.json`, `logs`, `backups`) |
+| Status, logs, backups, sync state | `%LOCALAPPDATA%\Slender` (`status.json`, `logs`, `backups`, `sync.json`) |
+| Sign-in setup (client ID) | `%LOCALAPPDATA%\Slender\slender.sync.json` |

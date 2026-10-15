@@ -212,6 +212,8 @@ public sealed partial class MainWindow
         AddRow("Launch at login", "Slender starts in the tray when you sign in to Windows.",
             PageToggle("Launch at login", c.LaunchAtLogin, on => _config.Update(x => x with { LaunchAtLogin = on })));
 
+        BuildSyncSection();
+
         AddSection("KEYBOARD");
         AddRow("F-keys first (Fn lock)", "Function keys act as F1 to F12 without holding Fn.",
             PageToggle("F-keys first", c.Keyboard.FnLock, on => _config.Update(x => x with { Keyboard = x.Keyboard with { FnLock = on } })));
