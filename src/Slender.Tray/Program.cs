@@ -45,14 +45,20 @@ static class Program
         var executor = new ActionExecutor(excel, foreground, log);
         using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, config, log);
 
-        using var context = new TrayApplicationContext(store, mouse);
+        // ERGO K860: per-app key bindings and Fn lock (m9). Diverts nothing until a key is bound.
+        using var keyboard = new LogiKeyboard(new WindowsHidTransportFactory(WindowsHidTransportFactory.ErgoK860ProductIds));
+        using var keys = new KeyboardRouter(keyboard, foreground, executor, config, log);
+
+        using var context = new TrayApplicationContext(store, mouse, foreground: foreground, log: log);
         context.ConfigChanged += (_, changed) =>
         {
             engine.ApplyConfig(changed);
+            keys.ApplyConfig(changed);
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
         };
         engine.Start();
+        keys.Start();
 
         Application.Run(context);
         log.Info("Slender stopping");

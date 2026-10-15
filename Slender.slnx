@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Slender.Engine/Slender.Engine.csproj" />
     <Project Path="src/Slender.Hidpp/Slender.Hidpp.csproj" />
+    <Project Path="src/Slender.Settings/Slender.Settings.csproj" />
     <Project Path="src/Slender.Tray/Slender.Tray.csproj" />
   </Folder>
   <Folder Name="/tools/">

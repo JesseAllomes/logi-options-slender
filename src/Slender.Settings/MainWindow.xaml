@@ -1,0 +1,94 @@
+<Window
+    x:Class="Slender.Settings.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Slender">
+
+  <Grid x:Name="Root" Background="{StaticResource WindowGroundBrush}" RequestedTheme="Dark">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="40" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="76" />
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="78" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Title bar: glyph and name only. The caption buttons are drawn by the system on the right. -->
+    <Grid x:Name="TitleBar" Grid.Row="0" Grid.ColumnSpan="3" Background="Transparent">
+      <StackPanel Orientation="Horizontal" Spacing="9" Margin="14,0,0,0" VerticalAlignment="Center">
+        <Viewbox Width="16" Height="16">
+          <Canvas Width="16" Height="16">
+            <Path Stroke="{StaticResource MarkBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  Data="M11,3.5 C9.8,2.6 5,2.3 5,5.2 C5,8.2 11,7.2 11,10.4 C11,13.4 6,13.2 4.6,12.2" />
+          </Canvas>
+        </Viewbox>
+        <TextBlock Text="Slender" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Rail -->
+    <Border x:Name="RailBorder" Grid.Row="1" Grid.Column="0" Background="{StaticResource RailBrush}"
+            BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,1,0">
+      <StackPanel x:Name="RailPanel" Padding="8,12,8,12" Spacing="6" />
+    </Border>
+
+    <!-- Stage -->
+    <Grid x:Name="StageRoot" Grid.Row="1" Grid.Column="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <StackPanel x:Name="InfoHost" Grid.Row="0" Spacing="6" Margin="16,8,16,0" />
+
+      <Grid x:Name="StageBody" Grid.Row="1">
+        <Grid x:Name="StageLayer" SizeChanged="OnStageSizeChanged" KeyDown="OnStageKeyDown">
+          <Canvas x:Name="StageCanvas" />
+        </Grid>
+        <ScrollViewer x:Name="PageScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0">
+          <StackPanel x:Name="PagePanel" MaxWidth="660" HorizontalAlignment="Left" Margin="40,22,24,28" Spacing="4" />
+        </ScrollViewer>
+
+        <!-- App heading sits over the stage, top left. -->
+        <StackPanel x:Name="HeadingPanel" Orientation="Horizontal" Spacing="16" Margin="32,18,0,0"
+                    VerticalAlignment="Top" HorizontalAlignment="Left" IsHitTestVisible="False">
+          <Grid x:Name="HeadingIconHost" Width="46" Height="46" VerticalAlignment="Center" />
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock x:Name="HeadingTitle" FontFamily="{StaticResource DisplayFont}" FontSize="34" LineHeight="38"
+                       Foreground="{StaticResource InkBrush}" />
+            <TextBlock x:Name="HeadingSub" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="2,2,0,0" />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+
+      <!-- Bottom bar: quick settings for the selected device. -->
+      <Border x:Name="BottomBar" Grid.Row="2" Height="56" BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,1,0,0">
+        <Grid Margin="32,0,20,0">
+          <StackPanel x:Name="BottomBarItems" Orientation="Horizontal" Spacing="30" VerticalAlignment="Center" HorizontalAlignment="Left" />
+          <Button x:Name="CompareButton" HorizontalAlignment="Right" VerticalAlignment="Center"
+                  Style="{StaticResource QuietButtonStyle}" Click="OnCompareClicked"
+                  AutomationProperties.Name="Compare apps">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <FontIcon Glyph="&#xE80A;" FontSize="13" />
+              <TextBlock Text="Compare apps" />
+            </StackPanel>
+            <Button.KeyboardAccelerators>
+              <KeyboardAccelerator Key="G" Modifiers="Control" />
+            </Button.KeyboardAccelerators>
+          </Button>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- App strip -->
+    <Border x:Name="StripBorder" Grid.Row="1" Grid.Column="2" Background="{StaticResource RailBrush}"
+            BorderBrush="{StaticResource RuleBrush}" BorderThickness="1,0,0,0">
+      <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollMode="Disabled">
+        <StackPanel x:Name="StripPanel" Padding="8,12,8,12" Spacing="4" />
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</Window>

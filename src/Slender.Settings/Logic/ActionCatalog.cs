@@ -1,0 +1,209 @@
+using Slender.Engine;
+
+namespace Slender.Settings.Logic;
+
+/// <summary>How an action reads on a label: plain text plus optional key-cap chips.</summary>
+public sealed record ActionLabel(string Text, IReadOnlyList<string> Chips);
+
+/// <summary>One choice in a picker tab.</summary>
+public sealed record ActionOption(string Title, ActionSpec Action);
+
+/// <summary>Human text and picker options for ActionSpec values. Pure.</summary>
+public static class ActionCatalog
+{
+    private static readonly Dictionary<string, string> ChordNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Win+Shift+S"] = "Snip & copy",
+        ["Win+Tab"] = "Task view",
+        ["Win+D"] = "Show desktop",
+        ["Win+L"] = "Lock",
+        ["Win+S"] = "Search",
+        ["Alt+Tab"] = "Switch apps",
+        ["Alt+Left"] = "Back",
+        ["Alt+Right"] = "Forward",
+        ["Ctrl+PageDown"] = "Next tab",
+        ["Ctrl+PageUp"] = "Previous tab",
+        ["Ctrl+Z"] = "Undo",
+        ["Ctrl+Y"] = "Redo",
+        ["Ctrl+C"] = "Copy",
+        ["Ctrl+V"] = "Paste",
+    };
+
+    public static string ExcelName(ExcelCommand command) => command switch
+    {
+        ExcelCommand.NextSheet => "Next sheet",
+        ExcelCommand.PreviousSheet => "Previous sheet",
+        ExcelCommand.ZoomIn => "Zoom in",
+        ExcelCommand.ZoomOut => "Zoom out",
+        ExcelCommand.ZoomReset => "Zoom to 100%",
+        ExcelCommand.ScrollToFirstColumn => "First column",
+        ExcelCommand.ScrollToLastUsedColumn => "Last used column",
+        _ => command.ToString(),
+    };
+
+    /// <summary>Key chord parts for key caps: "Ctrl+PageDown" gives ["Ctrl", "PgDn"].</summary>
+    public static IReadOnlyList<string> ChordParts(string chord) =>
+        chord.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => p switch { "PageDown" => "PgDn", "PageUp" => "PgUp", "Backspace" => "Bksp", _ => p })
+            .ToArray();
+
+    /// <summary>The label text for an action.</summary>
+    public static ActionLabel Describe(ActionSpec action) => action switch
+    {
+        ActionSpec.Keys keys => new ActionLabel(ChordNames.GetValueOrDefault(keys.Chord, string.Empty), ChordParts(keys.Chord)),
+        ActionSpec.Excel excel => new ActionLabel(ExcelName(excel.Command), []),
+        ActionSpec.MouseButton mouse => new ActionLabel(MouseName(mouse.Button), []),
+        ActionSpec.ActionsRing => new ActionLabel("Actions Ring", []),
+        _ => new ActionLabel("Not assigned", []),
+    };
+
+    public static string MouseName(string button) => button switch
+    {
+        "Left" => "Left click",
+        "Right" => "Right click",
+        "Middle" => "Middle click",
+        "Back" => "Back",
+        "Forward" => "Forward",
+        _ => button,
+    };
+
+    /// <summary>Single-line text, for tooltips and automation names.</summary>
+    public static string Plain(ActionSpec action)
+    {
+        ActionLabel l = Describe(action);
+        return l.Chips.Count == 0 ? l.Text : (l.Text.Length == 0 ? string.Join('+', l.Chips) : l.Text + " " + string.Join('+', l.Chips));
+    }
+
+    public static IReadOnlyList<ActionOption> MouseOptions { get; } =
+    [
+        new("Left click", new ActionSpec.MouseButton("Left")),
+        new("Right click", new ActionSpec.MouseButton("Right")),
+        new("Middle click", new ActionSpec.MouseButton("Middle")),
+        new("Back", new ActionSpec.MouseButton("Back")),
+        new("Forward", new ActionSpec.MouseButton("Forward")),
+    ];
+
+    public static IReadOnlyList<ActionOption> ExcelOptions { get; } =
+        Enum.GetValues<ExcelCommand>().Select(c => new ActionOption(ExcelName(c), new ActionSpec.Excel(c))).ToArray();
+
+    public static IReadOnlyList<ActionOption> RingOptions { get; } =
+    [
+        new("Show Actions Ring", new ActionSpec.ActionsRing()),
+    ];
+
+    /// <summary>Keyboard "App" tab: Windows shortcuts that open or switch apps.</summary>
+    public static IReadOnlyList<ActionOption> KeyboardAppOptions { get; } =
+    [
+        new("Task view", new ActionSpec.Keys("Win+Tab")),
+        new("Switch apps", new ActionSpec.Keys("Alt+Tab")),
+        new("Show desktop", new ActionSpec.Keys("Win+D")),
+        new("Search", new ActionSpec.Keys("Win+S")),
+        new("Snip & copy", new ActionSpec.Keys("Win+Shift+S")),
+        new("Lock", new ActionSpec.Keys("Win+L")),
+    ];
+
+    /// <summary>Keyboard "Media" tab. These chord names need engine support for media keys (docs/settings.md).</summary>
+    public static IReadOnlyList<ActionOption> KeyboardMediaOptions { get; } =
+    [
+        new("Play / pause", new ActionSpec.Keys("MediaPlayPause")),
+        new("Next track", new ActionSpec.Keys("MediaNext")),
+        new("Previous track", new ActionSpec.Keys("MediaPrevious")),
+        new("Mute", new ActionSpec.Keys("VolumeMute")),
+        new("Volume down", new ActionSpec.Keys("VolumeDown")),
+        new("Volume up", new ActionSpec.Keys("VolumeUp")),
+    ];
+}
+
+/// <summary>Turns key presses into chord strings the engine's ChordParser accepts.</summary>
+public static class ChordRecorder
+{
+    public const ushort VkShift = 0x10;
+    public const ushort VkControl = 0x11;
+    public const ushort VkMenu = 0x12;
+    public const ushort VkLeftWin = 0x5B;
+    public const ushort VkRightWin = 0x5C;
+
+    public static bool IsModifier(ushort vk) => vk is VkShift or VkControl or VkMenu or VkLeftWin or VkRightWin or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5;
+
+    /// <summary>The ChordParser name for a virtual key, or null when the engine has no name for it.</summary>
+    public static string? KeyName(ushort vk)
+    {
+        if (vk is >= 0x41 and <= 0x5A)
+        {
+            return ((char)vk).ToString();
+        }
+
+        if (vk is >= 0x30 and <= 0x39)
+        {
+            return ((char)vk).ToString();
+        }
+
+        if (vk is >= 0x70 and <= 0x87)
+        {
+            return "F" + (vk - 0x6F);
+        }
+
+        return vk switch
+        {
+            0x0D => "Enter",
+            0x1B => "Esc",
+            0x09 => "Tab",
+            0x20 => "Space",
+            0x08 => "Backspace",
+            0x2E => "Delete",
+            0x2D => "Insert",
+            0x24 => "Home",
+            0x23 => "End",
+            0x21 => "PageUp",
+            0x22 => "PageDown",
+            0x25 => "Left",
+            0x26 => "Up",
+            0x27 => "Right",
+            0x28 => "Down",
+            0x2C => "PrintScreen",
+            0xBC => "Comma",
+            0xBE => "Period",
+            0xBD => "Minus",
+            0xBB => "Plus",
+            0xBA => "Semicolon",
+            0xBF => "Slash",
+            0xDC => "Backslash",
+            0xC0 => "Backtick",
+            _ => null,
+        };
+    }
+
+    /// <summary>Builds "Win+Ctrl+Alt+Shift+Key". Returns null when the key has no name.</summary>
+    public static string? Compose(bool win, bool ctrl, bool alt, bool shift, ushort vk)
+    {
+        string? key = KeyName(vk);
+        if (key is null)
+        {
+            return null;
+        }
+
+        var parts = new List<string>(5);
+        if (win)
+        {
+            parts.Add("Win");
+        }
+
+        if (ctrl)
+        {
+            parts.Add("Ctrl");
+        }
+
+        if (alt)
+        {
+            parts.Add("Alt");
+        }
+
+        if (shift)
+        {
+            parts.Add("Shift");
+        }
+
+        parts.Add(key);
+        return string.Join('+', parts);
+    }
+}

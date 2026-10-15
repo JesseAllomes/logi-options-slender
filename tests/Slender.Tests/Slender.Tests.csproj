@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -16,6 +16,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pure settings logic (no WinUI types) is compiled into the tests directly; the WinUI project itself is not referenced. -->
+    <Compile Include="..\..\src\Slender.Settings\Logic\*.cs" Link="Settings\Logic\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -97,7 +97,13 @@ public sealed class JsonConfigStore : IConfigStore
         var profiles = new List<Profile>(profileDtos.Count);
         foreach (ProfileDto p in profileDtos)
         {
-            profiles.Add(new Profile(p.AppProcess, ParseBindings(p.Bindings)));
+            profiles.Add(new Profile(p.AppProcess, ParseBindings(p.Bindings))
+            {
+                // Version 1 files have none of these; missing means empty/null.
+                KeyBindings = p.KeyBindings is null ? new Dictionary<ushort, ActionSpec>() : ParseBindings(p.KeyBindings),
+                DisplayName = string.IsNullOrWhiteSpace(p.DisplayName) ? null : p.DisplayName,
+                ExePath = string.IsNullOrWhiteSpace(p.ExePath) ? null : p.ExePath,
+            });
         }
 
         ExcelDto excel = dto.Excel ?? new ExcelDto();
@@ -107,7 +113,26 @@ public sealed class JsonConfigStore : IConfigStore
             profiles,
             new ExcelSettings(excel.ThumbWheelScrollsColumns, Math.Clamp(excel.ColumnsPerNotch, 1, 10)),
             new HapticSettings(haptics.Enabled, Math.Clamp(haptics.Level, 0, 3), haptics.OnButtonPress, haptics.OnActionsRing),
-            dto.LaunchAtLogin);
+            dto.LaunchAtLogin)
+        {
+            Pointer = ToPointer(dto.Pointer),
+            Keyboard = new KeyboardSettings(dto.Keyboard?.FnLock ?? false),
+        };
+    }
+
+    private static PointerSettings ToPointer(PointerDto? p)
+    {
+        if (p is null)
+        {
+            return new PointerSettings();
+        }
+
+        return new PointerSettings(
+            p.Dpi is { } dpi ? Math.Clamp(dpi, 100, 32000) : null,
+            p.SmartShiftEnabled,
+            Math.Clamp(p.SmartShiftThreshold, 1, 255),
+            p.InvertWheel,
+            p.InvertThumbWheel);
     }
 
     private static Dictionary<ushort, ActionSpec> ParseBindings(Dictionary<string, ActionSpec>? raw)
@@ -144,6 +169,15 @@ public sealed class JsonConfigStore : IConfigStore
                 OnButtonPress = config.Haptics.OnButtonPress,
                 OnActionsRing = config.Haptics.OnActionsRing,
             },
+            Pointer = new PointerDto
+            {
+                Dpi = config.Pointer.Dpi,
+                SmartShiftEnabled = config.Pointer.SmartShiftEnabled,
+                SmartShiftThreshold = config.Pointer.SmartShiftThreshold,
+                InvertWheel = config.Pointer.InvertWheel,
+                InvertThumbWheel = config.Pointer.InvertThumbWheel,
+            },
+            Keyboard = new KeyboardDto { FnLock = config.Keyboard.FnLock },
             Profiles = new List<ProfileDto>(config.Profiles.Count),
         };
 
@@ -155,7 +189,20 @@ public sealed class JsonConfigStore : IConfigStore
                 bindings[FormatControlId(pair.Key)] = pair.Value;
             }
 
-            dto.Profiles.Add(new ProfileDto { AppProcess = profile.AppProcess, Bindings = bindings });
+            var keyBindings = new Dictionary<string, ActionSpec>(profile.KeyBindings.Count);
+            foreach (KeyValuePair<ushort, ActionSpec> pair in profile.KeyBindings)
+            {
+                keyBindings[FormatControlId(pair.Key)] = pair.Value;
+            }
+
+            dto.Profiles.Add(new ProfileDto
+            {
+                AppProcess = profile.AppProcess,
+                DisplayName = profile.DisplayName,
+                ExePath = profile.ExePath,
+                Bindings = bindings,
+                KeyBindings = keyBindings,
+            });
         }
 
         return dto;
@@ -223,12 +270,31 @@ public sealed class JsonConfigStore : IConfigStore
         public List<ProfileDto>? Profiles { get; set; }
         public ExcelDto? Excel { get; set; }
         public HapticsDto? Haptics { get; set; }
+        public PointerDto? Pointer { get; set; }
+        public KeyboardDto? Keyboard { get; set; }
+    }
+
+    internal sealed class PointerDto
+    {
+        public int? Dpi { get; set; }
+        public bool SmartShiftEnabled { get; set; } = true;
+        public int SmartShiftThreshold { get; set; } = 12;
+        public bool InvertWheel { get; set; }
+        public bool InvertThumbWheel { get; set; }
+    }
+
+    internal sealed class KeyboardDto
+    {
+        public bool FnLock { get; set; }
     }
 
     internal sealed class ProfileDto
     {
         public string? AppProcess { get; set; }
+        public string? DisplayName { get; set; }
+        public string? ExePath { get; set; }
         public Dictionary<string, ActionSpec>? Bindings { get; set; }
+        public Dictionary<string, ActionSpec>? KeyBindings { get; set; }
     }
 
     internal sealed class ExcelDto
