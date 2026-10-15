@@ -50,8 +50,22 @@ public static class SettingsLauncher
         return null;
     }
 
-    /// <summary>Brings the running window forward or starts a new one. Returns false when the exe cannot be found or started.</summary>
-    public static bool Launch()
+    public const string PopoverArgument = "--popover";
+
+    /// <summary>How the settings exe is started; the popover flag is only passed for the tray-icon click.</summary>
+    public static ProcessStartInfo StartInfo(string exe, bool popover)
+    {
+        var info = new ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! };
+        if (popover)
+        {
+            info.ArgumentList.Add(PopoverArgument);
+        }
+
+        return info;
+    }
+
+    /// <summary>Brings the running window forward or starts a new one (with --popover for the tray-icon click). Returns false when the exe cannot be found or started.</summary>
+    public static bool Launch(bool popover = false)
     {
         if (TrySignalRunning())
         {
@@ -66,7 +80,7 @@ public static class SettingsLauncher
 
         try
         {
-            using Process? p = Process.Start(new ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! });
+            using Process? p = Process.Start(StartInfo(exe, popover));
             return p is not null;
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)

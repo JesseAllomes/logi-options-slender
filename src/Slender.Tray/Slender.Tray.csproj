@@ -14,12 +14,19 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
+    <UseWindowsForms>false</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ApplicationIcon>slender.ico</ApplicationIcon>
+    <!-- NativeAOT: `dotnet publish -r win-x64 -p:PublishAot=true`. Opt-in on the command line so plain builds and tests stay JIT. -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Cap the gen0 budget: tray keeps ~0.6 MB live but reserves ~20 MB of GC space otherwise (docs/memory.md #2). -->
+    <!-- Cap the gen0 budget: tray keeps ~0.6 MB live but reserves ~20 MB of GC space otherwise (docs/memory.md #2).
+         For NativeAOT this item is baked into the executable (runtimeconfig knobs are compiled in), so it applies there too. -->
     <RuntimeHostConfigurationOption Include="System.GC.Gen0MaxBudget" Value="1048576" />
   </ItemGroup>
 

@@ -10,6 +10,9 @@ namespace Slender.Tray;
 
 static class Program
 {
+    /// <summary>Measurement switch: no HID devices, inert hook. Never used in normal running.</summary>
+    public const string NoDevicesArgument = "--no-devices";
+
     private static bool IsOptionsPlusRunning()
     {
         Process[] found = Process.GetProcessesByName(StatusPublisher.OptionsPlusProcess);
@@ -27,7 +30,7 @@ static class Program
     }
 
     [STAThread]
-    static void Main()
+    static int Main(string[] args)
     {
         // Velopack install/update/uninstall hooks. Must run first: during setup the exe is started with hook arguments and exits here.
         VelopackApp.Build()
@@ -46,17 +49,50 @@ static class Program
         using var singleInstance = new SingleInstance();
         if (!singleInstance.IsFirstInstance)
         {
-            return;
+            return 0;
         }
 
-        ApplicationConfiguration.Initialize();
+        bool restart = RunTray(args.Contains(NoDevicesArgument, StringComparer.OrdinalIgnoreCase));
+        if (restart)
+        {
+            // Everything is disposed. Free the single-instance lock first, or the new copy would exit as a second instance.
+            singleInstance.Release();
+            try
+            {
+                var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+                foreach (string a in args)
+                {
+                    info.ArgumentList.Add(a);
+                }
 
+                Process.Start(info)?.Dispose();
+            }
+            catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                new FileLog().Error("Restart after memory watchdog failed", e);
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>Builds and runs the whole tray; returns true when the memory watchdog asked for a restart.</summary>
+    private static bool RunTray(bool noDevices)
+    {
         var log = new FileLog();
-        log.Info("Slender starting");
-        IConfigStore store = SyncPaths.Override is { } configDir ? new JsonConfigStore(configDir) : new JsonConfigStore(); // SLENDER_CONFIG_DIR: test hook shared with the settings app
+        log.Info(noDevices ? "Slender starting (no devices)" : "Slender starting");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => log.Error("Unhandled exception", e.ExceptionObject as Exception);
+
+        string? configDir = SyncPaths.Override; // SLENDER_CONFIG_DIR: test hook shared with the settings app
+        IConfigStore store = configDir is not null ? new JsonConfigStore(configDir) : new JsonConfigStore();
+        StartupRegistration? startup = configDir is not null
+            ? new StartupRegistration(new InMemoryRunKey(), Environment.ProcessPath ?? "Slender.Tray.exe") // a test instance must not touch the real Run key
+            : null;
 
         var config = store.Load();
-        using var mouse = new LogiMouse(new WindowsHidTransportFactory(),
+        IHidppTransportFactory mouseFactory = noDevices ? new NoDevices() : new WindowsHidTransportFactory();
+        IHidppTransportFactory keyboardFactory = noDevices ? new NoDevices() : new WindowsHidTransportFactory(WindowsHidTransportFactory.ErgoK860ProductIds);
+        using var mouse = new LogiMouse(mouseFactory,
             new LogiMouseOptions
             {
                 ThumbWheelInvert = config.Pointer.InvertThumbWheel,
@@ -64,14 +100,14 @@ static class Program
                 SmoothScroll = config.Pointer.SmoothScroll,
                 Dpi = config.Pointer.Dpi,
             });
-        using var hook = new LowLevelMouseHook(log);
+        using IInputHook hook = noDevices ? new InertHook() : new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
         using var excel = new ExcelBridge(log);
         var executor = new ActionExecutor(excel, foreground, log);
         using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, config, log);
 
         // ERGO K860: per-app key bindings and Fn lock (m9). Diverts nothing until a key is bound.
-        using var keyboard = new LogiKeyboard(new WindowsHidTransportFactory(WindowsHidTransportFactory.ErgoK860ProductIds));
+        using var keyboard = new LogiKeyboard(keyboardFactory);
         using var keys = new KeyboardRouter(keyboard, foreground, executor, config, log);
 
         // Options+ and Slender must never both own HID++ diverts (docs/switch-over.md): the engines wait for it to go.
@@ -81,14 +117,16 @@ static class Program
             keys.Start();
         });
 
-        using var context = new TrayApplicationContext(store, mouse, foreground: foreground, log: log, keyboard: keyboard, guard: guard);
+        var watchdog = new MemoryWatchdog(MemoryWatchdog.ReadCurrentPrivateBytes, log.Info);
+        using var app = new TrayApplication(store, mouse, startup, foreground: foreground, log: log, keyboard: keyboard, guard: guard,
+            watchdog: watchdog, statusPath: Path.Combine(SyncPaths.StateDirectory, "status.json"));
         // Settings sync (OneDrive app folder). Inert until the user has set up sign-in and signed in; never blocks the tray.
         SyncSettings syncSettings = SyncSettings.LoadDefault();
         using var sync = new BackgroundSync(SyncServiceFactory.Create(), log);
         _ = sync.StartAsync();
         _ = SelfUpdate.CheckAsync(syncSettings.UpdateSource, log);
 
-        context.ConfigChanged += (_, changed) =>
+        app.ConfigChanged += (_, changed) =>
         {
             sync.NotifyConfigChanged();
             engine.ApplyConfig(changed);
@@ -98,7 +136,8 @@ static class Program
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);
             _ = mouse.SetDpiAsync(changed.Pointer.Dpi, CancellationToken.None);
         };
-        Application.Run(context);
+        app.Run();
         log.Info("Slender stopping");
+        return app.RestartRequested;
     }
 }

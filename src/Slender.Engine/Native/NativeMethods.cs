@@ -164,9 +164,6 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
-    [DllImport("oleacc.dll")]
-    public static extern int AccessibleObjectFromWindow(nint hwnd, uint dwId, ref Guid riid,
-        [MarshalAs(UnmanagedType.IUnknown)] out object? ppvObject);
 
     /// <summary>Process name without extension, lower case, or null (access denied, gone, system).</summary>
     public static string? GetProcessName(nint hwnd)

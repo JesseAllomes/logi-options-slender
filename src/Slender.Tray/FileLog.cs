@@ -12,7 +12,7 @@ public sealed class FileLog : ILog
 
     public FileLog(string? directory = null)
     {
-        var dir = directory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Slender", "logs");
+        var dir = directory ?? Path.Combine(Slender.Sync.SyncPaths.StateDirectory, "logs");
         Directory.CreateDirectory(dir);
         _path = Path.Combine(dir, "slender.log");
     }
