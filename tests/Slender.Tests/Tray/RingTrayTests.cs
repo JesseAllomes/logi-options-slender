@@ -102,10 +102,10 @@ public class RingRenderTests
     }
 
     [Fact]
-    public void BundledFontsLoadWhenPresent()
+    public void BundledFontsLoad()
     {
         var fonts = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts");
-        if (!File.Exists(Path.Combine(fonts, "Sora-SemiBold.ttf"))) return;
+        Assert.True(File.Exists(Path.Combine(fonts, "Sora-SemiBold.ttf")), "bundled fonts were not copied next to the tests");
         using var canvas = new RingCanvas(64, 64, 1, fonts);
         Assert.True(canvas.UsingBundledFonts);
     }

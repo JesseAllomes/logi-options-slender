@@ -16,6 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The same two fonts the tray ships, so the bundled-fonts test checks real files. -->
+    <None Include="..\..\src\Slender.Settings\Assets\Fonts\Sora-SemiBold.ttf" Link="Assets\Fonts\Sora-SemiBold.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\Slender.Settings\Assets\Fonts\JetBrainsMono-Medium.ttf" Link="Assets\Fonts\JetBrainsMono-Medium.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />

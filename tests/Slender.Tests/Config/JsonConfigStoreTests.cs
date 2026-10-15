@@ -158,8 +158,15 @@ public sealed class JsonConfigStoreTests : IDisposable
     [Fact]
     public void Config_without_battery_alerts_loads_defaults()
     {
-        Directory.CreateDirectory(_dir);
-        File.WriteAllText(FilePath, "{ \"version\": 2, \"launchAtLogin\": false }");
-        Assert.Equal(new BatteryAlertSettings(), Store().Load().BatteryAlerts);
+        Store().Save(SlenderConfig.Default with { LaunchAtLogin = true });
+        var obj = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(FilePath))!.AsObject();
+        Assert.True(obj.Remove("batteryAlerts"));
+        File.WriteAllText(FilePath, obj.ToJsonString());
+
+        SlenderConfig loaded = Store().Load();
+
+        Assert.Equal(new BatteryAlertSettings(), loaded.BatteryAlerts);
+        Assert.True(loaded.LaunchAtLogin);
+        Assert.Empty(Directory.GetFiles(_dir, "config.json.bad-*"));
     }
 }
