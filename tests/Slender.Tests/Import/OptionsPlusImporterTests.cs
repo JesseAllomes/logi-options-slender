@@ -199,6 +199,7 @@ public class OptionsPlusImporterTests
         var c = Result.Config;
         Assert.True(c.Haptics.Enabled);
         Assert.Equal(1, c.Haptics.Level); // 45 of 100 -> notch 1 of 0-3
+        Assert.Equal(45, c.Haptics.Strength); // the exact Options+ strength carries over
         Assert.True(c.Haptics.OnButtonPress);
         Assert.True(c.Haptics.OnActionsRing);
         Assert.True(c.Pointer.InvertThumbWheel); // dir NATURAL

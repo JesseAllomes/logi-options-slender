@@ -104,7 +104,7 @@ static class Program
                 WheelResistance = config.Pointer.WheelResistance,
                 SensePanelForce = config.Pointer.SensePanelForce,
                 SensePanelBaseline = config.Pointer.SensePanelBaseline,
-                HapticStrength = config.Haptics.EffectiveStrength,
+                HapticStrength = config.Haptics.Strength, // null = leave the mouse's own strength alone, like the other feel settings
             });
         using IInputHook hook = noDevices ? new InertHook() : new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
@@ -177,6 +177,6 @@ static class Program
     {
         await mouse.SetWheelResistanceAsync(config.Pointer.WheelResistance, CancellationToken.None).ConfigureAwait(false);
         await mouse.SetSensePanelForceAsync(config.Pointer.SensePanelForce, CancellationToken.None).ConfigureAwait(false);
-        await mouse.SetHapticStrengthAsync(config.Haptics.EffectiveStrength, CancellationToken.None).ConfigureAwait(false);
+        await mouse.SetHapticStrengthAsync(config.Haptics.Strength, CancellationToken.None).ConfigureAwait(false);
     }
 }
