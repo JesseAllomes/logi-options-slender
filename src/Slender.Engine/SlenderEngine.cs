@@ -236,11 +236,23 @@ public sealed class SlenderEngine : IDisposable
 
     // ---- horizontal wheel (hook thread: O(1), never throws) ----
 
+    /// <summary>Pseudo control id the settings app stores the thumb wheel binding under.</summary>
+    public const ushort ThumbWheelBindingId = 0xF150;
+    private const int MaxNotchesPerEvent = 10;
+
     private void OnWheel(object? sender, HookWheelEventArgs e)
     {
         try
         {
             var cfg = _config;
+            if (ResolveAction(ThumbWheelBindingId) is ActionSpec.Keys keys)
+            {
+                e.Handled = true;
+                var notches = _accumulator.Add(e.Delta, 1, _clock());
+                if (notches == 0) return;
+                _queue.Post(() => RunWheelKeys(keys.Chord, notches));
+                return;
+            }
             if (!cfg.Excel.ThumbWheelScrollsColumns) return;
             if (_foreground.ProcessName != "excel") return;
             var window = _foreground.WindowHandle;
@@ -254,6 +266,33 @@ public sealed class SlenderEngine : IDisposable
             });
         }
         catch (Exception ex) { SafeLog("wheel handler failed", ex); }
+    }
+
+    private void RunWheelKeys(string chord, int notches)
+    {
+        try
+        {
+            var (right, left) = SplitWheelChord(chord);
+            var action = new ActionSpec.Keys(notches > 0 ? right : left);
+            for (var i = Math.Min(Math.Abs(notches), MaxNotchesPerEvent); i > 0; i--)
+                _executor.Execute(action, true);
+        }
+        catch (Exception ex) { _log.Error("thumb wheel action failed", ex); }
+    }
+
+    /// <summary>
+    /// Thumb wheel Keys encoding: "Right|Left" gives both directions explicitly (e.g. "VolumeUp|VolumeDown");
+    /// a single chord is sent per notch right, and the same chord with Shift toggled per notch left
+    /// ("Ctrl+Tab" / "Ctrl+Shift+Tab").
+    /// </summary>
+    public static (string Right, string Left) SplitWheelChord(string chord)
+    {
+        var bar = chord.IndexOf('|');
+        if (bar >= 0) return (chord[..bar].Trim(), chord[(bar + 1)..].Trim());
+        var parts = chord.Split('+', StringSplitOptions.TrimEntries).ToList();
+        var i = parts.FindIndex(p => p.Equals("Shift", StringComparison.OrdinalIgnoreCase));
+        if (i >= 0) parts.RemoveAt(i); else parts.Insert(Math.Max(0, parts.Count - 1), "Shift");
+        return (chord.Trim(), string.Join('+', parts));
     }
 
     // ---- status ----

@@ -174,3 +174,12 @@ Read-only probe 2026-10-15, Options+ running. Raw output: `.agent/probe/k860-rea
   keeps mode and force, threshold 0xFF = off, skips the write when unchanged. Default threshold 22 (this user's value).
 - 0x2121 fn1 → mode 0x00: native target, **hi-res off**. Under Options+ it was 0x01 (wheel routed to Options+ for its own
   smooth scrolling). `Pointer.SmoothScroll` (default off) will set bit1 for native high-resolution wheel reports.
+
+### Smooth scroll (0x2121) and thumb wheel bindings
+
+- `LogiMouseOptions.SmoothScroll` / `LogiMouse.SetSmoothScrollAsync(bool)`: 0x2121 read-modify-write. Bit1 = hi-res wheel
+  (set when on, cleared when off); bit0 (divert to software) is always cleared so the wheel stays native HID; other bits are kept.
+  Applied on every connect when non-null; no write when the byte already matches.
+- Thumb wheel binding (pseudo id 0xF150, `ActionSpec.Keys` only): `"Right|Left"` sends each chord per notch in its direction;
+  a single chord is sent per notch right and the same chord with Shift toggled per notch left. Other actions fall back to the
+  Excel column scroll / native pass-through.
