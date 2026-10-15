@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=73 -->
+<!-- drainclamp-build: state; schema=1; generation=76 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -6,15 +6,16 @@ Slender = lean Windows replacement for Logi Options+ (MX Master 4 BLE PID B042 +
 Modules -> responsibility -> entry:
 - src/Slender.Hidpp -> HID++ 2.0 over Windows HID (shared open, SwId 0x0B tray / 0x0C probe), HidppChannel, HidppDevice + HidppAllowlist (payload-aware; only listed setters; DFU/host-change/pairing/reset/onboard profiles blocked; raw XY only for CID 0x00C3/0x00D7), LogiMouse (diverts gesture/modeshift/sense, raw-XY gesture divert 0x33, thumb wheel 0x2150 hi-res divert on demand + invert, SmartShift threshold + torque, Sense Panel force 0x19C0 fn3 within 50-200% of first reading, haptic strength 0x19B0, DPI 200-8000, all re-applied on connect, null = leave device alone), LogiKeyboard (diverts, Fn lock per host 0x40A3, disable keys 0x4521, 0x1C00 onboard remap read/set/reset 1 modifier max), Inventory/ (read-only probe: vetted getters, NeverCall guard on send path)
 - src/Slender.Engine -> SlenderEngine (hook middle/back/forward; HID++ buttons; TapHold 350 ms; gesture swipes from raw XY or hook, cursor held either way; thumb wheel via IThumbWheelSource hook|HID with per-app divert policy; Excel columns; dual thumb wheel per-app mode; per-app divert sets with held-control wait; brightness; Text/Launch/Disabled actions), KeyboardRouter (same per-app/held rules, TapHold, spare keys, toggle), Ring/ (RingSession tap/hold/hold-only, folders, wheel adjust, thumb-wheel steering; RingLayout geometry; RingDefaults; RingSource), Import/ (Options+ settings.db + Logi Plugin Service ring importer, read-only copies), ThumbWheelModes, RingButtonPairing, GestureTracker, BrightnessController + WindowsMonitorBrightness (DDC/CI + LCD IOCTL, active power policy); Config/ JsonConfigStore v2 (source-gen, quarantine bad files); Contracts/EngineContracts.cs
-- src/Slender.Tray -> raw Win32 tray, NativeAOT (~13.3 MB exe), Ring/ Direct2D layered overlay (Bezel/Compass/Keypad, appearance from config) + ThumbWheelToast cursor label, UpdateCoordinator (baked releases source, 30 s/6 h/on-demand, balloon + Restart to update, closes Settings first), battery alerts, lock-key indicator, OptionsPlusGuard, StatusPublisher (status.json incl. versions, DPI, feel values, keyboard channel), MemoryWatchdog, SyncService; entry Program.cs
+- src/Slender.Tray -> raw Win32 tray, NativeAOT (~13.3 MB exe), Ring/ Direct2D layered overlay (Bezel/Compass/Keypad, appearance from config) + ThumbWheelToast cursor label, UpdateCoordinator (GitHub Releases source baked in, 30 s/6 h/on-demand, balloon + Restart to update, closes Settings first), battery alerts, lock-key indicator, OptionsPlusGuard, StatusPublisher (status.json incl. versions, DPI, feel values, keyboard channel), MemoryWatchdog, SyncService; entry Program.cs
 - src/Slender.Settings -> WinUI 3 (locked design .grok/product-ui), pages: device stage, Point & scroll (feel sliders, dual thumb wheel), Haptics (0-100), Actions Ring (appearance + slot editor), General (import, keyboard disable keys/Fn per channel, version/updates); picker tabs incl. More (Launch/Text/Off/Press-Hold)
 - src/Slender.Sync -> MSAL personal MS account, OneDrive approot config sync (needs slender.sync.json client id; m14)
 - tools/Slender.Probe (read-only by default; --inventory), tools/Slender.InputLog
-- scripts/Build-Setup.ps1 -> artifacts/SlenderSetup.exe (Velopack, auto next patch, releases = update source)
+- scripts/Build-Setup.ps1 -> artifacts/SlenderSetup.exe (Velopack, downloads latest GitHub release as delta base, next patch, publishes v<version> to GitHub Releases; needs clean pushed HEAD + gh auth; -LocalOnly = old folder flow)
 - docs/: protocol.md, devices/ (inventory reports + feature-gaps.md), actions-ring-optionsplus.md, ring-prototypes-round1.html, memory.md, install.md, sync.md, switch-over.md
 Assets: device renders and imported ring icons under %LOCALAPPDATA%/Slender/assets; never committed.
 Device facts: survive power cycle = SmartShift threshold, haptics; NOT = DPI, thumb invert, hi-res, diverts. Options+ is installed but disabled (kept for firmware updates); Logi Plugin Service holds the real Actions Ring config (Loupedeck72).
 Machine/tooling: per-user .NET SDK at %LOCALAPPDATA%/Microsoft/dotnet (PATH dotnet has none); AOT needs VS Installer on PATH for vswhere. Worktrees only under .worktrees/ (git-excluded); one empty locked folder .worktrees/probe clears on reboot. DrainClamp plugin patched locally for .NET bin/obj caches (upstream PR #1). Branch wt-mem kept (audit experiments).
+Repo: public https://github.com/JesseAllomes/logi-options-slender (main pushed; wt-mem local only). History rewritten 2026-10-16 before first push: Windows username, work hostname and AI co-author trailers scrubbed; pre-rewrite backup bundle in the session scratchpad. Releases: v1.1.7 first GitHub release.
 <!-- /DC:ARCH -->
 
 <!-- DC:DECISIONS -->
@@ -25,7 +26,7 @@ Devices -> MX Master 4 (BLE B042) and ERGO K860 keyboard (BLE B359) both in scop
 Upstreams -> reference only in .agent/upstream; port logic with attribution (MIT/Apache-2.0), never execute their scripts or binaries (agent default)
 Options+ and Slender never own HID++ at the same time; switch-over needs a documented rollback (Mouser README constraint)
 Options+ reinstall, Excel registry/Resiliency edits and process kills run only after explicit user approval at run time; scripts back up registry first (security boundary)
-Project lives in C:/Users/user/Projects/personal, local only, never OneDrive (user memory)
+Project lives in %USERPROFILE%/Projects/personal, local only, never OneDrive (user memory)
 Build orchestration -> Opus orchestrates on main (scaffold, contracts, review, merge, m6); Sonnet/Haiku subagents build parts in separate git worktrees/branches, merged by Opus (user)
 Button capture -> hybrid: LL hook for middle/back/forward + thumb wheel; temporary HID++ divert (0x03, never persist bit 0x04) only for gesture/Sense Panel/mode shift when bound; firmware remap deferred (spec: temporary, resets on config reset) (user + docs)
 HID++ safety -> allowlist of writable features/functions in code; never touch DFU 0x00D1, host/pairing 0x1814/0x1815, onboard profiles (agent, user asked about device risk)
@@ -53,6 +54,8 @@ Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight
 Custom firmware -> not pursued (signed-only updates; hardware route irreversible; Slender already covers the gains) (user 2026-10-15)
 Device probe -> read-only inventory: enumerate every feature (incl. hidden/engineering), call only documented getters from a vetted table, list-only for DFU/host/pairing/reset/onboard-profile and unknown features; own SwId so it runs beside the tray (user 2026-10-15)
 Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + touch, K860 extras, raw-XY gestures, and press-vs-hold (Sense Panel: quick press = chosen task, long press = ring). Each new device write gets its own HidppAllowlist entry for the documented setter only; DFU/host/pairing/reset/onboard profiles stay blocked
+Hosting + OTA (user 2026-10-16) -> public GitHub repo JesseAllomes/logi-options-slender; updates ship as GitHub Releases (anonymous read, no token in the app); release only from a committed, pushed HEAD
+Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trailers in this repo's commits; no Windows username, work hostname or SRS paths in tracked files (use placeholders in fixtures)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -98,7 +101,6 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T00:24:31+00:00 ac36d067 m10 merged (820c394, 265 tests); keyboard wired into tray; team launched: wt-engine, wt-tray, wt-settings (Sonnet), wt-mem (Opus audit)
 - 2026-10-15T01:57:21+00:00 09374121 Merged: Win32 tray (AOT 5.3 MB private), popover mode, setup.exe+sync, onboard (1 modifier max; Options+ uses software divert for multi-mod); 400+ tests
 - 2026-10-15T02:04:29+00:00 6a918951 Session wrap: SlenderSetup.exe 1.0.0 built (AOT tray, 71.8 MB); next = user quits old Slender, installs, 5-min live pass (m13)
 - 2026-10-15T03:17:31+00:00 55959850 m13/c1 verified install; scope added m17 battery alert, m18 launch/turn-off actions, m19 Options+ import; contracts on main fb2adcb; Sonnet agents on wt-battery, wt-actions, wt-import
@@ -118,4 +120,5 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 - 2026-10-15T21:56:50+00:00 ee4bd2da m31 built and committed 7050cdc (985 tests, -warnaserror clean): thumb wheel card on the stage. Not yet seen live: needs Build-Setup.ps1 + in-app update, then click the thumb wheel on the mouse stage. m13 c4 memory sample still running
 - 2026-10-15T22:04:11+00:00 981b2667 m31 shipped: SlenderSetup 1.1.6 built 09:04 Melbourne (delta 1.1.5->1.1.6 in artifacts/releases); tray picks it up within 30 s / on Check for updates; awaiting user's live look at the card
 - 2026-10-15T22:28:27+00:00 e1338ec4 m13 c4 done: 1 h memory sample flat at ~11 MB commit (.agent/memory-samples-2026-10-16.txt); m13 all chunks done, close after the user's live look at 1.1.6
+- 2026-10-15T23:51:19+00:00 4b8962d4 Repo public on GitHub (history scrubbed: username, work hostname, AI trailers); OTA moved to GitHub Releases: Build-Setup.ps1 publishes v<version> via vpk upload github, 218118c; v1.1.7 published 10:50 Melbourne, installed 1.1.6 takes it from the local folder then follows GitHub. m31 still awaits the user's live look
 <!-- /DC:LOG -->
