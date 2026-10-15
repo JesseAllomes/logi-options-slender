@@ -78,6 +78,7 @@ public static partial class OptionsPlusImporter
             MergeProfile(merged, process, app.DisplayName, app.App.Path, mouse, keys);
         }
 
+        ApplyGestureSwipes(profiles, state, merged);
         notes.Add(new(ImportNoteKind.Info, "Profiles", "Imported profiles replace the bindings of Slender profiles for the same app (including All apps and the built-in Excel sheet buttons); other Slender profiles were kept."));
         return new ImportResult(result with { Profiles = merged }, notes);
     }
@@ -262,7 +263,7 @@ public static partial class OptionsPlusImporter
             }
             else
             {
-                directions.Add($"{dir}: {DescribeCard(sub, state.Macros)}");
+                directions.Add(dir); // swipes are imported by ApplyGestureSwipes
             }
         }
 
@@ -271,8 +272,6 @@ public static partial class OptionsPlusImporter
             notes.Add(new(ImportNoteKind.Unmapped, where, $"Gesture preset '{selected}' is a built-in motion feature (pan, zoom, rotate) with no Slender equivalent."));
             return null;
         }
-        if (directions.Count > 0)
-            notes.Add(new(ImportNoteKind.Unmapped, where, $"Gesture preset '{selected}': Slender's gesture button binds a single click action, so these swipe actions were not imported ({string.Join("; ", directions)})."));
         return click;
     }
 

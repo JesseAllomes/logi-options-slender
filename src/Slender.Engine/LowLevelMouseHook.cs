@@ -17,6 +17,8 @@ public sealed class LowLevelMouseHook : IInputHook
     private uint _threadId;
     private nint _hook;
     private readonly HookButtonPairing _pairing = new();
+    private volatile bool _captureMoves;
+    private int _anchorX, _anchorY;
     private bool _disposed;
 
     public LowLevelMouseHook(ILog? log = null)
@@ -28,6 +30,18 @@ public sealed class LowLevelMouseHook : IInputHook
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
+
+    public event EventHandler<HookMoveEventArgs>? MouseMoved;
+
+    public void SetMoveCapture(bool on)
+    {
+        if (on && NativeMethods.GetCursorPos(out var pt))
+        {
+            _anchorX = pt.X;
+            _anchorY = pt.Y;
+        }
+        _captureMoves = on;
+    }
 
     public void Start()
     {
@@ -80,7 +94,23 @@ public sealed class LowLevelMouseHook : IInputHook
             if (nCode >= 0)
             {
                 var msg = (int)wParam;
-                if (msg == NativeMethods.WM_MOUSEHWHEEL)
+                if (msg == NativeMethods.WM_MOUSEMOVE)
+                {
+                    // Only while a gesture is held. Swallowed moves leave the cursor at the anchor, so each event's
+                    // offset from the anchor is that event's own movement.
+                    if (_captureMoves)
+                    {
+                        var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                        var handler = MouseMoved;
+                        if (!IsInjected(data) && handler is not null)
+                        {
+                            var args = new HookMoveEventArgs(data.Pt.X - _anchorX, data.Pt.Y - _anchorY);
+                            handler(this, args);
+                            if (args.Handled) return 1; // swallow
+                        }
+                    }
+                }
+                else if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
                     var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
                     if (!IsInjected(data))
@@ -135,6 +165,8 @@ public sealed class LowLevelMouseHook : IInputHook
         }
         HorizontalWheel = null;
         ButtonChanged = null;
+        MouseMoved = null;
+        _captureMoves = false;
         if (t is null) return;
         if (_threadId != 0) NativeMethods.PostThreadMessage(_threadId, NativeMethods.WM_QUIT, 0, 0);
         t.Join(1000); // the thread unhooks itself on exit

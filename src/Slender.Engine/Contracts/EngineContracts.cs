@@ -9,7 +9,25 @@ public interface IInputHook : IDisposable
     /// <summary>Middle / XButton1 (back) / XButton2 (forward) down and up. Set Handled to swallow both halves.</summary>
     event EventHandler<HookButtonEventArgs>? ButtonChanged;
 
+    /// <summary>
+    /// WM_MOUSEMOVE, raised only while move capture is on (<see cref="SetMoveCapture"/>). Dx/Dy are the movement of
+    /// that event from the cursor position captured when capture began; set Handled to swallow it (the cursor stays put).
+    /// </summary>
+    event EventHandler<HookMoveEventArgs>? MouseMoved { add { } remove { } }
+
+    /// <summary>Turns move reporting on (anchoring at the current cursor position) or off. Off by default.</summary>
+    void SetMoveCapture(bool on) { }
+
     void Start();
+}
+
+public sealed class HookMoveEventArgs(int dx, int dy) : EventArgs
+{
+    public int Dx { get; } = dx;
+    public int Dy { get; } = dy;
+
+    /// <summary>Set true to swallow the move.</summary>
+    public bool Handled { get; set; }
 }
 
 public sealed class HookWheelEventArgs(int delta) : EventArgs

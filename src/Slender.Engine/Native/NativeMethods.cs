@@ -7,6 +7,7 @@ namespace Slender.Engine.Native;
 internal static class NativeMethods
 {
     public const int WH_MOUSE_LL = 14;
+    public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_MOUSEHWHEEL = 0x020E;
     public const int WM_MBUTTONDOWN = 0x0207;
     public const int WM_MBUTTONUP = 0x0208;
@@ -93,6 +94,9 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UnhookWindowsHookEx(nint hhk);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT point);
 
     [DllImport("user32.dll")]
     public static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
