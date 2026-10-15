@@ -9,6 +9,11 @@ internal static class NativeMethods
     public const int WH_MOUSE_LL = 14;
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_MOUSEHWHEEL = 0x020E;
+    public const int WM_LBUTTONDOWN = 0x0201;
+    public const int WM_LBUTTONUP = 0x0202;
+    public const int WM_RBUTTONDOWN = 0x0204;
+    public const int WM_RBUTTONUP = 0x0205;
+    public const int WM_MOUSEWHEEL = 0x020A;
     public const int WM_MBUTTONDOWN = 0x0207;
     public const int WM_MBUTTONUP = 0x0208;
     public const int WM_XBUTTONDOWN = 0x020B;
@@ -29,6 +34,8 @@ internal static class NativeMethods
     public const uint INPUT_KEYBOARD = 1;
     public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
     public const uint KEYEVENTF_KEYUP = 0x0002;
+    public const uint KEYEVENTF_UNICODE = 0x0004;
+    public const ushort VK_RETURN = 0x0D;
     public const uint MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004;
     public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008, MOUSEEVENTF_RIGHTUP = 0x0010;
     public const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020, MOUSEEVENTF_MIDDLEUP = 0x0040;

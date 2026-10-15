@@ -35,6 +35,34 @@ internal static class KeyInjector
         return Send([input]);
     }
 
+    /// <summary>Types text with KEYEVENTF_UNICODE (UTF-16 units, so surrogate pairs arrive as two events); Enter keys are VK_RETURN.</summary>
+    public static bool SendText(IReadOnlyList<TextKey> keys)
+    {
+        const int Chunk = 128; // keys per SendInput call (2 events each)
+        for (var offset = 0; offset < keys.Count; offset += Chunk)
+        {
+            var count = Math.Min(Chunk, keys.Count - offset);
+            var inputs = new NativeMethods.INPUT[count * 2];
+            for (var i = 0; i < count; i++)
+            {
+                inputs[i * 2] = TextEvent(keys[offset + i], up: false);
+                inputs[i * 2 + 1] = TextEvent(keys[offset + i], up: true);
+            }
+            if (!Send(inputs)) return false;
+        }
+        return true;
+    }
+
+    private static NativeMethods.INPUT TextEvent(TextKey k, bool up)
+    {
+        var input = new NativeMethods.INPUT { Type = NativeMethods.INPUT_KEYBOARD };
+        var flags = up ? NativeMethods.KEYEVENTF_KEYUP : 0;
+        input.Ki = k.Enter
+            ? new NativeMethods.KEYBDINPUT { WVk = NativeMethods.VK_RETURN, DwFlags = flags }
+            : new NativeMethods.KEYBDINPUT { WScan = k.Unit, DwFlags = flags | NativeMethods.KEYEVENTF_UNICODE };
+        return input;
+    }
+
     private static NativeMethods.INPUT Key(KeyStroke k, bool up)
     {
         var input = new NativeMethods.INPUT { Type = NativeMethods.INPUT_KEYBOARD };

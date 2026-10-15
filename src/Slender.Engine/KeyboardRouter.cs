@@ -173,7 +173,8 @@ public sealed class KeyboardRouter : IDisposable
             {
                 action = Resolve(e.ControlId);
                 lock (_gate) _active[e.ControlId] = action;
-                if (action is ActionSpec.None or ActionSpec.ActionsRing) return;
+                if (action is ActionSpec.ActionsRing) { RaiseRing(true); return; }
+                if (action is ActionSpec.None) return;
             }
             else
             {
@@ -181,11 +182,21 @@ public sealed class KeyboardRouter : IDisposable
                 {
                     if (!_active.Remove(e.ControlId, out action!)) return;
                 }
-                if (action is ActionSpec.None or ActionSpec.ActionsRing) return;
+                if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
+                if (action is ActionSpec.None) return;
             }
             _executor.Execute(action, e.Pressed);
         }
         catch (Exception ex) { _log.Error("key handling failed", ex); }
+    }
+
+    /// <summary>A key bound to the Actions Ring went down or up (raised on the router's worker thread).</summary>
+    public event EventHandler<RingTriggerEventArgs>? RingTrigger;
+
+    private void RaiseRing(bool pressed)
+    {
+        try { RingTrigger?.Invoke(this, new RingTriggerEventArgs(pressed)); }
+        catch (Exception ex) { _log.Error("ring trigger handler failed", ex); }
     }
 
     private ActionSpec Resolve(ushort key)

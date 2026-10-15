@@ -14,6 +14,8 @@ public static class ActionText
         ActionSpec.ActionsRing => "Actions ring",
         ActionSpec.Launch launch => $"Open: {launch.Target}",
         ActionSpec.Disabled => "Off",
+        ActionSpec.Brightness b => b.StepPercent >= 0 ? "Brightness up" : "Brightness down",
+        ActionSpec.Text t => $"Type: {t.Value}",
         _ => action.GetType().Name,
     };
 }
