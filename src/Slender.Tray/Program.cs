@@ -46,6 +46,7 @@ static class Program
                 ThumbWheelInvert = config.Pointer.InvertThumbWheel,
                 SmartShift = new SmartShiftSetting(config.Pointer.SmartShiftEnabled, (byte)config.Pointer.SmartShiftThreshold),
                 SmoothScroll = config.Pointer.SmoothScroll,
+                Dpi = config.Pointer.Dpi,
             });
         using var hook = new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
@@ -72,6 +73,7 @@ static class Program
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);
+            _ = mouse.SetDpiAsync(changed.Pointer.Dpi, CancellationToken.None);
         };
         Application.Run(context);
         log.Info("Slender stopping");

@@ -6,6 +6,8 @@ public sealed class LogiMouseOptions : LogiDeviceOptions
     public bool? ThumbWheelInvert { get; init; }
     /// <summary>SmartShift auto free-spin to apply on every connect (0x2111); null keeps whatever the device has.</summary>
     public SmartShiftSetting? SmartShift { get; init; }
+    /// <summary>Pointer speed to apply on every connect (0x2201); null keeps the device value. DPI does not survive a power cycle.</summary>
+    public int? Dpi { get; init; }
     /// <summary>High-resolution wheel (0x2121 bit1) to apply on every connect; bit0 (target) is always kept cleared. null keeps the device's value.</summary>
     public bool? SmoothScroll { get; init; }
 }
@@ -28,6 +30,7 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
     private bool? _thumbInvertDesired;
     private SmartShiftSetting? _smartShiftDesired;
     private bool? _smoothDesired;
+    private int? _dpiDesired;
 
     public LogiMouse(IHidppTransportFactory factory, LogiMouseOptions? options = null)
         : base(factory, options ?? new LogiMouseOptions())
@@ -35,6 +38,7 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         _thumbInvertDesired = (options ?? new LogiMouseOptions()).ThumbWheelInvert;
         _smartShiftDesired = (options ?? new LogiMouseOptions()).SmartShift;
         _smoothDesired = (options ?? new LogiMouseOptions()).SmoothScroll;
+        _dpiDesired = (options ?? new LogiMouseOptions()).Dpi;
     }
 
     public override string Name => "MX Master 4";
@@ -58,11 +62,41 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         bool? invert;
         SmartShiftSetting? smartShift;
         bool? smooth;
-        lock (State) { thumb = _thumbDesired; invert = _thumbInvertDesired; smartShift = _smartShiftDesired; smooth = _smoothDesired; }
+        int? dpi;
+        lock (State) { thumb = _thumbDesired; invert = _thumbInvertDesired; smartShift = _smartShiftDesired; smooth = _smoothDesired; dpi = _dpiDesired; }
         if (await TrySetThumbAsync(s, thumb, invert, ct).ConfigureAwait(false) && thumb)
             lock (State) _thumbApplied = true;
         if (smartShift is { } ss) await TrySetSmartShiftAsync(s, ss, ct).ConfigureAwait(false);
         if (smooth is { } sm) await TrySetSmoothScrollAsync(s, sm, ct).ConfigureAwait(false);
+        if (dpi is { } d) await TrySetDpiAsync(s, d, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>0x2201 sensor 0: read, then fn3 [0, hi, lo] only when different. Clamped to 200-8000.</summary>
+    private static async Task<bool> TrySetDpiAsync(Session s, int dpi, CancellationToken ct)
+    {
+        try
+        {
+            var value = Math.Clamp(dpi, 200, 8000);
+            var p = (await s.Device.CallAsync(FeatureId.AdjustableDpi, 2, new byte[] { 0 }, ct).ConfigureAwait(false)).Params;
+            if (((p[1] << 8) | p[2]) == value) return true;
+            await s.Device.CallAsync(FeatureId.AdjustableDpi, 3, new byte[] { 0, (byte)(value >> 8), (byte)value }, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (HidppException) { return false; }
+    }
+
+    /// <summary>Sets pointer speed now (if connected) and on every reconnect; null leaves the device value alone.</summary>
+    public async Task SetDpiAsync(int? dpi, CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            lock (State) _dpiDesired = dpi;
+            var s = CurrentSession;
+            if (s == null || !IsConnected || dpi is not { } d) return;
+            await TrySetDpiAsync(s, d, ct).ConfigureAwait(false);
+        }
+        finally { Gate.Release(); }
     }
 
     /// <summary>
