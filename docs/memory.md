@@ -326,3 +326,24 @@ WinUI popover candidates (`results-popover.csv`, 2 runs, 60 s):
 | Settings asked for 360×420 (clamped to 1040×640) | 201.9 | 85.8 | 110.7 | 28 |
 
 Settings (`results-settings.csv`): see the Settings table above.
+
+## Applied (wt-w32, 2026-10-15)
+
+Tray rewritten without WinForms and made NativeAOT-clean. Items #2, #3 and #4 above are done; the watchdog is new.
+
+- **Raw Win32 tray** (`TrayApplication`, `Native/Win32.cs`): hidden window, `Shell_NotifyIcon`, `WM_TIMER` timers (battery 5 min, keyboard 10 min, Options+ guard 30 s while paused, watchdog 60 s), `TrackPopupMenu` built on demand with the same items and text as before. Left click starts `Slender.Settings.exe --popover`; "Settings…" starts it without the flag. Worker-thread events reach the UI thread through a queue plus one posted message. Errors that used a balloon now go to the log. `UseWindowsForms` is false; the icon is a committed `slender.ico` (copper "S", 16-256 px) embedded with `ApplicationIcon` and loaded with `LoadImage` (resource id 32512, verified in the JIT and AOT builds).
+- **No reflection JSON**: `System.Text.Json` source generation for config.json (`ConfigJsonContext`, with the `ActionSpec` converter), status.json (`StatusJsonContext`) and sync.json (`SyncJsonContext`). `JsonSerializerIsReflectionEnabledByDefault=false` on the tray.
+- **ExcelBridge without late binding**: `ComDispatch` is a hand-written IDispatch client over raw interface pointers (`GetIDsOfNames` + `Invoke`, 24-byte VARIANT, DISPPARAMS with reversed arguments and named-argument ids, `DISPID_PROPERTYPUT`, EXCEPINFO scode mapped to `COMException` so the busy check still works). `AccessibleObjectFromWindow` returns an `IntPtr`. The WM_HSCROLL and Ctrl+PageUp/PageDown fallbacks are unchanged. Packing is unit-tested, and one test drives a real `Scripting.Dictionary` through it. Not exercised against a live Excel here.
+- **Memory watchdog** (`MemoryWatchdog`): every 60 s reads private bytes (`GetProcessMemoryInfo` `PrivateUsage`); logs once when it crosses 60 MB (re-arms after dropping below); above 100 MB for 3 consecutive checks it logs, leaves the message loop, disposes everything, releases the single-instance mutex, starts a new copy with the same arguments and exits. Constants only, no config. Tests use a fake reader.
+- **Test hooks**: with `SLENDER_CONFIG_DIR` set the tray uses its own mutex name (hash of the folder), keeps logs and status.json under that folder, and uses an in-memory Run key (it never touches the real registry). `--no-devices` opens no HID device and gives the engine an inert hook (no real mouse hook is installed either).
+- **Gen0 budget under NativeAOT**: the `RuntimeHostConfigurationOption` item is baked into the AOT executable and the GC honours it. Checked with a scratch AOT console app allocating 200 MB of short-lived arrays: 16 gen0 GCs without the item, 198 with `System.GC.Gen0MaxBudget=1048576`.
+
+Idle numbers, `--no-devices`, own `SLENDER_CONFIG_DIR`, release build, sampled at 60 s (MB; private = `PrivateMemorySize64`, i.e. commit):
+
+| Build | Private (commit) | Working set | Threads | Exe |
+|---|---|---|---|---|
+| Old WinForms tray, JIT (wt-mem measurement tray) | 11.5 | 49.8 | - | - |
+| Win32 tray, JIT, framework-dependent | 9.2 | 38.6 | 20 | 169 KB + shared runtime |
+| Win32 tray, NativeAOT | 5.3 | 17.6 | 11 | 13.5 MB single file |
+
+The JIT number is higher than the wt-mem prototype (8.4 / 33.5) because this tray also runs the engine, foreground watcher, Excel STA worker, config watcher, status publisher and Velopack. The real tray with devices connected will sit a little above these. Build NativeAOT with `dotnet publish src/Slender.Tray -r win-x64 -p:PublishAot=true -c Release` (needs the VS C++ Build Tools, and `vswhere.exe` on PATH: `C:\Program Files (x86)\Microsoft Visual Studio\Installer`). It publishes with no trim or AOT warnings.

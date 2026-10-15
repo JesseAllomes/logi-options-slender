@@ -10,21 +10,14 @@ namespace Slender.Engine.Config;
 /// </summary>
 public static class StatusJson
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-    };
-
-    public static string Serialize(SlenderStatus status) => JsonSerializer.Serialize(status, Options);
+    public static string Serialize(SlenderStatus status) => JsonSerializer.Serialize(status, StatusJsonContext.Default.SlenderStatus);
 
     /// <summary>Parses status text; null when it is empty or malformed.</summary>
     public static SlenderStatus? Parse(string text)
     {
         try
         {
-            SlenderStatus? status = JsonSerializer.Deserialize<SlenderStatus>(text, Options);
+            SlenderStatus? status = JsonSerializer.Deserialize(text, StatusJsonContext.Default.SlenderStatus);
             return status is { Devices: not null } ? status : null;
         }
         catch (JsonException)

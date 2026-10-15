@@ -17,8 +17,6 @@ public sealed class JsonConfigStore : IConfigStore
 
     private const string FileName = "config.json";
 
-    private static readonly JsonSerializerOptions Options = CreateOptions();
-
     private readonly string _directory;
 
     public JsonConfigStore()
@@ -68,7 +66,7 @@ public sealed class JsonConfigStore : IConfigStore
         ArgumentNullException.ThrowIfNull(config);
 
         Directory.CreateDirectory(_directory);
-        string json = JsonSerializer.Serialize(ToDto(config), Options);
+        string json = JsonSerializer.Serialize(ToDto(config), ConfigJsonContext.Default.ConfigDto);
         string target = FilePath;
         string temp = target + ".tmp";
         try
@@ -86,7 +84,7 @@ public sealed class JsonConfigStore : IConfigStore
     /// <summary>Parses the file text. Throws FormatException (or JsonException) on anything unusable.</summary>
     internal static SlenderConfig Parse(string text)
     {
-        ConfigDto dto = JsonSerializer.Deserialize<ConfigDto>(text, Options)
+        ConfigDto dto = JsonSerializer.Deserialize(text, ConfigJsonContext.Default.ConfigDto)
             ?? throw new FormatException("Config file is empty.");
         if (dto.Version is < 1 or > CurrentVersion)
         {
@@ -248,18 +246,6 @@ public sealed class JsonConfigStore : IConfigStore
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
         }
-    }
-
-    private static JsonSerializerOptions CreateOptions()
-    {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-        };
-        options.Converters.Add(new ActionSpecJsonConverter());
-        return options;
     }
 
     // Mutable DTOs: STJ needs settable members, and the engine records stay immutable.

@@ -94,13 +94,6 @@ public interface IConfigFile
 /// <summary>What the last sync left behind, stored in %LOCALAPPDATA%\Slender\sync.json.</summary>
 public sealed class SyncManifest
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-    };
-
     public string? AccountId { get; set; }
 
     public string? RemoteETag { get; set; }
@@ -115,9 +108,9 @@ public sealed class SyncManifest
 
     public static string Hash(byte[] content) => Convert.ToHexString(SHA256.HashData(content));
 
-    public string ToJson() => JsonSerializer.Serialize(this, Options);
+    public string ToJson() => JsonSerializer.Serialize(this, SyncJsonContext.Default.SyncManifest);
 
-    public static SyncManifest FromJson(string json) => JsonSerializer.Deserialize<SyncManifest>(json, Options) ?? new SyncManifest();
+    public static SyncManifest FromJson(string json) => JsonSerializer.Deserialize(json, SyncJsonContext.Default.SyncManifest) ?? new SyncManifest();
 
     /// <summary>Missing or unreadable file gives an empty manifest (as if never synced).</summary>
     public static SyncManifest Load(string path)
@@ -139,4 +132,14 @@ public sealed class SyncManifest
         File.WriteAllText(temp, ToJson());
         File.Move(temp, path, overwrite: true);
     }
+}
+
+/// <summary>Source-generated JSON metadata for sync.json (no reflection; NativeAOT safe).</summary>
+[JsonSourceGenerationOptions(
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.Never)]
+[JsonSerializable(typeof(SyncManifest))]
+internal sealed partial class SyncJsonContext : JsonSerializerContext
+{
 }
