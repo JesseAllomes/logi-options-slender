@@ -298,6 +298,71 @@
           "docs/devices"
         ]
       }
+    ],
+    "m26": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T10:52:07+00:00",
+        "est_min": 60,
+        "goal": "wt-feel build",
+        "id": "c1",
+        "note": "c157160 + e086b24 merged (6379cf8): torque, Sense Panel force band 50-200% of baseline, haptic Strength (null = leave alone), DPI 200; allowlist +0x19C0 fn3; SmoothScroll persistence fixed",
+        "targets": [
+          "src/Slender.Hidpp/LogiMouse.cs"
+        ]
+      }
+    ],
+    "m27": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T10:55:44+00:00",
+        "est_min": 60,
+        "goal": "wt-k860 build",
+        "id": "c1",
+        "note": "998bad8 merged: 0x4521 disable keys, Caps/Num indicator via GetKeyState poll (0x4220 undocumented), Fn lock per channel, spare keys bindable + Identify; 0x4531 per-channel left out (undocumented); 900 tests, AOT clean",
+        "targets": [
+          "src/Slender.Hidpp/LogiKeyboard.cs"
+        ]
+      }
+    ],
+    "m28": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T10:52:08+00:00",
+        "est_min": 60,
+        "goal": "wt-taphold build",
+        "id": "c1",
+        "note": "1326499 merged (34d6e77): TapHold 350 ms, hold-only ring, picker Press/Hold section; keyboard hold has no haptic; keyboard router lacks disconnect release (todo)",
+        "targets": [
+          "src/Slender.Engine/TapHoldTracker.cs"
+        ]
+      }
+    ],
+    "m29": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T11:10:03+00:00",
+        "est_min": 60,
+        "goal": "wt-thumbhires build",
+        "id": "c1",
+        "note": "81d1721 merged: IThumbWheelSource hook/HID, divert policy per app (Excel/bound/dual/ring/tap), debounce + no mid-rotation switch, touch 0xF151 / tap 0xF152; event p[0-1] rotation, p[4] status from Solaar, touch flags unconfirmed; 977 tests",
+        "targets": [
+          "src/Slender.Engine/ThumbWheelSource.cs"
+        ]
+      }
+    ],
+    "m30": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T11:03:04+00:00",
+        "est_min": 60,
+        "goal": "wt-rawxy build",
+        "id": "c1",
+        "note": "2af1863 merged (9c4b7ad) + cursor hold on raw path: divert 0x33 for 0x00C3, event1 dx/dy int16 BE, threshold 50 counts @1000 DPI scaled, allowlist payload-aware; 955 tests",
+        "targets": [
+          "src/Slender.Engine/GestureTracker.cs"
+        ]
+      }
     ]
   },
   "errors": [
@@ -335,7 +400,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 222,
+  "rev": 233,
   "review": {
     "advice": [],
     "config": {
@@ -13093,7 +13158,7 @@
       "start": "2026-10-15T09:14:29+00:00"
     },
     {
-      "end": "2026-10-15T10:33:40+00:00",
+      "end": "2026-10-15T11:10:03+00:00",
       "id": "s5",
       "note": "",
       "source": "auto",
@@ -13108,6 +13173,14 @@
       "id": "t1",
       "milestone": "m13",
       "text": "RingSlotText.IconFile: forward-slash UNC (//server/share/x.exe) still reaches File.Exists; treat '//' like '\\' (r9 residual)"
+    },
+    {
+      "at": "2026-10-15T10:52:08+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t2",
+      "milestone": "m28",
+      "text": "KeyboardRouter: release held actions when the keyboard disconnects (no disconnect handling today)"
     }
   ],
   "tokens": null
