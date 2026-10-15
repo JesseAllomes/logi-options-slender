@@ -36,6 +36,18 @@ public sealed class ActionExecutor : IActionExecutor
     /// <summary>Raised on press of an ActionsRing action (UI arrives in m6).</summary>
     public event EventHandler? ActionsRingRequested;
 
+    /// <summary>Pause between the chords of a sequence so the target app sees them as separate key presses.</summary>
+    private const int SequenceGapMs = 30;
+
+    private void SendSteps(string chord, IReadOnlyList<IReadOnlyList<KeyStroke>> steps)
+    {
+        for (var i = 0; i < steps.Count; i++)
+        {
+            if (i > 0) Thread.Sleep(SequenceGapMs);
+            if (!KeyInjector.SendChord(steps[i])) { _log.Error($"SendInput failed for '{chord}'"); return; }
+        }
+    }
+
     public void Execute(ActionSpec action, bool pressed)
     {
         try
@@ -46,8 +58,8 @@ public sealed class ActionExecutor : IActionExecutor
                     // One-shot: fire on press only.
                     if (pressed)
                     {
-                        if (!ChordParser.TryParse(k.Chord, out var keys)) _log.Error($"bad chord '{k.Chord}'");
-                        else if (!KeyInjector.SendChord(keys)) _log.Error($"SendInput failed for '{k.Chord}'");
+                        if (!ChordParser.TryParseSequence(k.Chord, out var steps)) _log.Error($"bad chord '{k.Chord}'");
+                        else SendSteps(k.Chord, steps);
                     }
                     break;
                 case ActionSpec.MouseButton m:

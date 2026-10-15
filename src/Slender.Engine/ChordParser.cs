@@ -62,4 +62,22 @@ public static class ChordParser
         keys = mods;
         return true;
     }
+
+    /// <summary>
+    /// Parses a comma-separated sequence of chords ("Enter, Ctrl+W"); a single chord gives one step. Key names never contain
+    /// a comma (the comma key is "Comma"), so the separator is unambiguous. False if any step is empty or unknown.
+    /// </summary>
+    public static bool TryParseSequence(string? sequence, out IReadOnlyList<IReadOnlyList<KeyStroke>> steps)
+    {
+        steps = [];
+        if (string.IsNullOrWhiteSpace(sequence)) return false;
+        var list = new List<IReadOnlyList<KeyStroke>>();
+        foreach (var part in sequence.Split(','))
+        {
+            if (!TryParse(part, out var keys)) return false;
+            list.Add(keys);
+        }
+        steps = list;
+        return true;
+    }
 }

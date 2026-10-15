@@ -227,6 +227,10 @@ public sealed partial class MainWindow
         refresh.Click += async (_, _) => await RefreshDevicePicturesAsync(refresh);
         AddRow("Device pictures", "Copied from Logi Options+ on this PC. Refresh them after Options+ updates.", refresh);
 
+        var import = new Button { Content = "Import…", Style = Ui.Res<Style>("QuietButtonStyle") };
+        import.Click += async (_, _) => await ImportFromOptionsPlusAsync();
+        AddRow("Import from Options+", "Copies your Logi Options+ buttons and settings into Slender. You see a preview first, and the current settings are backed up.", import);
+
         BuildFirmwareSection();
 
         AddSection("ABOUT");
