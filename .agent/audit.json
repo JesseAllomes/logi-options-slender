@@ -1,57 +1,57 @@
 {
   "schema": 1,
   "root": "C:/Users/user/Projects/personal/logi-options-slender",
-  "head": "34d37facc6c0f7885bb53ecc843d7b11406f98d9",
+  "head": "726c7a2b6d7ee5dbad4732d3e6da26c1ec0ffe1c",
   "dirty_fingerprint": "b9a8816e585d5eaae36410a797c929afa619999265d5b3e4b5cebab270c98a51",
   "dirty_files": 0,
   "verify_config_fingerprint": "00ce9ee58ad8770625f9898500af160bb6ba911f48358a89368194ce77da1176",
   "verify_block_fingerprint": "5f5bea8ca7cf2882dfd2c04443c75ae033074c33c977bde0f3b4b31eb27ba141",
   "verify_entries": 2,
   "config_files": [],
-  "generated": "2026-10-15T03:07:50+00:00",
+  "generated": "2026-10-15T21:33:24+00:00",
   "scan": {
-    "files": 191,
-    "lines": 22944,
+    "files": 281,
+    "lines": 41615,
     "depth2": [
       {
         "path": "src/Slender.Settings",
-        "files": 55,
-        "lines": 9182
+        "files": 67,
+        "lines": 12462
       },
       {
         "path": "tests/Slender.Tests",
-        "files": 31,
-        "lines": 5132
+        "files": 67,
+        "lines": 11838
       },
       {
         "path": "src/Slender.Engine",
-        "files": 28,
-        "lines": 2620
-      },
-      {
-        "path": "src/Slender.Hidpp",
-        "files": 24,
-        "lines": 2125
+        "files": 50,
+        "lines": 6992
       },
       {
         "path": "src/Slender.Tray",
-        "files": 24,
-        "lines": 1820
+        "files": 35,
+        "lines": 4310
+      },
+      {
+        "path": "src/Slender.Hidpp",
+        "files": 32,
+        "lines": 3819
       },
       {
         "path": "src/Slender.Sync",
         "files": 13,
-        "lines": 920
+        "lines": 932
       },
       {
         "path": "scripts",
         "files": 5,
-        "lines": 617
+        "lines": 625
       },
       {
         "path": "tools/Slender.Probe",
-        "files": 7,
-        "lines": 389
+        "files": 8,
+        "lines": 498
       },
       {
         "path": "tools/Slender.InputLog",
@@ -66,5 +66,5 @@
   ],
   "languages": [],
   "dead_code_candidates": [],
-  "gate3_required": true
+  "gate3_required": false
 }

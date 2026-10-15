@@ -398,6 +398,7 @@ public sealed partial class MainWindow : Window
         if (_page == Page.Device)
         {
             RefreshStageLabels();
+            RefreshThumbCard();
         }
         else if (_page == Page.Ring)
         {

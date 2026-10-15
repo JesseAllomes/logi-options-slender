@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=67 -->
+<!-- drainclamp-build: state; schema=1; generation=69 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -86,6 +86,7 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 | m28 | press vs hold: ActionSpec.TapHold(Tap, Hold) for any button; Sense Panel default stays ring; quick press runs Tap, hold past threshold runs Hold (ring opens in hold mode), haptic tick at the threshold; picker support | src/Slender.Engine;src/Slender.Settings | done | m20 |
 | m29 | precise thumb wheel: divert 0x2150 to hi-res (120) only while an app needs non-native behaviour (Excel columns, dual mode, ring), synthesize nothing otherwise; thumb-wheel touch/tap as a bindable control | src/Slender.Hidpp;src/Slender.Engine;src/Slender.Settings | done | m26 |
 | m30 | mouse-tracked gestures: temporary divert with raw XY on the gesture button (0x1B04), gestures from device deltas, hook path kept as fallback; allowlist adds the raw-XY divert flag only | src/Slender.Hidpp;src/Slender.Engine | done | m26 |
+| m31 | thumb wheel card on the device stage: clicking the thumb wheel label/hotspot opens a card (Scroll sideways action -> picker, Second action on/off, Scroll right / Scroll left actions, Switch with = which mouse button holds "Switch thumb wheel mode" in this app, inherited line + Customise), follows the app strip; Point & scroll section kept with the same labels | src/Slender.Settings/MainWindow.ThumbCard.cs;src/Slender.Settings/MainWindow.Stage.cs;src/Slender.Settings/MainWindow.DualThumb.cs;src/Slender.Settings/Logic/ThumbWheelOps.cs;tests/Slender.Tests/Settings/ThumbWheelOpsTests.cs | active | m24 |
 | m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m24;m30 |
 <!-- /DC:ROADMAP -->
 
@@ -97,7 +98,6 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-14T22:43:00+00:00 0631fb3c m3 merged + read-only probe confirmed BLE PID B042/idx 0xFF/CIDs; fixed: connect now undiverts Options+ leftovers + thumb wheel native; engine wired into tray; 102 tests
 - 2026-10-14T23:32:04+00:00 6fabb77f Settings UI locked (round 4); contracts v2 (hook buttons, config v2, status) at 7187832; m8 + m10 building in worktrees -m8/-m10
 - 2026-10-14T23:36:33+00:00 22f79d82 m8 merged: hook captures middle/back/forward, HID++ divert only gesture/modeshift/sense, allowlist enforced in HidppDevice; raw channel sends made internal; 134 tests
 - 2026-10-14T23:56:42+00:00 c3ee0158 Live test: Options+ service stopped (until reboot); haptic play = fn4 confirmed; thumb wheel invert applied from config (default on); m9 keyboard merged (151 tests); keyboard router not yet wired into tray
@@ -117,4 +117,5 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 - 2026-10-15T10:33:40+00:00 bf4a3720 m25 device inventory done: gaps = wheel resistance, Sense Panel force, haptic 0-100, DPI 200, hi-res/touch thumb wheel, raw-XY gestures; K860 disable keys, lock-key OSD, multi-platform, per-host Fn lock, 3 unused keys
 - 2026-10-15T11:10:03+00:00 82a52e7a Device feature round m26-m30 merged (977 tests, AOT clean): mouse feel, K860 extras, press/hold, precise thumb wheel + touch/tap, raw-XY gestures with cursor hold
 - 2026-10-15T11:12:32+00:00 72922479 State refresh: ARCH rewritten for 1.1.5 (m17-m30 done); open: m13 c4 live memory/Excel check, m14 sync, m15 onboard K860 UI, m16 firmware, m7 switch-over; to-dos t1 (forward-slash UNC, fixed in R2), t2 keyboard disconnect release
+- 2026-10-15T21:51:04+00:00 8c83d2cd m13 c4 live check: Excel thumb wheel + sheets pass (user); tray 8.8 MB commit at 8 min, 1 h sampler running (.agent/memory-samples-2026-10-16.txt); Settings 219 MB commit while open (note). m31 added: thumb wheel card on the stage (user chose card on click, labels Scroll right / Scroll left)
 <!-- /DC:LOG -->

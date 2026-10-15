@@ -1,4 +1,5 @@
 using Slender.Engine;
+using Slender.Hidpp;
 using Slender.Settings.Logic;
 
 namespace Slender.Tests.Settings;
@@ -104,5 +105,73 @@ public class ThumbWheelOpsTests
     {
         Assert.Equal("Switch thumb wheel mode", ActionCatalog.Plain(new ActionSpec.ToggleThumbWheelMode()));
         Assert.Contains(ActionCatalog.ThumbModeOptions, o => o.Action is ActionSpec.ToggleThumbWheelMode);
+    }
+
+    private static readonly ActionSpec Switch = new ActionSpec.ToggleThumbWheelMode();
+
+    private static Profile Bound(string? app, ushort id, ActionSpec action) =>
+        new(app, new Dictionary<ushort, ActionSpec> { [id] = action });
+
+    [Fact]
+    public void Switch_candidates_leave_out_the_thumb_wheel()
+    {
+        Assert.DoesNotContain(ThumbWheelOps.SwitchCandidates, c => c.Id == DeviceIds.ThumbWheelPseudoId);
+        Assert.Contains(ThumbWheelOps.SwitchCandidates, c => c.Id == ControlId.ModeShift);
+        Assert.Contains(ThumbWheelOps.SwitchCandidates, c => c.Id == DeviceIds.ThumbWheelTapPseudoId);
+    }
+
+    [Fact]
+    public void No_switch_control_when_nothing_holds_the_toggle()
+    {
+        Assert.Equal((null, false), ThumbWheelOps.SwitchControl(Cfg(Def(), App("excel")), "excel"));
+    }
+
+    [Fact]
+    public void Switch_control_is_own_for_all_apps_and_inherited_for_an_app()
+    {
+        SlenderConfig c = Cfg(Bound(null, ControlId.ModeShift, Switch), App("excel"));
+        Assert.Equal((ControlId.ModeShift, false), ThumbWheelOps.SwitchControl(c, null));
+        Assert.Equal((ControlId.ModeShift, true), ThumbWheelOps.SwitchControl(c, "excel"));
+    }
+
+    [Fact]
+    public void Switch_as_the_tap_of_a_press_hold_counts()
+    {
+        SlenderConfig c = Cfg(Bound(null, ControlId.Forward, new ActionSpec.TapHold(Switch, new ActionSpec.ActionsRing())));
+        Assert.Equal((ControlId.Forward, false), ThumbWheelOps.SwitchControl(c, null));
+    }
+
+    [Fact]
+    public void Set_switch_control_moves_the_toggle_to_the_new_button()
+    {
+        SlenderConfig c = ThumbWheelOps.SetSwitchControl(Cfg(Bound(null, ControlId.ModeShift, Switch)), null, ControlId.Forward);
+        Assert.Equal((ControlId.Forward, false), ThumbWheelOps.SwitchControl(c, null));
+        Assert.Null(ProfileOps.Own(c, null, DeviceKind.Mouse, ControlId.ModeShift));
+        Assert.Same(c, ThumbWheelOps.SetSwitchControl(c, null, ControlId.Forward));
+    }
+
+    [Fact]
+    public void Set_switch_control_in_an_app_overrides_the_inherited_button()
+    {
+        SlenderConfig c = ThumbWheelOps.SetSwitchControl(Cfg(Bound(null, ControlId.ModeShift, Switch), App("excel")), "excel", ControlId.Back);
+        Assert.Equal((ControlId.Back, false), ThumbWheelOps.SwitchControl(c, "excel"));
+        Assert.True(ProfileOps.IsPassThrough(c, "excel", DeviceKind.Mouse, ControlId.ModeShift));
+        Assert.Equal((ControlId.ModeShift, false), ThumbWheelOps.SwitchControl(c, null));
+    }
+
+    [Fact]
+    public void None_in_an_app_passes_the_inherited_button_through()
+    {
+        SlenderConfig c = ThumbWheelOps.SetSwitchControl(Cfg(Bound(null, ControlId.ModeShift, Switch), App("excel")), "excel", null);
+        Assert.Equal((null, false), ThumbWheelOps.SwitchControl(c, "excel"));
+        Assert.True(ProfileOps.IsPassThrough(c, "excel", DeviceKind.Mouse, ControlId.ModeShift));
+        Assert.Equal((ControlId.ModeShift, false), ThumbWheelOps.SwitchControl(c, null));
+    }
+
+    [Fact]
+    public void None_for_all_apps_clears_the_toggle()
+    {
+        SlenderConfig c = ThumbWheelOps.SetSwitchControl(Cfg(Bound(null, ControlId.ModeShift, Switch)), null, null);
+        Assert.Equal((null, false), ThumbWheelOps.SwitchControl(c, null));
     }
 }

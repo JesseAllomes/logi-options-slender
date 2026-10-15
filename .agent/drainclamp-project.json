@@ -363,6 +363,44 @@
           "src/Slender.Engine/GestureTracker.cs"
         ]
       }
+    ],
+    "m31": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T21:54:49+00:00",
+        "est_min": 15,
+        "goal": "ThumbWheelOps: SwitchCandidates, SwitchControl(config, app) -> (id, inherited), SetSwitchControl(config, app, id?) clears the old holder in the app's own profile; tests",
+        "id": "c1",
+        "note": "ThumbWheelOps.SwitchCandidates/SwitchControl/SetSwitchControl (own wins over inherited; app override passes the inherited button through); 8 tests, 18/18 pass",
+        "targets": [
+          "src/Slender.Settings/Logic/ThumbWheelOps.cs",
+          "tests/Slender.Tests/Settings/ThumbWheelOpsTests.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T21:55:32+00:00",
+        "est_min": 25,
+        "goal": "MainWindow.ThumbCard.cs: card flyout (Scroll sideways -> picker, Second action toggle, Scroll right/left, Switch with dropdown, inherited + Customise); refresh on config change",
+        "id": "c2",
+        "note": "MainWindow.ThumbCard.cs: card flyout with Scroll sideways -> picker, Second action toggle, Scroll right/left, Switch with combo (SetSwitchControl), inherited + Customise; refreshed from OnConfigChanged",
+        "targets": [
+          "src/Slender.Settings/MainWindow.ThumbCard.cs",
+          "src/Slender.Settings/MainWindow.DualThumb.cs::NotchButton"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T21:56:37+00:00",
+        "est_min": 15,
+        "goal": "Stage routes the thumb wheel click to the card; Point & scroll labels renamed Scroll right / Scroll left; build -warnaserror + tests; commit",
+        "id": "c3",
+        "note": "stage routes thumb wheel click to the card; Point & scroll labels Scroll right / Scroll left; build -warnaserror clean, 985 tests pass",
+        "targets": [
+          "src/Slender.Settings/MainWindow.Stage.cs::ActivateControl",
+          "src/Slender.Settings/MainWindow.DualThumb.cs::RefreshDualThumb"
+        ]
+      }
     ]
   },
   "errors": [
@@ -400,7 +438,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 234,
+  "rev": 240,
   "review": {
     "advice": [],
     "config": {
@@ -13163,6 +13201,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-15T10:33:40+00:00"
+    },
+    {
+      "end": "2026-10-15T21:56:37+00:00",
+      "id": "s6",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-15T21:54:49+00:00"
     }
   ],
   "todos": [

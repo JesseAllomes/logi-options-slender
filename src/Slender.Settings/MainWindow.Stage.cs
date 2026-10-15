@@ -748,7 +748,16 @@ public sealed partial class MainWindow
         }
 
         FrameworkElement? anchor = _kind == DeviceKind.Keyboard && _kbLabel is not null ? _kbLabel : item.Label ?? item.Hotspot;
-        if (anchor is not null)
+        if (anchor is null)
+        {
+            return;
+        }
+
+        if (_kind == DeviceKind.Mouse && id == DeviceIds.ThumbWheelPseudoId)
+        {
+            ShowThumbCard(anchor, item.Info); // the wheel's card: scroll action, second action, switch button
+        }
+        else
         {
             ShowPicker(anchor, item.Info);
         }

@@ -9,7 +9,8 @@ namespace Slender.Settings;
 
 /// <summary>
 /// "Dual thumb wheel" on the Point &amp; scroll page, for the app chosen in the strip: an on/off toggle and, when on, what one notch
-/// forward and one notch back do in the second role. The role is switched with "Switch thumb wheel mode" on any control.
+/// right and one notch left do in the second role. The role is switched with "Switch thumb wheel mode" on any control; the
+/// thumb wheel card on the device stage (MainWindow.ThumbCard.cs) edits the same settings.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -54,9 +55,9 @@ public sealed partial class MainWindow
         }
 
         bool own = !view.Inherited;
-        AddRow("Notch forward", null, NotchButton("Notch forward", second.Forward, own, name,
+        AddRow("Scroll right", null, NotchButton("Scroll right", second.Forward, own, name,
             a => _config.Update(x => ThumbWheelOps.SetForward(x, app, a))), _dualHost);
-        AddRow("Notch back", null, NotchButton("Notch back", second.Back, own, name,
+        AddRow("Scroll left", null, NotchButton("Scroll left", second.Back, own, name,
             a => _config.Update(x => ThumbWheelOps.SetBack(x, app, a))), _dualHost);
 
         if (app is not null)
