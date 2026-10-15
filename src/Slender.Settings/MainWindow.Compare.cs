@@ -35,11 +35,18 @@ public sealed partial class MainWindow
         {
             XamlRoot = Root.XamlRoot,
             Title = $"Compare apps · {ControlCatalog.DeviceName(_kind)}",
-            CloseButtonText = "Done",
-            DefaultButton = ContentDialogButton.Close,
             RequestedTheme = ElementTheme.Dark,
-            Content = _compareScroll,
         };
+        // No stock button row (it stretches Done across the dialog): own footer with a right-aligned primary button.
+        var done = new Button { Content = "Done", Style = Ui.Res<Style>("PrimaryPillStyle"), MinWidth = 88, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
+        done.Click += (_, _) => _compare?.Hide();
+        var body = new Grid();
+        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        body.Children.Add(_compareScroll);
+        Grid.SetRow(done, 1);
+        body.Children.Add(done);
+        _compare.Content = body;
         _compare.Resources["ContentDialogMaxWidth"] = Math.Max(760.0, Root.ActualWidth - 100);
         _compare.Resources["ContentDialogMinWidth"] = Math.Min(900.0, Math.Max(760.0, Root.ActualWidth - 100));
         _compare.Resources["ContentDialogMaxHeight"] = Math.Max(420.0, Root.ActualHeight - 60);

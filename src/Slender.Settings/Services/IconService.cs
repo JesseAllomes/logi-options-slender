@@ -125,57 +125,23 @@ public sealed class IconService
         return null;
     }
 
-    /// <summary>For a path under ...\WindowsApps\&lt;package&gt;\, the largest Square44x44 (or Square150x150) logo PNG; else null.</summary>
+    /// <summary>For a path under ...\WindowsApps\&lt;package&gt;\, the package's largest logo PNG; else null.</summary>
     internal static string? FindStoreLogo(string exePath)
     {
-        const string marker = @"\WindowsApps\";
-        int i = exePath.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (i < 0)
+        string? package = Logic.StoreLogo.PackageDirectory(exePath);
+        if (package is null)
         {
             return null;
         }
 
-        string rest = exePath[(i + marker.Length)..];
-        int slash = rest.IndexOf('\\');
-        if (slash <= 0)
-        {
-            return null;
-        }
-
-        string package = exePath[..(i + marker.Length + slash)];
         try
         {
-            string? best = null;
-            long bestSize = -1;
-            foreach (string kind in new[] { "*Square44x44Logo*.png", "*Square150x150Logo*.png", "*StoreLogo*.png" })
-            {
-                foreach (string file in Directory.EnumerateFiles(package, kind, SearchOption.AllDirectories))
-                {
-                    if (file.Contains("contrast-", StringComparison.OrdinalIgnoreCase) || file.Contains("altform-lightunplated", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    long size = new FileInfo(file).Length;
-                    if (size > bestSize)
-                    {
-                        best = file;
-                        bestSize = size;
-                    }
-                }
-
-                if (best is not null)
-                {
-                    return best;
-                }
-            }
+            return Logic.StoreLogo.Find(package);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // The package folder is often not readable; fall back to the shell icon.
+            return null; // the package folder is often not readable; fall back to the shell icon
         }
-
-        return null;
     }
 
     private static async Task<byte[]?> ExtractShellIconPngAsync(string exe)

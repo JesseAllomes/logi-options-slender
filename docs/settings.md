@@ -36,3 +36,12 @@ Fonts (SIL OFL, licences beside them in `Assets/Fonts`): Archivo Expanded ExtraB
 - Keyboard "Media" picker options store chords such as `MediaPlayPause` and `VolumeUp`; the engine's `ChordParser` does not know these names yet (keyboard support is a later milestone).
 - Easy-Switch host chips are informational: the status contract has no active-host field.
 - Memory: the window decodes images at display size and keeps no render cache; closing it ends the process.
+
+## Point & scroll, labels, thumb wheel, test hooks
+
+- Point & scroll page: SmartShift on/off and Sensitivity (1-50, `PointerMapping`), Smooth scrolling, Invert thumb wheel, Invert main wheel, Pointer speed (400-8000 DPI in steps of 50; "Default" writes `Pointer.Dpi = null`). All go through `ConfigService.Update`.
+- Labels show key-cap chips after the action text for Keys actions and for Excel commands that have a plain shortcut (Next/Previous sheet = Ctrl+PgDn/PgUp).
+- Thumb wheel picker has a "Two-way" tab. A two-direction action is stored as `Right|Left` in a Keys chord (for example `VolumeUp|VolumeDown`) and labelled "Volume up / down". Helpers: `ActionCatalog.EncodePair`, `TryDecodePair`, `PairName`.
+- Store app icons: `StoreLogo` reads `AppxManifest.xml` for the logo base name and takes the largest plain variant (Teams uses `TeamsForWorkNewAppList.*`, not `Square44x44Logo`).
+- Minimum window size 1040x640. Compare apps uses its own right-aligned "Done" button instead of the dialog's stretched close row.
+- Test hooks (ignored unless set): `SLENDER_CONFIG_DIR` redirects config.json, settings-ui.json and the single-instance names to another folder; with it, `SLENDER_PAGE` (device, pointer, haptics, general) picks the start page and `SLENDER_SHOT=<png>` renders the window's XAML tree to a file and exits.
