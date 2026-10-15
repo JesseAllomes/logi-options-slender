@@ -400,19 +400,14 @@ public sealed class SlenderEngine : IDisposable
                 _gesturePlainClick = !AnySwipeBound();
                 if (_gesturePlainClick) return false;
                 _gestureRaw = _mouse.IsRawXyActive(ControlId.Gesture);
-                if (_gestureRaw)
-                {
-                    _gesture.Begin(_clock(), GestureTracker.RawThresholdFor(EffectiveDpi()));
-                }
-                else
-                {
-                    _gesture.Begin(_clock());
-                    _hook.SetMoveCapture(true);
-                }
+                _gesture.Begin(_clock(), _gestureRaw ? GestureTracker.RawThresholdFor(EffectiveDpi()) : GestureTracker.SwipeThresholdPx);
+                // Capture moves on both paths: with raw XY the direction comes from the device only, but any cursor movement
+                // Windows still receives is swallowed, so the cursor stays put whether or not raw XY stops normal reports.
+                _hook.SetMoveCapture(true);
                 return true;
             }
             if (_gesturePlainClick) { _gesturePlainClick = false; return false; }
-            if (!_gestureRaw) _hook.SetMoveCapture(false); // always on the hook path, even if the gesture already timed out
+            _hook.SetMoveCapture(false); // always, even if the gesture already timed out
             _gestureRaw = false;
             var (live, direction) = _gesture.End(_clock());
             if (live) _queue.Post(() => RunGesture(direction));
@@ -430,7 +425,8 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
-            if (_gesture.Add(e.Dx, e.Dy, _clock())) e.Handled = true;
+            bool live = _gestureRaw ? _gesture.IsLive(_clock()) : _gesture.Add(e.Dx, e.Dy, _clock());
+            if (live) e.Handled = true; // raw XY: swallow only, the device's own deltas decide the direction
             else _hook.SetMoveCapture(false); // no live gesture (timed out or cancelled): stop capturing, never swallow
         }
         catch (Exception ex) { SafeLog("hook move handler failed", ex); }

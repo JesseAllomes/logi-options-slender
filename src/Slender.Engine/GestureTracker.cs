@@ -32,6 +32,16 @@ internal sealed class GestureTracker
 
     public bool Active { get { lock (_gate) return _active; } }
 
+    /// <summary>True while a gesture is running and inside <see cref="TimeoutMs"/>; a timed-out gesture is abandoned here.</summary>
+    public bool IsLive(long now)
+    {
+        lock (_gate)
+        {
+            if (_active && now - _start > TimeoutMs) _active = false;
+            return _active;
+        }
+    }
+
     public void Begin(long now, int threshold = SwipeThresholdPx)
     {
         lock (_gate) { _active = true; _start = now; _dx = 0; _dy = 0; _threshold = threshold; }

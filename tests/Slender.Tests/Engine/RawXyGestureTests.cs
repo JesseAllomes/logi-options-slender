@@ -78,14 +78,14 @@ public class RawXyGestureTests
     // ---- engine: raw XY source ----
 
     [Fact]
-    public void Raw_swipe_runs_the_direction_action_without_capturing_the_cursor()
+    public void Raw_swipe_holds_the_cursor_but_only_device_deltas_decide_the_direction()
     {
         var r = new Rig(Standard());
         r.Press();
-        Assert.False(r.Hook.Capturing);
+        Assert.True(r.Hook.Capturing); // the cursor stays put even if Windows still gets movement
         r.Mouse.RawMove(0, -30);
         r.Mouse.RawMove(3, -30);
-        Assert.False(r.Hook.Move(0, -30)); // the hook never swallows while raw XY is the source
+        Assert.True(r.Hook.Move(400, 0)); // swallowed, and it must not turn the swipe into Right
         r.Release();
         Assert.False(r.Hook.Capturing);
         Assert.Equal([Up], r.Ran);
