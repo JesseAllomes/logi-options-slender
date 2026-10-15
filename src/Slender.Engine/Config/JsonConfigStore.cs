@@ -102,7 +102,7 @@ public sealed class JsonConfigStore : IConfigStore
                 DisplayName = string.IsNullOrWhiteSpace(p.DisplayName) ? null : p.DisplayName,
                 ExePath = string.IsNullOrWhiteSpace(p.ExePath) ? null : p.ExePath,
                 GestureSwipes = ParseSwipes(p.GestureSwipes),
-                RingSlots = p.RingSlots is null ? null : NormaliseRing(p.RingSlots),
+                RingSlots = p.RingSlots is null ? null : ToRing(p.RingSlots, allowFolders: true),
             });
         }
 
@@ -118,6 +118,7 @@ public sealed class JsonConfigStore : IConfigStore
             Pointer = ToPointer(dto.Pointer),
             Keyboard = new KeyboardSettings(dto.Keyboard?.FnLock ?? false),
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
+            Ring = ToRingAppearance(dto.Ring),
         };
     }
 
@@ -170,17 +171,56 @@ public sealed class JsonConfigStore : IConfigStore
         return swipes;
     }
 
-    /// <summary>Pads or trims to Profile.RingSlotCount so the ring always has a fixed layout.</summary>
-    private static List<ActionSpec> NormaliseRing(List<ActionSpec> slots)
+    /// <summary>Pads or trims to Profile.RingSlotCount so the ring always has a fixed layout. Folders are one level deep.</summary>
+    private static List<RingSlot> ToRing(List<RingSlotDto> slots, bool allowFolders)
     {
-        var ring = slots.Take(Profile.RingSlotCount).ToList();
+        var ring = new List<RingSlot>(Profile.RingSlotCount);
+        foreach (RingSlotDto d in slots.Take(Profile.RingSlotCount))
+        {
+            ring.Add(new RingSlot(d.Action ?? new ActionSpec.None())
+            {
+                Name = string.IsNullOrWhiteSpace(d.Name) ? null : d.Name,
+                Icon = string.IsNullOrWhiteSpace(d.Icon) ? null : d.Icon,
+                Folder = allowFolders && d.Folder is not null ? ToRing(d.Folder, allowFolders: false) : null,
+            });
+        }
+
         while (ring.Count < Profile.RingSlotCount)
         {
-            ring.Add(new ActionSpec.None());
+            ring.Add(RingSlot.Empty);
         }
 
         return ring;
     }
+
+    private static List<RingSlotDto> FromRing(IReadOnlyList<RingSlot> slots) =>
+        slots.Select(r => new RingSlotDto
+        {
+            Action = r.IsFolder ? null : r.Action,
+            Name = r.Name,
+            Icon = r.Icon,
+            Folder = r.Folder is null ? null : FromRing(r.Folder),
+        }).ToList();
+
+    private static RingAppearance ToRingAppearance(RingDto? r)
+    {
+        var d = new RingAppearance();
+        if (r is null)
+        {
+            return d;
+        }
+
+        return new RingAppearance(
+            Enum.TryParse(r.Style, ignoreCase: true, out RingStyle style) ? style : d.Style,
+            Enum.TryParse(r.Size, ignoreCase: true, out RingSize size) ? size : d.Size,
+            IsHexColour(r.Accent) ? r.Accent! : d.Accent,
+            Math.Clamp(r.OpacityPercent, 40, 100),
+            Enum.TryParse(r.Labels, ignoreCase: true, out RingLabels labels) ? labels : d.Labels,
+            Enum.TryParse(r.Position, ignoreCase: true, out RingPosition position) ? position : d.Position);
+    }
+
+    private static bool IsHexColour(string? s) =>
+        s is { Length: 7 } && s[0] == '#' && s.AsSpan(1).IndexOfAnyExcept("0123456789abcdefABCDEF") < 0;
 
     private static Dictionary<ushort, ActionSpec> ParseBindings(Dictionary<string, ActionSpec>? raw)
     {
@@ -231,6 +271,15 @@ public sealed class JsonConfigStore : IConfigStore
                 MouseThresholdPercent = config.BatteryAlerts.MouseThresholdPercent,
                 KeyboardThresholdPercent = config.BatteryAlerts.KeyboardThresholdPercent,
             },
+            Ring = new RingDto
+            {
+                Style = config.Ring.Style.ToString(),
+                Size = config.Ring.Size.ToString(),
+                Accent = config.Ring.Accent,
+                OpacityPercent = config.Ring.OpacityPercent,
+                Labels = config.Ring.Labels.ToString(),
+                Position = config.Ring.Position.ToString(),
+            },
             Profiles = new List<ProfileDto>(config.Profiles.Count),
         };
 
@@ -258,7 +307,7 @@ public sealed class JsonConfigStore : IConfigStore
                 GestureSwipes = profile.GestureSwipes.Count == 0
                     ? null
                     : profile.GestureSwipes.ToDictionary(kv => kv.Key.ToString().ToLowerInvariant(), kv => kv.Value),
-                RingSlots = profile.RingSlots?.ToList(),
+                RingSlots = profile.RingSlots is null ? null : FromRing(profile.RingSlots),
             });
         }
 
@@ -318,6 +367,25 @@ public sealed class JsonConfigStore : IConfigStore
         public PointerDto? Pointer { get; set; }
         public KeyboardDto? Keyboard { get; set; }
         public BatteryAlertsDto? BatteryAlerts { get; set; }
+        public RingDto? Ring { get; set; }
+    }
+
+    internal sealed class RingSlotDto
+    {
+        public ActionSpec? Action { get; set; }
+        public string? Name { get; set; }
+        public string? Icon { get; set; }
+        public List<RingSlotDto>? Folder { get; set; }
+    }
+
+    internal sealed class RingDto
+    {
+        public string? Style { get; set; }
+        public string? Size { get; set; }
+        public string? Accent { get; set; }
+        public int OpacityPercent { get; set; } = 92;
+        public string? Labels { get; set; }
+        public string? Position { get; set; }
     }
 
     internal sealed class BatteryAlertsDto
@@ -349,7 +417,7 @@ public sealed class JsonConfigStore : IConfigStore
         public Dictionary<string, ActionSpec>? Bindings { get; set; }
         public Dictionary<string, ActionSpec>? KeyBindings { get; set; }
         public Dictionary<string, ActionSpec>? GestureSwipes { get; set; }
-        public List<ActionSpec>? RingSlots { get; set; }
+        public List<RingSlotDto>? RingSlots { get; set; }
     }
 
     internal sealed class ExcelDto

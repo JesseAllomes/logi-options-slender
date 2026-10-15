@@ -62,7 +62,7 @@ public sealed class ConfigV2Tests : IDisposable
     [Fact]
     public void Gesture_swipes_and_ring_slots_round_trip()
     {
-        var ring = new List<ActionSpec> { new ActionSpec.Keys("Ctrl+C"), new ActionSpec.Launch("calc.exe") };
+        var ring = new List<RingSlot> { new(new ActionSpec.Keys("Ctrl+C")), new(new ActionSpec.Launch("calc.exe")) };
         SlenderConfig config = SlenderConfig.Default with
         {
             Profiles =
@@ -82,8 +82,8 @@ public sealed class ConfigV2Tests : IDisposable
         Profile def = loaded.Profiles[0];
         Assert.Equal(new ActionSpec.Keys("Win+D"), def.GestureSwipes[GestureDirection.Down]);
         Assert.Equal(Profile.RingSlotCount, def.RingSlots!.Count); // padded to the fixed layout
-        Assert.Equal(new ActionSpec.Launch("calc.exe"), def.RingSlots[1]);
-        Assert.Equal(new ActionSpec.None(), def.RingSlots[7]);
+        Assert.Equal(new ActionSpec.Launch("calc.exe"), def.RingSlots[1].Action);
+        Assert.True(def.RingSlots[7].IsEmpty);
         Assert.Empty(loaded.Profiles[1].GestureSwipes);
         Assert.Null(loaded.Profiles[1].RingSlots); // follows the default profile
     }

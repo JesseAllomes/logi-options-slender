@@ -107,6 +107,8 @@ public abstract record ActionSpec
     public sealed record Disabled : ActionSpec;
     /// <summary>Changes the brightness of the monitor under the cursor by StepPercent points (negative = dimmer).</summary>
     public sealed record Brightness(int StepPercent) : ActionSpec;
+    /// <summary>Types the text as Unicode input into the foreground app (a saved snippet).</summary>
+    public sealed record Text(string Value) : ActionSpec;
 }
 
 /// <summary>Executes actions in the foreground app.</summary>
@@ -137,13 +139,47 @@ public sealed record Profile(string? AppProcess, IReadOnlyDictionary<ushort, Act
     public IReadOnlyDictionary<GestureDirection, ActionSpec> GestureSwipes { get; init; } = new Dictionary<GestureDirection, ActionSpec>();
 
     /// <summary>
-    /// Actions Ring slots, clockwise from the top (RingSlotCount entries; ActionSpec.None = empty slot).
+    /// Actions Ring slots, clockwise from the top (RingSlotCount entries; a slot whose Action is None and has no Folder is empty).
     /// Null = follow the default profile.
     /// </summary>
-    public IReadOnlyList<ActionSpec>? RingSlots { get; init; }
+    public IReadOnlyList<RingSlot>? RingSlots { get; init; }
 
     public const int RingSlotCount = 8;
 }
+
+/// <summary>
+/// One Actions Ring slot. Folder non-null makes it a folder (Action is ignored): up to Profile.RingSlotCount children,
+/// one level deep (children never have folders). Name null = derive from the action. Icon null = automatic (app or site icon,
+/// else the action's glyph); "glyph:E8C8" = a Segoe Fluent Icons code point; "file:C:\path\app.exe" = that file's icon.
+/// </summary>
+public sealed record RingSlot(ActionSpec Action)
+{
+    public string? Name { get; init; }
+    public string? Icon { get; init; }
+    public IReadOnlyList<RingSlot>? Folder { get; init; }
+
+    public bool IsFolder => Folder is not null;
+    public bool IsEmpty => Folder is null && Action is ActionSpec.None;
+
+    public static RingSlot Empty { get; } = new(new ActionSpec.None());
+}
+
+public enum RingStyle { Bezel, Compass, Keypad }
+
+public enum RingSize { Small, Medium, Large }
+
+public enum RingLabels { Always, SelectedOnly }
+
+public enum RingPosition { AtCursor, MonitorCentre }
+
+/// <summary>How the Actions Ring looks. Global, not per profile. Accent is "#RRGGBB" (copper by default).</summary>
+public sealed record RingAppearance(
+    RingStyle Style = RingStyle.Bezel,
+    RingSize Size = RingSize.Medium,
+    string Accent = "#D9925F",
+    int OpacityPercent = 92,
+    RingLabels Labels = RingLabels.Always,
+    RingPosition Position = RingPosition.AtCursor);
 
 public enum GestureDirection
 {
@@ -184,6 +220,7 @@ public sealed record SlenderConfig(
     public PointerSettings Pointer { get; init; } = new();
     public KeyboardSettings Keyboard { get; init; } = new();
     public BatteryAlertSettings BatteryAlerts { get; init; } = new();
+    public RingAppearance Ring { get; init; } = new();
 
     public static SlenderConfig Default { get; } = new(
         CurrentVersion,

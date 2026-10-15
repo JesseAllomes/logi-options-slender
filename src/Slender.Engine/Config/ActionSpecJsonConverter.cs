@@ -27,6 +27,7 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "launch" => new ActionSpec.Launch(ReadString(root, "target"), ReadOptionalString(root, "arguments")),
             "disabled" => new ActionSpec.Disabled(),
             "brightness" => new ActionSpec.Brightness(ReadInt(root, "step")),
+            "text" => new ActionSpec.Text(ReadString(root, "value")),
             _ => throw new FormatException($"Unknown action type '{type}'."),
         };
     }
@@ -65,6 +66,10 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.Brightness brightness:
                 writer.WriteString("type", "brightness");
                 writer.WriteNumber("step", brightness.StepPercent);
+                break;
+            case ActionSpec.Text text:
+                writer.WriteString("type", "text");
+                writer.WriteString("value", text.Value);
                 break;
             default:
                 throw new NotSupportedException($"Unsupported action {value.GetType().Name}.");
