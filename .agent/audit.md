@@ -2,10 +2,10 @@
 # Audit
 
 Root: `C:/Users/user/Projects/personal/logi-options-slender`  
-Generated: 2026-10-15T21:33:24+00:00  
-HEAD: 726c7a2b6d7ee5dbad4732d3e6da26c1ec0ffe1c
+Generated: 2026-10-15T23:01:05+00:00  
+HEAD: 2d541106e3701e8409a6e4141373822783d36345
 
-281 source file(s), 41615 line(s). COVERAGE: partial — indexed extensions only.
+282 source file(s), 41916 line(s). COVERAGE: partial — indexed extensions only.
 
 ## Stack
 
@@ -15,8 +15,8 @@ HEAD: 726c7a2b6d7ee5dbad4732d3e6da26c1ec0ffe1c
 
 | path | files | lines |
 |---|---|---|
-| src/Slender.Settings | 67 | 12462 |
-| tests/Slender.Tests | 67 | 11838 |
+| src/Slender.Settings | 68 | 12694 |
+| tests/Slender.Tests | 67 | 11907 |
 | src/Slender.Engine | 50 | 6992 |
 | src/Slender.Tray | 35 | 4310 |
 | src/Slender.Hidpp | 32 | 3819 |

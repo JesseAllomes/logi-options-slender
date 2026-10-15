@@ -1,27 +1,27 @@
 {
   "schema": 1,
   "root": "C:/Users/user/Projects/personal/logi-options-slender",
-  "head": "726c7a2b6d7ee5dbad4732d3e6da26c1ec0ffe1c",
+  "head": "2d541106e3701e8409a6e4141373822783d36345",
   "dirty_fingerprint": "b9a8816e585d5eaae36410a797c929afa619999265d5b3e4b5cebab270c98a51",
   "dirty_files": 0,
   "verify_config_fingerprint": "00ce9ee58ad8770625f9898500af160bb6ba911f48358a89368194ce77da1176",
   "verify_block_fingerprint": "5f5bea8ca7cf2882dfd2c04443c75ae033074c33c977bde0f3b4b31eb27ba141",
   "verify_entries": 2,
   "config_files": [],
-  "generated": "2026-10-15T21:33:24+00:00",
+  "generated": "2026-10-15T23:01:05+00:00",
   "scan": {
-    "files": 281,
-    "lines": 41615,
+    "files": 282,
+    "lines": 41916,
     "depth2": [
       {
         "path": "src/Slender.Settings",
-        "files": 67,
-        "lines": 12462
+        "files": 68,
+        "lines": 12694
       },
       {
         "path": "tests/Slender.Tests",
         "files": 67,
-        "lines": 11838
+        "lines": 11907
       },
       {
         "path": "src/Slender.Engine",
