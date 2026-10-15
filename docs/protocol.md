@@ -284,3 +284,17 @@ any of them; they are stored in `OnboardSync.K860ObservedDefaults` as "observed"
   Easy-Switch reconnect.
 - fn5 reset works: the key reads back Consumer 0x0192 and Calculator opens again. Key left at factory.
 - Open question: where the remapped report goes (vendor collection / needs host software?). Not usable until explained.
+
+### 0x1C00 modifier test (ERGO K860, 2026-10-15, input logged with tools/Slender.InputLog)
+
+| Stored action | What Windows received |
+|---|---|
+| Ctrl+Shift+Esc (Key 0x29 mods 0x03) | Esc only (no Ctrl/Shift events) |
+| Win+Shift+S (Key 0x16 mods 0x0A) | (S only, inferred) |
+| Win+E (Key 0x08 mods 0x08) | Win+E, Explorer opened |
+| Ctrl+Esc (Key 0x29 mods 0x01) | Ctrl+Esc, Start opened |
+
+One modifier works; with two or more the firmware drops all of them. The encoder now refuses multi-modifier chords.
+Open: the user reports Options+ offers two-modifier shortcuts for these keys; next step is to set one in Options+ and
+read 0x1C00 / 0x1B04 to see whether Options+ stores it onboard (different encoding) or handles it in software (divert).
+Key 10 reset to factory after the tests.

@@ -25,11 +25,11 @@ public class OnboardSyncTests
     [Fact]
     public void Only_differing_keys_are_set_in_cid_order()
     {
-        var plan = OnboardSync.Plan(new Dictionary<ushort, string> { [229] = "Ctrl+Shift+S", [224] = "Win+Tab", [199] = "F5" }, Current);
+        var plan = OnboardSync.Plan(new Dictionary<ushort, string> { [229] = "Ctrl+S", [224] = "Win+Tab", [199] = "F5" }, Current);
         var ops = plan.Ops.Cast<OnboardSetOp>().ToList();
         Assert.Equal([199, 229], ops.Select(o => o.Cid).ToArray());
         Assert.Equal(OnboardAction.Keystroke(0x3E, OnboardModifiers.None), ops[0].Action);
-        Assert.Equal(OnboardAction.Keystroke(0x16, OnboardModifiers.Ctrl | OnboardModifiers.Shift), ops[1].Action);
+        Assert.Equal(OnboardAction.Keystroke(0x16, OnboardModifiers.Ctrl), ops[1].Action);
     }
 
     [Fact]

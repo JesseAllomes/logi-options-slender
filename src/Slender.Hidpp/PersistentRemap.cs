@@ -114,7 +114,8 @@ public static class OnboardChordEncoder
 
     /// <summary>
     /// "Ctrl+Shift+S" gives Key + usage + left-hand modifier mask. A single media name gives a Consumer action.
-    /// Rejected: empty, unknown names, modifiers only, more than one main key, modifiers with a media key.
+    /// Rejected: empty, unknown names, modifiers only, more than one main key, modifiers with a media key,
+    /// more than one modifier (the K860 drops them all).
     /// </summary>
     public static bool TryEncode(string? chord, out OnboardAction action, out string error)
     {
@@ -139,6 +140,9 @@ public static class OnboardChordEncoder
             action = OnboardAction.Consumer(usage);
             return true;
         }
+        // ERGO K860 (tested 2026-10-15): one modifier is honoured (Ctrl+Esc, Win+E work); with two or more the firmware drops
+        // every modifier and sends the bare key (Ctrl+Shift+Esc arrived as Esc). Refuse rather than store a silent surprise.
+        if (System.Numerics.BitOperations.PopCount((uint)mods) > 1) { error = "the keyboard only stores one modifier (e.g. Ctrl+Esc or Win+E)"; return false; }
         action = OnboardAction.Keystroke(Keys[main], mods);
         return true;
     }

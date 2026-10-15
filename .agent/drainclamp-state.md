@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=28 -->
+<!-- drainclamp-build: state; schema=1; generation=29 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -30,6 +30,11 @@ Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/Lo
 Distribution -> one all-in-one SlenderSetup.exe (Velopack, per-user, no admin, self-update) replacing the PowerShell installer (user)
 Sync -> sign-in with personal Microsoft account; settings stored in the user's own OneDrive app folder (Files.ReadWrite.AppFolder), no server; public-client app registration on the user's personal account; no secrets in repo (user)
 Onboard -> K860 global key remaps stored on the keyboard via 0x1C00 (allowlist writes keyboard-only); mouse power-cycle test decides which device settings are trusted to persist (user)
+Firmware updates -> no own DFU (brick risk, allowlist keeps 0x00D1 blocked); Slender reads firmware versions, and "Update firmware..." launches Options+ temporarily; Options+ service set to Manual otherwise (user asked for updates via Slender)
+Tray -> Win32 rewrite (no WinForms) built NativeAOT-ready, then NativeAOT publish; VS 2022 C++ Build Tools installed for it (user)
+Popover -> WinUI popover kept for looks; runs only while open (process exits when dismissed); unfolds into the full window (user)
+Leak guard -> tray memory watchdog: log + clean self-restart above a threshold (Options+ reached 14 GB; user)
+Onboard K860 -> dig deeper with an input logger before deciding (user)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->

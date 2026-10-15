@@ -1,0 +1,32 @@
+Logging raw input from devices matching 'pid&b359' for 30 s...
+   4.92s KEYBOARD &col01 vk=0x1B make=0x01 flags=0x0 down
+   5.09s KEYBOARD &col01 vk=0x1B make=0x01 flags=0x1 up
+   6.11s KEYBOARD &col01 vk=0x1B make=0x01 flags=0x0 down
+   6.31s KEYBOARD &col01 vk=0x1B make=0x01 flags=0x1 up
+   7.23s KEYBOARD &col01 vk=0x1B make=0x01 flags=0x0 down
+   7.45s KEYBOARD &col01 vk=0x1B make=0x01 flags=0x1 up
+   8.42s KEYBOARD &col01 vk=0x41 make=0x1E flags=0x0 down
+   8.52s KEYBOARD &col01 vk=0x41 make=0x1E flags=0x1 up
+   9.78s KEYBOARD &col01 vk=0x20 make=0x39 flags=0x0 down
+   9.89s KEYBOARD &col01 vk=0x20 make=0x39 flags=0x1 up
+   9.91s KEYBOARD &col01 vk=0x44 make=0x20 flags=0x0 down
+   9.97s KEYBOARD &col01 vk=0x4F make=0x18 flags=0x0 down
+  10.02s KEYBOARD &col01 vk=0x44 make=0x20 flags=0x1 up
+  10.09s KEYBOARD &col01 vk=0x4F make=0x18 flags=0x1 up
+  10.16s KEYBOARD &col01 vk=0x4E make=0x31 flags=0x0 down
+  10.25s KEYBOARD &col01 vk=0x45 make=0x12 flags=0x0 down
+  10.27s KEYBOARD &col01 vk=0x4E make=0x31 flags=0x1 up
+  10.34s KEYBOARD &col01 vk=0x45 make=0x12 flags=0x1 up
+  10.36s KEYBOARD &col01 vk=0x0D make=0x1C flags=0x0 down
+  10.50s KEYBOARD &col01 vk=0x0D make=0x1C flags=0x1 up
+  12.75s KEYBOARD &col01 vk=0x44 make=0x20 flags=0x0 down
+  12.86s KEYBOARD &col01 vk=0x44 make=0x20 flags=0x1 up
+  12.88s KEYBOARD &col01 vk=0x4F make=0x18 flags=0x0 down
+  12.92s KEYBOARD &col01 vk=0x4F make=0x18 flags=0x1 up
+  13.44s KEYBOARD &col01 vk=0x4E make=0x31 flags=0x0 down
+  13.59s KEYBOARD &col01 vk=0x4E make=0x31 flags=0x1 up
+  13.67s KEYBOARD &col01 vk=0x45 make=0x12 flags=0x0 down
+  13.75s KEYBOARD &col01 vk=0x45 make=0x12 flags=0x1 up
+  13.83s KEYBOARD &col01 vk=0x0D make=0x1C flags=0x0 down
+  13.94s KEYBOARD &col01 vk=0x0D make=0x1C flags=0x1 up
+Done.

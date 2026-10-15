@@ -9,11 +9,11 @@ public class OnboardRemapTests
     // ---- encoding table (Solaar layout: action, param BE, modifier mask) ----
 
     [Theory]
-    [InlineData("Ctrl+Shift+S", "01 00 16 03")]
-    [InlineData("Win+Shift+S", "01 00 16 0A")]
+    [InlineData("Ctrl+S", "01 00 16 01")]
+    [InlineData("Win+E", "01 00 08 08")]
+    [InlineData("Ctrl+Escape", "01 00 29 01")]
     [InlineData("Win+D", "01 00 07 08")]
     [InlineData("Win+Tab", "01 00 2B 08")]
-    [InlineData("Ctrl+Alt+Delete", "01 00 4C 05")]
     [InlineData("alt+left", "01 00 50 04")]
     [InlineData("F5", "01 00 3E 00")]
     [InlineData("F13", "01 00 68 00")]
@@ -40,6 +40,8 @@ public class OnboardRemapTests
     [Theory]
     [InlineData("")]
     [InlineData("Ctrl+Shift")]        // modifiers only
+    [InlineData("Ctrl+Shift+S")]      // two modifiers: the K860 drops them all (tested on device)
+    [InlineData("Win+Shift+S")]
     [InlineData("Ctrl+A+B")]          // two main keys
     [InlineData("Ctrl+Banana")]       // unknown name
     [InlineData("Ctrl+VolumeUp")]     // modifier with a consumer key
@@ -56,7 +58,7 @@ public class OnboardRemapTests
     [Fact]
     public void Action_round_trips_through_bytes()
     {
-        var a = OnboardChordEncoder.Encode("Win+Shift+S");
+        var a = OnboardChordEncoder.Encode("Win+E");
         Assert.Equal(a, OnboardAction.FromBytes(a.ToBytes()));
     }
 
@@ -159,10 +161,10 @@ public class OnboardRemapTests
     {
         using var r = new Rig();
         await r.ConnectAsync();
-        await r.Kb.SetOnboardChordAsync(0xE0, "Win+Shift+S", default);
+        await r.Kb.SetOnboardChordAsync(0xE0, "Win+E", default);
         var w = Assert.Single(r.PWrites(4));
-        Assert.Equal(Convert.FromHexString("00E0FF0100160A"), w[4..11]);
-        Assert.Equal(OnboardAction.Keystroke(0x16, OnboardModifiers.Meta | OnboardModifiers.Shift), (await r.Kb.ReadOnboardMappingsAsync(default))[0].Action);
+        Assert.Equal(Convert.FromHexString("00E0FF01000808"), w[4..11]);
+        Assert.Equal(OnboardAction.Keystroke(0x08, OnboardModifiers.Meta), (await r.Kb.ReadOnboardMappingsAsync(default))[0].Action);
     }
 
     [Fact]
