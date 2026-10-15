@@ -46,7 +46,7 @@ if byte 0 is 0x10/0x11, skip it.
 | Reprog controls v4 | 0x1B04 | fn0 getCount; fn1 getCidInfo(i) → [0-1] cid, [2-3] task, [4] flags, [5] pos, [6] group, [7] gmask, [8] flags hi; fn2 getCidReporting(cid); fn3 setCidReporting [cidHi, cidLo, flags, 0, 0] | see divert flags below |
 | SmartShift enhanced | 0x2111 | fn1 read → [mode, autoDisengage, force]; fn2 write [mode, threshold, force] | mode 1 free-spin, 2 ratchet; disable = ratchet + 0xFF |
 | Hi-res wheel | 0x2121 | fn0 caps (p[0] multiplier); fn1 get mode; fn2 set mode | mode bit0 target (0 = native HID), bit1 hi-res, bit2 invert. Always read-modify-write; clear bit0 on start (survives process exit) |
-| Thumb wheel | 0x2150 | fn0 getInfo → p[5] caps (bit0 timestamp, bit1 touch, bit2 proximity, bit3 single-tap), p[6-7] time unit; fn1 getConfig → [mode, invert]; fn2 setConfig [mode, invert, 0] (mode 0 native, 1 diverted) | **event layout PROBE**: neither repo parses it. Expected per Logitech spec: fn0 event, p[0-1] int16 BE rotation, p[2-3] timestamp, p[4] rotation status, p[5] flags (touch/proximity/tap) |
+| Thumb wheel | 0x2150 | fn0 getInfo → p[5] caps (bit0 timestamp, bit1 touch, bit2 proximity, bit3 single-tap), p[6-7] time unit; fn1 getConfig → [mode, invert]; fn2 setConfig [mode, invert, 0] (mode 0 native, 1 diverted) | **event layout**: rotation (p[0-1] int16 BE) and rotation status (p[4], <= 1 = a new movement starts) match Solaar (`lib/logitech_receiver/diversion.py`, THUMB_WHEEL branch of `process_notification`: `signed(notification.data[0:2])`, `data[4] <= 0x01`); divert and invert are bytes 0 and 1 of fn2 (Solaar `settings_templates.py` ThumbMode / ThumbInvert, write_fnid 0x20). Timestamp p[2-3] and touch/proximity/tap flags p[5] are the Logitech-spec expectation, not in Solaar, unconfirmed on device. Spec: fn0 event, p[0-1] int16 BE rotation, p[2-3] timestamp, p[4] rotation status, p[5] flags (touch/proximity/tap) |
 | Adjustable DPI | 0x2201 | fn2 getSensorDpi [0]; fn3 setSensorDpi [0, hi, lo] | |
 
 ### Reprog divert flags (0x1B04 fn3, byte 2)
@@ -183,6 +183,18 @@ Read-only probe 2026-10-15, Options+ running. Raw output: `.agent/probe/k860-rea
 - Thumb wheel binding (pseudo id 0xF150, `ActionSpec.Keys` only): `"Right|Left"` sends each chord per notch in its direction;
   a single chord is sent per notch right and the same chord with Shift toggled per notch left. Other actions fall back to the
   Excel column scroll / native pass-through.
+
+### Thumb wheel divert on demand (m29)
+
+- Divert is the same call as invert: 0x2150 fn2 `[divert, invert, 0]` (already allowlisted up to fn2; nothing else added). The
+  user's invert is always sent, in both modes. fn0 getInfo caps (p[5] bit1 = touch) is read once per connect.
+- Diverted reporting is on only while the foreground app needs non-native behaviour: Excel column mode, a bound thumb wheel
+  (keys or off), the dual wheel flipped to its second role, the Actions Ring open, or a touch / tap binding. Changes are debounced
+  and serialised with the button diverts and never happen mid rotation (150 ms pause, 10 s cap).
+- Rotation is 1/120 notch units (divertedResolution 120), the same unit as WHEEL_DELTA, so Excel, bound pairs, the second role
+  and ring steering take one path (`IThumbWheelSource`: hook or HID++). If the divert fails or the device is gone, the hook stays.
+- Pseudo control ids: 0xF150 thumb wheel, 0xF151 thumb wheel touch (press on contact, release on lift), 0xF152 thumb wheel tap
+  (touch then lift within 250 ms with under a quarter notch, 30 counts, of rotation). Both default unbound.
 
 ### What survives a power cycle (MX Master 4, tested 2026-10-15)
 

@@ -141,6 +141,9 @@ static class Program
         using var ring = new RingController(() => engine.Config, foreground, hook, engine.RunRingAction, engine.PlayRingHaptic, app.PostToUi, log);
         EventHandler<RingTriggerEventArgs> onTrigger = (_, e) => app.PostToUi(() => ring.OnTrigger(e.Pressed, e.HoldOnly));
         engine.RingTrigger += onTrigger;
+        // The ring needs the thumb wheel diverted while open; diverted rotation reaches it through the engine, not the mouse hook.
+        ring.OpenChanged += engine.SetRingOpen;
+        engine.RingThumbWheel += (_, delta) => ring.OnDivertedThumbWheel(delta);
         keys.RingTrigger += onTrigger;
         // Dual thumb wheel: the top button (engine or keyboard) flips the app's mode; a short label near the cursor says which.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);

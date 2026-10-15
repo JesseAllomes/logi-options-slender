@@ -55,6 +55,12 @@ public readonly record struct ButtonEvent(ushort ControlId, bool Pressed);
 /// <summary>Diverted thumb wheel report. Rotation is signed, positive = right.</summary>
 public readonly record struct ThumbWheelEvent(int Rotation, bool Touch, bool Proximity, bool SingleTap);
 
+/// <summary>0x2150 divertedResolution: rotation counts per notch in diverted reports (inventory: 120, same as WHEEL_DELTA).</summary>
+public static class ThumbWheelUnits
+{
+    public const int PerNotch = 120;
+}
+
 public readonly record struct BatteryStatus(int Percent, bool Charging);
 
 /// <summary>
@@ -77,6 +83,20 @@ public interface ILogiMouse : IDisposable
     Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct);
 
     Task SetThumbWheelDivertedAsync(bool diverted, CancellationToken ct);
+
+    /// <summary>
+    /// Puts the thumb wheel (0x2150 fn2, divert bit) into HID++ reporting or back to native, keeping the invert setting.
+    /// Returns true only when the device accepted it right now: false (disconnected, rejected, unsupported) means the OS
+    /// still scrolls natively, so callers keep using the mouse hook. The default does the call and reports "not diverted".
+    /// </summary>
+    async Task<bool> TrySetThumbWheelDivertedAsync(bool diverted, CancellationToken ct)
+    {
+        await SetThumbWheelDivertedAsync(diverted, ct).ConfigureAwait(false);
+        return false;
+    }
+
+    /// <summary>Whether 0x2150 getInfo caps include touch. null until read (or when unsupported).</summary>
+    bool? ThumbWheelTouchSupported => null;
 
     /// <summary>Fire-and-forget haptic pulse. No-op when unsupported or disconnected.</summary>
     Task PlayHapticAsync(byte waveform, CancellationToken ct);

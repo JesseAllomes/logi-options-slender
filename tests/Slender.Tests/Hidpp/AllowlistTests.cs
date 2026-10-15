@@ -68,4 +68,13 @@ public class AllowlistTests
         foreach (ushort never in new ushort[] { 0x00D0, 0x00D1, 0x1814, 0x1815, 0x8100 })
             for (byte fn = 0; fn < 16; fn++) Assert.False(HidppAllowlist.IsAllowed(never, fn));
     }
+
+    [Fact]
+    public void Thumb_wheel_divert_and_invert_share_fn2_and_nothing_beyond_it_is_allowed()
+    {
+        Assert.True(HidppAllowlist.IsAllowed(0x2150, 0)); // getInfo
+        Assert.True(HidppAllowlist.IsAllowed(0x2150, 1)); // getConfig
+        Assert.True(HidppAllowlist.IsAllowed(0x2150, 2)); // setConfig [divert, invert]
+        Assert.False(HidppAllowlist.IsAllowed(0x2150, 3));
+    }
 }

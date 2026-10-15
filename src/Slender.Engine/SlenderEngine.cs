@@ -33,6 +33,10 @@ public sealed class SlenderEngine : IDisposable
     private readonly IWorkQueue _queue;
     private readonly Func<long> _clock;
     private readonly TapHoldTracker _tapHold;
+    private readonly IThumbWheelSource _hookSource;
+    private readonly IThumbWheelSource _hidSource;
+    private readonly ThumbTouchTracker _touch = new();
+    private ActionSpec? _touchAction; // action used at touch start, released at touch end (under _gate)
     private readonly ColumnScrollAccumulator _accumulator = new();
     private readonly ColumnScrollAccumulator _secondAccumulator = new();
     private readonly Dictionary<string, bool> _secondMode = new(StringComparer.OrdinalIgnoreCase); // dual thumb wheel: per app, this run only
@@ -47,6 +51,10 @@ public sealed class SlenderEngine : IDisposable
     private Task _divertChain = Task.CompletedTask;
     private volatile bool _gesturePlainClick; // this press had no swipes configured: the legacy press/release path
     private bool _started, _disposed;
+    private bool _thumbWanted, _thumbHid; // under _gate: the divert we asked for / the device confirmed it (HID++ path live)
+    private volatile bool _ringOpen;
+    private long _lastRotation = long.MinValue / 2; // clock ms of the last rotation from either source
+    private CancellationTokenSource? _thumbRetry;
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
         IActionExecutor executor, SlenderConfig config, ILog? log = null)
@@ -65,6 +73,8 @@ public sealed class SlenderEngine : IDisposable
         _queue = queue ?? new BoundedWorker("Slender.Engine", 256, sta: false, _log);
         _clock = clock ?? (() => Environment.TickCount64);
         _tapHold = new TapHoldTracker(holdTimer ?? new ThreadingHoldTimer(), _queue, _log);
+        _hookSource = new HookThumbWheelSource(hook);
+        _hidSource = new HidThumbWheelSource(mouse);
     }
 
     /// <summary>Raised on press of an ActionsRing control (the tray opens the ring). Press and release are both on <see cref="RingTrigger"/>.</summary>
@@ -73,6 +83,9 @@ public sealed class SlenderEngine : IDisposable
     /// <summary>The ring trigger control went down (Pressed) or up. Raised on the engine thread.</summary>
     public event EventHandler<RingTriggerEventArgs>? RingTrigger;
     public event EventHandler<EngineStatus>? StatusChanged;
+
+    /// <summary>Thumb wheel rotation (1/120 notch units, positive = right) for the open Actions Ring while the wheel is diverted. Raised on the HID thread.</summary>
+    public event EventHandler<int>? RingThumbWheel;
 
     /// <summary>The thumb wheel mode of the foreground app was flipped, or a flip was refused (no second role). Raised on the engine queue.</summary>
     public event EventHandler<ThumbWheelModeEventArgs>? ThumbWheelModeChanged;
@@ -89,7 +102,9 @@ public sealed class SlenderEngine : IDisposable
         }
         _mouse.ButtonChanged += OnButton;
         _mouse.ConnectionChanged += OnConnection;
-        _hook.HorizontalWheel += OnWheel;
+        _hookSource.ThumbWheelRotated += OnRotation;
+        _hidSource.ThumbWheelRotated += OnRotation;
+        _mouse.ThumbWheelMoved += OnThumbTouch;
         _hook.ButtonChanged += OnHookButton;
         _hook.MouseMoved += OnHookMove;
         _foreground.Changed += OnForegroundChanged;
@@ -199,6 +214,7 @@ public sealed class SlenderEngine : IDisposable
 
     private void Rediverts(bool force)
     {
+        EvaluateThumb(force: false, _clock());
         var set = ComputeDivertSet(_config, _foreground.ProcessName);
         lock (_gate)
         {
@@ -261,10 +277,12 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("button handling failed", ex); }
     }
 
-    private ActionSpec ResolveAction(ushort control)
+    private ActionSpec ResolveAction(ushort control) => EffectiveBinding(_config, _foreground.ProcessName, control);
+
+    /// <summary>The binding in effect for <paramref name="control"/> in <paramref name="process"/>: the app's own entry (an explicit None wins), else the default profile's, else None.</summary>
+    internal static ActionSpec EffectiveBinding(SlenderConfig cfg, string? process, ushort control)
     {
-        var cfg = _config;
-        var profile = ProfileResolver.Resolve(cfg, _foreground.ProcessName);
+        var profile = ProfileResolver.Resolve(cfg, process);
         // An explicit None in a per-app profile means "native / pass through": it wins over the default profile's binding.
         if (profile.Bindings.TryGetValue(control, out var own) && own is not null) return own;
         if (Bound(ProfileResolver.Default(cfg), control) is { } d) return d;
@@ -512,12 +530,30 @@ public sealed class SlenderEngine : IDisposable
 
     /// <summary>Pseudo control id the settings app stores the thumb wheel binding under.</summary>
     public const ushort ThumbWheelBindingId = 0xF150;
+    /// <summary>Pseudo control id for "thumb wheel touch" (held while a finger rests on the wheel). Needs the wheel diverted.</summary>
+    public const ushort ThumbWheelTouchBindingId = 0xF151;
+    /// <summary>Pseudo control id for "thumb wheel tap" (touch then release within 250 ms and under a quarter notch of rotation).</summary>
+    public const ushort ThumbWheelTapBindingId = 0xF152;
     private const int MaxNotchesPerEvent = 10;
 
-    private void OnWheel(object? sender, HookWheelEventArgs e)
+    /// <summary>
+    /// One entry for every thumb wheel rotation, from the hook (native) or HID++ (diverted). Delta is 1/120 notch units.
+    /// Exactly one source is live at a time: a diverted wheel sends no native scroll, and a native hook event seen while the
+    /// device is confirmed diverted is left to the OS (never handled twice).
+    /// </summary>
+    private void OnRotation(object? sender, ThumbWheelRotatedEventArgs e)
     {
         try
         {
+            _lastRotation = _clock();
+            if (e.FromHid)
+            {
+                if (_ringOpen) { RingThumbWheel?.Invoke(this, e.Delta); return; }
+            }
+            else
+            {
+                lock (_gate) if (_thumbHid) return;
+            }
             var cfg = _config;
             if (ActiveSecond() is { } second)
             {
@@ -554,6 +590,116 @@ public sealed class SlenderEngine : IDisposable
             });
         }
         catch (Exception ex) { SafeLog("wheel handler failed", ex); }
+    }
+
+    // ---- thumb wheel divert on demand ----
+
+    /// <summary>Quiet time after the last rotation before the wheel's reporting mode may change.</summary>
+    internal int RotationPauseMs { get; set; } = 150;
+
+    /// <summary>The Actions Ring opened or closed: it needs the wheel diverted while it is open.</summary>
+    public void SetRingOpen(bool open)
+    {
+        _ringOpen = open;
+        bool started;
+        lock (_gate) started = _started;
+        if (started) EvaluateThumb(force: false, _clock());
+    }
+
+    /// <summary>True while the wheel is confirmed diverted and rotation comes from HID++ (the hook path is the fallback otherwise).</summary>
+    internal bool ThumbWheelDiverted { get { lock (_gate) return _thumbHid; } }
+
+    private bool ThumbWheelWanted() =>
+        ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, ActiveSecond() is not null, _ringOpen, _mouse.ThumbWheelTouchSupported);
+
+    /// <summary>
+    /// Recomputes whether the wheel should be diverted and applies it on the serialised divert chain. A change never happens
+    /// while the wheel is turning: it waits for a pause of <see cref="RotationPauseMs"/>, or the 10 s cap. A forced call always
+    /// reaches the device (after a reconnect).
+    /// </summary>
+    private void EvaluateThumb(bool force, long since)
+    {
+        try
+        {
+            var wanted = ThumbWheelWanted();
+            lock (_gate)
+            {
+                if (_disposed) return;
+                _thumbRetry?.Cancel();
+                _thumbRetry = null;
+                if (!force && wanted == _thumbWanted) return;
+                if (_clock() - _lastRotation < RotationPauseMs && _clock() - since < HeldDivertWaitMs)
+                {
+                    var cts = _thumbRetry = new CancellationTokenSource();
+                    _ = Task.Delay(Math.Max(10, RotationPauseMs / 3), cts.Token).ContinueWith(t =>
+                    {
+                        try { if (!t.IsCanceled && !_disposed) EvaluateThumb(force, since); }
+                        catch (Exception ex) { SafeLog("thumb wheel divert retry failed", ex); }
+                    }, TaskScheduler.Default);
+                    return;
+                }
+                _thumbWanted = wanted;
+                _divertChain = _divertChain.ContinueWith(_ => SafeThumbDivert(wanted), TaskScheduler.Default).Unwrap();
+            }
+        }
+        catch (Exception ex) { SafeLog("thumb wheel divert decision failed", ex); }
+    }
+
+    private async Task SafeThumbDivert(bool wanted)
+    {
+        var ok = false;
+        try { ok = await _mouse.TrySetThumbWheelDivertedAsync(wanted, _cts.Token).ConfigureAwait(false); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { _log.Error("thumb wheel divert failed", ex); }
+        lock (_gate)
+        {
+            _thumbHid = wanted && ok;
+            if (wanted && !ok) _thumbWanted = false; // not diverted: the hook keeps the wheel, and the next change retries
+        }
+        if (wanted && !ok) _log.Info("thumb wheel divert not applied; using the mouse hook");
+    }
+
+    // ---- thumb wheel touch and tap (HID thread) ----
+
+    private void OnThumbTouch(object? sender, ThumbWheelEvent e)
+    {
+        try
+        {
+            if (_mouse.ThumbWheelTouchSupported == false) return;
+            var r = _touch.OnReport(e.Touch, e.Rotation, _clock());
+            if (r.Down) _queue.Post(HandleTouchDown);
+            if (r.Up) _queue.Post(() => HandleTouchUp(r.Tap));
+        }
+        catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
+    }
+
+    private void HandleTouchDown()
+    {
+        try
+        {
+            var action = ResolveAction(ThumbWheelTouchBindingId);
+            lock (_gate) _touchAction = action is ActionSpec.None or ActionSpec.TapHold ? null : action;
+            if (_touchAction is not { } a) return;
+            MaybeHaptic(a);
+            if (a is ActionSpec.ActionsRing) { RaiseRing(true); return; }
+            Run(a, true);
+        }
+        catch (Exception ex) { _log.Error("thumb wheel touch failed", ex); }
+    }
+
+    private void HandleTouchUp(bool tap)
+    {
+        try
+        {
+            ActionSpec? held;
+            lock (_gate) { held = _touchAction; _touchAction = null; }
+            if (held is ActionSpec.ActionsRing) RaiseRing(false);
+            else if (held is { } h) Run(h, false);
+            if (!tap) return;
+            var action = ResolveAction(ThumbWheelTapBindingId);
+            if (action is not ActionSpec.None) RunGestureAction(action);
+        }
+        catch (Exception ex) { _log.Error("thumb wheel tap failed", ex); }
     }
 
     // ---- dual thumb wheel ----
@@ -601,6 +747,7 @@ public sealed class SlenderEngine : IDisposable
                 return;
             }
             _secondAccumulator.Reset();
+            EvaluateThumb(force: false, _clock());
             PlayFlipHaptic();
             RaiseMode(new ThumbWheelModeEventArgs(app, now, second, !now ? "Side scroll" : second == ThumbWheelModes.Tabs ? "Tabs" : string.Empty));
         }
@@ -680,6 +827,12 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
+            if (connected) EvaluateThumb(force: true, _clock()); // a reconnect re-applies the mouse's own desired wheel state
+            else
+            {
+                lock (_gate) { _thumbHid = false; _thumbWanted = false; } // the hook is the fallback until the device is back
+                if (_touch.Reset()) _queue.Post(() => HandleTouchUp(false));
+            }
             if (!connected)
             {
                 AbortGesture(); // a held gesture button can never be released once the device is gone
@@ -741,12 +894,16 @@ public sealed class SlenderEngine : IDisposable
         }
         _mouse.ButtonChanged -= OnButton;
         _mouse.ConnectionChanged -= OnConnection;
-        _hook.HorizontalWheel -= OnWheel;
+        _hookSource.ThumbWheelRotated -= OnRotation;
+        _hidSource.ThumbWheelRotated -= OnRotation;
+        _mouse.ThumbWheelMoved -= OnThumbTouch;
+        _hookSource.Dispose();
+        _hidSource.Dispose();
         _hook.ButtonChanged -= OnHookButton;
         _hook.MouseMoved -= OnHookMove;
         AbortGesture();
         _foreground.Changed -= OnForegroundChanged;
-        lock (_gate) _foregroundDebounce?.Cancel();
+        lock (_gate) { _foregroundDebounce?.Cancel(); _thumbRetry?.Cancel(); }
         _cts.Cancel();
         _queue.Dispose();
         _tapHold.Dispose();
