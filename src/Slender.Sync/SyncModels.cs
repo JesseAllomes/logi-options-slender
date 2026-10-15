@@ -130,7 +130,19 @@ public sealed class SyncManifest
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string temp = path + ".tmp";
         File.WriteAllText(temp, ToJson());
-        File.Move(temp, path, overwrite: true);
+        // Antivirus, the indexer or a reader can hold either file for a moment; retry briefly (same as StatusJson).
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, path, overwrite: true);
+                break;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && attempt < 6)
+            {
+                Thread.Sleep(15 * attempt);
+            }
+        }
     }
 }
 
