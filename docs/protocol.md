@@ -183,3 +183,76 @@ Read-only probe 2026-10-15, Options+ running. Raw output: `.agent/probe/k860-rea
 - Thumb wheel binding (pseudo id 0xF150, `ActionSpec.Keys` only): `"Right|Left"` sends each chord per notch in its direction;
   a single chord is sent per notch right and the same chord with Shift toggled per notch left. Other actions fall back to the
   Excel column scroll / native pass-through.
+
+## 0x1C00 Persistent remappable action (ERGO K860)
+
+Stores a control's mapping **in the keyboard's own memory**, so it applies on any PC with no software. Sources: Solaar
+(github.com/pwr-Solaar/Solaar, master as fetched 2026-10-15), `lib/logitech_receiver/hidpp20.py` (H), `settings_templates.py` (S),
+`special_keys.py` (K). Function numbers below are the high nibble of the function byte (Solaar passes them as 0x00..0x50).
+
+| fn | Solaar | Request params | Reply | Solaar source |
+|----|--------|----------------|-------|---------------|
+| 0 | capabilities | none | `u16 BE` flags | H:789-792 |
+| 1 | count | none | `p[0]` = number of controls | H:1951-1953 |
+| 2 | getCidInfo | `[index, 0xFF]` | `p[0..1]` = CID (BE) | H:797-799 |
+| 3 | getMapping | `[cidHi, cidLo, 0xFF]` | `cid(2), host(1), action(1), param(2 BE), modifiers(1), status(1)` | H:800-811 |
+| 4 | setMapping | `[cidHi, cidLo, 0xFF, action, paramHi, paramLo, modifiers]` | ack (not inspected by Solaar) | H:677 |
+| 5 | reset | `[cidHi, cidLo, 0xFF]`, then re-read the mapping | ack | H:670-672 |
+
+- **Host index**: Solaar uses 0xFF ("current host") for every call, comment H:780 and S:1518.
+- **Action types** (K:1190-1201, `ACTIONID`): 0 Empty, 1 Key, 2 Mouse, 3 X displacement, 4 Y displacement, 5 V scroll, 6 H scroll,
+  7 Consumer, 8 Internal, 9 Power. For Key, param = USB HID keyboard usage (page 7); for Consumer, param = HID consumer usage
+  (page 0x0C), modifiers 0 (K:1248-1255, H:812-824).
+- **Modifier mask** (K:1188 `KEYMOD`): Ctrl 0x01, Shift 0x02, Alt 0x04, Meta/Win 0x08, right-hand 0x10/0x20/0x40/0x80.
+  Solaar only offers these combinations (K:1236-1247): none, Ctrl, Shift, Alt, Meta, Ctrl+Shift, Alt+Ctrl, Meta+Ctrl, Alt+Shift,
+  Meta+Shift, Meta+Alt. Three or four modifiers are **not exercised by Solaar**; Slender's encoder accepts them but they are unverified.
+- **Capabilities** (S:1553-1556): `flags & 0x0041 == 0x0041` = device does Key + Consumer codes (Craft, and the K860, flags 0x0141);
+  `flags & 0x0023 == 0x0023` = Key + Mouse + HScroll (M720). Other bits unknown.
+- **Restore default**: Solaar maps the pseudo value `KEYS_Default = 0x7FFFFFFF` to fn5 (H:669-672, K:1231). There is no "write the
+  default action" path; fn5 is the only way back to factory.
+- **Warnings** (S:1525-1527): the setting is persistent in the device ("so no need to persist it here"); Solaar warns that
+  remapping important keys can make the system unusable. Craft returns a value Solaar cannot classify, which Solaar treats as Default
+  (S:1573-1577, 1575). Solaar's `Empty` reply purges param and modifiers (H:823-824).
+- Solaar's `PersistentRemappableAction.action` has a duplicated `Internal` branch where `Power` was meant (H:651-653); harmless.
+
+### K860 read-only dump (2026-10-15)
+
+Raw: `.agent/probe/k860-1c00-20261015.txt` (`Slender.Probe --device k860`, fn0-3 only, Options+ running).
+Feature index 11. **Capabilities 0x0141** (Key + Consumer, no Mouse). **17 controls**. The reply layout matches Solaar byte for byte
+(`00E0 00 01 002B 08 00`: byte 2 is 0, not 0xFF, i.e. the host is not echoed). All status bytes 0. CIDs are the 0x1B04 CIDs, but the
+set differs: 0xD5 (213) and 0xE1 (225) are here only, and the Easy-Switch keys (209-211) are absent.
+
+| CID | dec | action read | meaning |
+|-----|-----|-------------|---------|
+| 0xC7 | 199 | Empty | brightness down (firmware native, no mapping) |
+| 0xC8 | 200 | Empty | brightness up |
+| 0xE0 | 224 | Key 0x2B + Meta | Win+Tab (task view) |
+| 0xE1 | 225 | Key 0x04 + Meta | Win+A |
+| 0x6E | 110 | Key 0x07 + Meta | Win+D (show desktop) |
+| 0xD5 | 213 | Consumer 0x0223 | AC Home |
+| 0xE4 | 228 | Consumer 0x00B6 | previous track |
+| 0xE5 | 229 | Consumer 0x00CD | play/pause |
+| 0xE6 | 230 | Consumer 0x00B5 | next track |
+| 0xE7 | 231 | Consumer 0x00E2 | mute |
+| 0xE8 | 232 | Consumer 0x00EA | volume down |
+| 0xE9 | 233 | Consumer 0x00E9 | volume up |
+| 0x101 | 257 | Empty | (switch apps, native) |
+| 0xBF | 191 | Key 0x46 | Print Screen (screen capture) |
+| 0x0A | 10 | Consumer 0x0192 | calculator |
+| 0xEA | 234 | Key 0x65 | Menu/Application (look up) |
+| 0x6F | 111 | Key 0x0F + Meta | Win+L (lock) |
+
+These look like factory defaults (standard Windows shortcuts and consumer usages), but nothing proves Options+ had not written
+any of them; they are stored in `OnboardSync.K860ObservedDefaults` as "observed", not "factory".
+
+### Slender implementation
+
+- Allowlist: `0x1C00` fn0-5 (`HidppAllowlist`). fn4 and fn5 write persistent keyboard memory and are reachable only through
+  `LogiKeyboard.SetOnboardActionAsync/SetOnboardChordAsync/ResetOnboardKeyAsync` (Key and Consumer actions only).
+- `OnboardChordEncoder`: "Ctrl+Shift+S" gives `01 00 16 03`, "Win+Shift+S" `01 00 16 0A`, media names give Consumer
+  (`MediaPlayPause` 0xCD, `MediaNext` 0xB5, `MediaPrevious` 0xB6, `MediaStop` 0xB7, `VolumeMute` 0xE2, `VolumeUp` 0xE9,
+  `VolumeDown` 0xEA, `Calculator` 0x192, ...). Rejected: modifiers only, two main keys, modifier + media key, unknown names.
+- `OnboardSync.Plan(desired, current, previouslyManaged, factoryDefaults)` is a pure diff; only changed keys produce an op.
+- **No write has been sent to a real keyboard.** Unverified on device: fn4 and fn5 reply shapes, whether 0xFF is accepted as host on
+  writes, whether a write takes effect immediately, three-modifier masks, and whether a Key remap of a CID that currently reads
+  Empty (brightness) is honoured.
