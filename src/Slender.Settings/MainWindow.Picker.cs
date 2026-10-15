@@ -21,6 +21,11 @@ public sealed partial class MainWindow
         new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("default", "Default"),
     ];
 
+    private static readonly PickerTab[] ThumbTabs =
+    [
+        new("twoway", "Two-way"), new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("default", "Default"),
+    ];
+
     private static readonly PickerTab[] KeyboardTabs =
     [
         new("keys", "Keys"), new("app", "App"), new("media", "Media"), new("default", "Default"),
@@ -49,11 +54,12 @@ public sealed partial class MainWindow
             _config.Update(c => ProfileOps.SetBinding(c, target, _kind, info.Id, action));
         }
 
-        PickerTab[] tabs = _kind == DeviceKind.Mouse ? MouseTabs : KeyboardTabs;
+        PickerTab[] tabs = _kind == DeviceKind.Mouse ? (info.Id == DeviceIds.ThumbWheelPseudoId ? ThumbTabs : MouseTabs) : KeyboardTabs;
         string initial = own switch
         {
             ActionSpec.Keys when _kind == DeviceKind.Keyboard && ActionCatalog.KeyboardAppOptions.Any(o => o.Action.Equals(own)) => "app",
             ActionSpec.Keys when _kind == DeviceKind.Keyboard && ActionCatalog.KeyboardMediaOptions.Any(o => o.Action.Equals(own)) => "media",
+            ActionSpec.Keys k when _kind == DeviceKind.Mouse && ActionCatalog.TryDecodePair(k.Chord, out _, out _) => "twoway",
             ActionSpec.Keys => "keys",
             ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
@@ -116,6 +122,8 @@ public sealed partial class MainWindow
         {
             case "keys":
                 return KeysRecorder(own as ActionSpec.Keys, commit, flyout);
+            case "twoway":
+                return OptionList(ActionCatalog.ThumbPairOptions, own, commit);
             case "mouse":
                 return OptionList(ActionCatalog.MouseOptions, own, commit);
             case "excel":

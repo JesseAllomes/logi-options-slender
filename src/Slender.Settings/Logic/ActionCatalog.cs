@@ -29,6 +29,68 @@ public static class ActionCatalog
         ["Ctrl+V"] = "Paste",
     };
 
+    private static readonly Dictionary<string, string> ChordWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["VolumeUp"] = "Volume up",
+        ["VolumeDown"] = "Volume down",
+        ["MediaNext"] = "Next track",
+        ["MediaPrevious"] = "Previous track",
+        ["MediaPlayPause"] = "Play / pause",
+        ["MediaStop"] = "Stop",
+        ["VolumeMute"] = "Mute",
+        ["Ctrl+Plus"] = "Zoom in",
+        ["Ctrl+Minus"] = "Zoom out",
+        ["Ctrl+PageDown"] = "Next tab",
+        ["Ctrl+PageUp"] = "Previous tab",
+        ["Right"] = "Right",
+        ["Left"] = "Left",
+    };
+
+    /// <summary>Two-direction thumb wheel encoding: "Right|Left" sends the first chord per notch right and the second per notch left.</summary>
+    public static string EncodePair(string right, string left) => right + "|" + left;
+
+    public static bool TryDecodePair(string chord, out string right, out string left)
+    {
+        right = left = string.Empty;
+        int bar = chord.IndexOf('|');
+        if (bar <= 0 || bar == chord.Length - 1 || chord.IndexOf('|', bar + 1) >= 0)
+        {
+            return false;
+        }
+
+        right = chord[..bar].Trim();
+        left = chord[(bar + 1)..].Trim();
+        return right.Length > 0 && left.Length > 0;
+    }
+
+    /// <summary>"Volume up / down" for VolumeUp|VolumeDown; falls back to "A / B" with readable names.</summary>
+    public static string PairName(string right, string left)
+    {
+        string a = ChordWords.GetValueOrDefault(right, right);
+        string b = ChordWords.GetValueOrDefault(left, left);
+        string[] wa = a.Split(' ');
+        string[] wb = b.Split(' ');
+        if (wa.Length == 2 && wb.Length == 2 && wa[0].Equals(wb[0], StringComparison.OrdinalIgnoreCase))
+        {
+            return wa[0] + " " + wa[1].ToLowerInvariant() + " / " + wb[1].ToLowerInvariant();
+        }
+
+        if (wa.Length == 2 && wb.Length == 2 && wa[1].Equals(wb[1], StringComparison.OrdinalIgnoreCase))
+        {
+            return wa[0] + " / " + wb[0].ToLowerInvariant() + " " + wa[1];
+        }
+
+        return a + " / " + b;
+    }
+
+    /// <summary>Keyboard chord for an Excel command when Excel has a plain shortcut for it, else null.</summary>
+    public static string? ExcelChord(ExcelCommand command) => command switch
+    {
+        ExcelCommand.NextSheet => "Ctrl+PageDown",
+        ExcelCommand.PreviousSheet => "Ctrl+PageUp",
+        _ => null,
+    };
+
     public static string ExcelName(ExcelCommand command) => command switch
     {
         ExcelCommand.NextSheet => "Next sheet",
@@ -50,8 +112,9 @@ public static class ActionCatalog
     /// <summary>The label text for an action.</summary>
     public static ActionLabel Describe(ActionSpec action) => action switch
     {
+        ActionSpec.Keys keys when TryDecodePair(keys.Chord, out string r, out string l) => new ActionLabel(PairName(r, l), []),
         ActionSpec.Keys keys => new ActionLabel(ChordNames.GetValueOrDefault(keys.Chord, string.Empty), ChordParts(keys.Chord)),
-        ActionSpec.Excel excel => new ActionLabel(ExcelName(excel.Command), []),
+        ActionSpec.Excel excel => new ActionLabel(ExcelName(excel.Command), ExcelChord(excel.Command) is { } c ? ChordParts(c) : []),
         ActionSpec.MouseButton mouse => new ActionLabel(MouseName(mouse.Button), []),
         ActionSpec.ActionsRing => new ActionLabel("Actions Ring", []),
         _ => new ActionLabel("Not assigned", []),
@@ -91,6 +154,15 @@ public static class ActionCatalog
         new("Show Actions Ring", new ActionSpec.ActionsRing()),
     ];
 
+    /// <summary>Thumb wheel "Two-way" tab: one pick covers both directions.</summary>
+    public static IReadOnlyList<ActionOption> ThumbPairOptions { get; } =
+    [
+        new("Volume up / down", new ActionSpec.Keys(EncodePair("VolumeUp", "VolumeDown"))),
+        new("Next / previous track", new ActionSpec.Keys(EncodePair("MediaNext", "MediaPrevious"))),
+        new("Zoom in / out", new ActionSpec.Keys(EncodePair("Ctrl+Plus", "Ctrl+Minus"))),
+        new("Next / previous tab", new ActionSpec.Keys(EncodePair("Ctrl+PageDown", "Ctrl+PageUp"))),
+    ];
+
     /// <summary>Keyboard "App" tab: Windows shortcuts that open or switch apps.</summary>
     public static IReadOnlyList<ActionOption> KeyboardAppOptions { get; } =
     [
@@ -106,6 +178,7 @@ public static class ActionCatalog
     public static IReadOnlyList<ActionOption> KeyboardMediaOptions { get; } =
     [
         new("Play / pause", new ActionSpec.Keys("MediaPlayPause")),
+        new("Stop", new ActionSpec.Keys("MediaStop")),
         new("Next track", new ActionSpec.Keys("MediaNext")),
         new("Previous track", new ActionSpec.Keys("MediaPrevious")),
         new("Mute", new ActionSpec.Keys("VolumeMute")),

@@ -5,8 +5,9 @@ namespace Slender.Settings;
 
 public static class Program
 {
-    public const string MutexName = @"Local\Slender.Settings";
-    public const string ShowEventName = @"Local\Slender.Settings.Show";
+    private static readonly string Suffix = Environment.GetEnvironmentVariable("SLENDER_CONFIG_DIR") is { Length: > 0 } ? ".Test" : string.Empty;
+    public static readonly string MutexName = @"Local\Slender.Settings" + Suffix;
+    public static readonly string ShowEventName = @"Local\Slender.Settings.Show" + Suffix;
 
     // Held for the life of the process; the OS releases them on exit.
     private static Mutex? _mutex;

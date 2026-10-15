@@ -29,7 +29,10 @@ public sealed partial class MainWindow : Window
         General,
     }
 
-    private static readonly string UiPath = Path.Combine(SlenderPaths.LocalDirectory, "settings-ui.json");
+    /// <summary>Test hook: SLENDER_CONFIG_DIR redirects config.json and window state to another folder.</summary>
+    private static readonly string? ConfigDirOverride = Environment.GetEnvironmentVariable("SLENDER_CONFIG_DIR") is { Length: > 0 } d ? d : null;
+
+    private static readonly string UiPath = Path.Combine(ConfigDirOverride ?? SlenderPaths.LocalDirectory, "settings-ui.json");
 
     private readonly UiState _ui = UiState.Load(UiPath);
     private readonly ConfigService _config;
@@ -53,7 +56,7 @@ public sealed partial class MainWindow : Window
         _kind = _ui.Device == DeviceIds.Keyboard ? DeviceKind.Keyboard : DeviceKind.Mouse;
         _app = _ui.App;
 
-        _config = new ConfigService(new JsonConfigStore(), DispatcherQueue);
+        _config = new ConfigService(ConfigDirOverride is null ? new JsonConfigStore() : new JsonConfigStore(ConfigDirOverride), DispatcherQueue);
         _status = new StatusMonitor(DispatcherQueue);
         _icons = new IconService(_assets.IconsDirectory);
 
@@ -82,9 +85,37 @@ public sealed partial class MainWindow : Window
             _app = null;
         }
 
+        if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_PAGE") is { } start)
+        {
+            _page = start.ToLowerInvariant() switch { "pointer" => Page.Pointer, "haptics" => Page.Haptics, "general" => Page.General, _ => _page }; // test hook
+        }
+
         _ready = true;
         RebuildAll();
         FocusSelectedHotspot(keyboard: false); // no focus ring until the user presses a key
+        if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_SHOT") is { Length: > 0 } shot)
+        {
+            await SaveSnapshotAsync(shot); // test hook: renders this window's own XAML tree to a PNG, then closes
+        }
+    }
+
+    private async Task SaveSnapshotAsync(string path)
+    {
+        await Task.Delay(2500);
+        var target = new Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap();
+        await target.RenderAsync(Root);
+        Windows.Storage.Streams.IBuffer pixels = await target.GetPixelsAsync();
+        using var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+        Windows.Graphics.Imaging.BitmapEncoder encoder = await Windows.Graphics.Imaging.BitmapEncoder.CreateAsync(Windows.Graphics.Imaging.BitmapEncoder.PngEncoderId, stream);
+        encoder.SetPixelData(Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8, Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied, (uint)target.PixelWidth, (uint)target.PixelHeight, 96, 96, System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions.ToArray(pixels));
+        await encoder.FlushAsync();
+        stream.Seek(0);
+        byte[] png = new byte[stream.Size];
+        using var reader = new Windows.Storage.Streams.DataReader(stream);
+        await reader.LoadAsync((uint)stream.Size);
+        reader.ReadBytes(png);
+        await File.WriteAllBytesAsync(path, png);
+        Close();
     }
 
     private void SetUpWindow()

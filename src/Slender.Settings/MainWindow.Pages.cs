@@ -119,31 +119,65 @@ public sealed partial class MainWindow
         SlenderConfig c = _config.Config;
         AddSection("MX MASTER 4");
 
-        bool custom = c.Pointer.Dpi is not null;
-        Slider dpi = PageSlider("Pointer speed", 400, 8000, 100, c.Pointer.Dpi ?? 1600,
-            v => _config.Update(x => x with { Pointer = x.Pointer with { Dpi = (int)v } }), v => $"{(int)v} DPI", out TextBlock dpiText);
-        dpi.IsEnabled = custom;
-        dpiText.Opacity = custom ? 1 : 0.5;
-        ToggleSwitch dpiToggle = PageToggle("Set pointer speed", custom, on =>
-        {
-            dpi.IsEnabled = on;
-            dpiText.Opacity = on ? 1 : 0.5;
-            _config.Update(x => x with { Pointer = x.Pointer with { Dpi = on ? (int)dpi.Value : null } });
-        });
-        AddRow("Set the pointer speed", "Leave it off to keep the speed the mouse already has.", dpiToggle);
-        AddRow("Pointer speed", "Dots per inch.", WithReadout(dpi, dpiText));
+        void Edit(Func<PointerSettings, PointerSettings> f) => _config.Update(x => x with { Pointer = f(x.Pointer) });
+
+        Slider threshold = PageSlider("Sensitivity", PointerMapping.ThresholdMin, PointerMapping.ThresholdMax, 1, c.Pointer.SmartShiftThreshold,
+            v => Edit(p => p with { SmartShiftThreshold = PointerMapping.ClampThreshold(v) }), v => $"{PointerMapping.ClampThreshold(v)}", out TextBlock thresholdText);
+        threshold.IsEnabled = c.Pointer.SmartShiftEnabled;
+        thresholdText.Opacity = c.Pointer.SmartShiftEnabled ? 1 : 0.5;
 
         AddRow("SmartShift", "Scroll wheel switches between ratchet and free-spin by itself when you spin it fast.",
-            PageToggle("SmartShift", c.Pointer.SmartShiftEnabled, on => _config.Update(x => x with { Pointer = x.Pointer with { SmartShiftEnabled = on } })));
+            PageToggle("SmartShift", c.Pointer.SmartShiftEnabled, on =>
+            {
+                threshold.IsEnabled = on;
+                thresholdText.Opacity = on ? 1 : 0.5;
+                Edit(p => p with { SmartShiftEnabled = on });
+            }));
+        AddRow("Sensitivity", "Lower switches to free-spin sooner.", WithReadout(threshold, thresholdText));
 
-        Slider threshold = PageSlider("SmartShift sensitivity", 1, 50, 1, c.Pointer.SmartShiftThreshold,
-            v => _config.Update(x => x with { Pointer = x.Pointer with { SmartShiftThreshold = (int)v } }), v => $"{(int)v}", out TextBlock thresholdText);
-        AddRow("SmartShift sensitivity", "Lower switches to free-spin sooner.", WithReadout(threshold, thresholdText));
+        AddRow("Smooth scrolling", "Smoother scrolling in browsers and Office; older apps still scroll per notch",
+            PageToggle("Smooth scrolling", c.Pointer.SmoothScroll, on => Edit(p => p with { SmoothScroll = on })));
+        AddRow("Invert thumb wheel", "Roll the thumb wheel the other way to scroll right.",
+            PageToggle("Invert thumb wheel", c.Pointer.InvertThumbWheel, on => Edit(p => p with { InvertThumbWheel = on })));
+        AddRow("Invert main wheel", "Spin the wheel toward you to scroll up.",
+            PageToggle("Invert main wheel", c.Pointer.InvertWheel, on => Edit(p => p with { InvertWheel = on })));
 
-        AddRow("Reverse the scroll wheel", "Spin the wheel toward you to scroll up.",
-            PageToggle("Reverse the scroll wheel", c.Pointer.InvertWheel, on => _config.Update(x => x with { Pointer = x.Pointer with { InvertWheel = on } })));
-        AddRow("Reverse the thumb wheel", "Roll the thumb wheel the other way to scroll right.",
-            PageToggle("Reverse the thumb wheel", c.Pointer.InvertThumbWheel, on => _config.Update(x => x with { Pointer = x.Pointer with { InvertThumbWheel = on } })));
+        Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? PointerMapping.DpiShown,
+            v => { }, v => PointerMapping.DpiText(PointerMapping.SnapDpi(v)), out TextBlock dpiText);
+        dpiText.Width = 84;
+        bool setting = false;
+        void ShowDefault(bool isDefault)
+        {
+            dpiText.Text = isDefault ? "Default" : PointerMapping.DpiText(PointerMapping.SnapDpi(dpi.Value));
+            dpiText.Opacity = isDefault ? 0.6 : 1;
+        }
+
+        ShowDefault(c.Pointer.Dpi is null);
+        dpi.ValueChanged += (_, e) =>
+        {
+            if (setting)
+            {
+                return;
+            }
+
+            int v = PointerMapping.SnapDpi(e.NewValue);
+            ShowDefault(false);
+            Edit(p => p with { Dpi = v });
+        };
+        var reset = new Button { Content = "Default", Style = Ui.Res<Style>("QuietButtonStyle") };
+        reset.Click += (_, _) =>
+        {
+            setting = true;
+            dpi.Value = PointerMapping.DpiShown;
+            setting = false;
+            ShowDefault(true);
+            Edit(p => p with { Dpi = null });
+        };
+        var dpiRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        dpiRow.Children.Add(dpi);
+        dpiRow.Children.Add(dpiText);
+        dpiRow.Children.Add(reset);
+        AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
 
         AddSection("EXCEL");
         AddRow("Thumb wheel scrolls columns", "In Excel the thumb wheel moves by whole columns instead of pixels.",
