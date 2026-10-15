@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=46 -->
+<!-- drainclamp-build: state; schema=1; generation=48 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -14,7 +14,7 @@ Modules -> responsibility -> entry:
 - docs/: protocol.md (all device facts), memory.md (audit), settings.md, sync.md, install.md, switch-over.md, baseline.md
 Assets: device renders/hotspots copied at runtime from C:/ProgramData/LogiOptionsPlus/depots to %LOCALAPPDATA%/Slender/assets; never committed.
 Device facts: survive power cycle = SmartShift threshold, haptics; NOT = DPI, thumb invert, hi-res, diverts. Options+ leaves diverts behind when its agent stops (Easy-Switch reconnect or Slender connect clears them).
-Machine state now: Options+ service STOPPED (until reboot); old Slender build (main Release bin, pid 15720) still running; LogiPluginService running (~180-700 MB). Leftover locked worktree folders: logi-options-slender-m9, slender-wt-tray, slender-wt-settings (delete when unlocked). Branch wt-mem kept (audit experiments).
+Machine state now: Options+ service STOPPED (until reboot); old Slender build (main Release bin, pid 15720) still running; LogiPluginService running (~180-700 MB). Worktrees: only .worktrees/ inside the repo; all merged ones removed 2026-10-15. Branch wt-mem kept (audit experiments).
 <!-- /DC:ARCH -->
 
 <!-- DC:DECISIONS -->
@@ -46,6 +46,7 @@ Options+ is disabled, not uninstalled; keep it installed for firmware updates (u
 New scope (user 2026-10-15): 15% mouse charge alert, open custom apps from a key, turn a key off, migrate all Options+ profile settings
 Options+ import -> one-time, read-only (copy settings.db first, never write Options+ files); unmapped items listed in a report, never silently dropped (agent default)
 Actions Ring -> own ring drawn by the AOT tray; styles Bezel, Compass, Keypad (round-1 prototypes 1-3) switchable in Settings with colour, opacity and layout options; folder slots open nested apps/web pages/actions like Options+; feature parity researched before build (user 2026-10-15)
+Builder worktrees -> only under logi-options-slender/.worktrees/<name> (ignored via .git/info/exclude); remove each once merged; nothing else in the personal folder (user 2026-10-15)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
