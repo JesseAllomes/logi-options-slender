@@ -80,6 +80,13 @@ public abstract record ActionSpec
     /// <summary>Mouse button: "Left", "Right", "Middle", "Back", "Forward".</summary>
     public sealed record MouseButton(string Button) : ActionSpec;
     public sealed record ActionsRing : ActionSpec;
+    /// <summary>
+    /// Opens something via the shell: an .exe path, a file or folder, a URL, or a Store app as "shell:AppsFolder\{AUMID}".
+    /// Arguments only apply to executables.
+    /// </summary>
+    public sealed record Launch(string Target, string? Arguments = null) : ActionSpec;
+    /// <summary>Turns the control off: the press is swallowed and nothing runs (unlike None, which passes the native input through).</summary>
+    public sealed record Disabled : ActionSpec;
 }
 
 /// <summary>Executes actions in the foreground app.</summary>
@@ -119,6 +126,9 @@ public sealed record PointerSettings(
 
 public sealed record KeyboardSettings(bool FnLock = false);
 
+/// <summary>Low-battery notification: once per discharge when a device drops to the threshold while not charging; re-armed by charging or rising above it.</summary>
+public sealed record BatteryAlertSettings(bool Enabled = true, int MouseThresholdPercent = 15, int KeyboardThresholdPercent = 10);
+
 /// <summary>Persisted at %APPDATA%\Slender\config.json. Schema changes bump Version (2 adds Pointer, Keyboard, KeyBindings, DisplayName, ExePath).</summary>
 public sealed record SlenderConfig(
     int Version,
@@ -131,6 +141,7 @@ public sealed record SlenderConfig(
 
     public PointerSettings Pointer { get; init; } = new();
     public KeyboardSettings Keyboard { get; init; } = new();
+    public BatteryAlertSettings BatteryAlerts { get; init; } = new();
 
     public static SlenderConfig Default { get; } = new(
         CurrentVersion,
