@@ -169,6 +169,21 @@ public sealed partial class MainWindow
         {
             StageCanvas.Children.Add(item.Hotspot!);
         }
+
+        // Gesture swipe rows: one strip of labels along the bottom (no hotspots on the render). Click is the gesture button's own label.
+        double stripWidth = Math.Min(w - 36, 4 * 190 + 3 * 8);
+        double cell = (stripWidth - 3 * 8) / 4;
+        double stripLeft = (w - stripWidth) / 2;
+        IReadOnlyList<ControlInfo> swipes = ControlCatalog.SwipeControls;
+        for (int i = 0; i < swipes.Count; i++)
+        {
+            var swipeItem = new StageItem { Info = swipes[i], LabelWidth = cell };
+            swipeItem.Label = MakeLabelButton(swipeItem, cell);
+            Canvas.SetLeft(swipeItem.Label, stripLeft + i * (cell + 8));
+            Canvas.SetTop(swipeItem.Label, h - LabelHeight - 6);
+            StageCanvas.Children.Add(swipeItem.Label);
+            _items[swipes[i].Id] = swipeItem;
+        }
     }
 
     private void PlaceLabelColumn(List<(Hotspot Spot, Point Pos)> column, bool labelOnLeft, double edge, double width, double minY, double maxY)

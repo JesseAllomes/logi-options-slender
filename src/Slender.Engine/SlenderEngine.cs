@@ -21,6 +21,7 @@ public sealed class SlenderEngine : IDisposable
     private readonly IWorkQueue _queue;
     private readonly Func<long> _clock;
     private readonly ColumnScrollAccumulator _accumulator = new();
+    private readonly GestureTracker _gesture = new();
     private readonly object _gate = new();
     private readonly Dictionary<ushort, ActionSpec> _active = new(); // HID++ path: action used at press, replayed on release
     private readonly Dictionary<ushort, ActionSpec> _hookActive = new(); // hook path: same, for swallowed Middle/Back/Forward
@@ -28,6 +29,7 @@ public sealed class SlenderEngine : IDisposable
     private volatile SlenderConfig _config;
     private IReadOnlyList<ushort> _diverted = [];
     private Task _divertChain = Task.CompletedTask;
+    private volatile bool _gesturePlainClick; // this press had no swipes configured: the legacy press/release path
     private bool _started, _disposed;
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
@@ -65,6 +67,7 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ConnectionChanged += OnConnection;
         _hook.HorizontalWheel += OnWheel;
         _hook.ButtonChanged += OnHookButton;
+        _hook.MouseMoved += OnHookMove;
         try { _hook.Start(); }
         catch (Exception ex) { _log.Error("mouse hook failed to start; thumb wheel will not scroll Excel", ex); }
         try { _ = ObserveAsync(_mouse.StartAsync(_cts.Token), "mouse start"); }
@@ -91,6 +94,7 @@ public sealed class SlenderEngine : IDisposable
             .SelectMany(p => p.Bindings)
             .Where(kv => kv.Value is not null and not ActionSpec.None && IsHidppControl(kv.Key))
             .Select(kv => kv.Key)
+            .Concat(config.Profiles.Where(p => p.GestureSwipes.Values.Any(a => a is not ActionSpec.None)).Select(_ => ControlId.Gesture))
             .Distinct()
             .Order()
             .ToList();
@@ -127,6 +131,7 @@ public sealed class SlenderEngine : IDisposable
     private void OnButton(object? sender, ButtonEvent e)
     {
         if (!IsHidppControl(e.ControlId)) return; // Middle/Back/Forward come from the hook; ignore stale diverts
+        if (e.ControlId == ControlId.Gesture && OnGestureButton(e)) return;
         try { _queue.Post(() => HandleButton(e)); }
         catch (Exception ex) { SafeLog("button dispatch failed", ex); }
     }
@@ -184,6 +189,96 @@ public sealed class SlenderEngine : IDisposable
     {
         try { ActionsRingRequested?.Invoke(this, EventArgs.Empty); }
         catch (Exception ex) { _log.Error("ActionsRingRequested handler failed", ex); }
+    }
+
+    // ---- gesture button (HID thread: press/release; hook thread: moves) ----
+
+    /// <summary>Returns true if the gesture path handled the event; false = fall back to the plain press/release binding.</summary>
+    private bool OnGestureButton(ButtonEvent e)
+    {
+        try
+        {
+            if (e.Pressed)
+            {
+                _gesturePlainClick = !AnySwipeBound();
+                if (_gesturePlainClick) return false;
+                _gesture.Begin(_clock());
+                _hook.SetMoveCapture(true);
+                return true;
+            }
+            if (_gesturePlainClick) { _gesturePlainClick = false; return false; }
+            _hook.SetMoveCapture(false); // always, even if the gesture already timed out
+            var (live, direction) = _gesture.End(_clock());
+            if (live) _queue.Post(() => RunGesture(direction));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AbortGesture();
+            SafeLog("gesture button handling failed", ex);
+            return true;
+        }
+    }
+
+    private void OnHookMove(object? sender, HookMoveEventArgs e)
+    {
+        try
+        {
+            if (_gesture.Add(e.Dx, e.Dy, _clock())) e.Handled = true;
+            else _hook.SetMoveCapture(false); // no live gesture (timed out or cancelled): stop capturing, never swallow
+        }
+        catch (Exception ex) { SafeLog("hook move handler failed", ex); }
+    }
+
+    private void AbortGesture()
+    {
+        _gesture.Cancel();
+        try { _hook.SetMoveCapture(false); } catch { }
+    }
+
+    private bool AnySwipeBound()
+    {
+        foreach (var d in Enum.GetValues<GestureDirection>())
+            if (ResolveSwipe(d) is not ActionSpec.None) return true;
+        return false;
+    }
+
+    private ActionSpec ResolveSwipe(GestureDirection direction)
+    {
+        var cfg = _config;
+        var profile = ProfileResolver.Resolve(cfg, _foreground.ProcessName);
+        // Like Bindings: an explicit None in an app profile means no action and wins over the default profile.
+        if (profile.GestureSwipes.TryGetValue(direction, out var own) && own is not null) return own;
+        if (ProfileResolver.Default(cfg).GestureSwipes.TryGetValue(direction, out var d) && d is not null) return d;
+        return new ActionSpec.None();
+    }
+
+    private void RunGesture(GestureDirection? direction)
+    {
+        try
+        {
+            if (direction is { } dir)
+            {
+                var swipe = ResolveSwipe(dir);
+                if (swipe is ActionSpec.None) return;
+                RunGestureAction(swipe);
+            }
+            else
+            {
+                var click = ResolveAction(ControlId.Gesture);
+                if (click is ActionSpec.None) return;
+                RunGestureAction(click);
+            }
+        }
+        catch (Exception ex) { _log.Error("gesture action failed", ex); }
+    }
+
+    private void RunGestureAction(ActionSpec action)
+    {
+        MaybeHaptic(action);
+        if (action is ActionSpec.ActionsRing) { RaiseRing(); return; }
+        _executor.Execute(action, true);
+        _executor.Execute(action, false);
     }
 
     // ---- hook buttons (hook thread: O(1), never throws) ----
@@ -309,6 +404,7 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
+            if (!connected) AbortGesture(); // a held gesture button can never be released once the device is gone
             PublishStatus(connected);
             if (connected) _ = FetchBatteryAsync();
         }
@@ -348,6 +444,8 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ConnectionChanged -= OnConnection;
         _hook.HorizontalWheel -= OnWheel;
         _hook.ButtonChanged -= OnHookButton;
+        _hook.MouseMoved -= OnHookMove;
+        AbortGesture();
         _cts.Cancel();
         _queue.Dispose();
         _cts.Dispose();

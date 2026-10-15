@@ -8,6 +8,17 @@ public static class ProfileOps
     public static IReadOnlyDictionary<ushort, ActionSpec> Map(Profile profile, DeviceKind kind) =>
         kind == DeviceKind.Mouse ? profile.Bindings : profile.KeyBindings;
 
+    /// <summary>This profile's own entry for a control, including gesture swipes (pseudo ids); null when it has none.</summary>
+    private static ActionSpec? Lookup(Profile profile, DeviceKind kind, ushort id)
+    {
+        if (kind == DeviceKind.Mouse && DeviceIds.TryGetSwipe(id, out GestureDirection d))
+        {
+            return profile.GestureSwipes.TryGetValue(d, out ActionSpec? s) ? s : null;
+        }
+
+        return Map(profile, kind).TryGetValue(id, out ActionSpec? a) ? a : null;
+    }
+
     public static Profile? Find(SlenderConfig config, string? appProcess) =>
         config.Profiles.FirstOrDefault(p => string.Equals(p.AppProcess, appProcess, StringComparison.OrdinalIgnoreCase));
 
@@ -15,7 +26,7 @@ public static class ProfileOps
     public static ActionSpec? Own(SlenderConfig config, string? appProcess, DeviceKind kind, ushort id)
     {
         Profile? p = Find(config, appProcess);
-        return p is not null && Map(p, kind).TryGetValue(id, out ActionSpec? a) && a is not ActionSpec.None ? a : null;
+        return p is not null && Lookup(p, kind, id) is { } a && a is not ActionSpec.None ? a : null;
     }
 
     /// <summary>
@@ -30,7 +41,7 @@ public static class ProfileOps
         }
 
         Profile? p = Find(config, appProcess);
-        return p is not null && Map(p, kind).TryGetValue(id, out ActionSpec? a) && a is ActionSpec.None;
+        return p is not null && Lookup(p, kind, id) is ActionSpec.None;
     }
 
     /// <summary>What the control does in this app. Inherited is true when the app has no binding of its own. Explicit pass-through gives no action.</summary>
@@ -66,7 +77,8 @@ public static class ProfileOps
 
         HashSet<ushort> known = ControlCatalog.For(kind).Select(c => c.Id).ToHashSet();
         // In an app profile an explicit None is a change from All apps (pass through); in All apps it is just unassigned.
-        return Map(p, kind).Count(kv => known.Contains(kv.Key) && (kv.Value is not ActionSpec.None || appProcess is not null));
+        int swipes = kind == DeviceKind.Mouse ? p.GestureSwipes.Count(kv => kv.Value is not ActionSpec.None || appProcess is not null) : 0;
+        return swipes + Map(p, kind).Count(kv => known.Contains(kv.Key) && (kv.Value is not ActionSpec.None || appProcess is not null));
     }
 
     /// <summary>Sets (or, with a null action, clears) one binding. Creates the profile if it does not exist.</summary>
@@ -84,6 +96,22 @@ public static class ProfileOps
         else
         {
             profile = profiles[index];
+        }
+
+        if (kind == DeviceKind.Mouse && DeviceIds.TryGetSwipe(id, out GestureDirection direction))
+        {
+            var swipes = new Dictionary<GestureDirection, ActionSpec>(profile.GestureSwipes);
+            if (action is null)
+            {
+                swipes.Remove(direction);
+            }
+            else
+            {
+                swipes[direction] = action;
+            }
+
+            profiles[index] = profile with { GestureSwipes = swipes };
+            return config with { Profiles = profiles };
         }
 
         var map = new Dictionary<ushort, ActionSpec>(Map(profile, kind));

@@ -46,6 +46,17 @@ internal sealed class FakeHook : IInputHook
     public bool Started;
     public void Start() => Started = true;
     public void Dispose() { }
+    public event EventHandler<HookMoveEventArgs>? MouseMoved;
+    public bool Capturing;
+    public void SetMoveCapture(bool on) => Capturing = on;
+    /// <summary>Raises a move like the real hook: only while capturing. Returns whether it was swallowed.</summary>
+    public bool Move(int dx, int dy)
+    {
+        if (!Capturing) return false;
+        var a = new HookMoveEventArgs(dx, dy);
+        MouseMoved?.Invoke(this, a);
+        return a.Handled;
+    }
     public HookWheelEventArgs Wheel(int delta)
     {
         var a = new HookWheelEventArgs(delta);

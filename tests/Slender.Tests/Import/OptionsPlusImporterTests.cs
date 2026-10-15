@@ -103,15 +103,36 @@ public class OptionsPlusImporterTests
     }
 
     [Fact]
-    public void GestureClickIsMappedAndSwipesAreReported()
+    public void GestureClickIsMapped()
     {
         Assert.Equal(new ActionSpec.Launch("snippingtool.exe"), Default.Bindings[ControlId.Gesture]);
-        string swipes = Assert.Single(Notes(ImportNoteKind.Unmapped), n => n.Contains("All apps") && n.Contains("c195") && n.Contains("swipe"));
-        Assert.Contains("custom_gesture", swipes);
-        Assert.Contains("down: launch Explorer.exe", swipes);
-        Assert.Contains("left: Ctrl+Win+Left", swipes.Replace("Win+Ctrl", "Ctrl+Win"));
-        Assert.Contains("up: Win+Tab", swipes);
         Assert.Contains(Notes(ImportNoteKind.Approximated), n => n.Contains("snippingtool.exe"));
+        Assert.DoesNotContain(Notes(ImportNoteKind.Unmapped), n => n.Contains("swipe actions were not imported"));
+    }
+
+    [Fact]
+    public void DefaultGestureSwipesAreImported()
+    {
+        var s = Default.GestureSwipes;
+        Assert.Equal(4, s.Count);
+        Assert.Equal(new ActionSpec.Keys("Win+Tab"), s[GestureDirection.Up]);
+        Assert.Equal(new ActionSpec.Launch("Explorer.exe"), s[GestureDirection.Down]);
+        Assert.IsType<ActionSpec.Keys>(s[GestureDirection.Left]);
+        Assert.IsType<ActionSpec.Keys>(s[GestureDirection.Right]);
+        Assert.Contains("Left", ((ActionSpec.Keys)s[GestureDirection.Left]).Chord);
+        Assert.Contains("Right", ((ActionSpec.Keys)s[GestureDirection.Right]).Chord);
+    }
+
+    [Fact]
+    public void TeamsGesturePresetOnlyHoldsWhatDiffersFromDefault()
+    {
+        var teams = Result.Config.Profiles.Single(p => p.AppProcess is not null && p.AppProcess.Contains("teams", StringComparison.OrdinalIgnoreCase));
+        // The Start menu (a bare Win key) cannot be sent as a chord: reported, and the default swipe is switched off here.
+        Assert.Equal(new ActionSpec.None(), teams.GestureSwipes[GestureDirection.Up]);
+        Assert.Contains(Notes(ImportNoteKind.Unmapped), n => n.Contains("Teams") && n.Contains("swipe up"));
+        Assert.Equal(new ActionSpec.Keys("Win+D"), teams.GestureSwipes[GestureDirection.Down]);
+        Assert.False(teams.GestureSwipes.ContainsKey(GestureDirection.Left)); // same as default: inherited
+        Assert.False(teams.GestureSwipes.ContainsKey(GestureDirection.Right));
     }
 
     [Fact]

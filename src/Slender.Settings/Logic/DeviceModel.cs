@@ -1,3 +1,4 @@
+using Slender.Engine;
 using Slender.Hidpp;
 
 namespace Slender.Settings.Logic;
@@ -18,6 +19,17 @@ public static class DeviceIds
 
     /// <summary>The thumb wheel is not a HID++ control id; Slender stores its binding under this pseudo id.</summary>
     public const ushort ThumbWheelPseudoId = 0xF150;
+
+    /// <summary>Gesture swipes are not controls either: pseudo ids 0xF1C0 + (int)GestureDirection, stored in Profile.GestureSwipes.</summary>
+    public const ushort SwipePseudoIdBase = 0xF1C0;
+
+    public static ushort SwipeId(GestureDirection direction) => (ushort)(SwipePseudoIdBase + (int)direction);
+
+    public static bool TryGetSwipe(ushort id, out GestureDirection direction)
+    {
+        direction = (GestureDirection)(id - SwipePseudoIdBase);
+        return id >= SwipePseudoIdBase && id < SwipePseudoIdBase + 4;
+    }
 }
 
 /// <summary>One assignable control: a mouse button, the thumb wheel or a keyboard key.</summary>
@@ -39,9 +51,16 @@ public static class ControlCatalog
         new(DeviceIds.ThumbWheelPseudoId, "Thumb wheel", "Scroll sideways"),
         new(ControlId.Forward, "Forward", "Forward"),
         new(ControlId.Back, "Back", "Back"),
-        new(ControlId.Gesture, "Gesture button", "Not assigned"),
+        new(ControlId.Gesture, "Gesture click", "Not assigned"),
+        new(DeviceIds.SwipeId(GestureDirection.Up), "Gesture swipe up", "Not assigned"),
+        new(DeviceIds.SwipeId(GestureDirection.Down), "Gesture swipe down", "Not assigned"),
+        new(DeviceIds.SwipeId(GestureDirection.Left), "Gesture swipe left", "Not assigned"),
+        new(DeviceIds.SwipeId(GestureDirection.Right), "Gesture swipe right", "Not assigned"),
         new(ControlId.SensePanel, "Sense Panel", "Not assigned"),
     ];
+
+    /// <summary>The four swipe rows, in Up, Down, Left, Right order.</summary>
+    public static IReadOnlyList<ControlInfo> SwipeControls => MouseControls.Where(c => DeviceIds.TryGetSwipe(c.Id, out _)).ToList();
 
     public static IReadOnlyList<ControlInfo> KeyboardControls { get; } =
     [
