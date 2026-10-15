@@ -21,7 +21,7 @@ public class RingSessionTests
 
         public Rec(IReadOnlyList<RingSlot>? slots = null, long now = 0)
         {
-            Session = new RingSession(slots ?? RingDefaults.Slots, Metrics, now);
+            Session = new RingSession(slots ?? RingDefaults.Slots(), Metrics, now);
             Session.Closed += (_, r) => Closed.Add(r);
             Session.ActionRequested += (_, a) => Ran.Add(a);
             Session.Adjust += (_, a) => Adjusted.Add(a);

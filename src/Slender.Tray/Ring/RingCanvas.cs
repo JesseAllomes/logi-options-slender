@@ -329,7 +329,7 @@ internal sealed unsafe class RingCanvas : IDisposable
     /// <summary>Text with a dark outline so it stays readable over any window (the compass labels).</summary>
     public void HaloText(string text, RingFont font, double size, double x, double cy, RingColor color, RingColor halo, int align = 0, double maxWidth = 240)
     {
-        ReadOnlySpan<(double, double)> offsets = [(-1.5, 0), (1.5, 0), (0, -1.5), (0, 1.5), (-1.1, -1.1), (1.1, -1.1), (-1.1, 1.1), (1.1, 1.1)];
+        ReadOnlySpan<(double, double)> offsets = [(-1, 0), (1, 0), (0, -1), (0, 1), (-0.8, -0.8), (0.8, -0.8), (-0.8, 0.8), (0.8, 0.8)];
         foreach (var (dx, dy) in offsets) Text(text, font, size, x + dx, cy + dy, halo, align, maxWidth);
         Text(text, font, size, x, cy, color, align, maxWidth);
     }

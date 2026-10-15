@@ -31,6 +31,23 @@ public sealed partial class MainWindow
         new("keys", "Keys"), new("app", "App"), new("media", "Media"), new("more", "More"), new("default", "Default"),
     ];
 
+    /// <summary>What one open picker offers: its tabs, what is chosen now, and where a choice goes.</summary>
+    private sealed record PickerSpec(
+        string Header, PickerTab[] Tabs, string Initial, ActionSpec? Own, string DefaultText, bool ThumbWheel, Action<ActionSpec?> Apply)
+    {
+        /// <summary>Extra content under the header (the ring's Name box).</summary>
+        public Func<FrameworkElement>? Extra { get; init; }
+
+        /// <summary>Builds a tab the picker does not know (the ring's Icon tab).</summary>
+        public Func<string, (FrameworkElement Content, FrameworkElement? Focus)?>? CustomTab { get; init; }
+
+        /// <summary>Runs when the flyout closes (the ring returns focus to its preview).</summary>
+        public Action? Closed { get; init; }
+
+        /// <summary>Opens at this point of the anchor instead of under it (the ring anchors to its preview, whose slots are redrawn).</summary>
+        public Windows.Foundation.Point? At { get; init; }
+    }
+
     /// <summary>
     /// The action picker: a flyout anchored under the label. Tabs for the device, a recorder for key chords. Nothing is saved
     /// until an option is chosen or Enter/Save is pressed; Esc cancels.
@@ -41,18 +58,6 @@ public sealed partial class MainWindow
         Profile? profile = ProfileOps.Find(_config.Config, target);
         string appName = target is null ? "All apps" : profile is null ? target : ProfileOps.AppName(profile);
         ActionSpec? own = ProfileOps.Own(_config.Config, target, _kind, info.Id);
-
-        var flyout = new Flyout
-        {
-            Placement = FlyoutPlacementMode.Bottom,
-            FlyoutPresenterStyle = Ui.Res<Style>("PickerFlyoutPresenterStyle"),
-        };
-
-        void Commit(ActionSpec? action)
-        {
-            flyout.Hide();
-            _config.Update(c => ProfileOps.SetBinding(c, target, _kind, info.Id, action));
-        }
 
         PickerTab[] tabs = _kind == DeviceKind.Mouse ? (info.Id == DeviceIds.ThumbWheelPseudoId ? ThumbTabs : MouseTabs) : KeyboardTabs;
         string initial = own switch
@@ -65,11 +70,44 @@ public sealed partial class MainWindow
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
             ActionSpec.Brightness when _kind == DeviceKind.Keyboard => "media",
-            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness => "more",
+            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text => "more",
             _ => "default",
         };
 
-        var header = Ui.Text(target is null ? info.Name : $"{info.Name} in {appName}", 12, Ui.Muted);
+        string defaultText;
+        if (target is null)
+        {
+            defaultText = $"Use the device default ({info.NativeText})";
+        }
+        else
+        {
+            ActionSpec? inherited = ProfileOps.Own(_config.Config, null, _kind, info.Id);
+            defaultText = $"Same as All apps ({(inherited is null ? info.NativeText : ActionCatalog.Plain(inherited))})";
+        }
+
+        ShowPickerCore(anchor, new PickerSpec(
+            target is null ? info.Name : $"{info.Name} in {appName}", tabs, initial, own, defaultText, info.Id == DeviceIds.ThumbWheelPseudoId,
+            action => _config.Update(c => ProfileOps.SetBinding(c, target, _kind, info.Id, action))));
+    }
+
+    private void ShowPickerCore(FrameworkElement anchor, PickerSpec spec)
+    {
+        var flyout = new Flyout
+        {
+            Placement = FlyoutPlacementMode.Bottom,
+            FlyoutPresenterStyle = Ui.Res<Style>("PickerFlyoutPresenterStyle"),
+        };
+
+        void Commit(ActionSpec? action)
+        {
+            flyout.Hide();
+            spec.Apply(action);
+        }
+
+        PickerTab[] tabs = spec.Tabs;
+        string initial = spec.Initial;
+
+        var header = Ui.Text(spec.Header, 12, Ui.Muted);
         var host = new Grid { MinHeight = 150 };
         var bar = new SelectorBar();
         foreach (PickerTab t in tabs)
@@ -81,7 +119,7 @@ public sealed partial class MainWindow
         void ShowTab(string key)
         {
             host.Children.Clear();
-            (FrameworkElement content, FrameworkElement? focus) = BuildTab(key, info, target, own, Commit, flyout);
+            (FrameworkElement content, FrameworkElement? focus) = BuildTab(key, spec, Commit, flyout);
             host.Children.Add(content);
             firstFocus = focus;
         }
@@ -97,6 +135,11 @@ public sealed partial class MainWindow
 
         var root = new StackPanel { Spacing = 10, Width = 316 };
         root.Children.Add(header);
+        if (spec.Extra is not null)
+        {
+            root.Children.Add(spec.Extra());
+        }
+
         root.Children.Add(bar);
         root.Children.Add(host);
         flyout.Content = root;
@@ -107,6 +150,7 @@ public sealed partial class MainWindow
         };
         flyout.Closed += (_, _) =>
         {
+            spec.Closed?.Invoke();
             if (anchor is Control c && c.IsLoaded)
             {
                 c.Focus(FocusState.Programmatic);
@@ -114,12 +158,24 @@ public sealed partial class MainWindow
         };
 
         bar.SelectedItem = bar.Items.First(i => (string?)i.Tag == initial);
-        flyout.ShowAt(anchor);
+        if (spec.At is { } at)
+        {
+            flyout.ShowAt(anchor, new FlyoutShowOptions { Position = at, Placement = FlyoutPlacementMode.Bottom });
+        }
+        else
+        {
+            flyout.ShowAt(anchor);
+        }
     }
 
-    private (FrameworkElement Content, FrameworkElement? Focus) BuildTab(
-        string key, ControlInfo info, string? target, ActionSpec? own, Action<ActionSpec?> commit, Flyout flyout)
+    private (FrameworkElement Content, FrameworkElement? Focus) BuildTab(string key, PickerSpec spec, Action<ActionSpec?> commit, Flyout flyout)
     {
+        ActionSpec? own = spec.Own;
+        if (spec.CustomTab?.Invoke(key) is { } custom)
+        {
+            return custom;
+        }
+
         switch (key)
         {
             case "keys":
@@ -133,24 +189,13 @@ public sealed partial class MainWindow
             case "ring":
                 return OptionList(ActionCatalog.RingOptions, own, commit);
             case "more":
-                return MoreTab(info, own, commit);
+                return MoreTab(spec.ThumbWheel, own, commit);
             case "app":
                 return OptionList(ActionCatalog.KeyboardAppOptions, own, commit);
             case "media":
                 return OptionList(ActionCatalog.KeyboardMediaOptions, own, commit);
             default:
-                string text;
-                if (target is null)
-                {
-                    text = $"Use the device default ({info.NativeText})";
-                }
-                else
-                {
-                    ActionSpec? inherited = ProfileOps.Own(_config.Config, null, _kind, info.Id);
-                    text = $"Same as All apps ({(inherited is null ? info.NativeText : ActionCatalog.Plain(inherited))})";
-                }
-
-                var option = new ActionOption(text, new ActionSpec.None());
+                var option = new ActionOption(spec.DefaultText, new ActionSpec.None());
                 return OptionList([option], own is null ? new ActionSpec.None() : null, a => commit(null));
         }
     }
@@ -159,12 +204,12 @@ public sealed partial class MainWindow
     /// "Turn off" plus (not for the thumb wheel) "Open app or file...". A .lnk is launched as is, so Windows resolves it and keeps
     /// its arguments. A URL, folder or Store app ("shell:AppsFolder\AUMID") can be typed instead of browsed.
     /// </summary>
-    private (FrameworkElement Content, FrameworkElement? Focus) MoreTab(ControlInfo info, ActionSpec? own, Action<ActionSpec?> commit)
+    private (FrameworkElement Content, FrameworkElement? Focus) MoreTab(bool thumbWheel, ActionSpec? own, Action<ActionSpec?> commit)
     {
         (FrameworkElement off, FrameworkElement? focus) = OptionList([.. ActionCatalog.OffOptions, .. ActionCatalog.BrightnessOptions], own, commit);
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(off);
-        if (info.Id == DeviceIds.ThumbWheelPseudoId)
+        if (thumbWheel)
         {
             return (panel, focus);
         }
@@ -211,7 +256,63 @@ public sealed partial class MainWindow
         panel.Children.Add(browse);
         panel.Children.Add(box);
         panel.Children.Add(row);
+        panel.Children.Add(TypeTextEditor(own as ActionSpec.Text, commit));
         return (panel, focus);
+    }
+
+    /// <summary>"Type text...": a multi-line box; the saved text is typed into the foreground app. Ctrl+Enter saves.</summary>
+    private static FrameworkElement TypeTextEditor(ActionSpec.Text? current, Action<ActionSpec?> commit)
+    {
+        string saved = current?.Value ?? string.Empty;
+        var open = new Button { Content = "Type text...", Style = Ui.Res<Style>("QuietButtonStyle") };
+        var box = new TextBox
+        {
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 72,
+            MaxHeight = 140,
+            MaxLength = 2000,
+            PlaceholderText = "Text to type",
+            Text = saved,
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, "Text to type");
+        var save = new Button { Content = "Save", Style = Ui.Res<Style>("PrimaryPillStyle"), IsEnabled = false };
+        var hint = Ui.Text("Ctrl+Enter saves. Enter starts a new line.", 12, Ui.Muted);
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        buttons.Children.Add(save);
+        var area = new StackPanel { Spacing = 8, Visibility = current is null ? Visibility.Collapsed : Visibility.Visible };
+        area.Children.Add(box);
+        area.Children.Add(hint);
+        area.Children.Add(buttons);
+
+        box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0 && box.Text != saved;
+        void Save()
+        {
+            if (box.Text.Trim().Length > 0)
+            {
+                commit(new ActionSpec.Text(box.Text.Replace("\r\n", "\n").Replace('\r', '\n')));
+            }
+        }
+
+        save.Click += (_, _) => Save();
+        box.KeyDown += (_, e) =>
+        {
+            if (e.Key == VirtualKey.Enter && Down(VirtualKey.Control))
+            {
+                e.Handled = true;
+                Save();
+            }
+        };
+        open.Click += (_, _) =>
+        {
+            area.Visibility = Visibility.Visible;
+            box.Focus(FocusState.Keyboard);
+        };
+
+        var panel = new StackPanel { Spacing = 8 };
+        panel.Children.Add(open);
+        panel.Children.Add(area);
+        return panel;
     }
 
     private static (FrameworkElement Content, FrameworkElement? Focus) OptionList(IReadOnlyList<ActionOption> options, ActionSpec? current, Action<ActionSpec?> commit)

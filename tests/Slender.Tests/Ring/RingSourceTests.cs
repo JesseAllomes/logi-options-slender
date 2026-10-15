@@ -15,7 +15,7 @@ public class RingSourceTests
     [Fact]
     public void DefaultsAreTheOptionsPlusRing()
     {
-        var d = RingDefaults.Slots;
+        var d = RingDefaults.Slots();
         Assert.Equal(8, d.Count);
         Assert.Equal(["Cut", "Copy", "Paste", "Forward", "Back", "Undo", "Redo", "Folder"], d.Select(s => s.Name));
         Assert.Equal(new ActionSpec.Keys("Ctrl+X"), d[0].Action);
@@ -26,7 +26,7 @@ public class RingSourceTests
         Assert.Equal(new ActionSpec.Keys("Ctrl+Z"), d[5].Action);
         Assert.Equal(new ActionSpec.Keys("Ctrl+Y"), d[6].Action);
         Assert.True(d[7].IsFolder);
-        Assert.Empty(d[7].Folder!);
+        Assert.All(d[7].Folder!, s => Assert.True(s.IsEmpty));
     }
 
     [Fact]

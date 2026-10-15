@@ -19,3 +19,5 @@ Tray popover (Acrylic, 330 px): device rows with battery, the same quick toggles
 
 Keyboard: arrows move between hotspots, Enter opens the picker, Ctrl+Tab next app, F6 cycles rail / stage / apps / bottom bar.
 Process: Slender.Settings.exe is separate from the tray, started on demand, exits on close. It reads/writes config.json; the tray watches config.json and publishes status.json.
+
+Actions Ring overlay (tray, Direct2D layered window, no activation): opens at the cursor clamped on-screen (or monitor centre); geometry from src/Slender.Engine/Ring/RingLayout.cs, shared with the Settings preview/editor (Actions Ring page: appearance controls + live preview that doubles as the slot editor for the selected app).

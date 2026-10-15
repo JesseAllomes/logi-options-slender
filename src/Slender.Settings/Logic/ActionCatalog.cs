@@ -120,8 +120,24 @@ public static class ActionCatalog
         ActionSpec.Launch launch => new ActionLabel(LaunchName(launch.Target), []),
         ActionSpec.Disabled => new ActionLabel("Off", []),
         ActionSpec.Brightness b => new ActionLabel(b.StepPercent < 0 ? "Brightness down" : "Brightness up", []),
+        ActionSpec.Text t => new ActionLabel(TextName(t.Value), []),
         _ => new ActionLabel("Not assigned", []),
     };
+
+    /// <summary>"Type 'Kind regards,…'": the first line of the text, cut to 20 characters; the ellipsis shows when something was cut.</summary>
+    public static string TextName(string value)
+    {
+        string[] lines = value.Replace("\r", string.Empty).Split('\n');
+        string first = lines[0].Trim();
+        bool cut = lines.Skip(1).Any(l => l.Trim().Length > 0);
+        if (first.Length > 20)
+        {
+            first = first[..20].TrimEnd();
+            cut = true;
+        }
+
+        return first.Length == 0 && !cut ? "Type text" : $"Type '{first}{(cut ? "…" : string.Empty)}'";
+    }
 
     /// <summary>"Open Excel" for an .exe or file, "Open example.com" for a URL, "Open Documents" for a folder, "Open app" for a Store app.</summary>
     public static string LaunchName(string target)

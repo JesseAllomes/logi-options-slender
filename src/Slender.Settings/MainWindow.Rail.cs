@@ -117,8 +117,8 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
             Content = new Grid { Children = { new FontIcon { Glyph = "", FontSize = 18, Foreground = Ui.Mark, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } } },
         };
-        AutomationProperties.SetName(button, "Point and scroll, haptics and general settings");
-        ToolTipService.SetToolTip(button, "Point & scroll, Haptics, General");
+        AutomationProperties.SetName(button, "Point and scroll, haptics, actions ring and general settings");
+        ToolTipService.SetToolTip(button, "Point & scroll, Haptics, Actions Ring, General");
         button.Click += (_, _) => OpenPage(_page == Page.Device ? Page.Pointer : _page);
         return button;
     }
@@ -148,7 +148,7 @@ public sealed partial class MainWindow
 
     private Button StripTile(Profile? profile, string name, string? process, int index)
     {
-        bool selected = string.Equals(process, _app, StringComparison.OrdinalIgnoreCase) && _page == Page.Device;
+        bool selected = string.Equals(process, _app, StringComparison.OrdinalIgnoreCase) && _page is Page.Device or Page.Ring;
         FrameworkElement icon;
         if (profile is null)
         {
