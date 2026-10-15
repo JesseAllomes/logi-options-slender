@@ -7,8 +7,9 @@ namespace Slender.Tray;
 
 /// <summary>
 /// Velopack self-update behind IUpdateBackend. The source is a folder path (or UNC share) holding the release files, or a
-/// GitHub repository URL: updateSource in slender.sync.json if set, else the artifacts\releases folder that
-/// scripts\Build-Setup.ps1 baked into this build (assembly metadata SlenderUpdateSource). A dev build has neither: no updates.
+/// GitHub repository URL: updateSource in slender.sync.json if set, else the source scripts\Build-Setup.ps1 baked into this
+/// build (assembly metadata SlenderUpdateSource): the public GitHub repo, or artifacts\releases with -LocalOnly.
+/// A dev build has neither: no updates.
 /// </summary>
 public sealed class VelopackUpdateBackend : IUpdateBackend
 {

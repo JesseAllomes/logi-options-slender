@@ -6,15 +6,21 @@
   then runs `vpk pack` (the local tool from .config\dotnet-tools.json) to produce the installer and update packages.
   Output goes under artifacts\ (git-ignored). Nothing is installed and nothing on this PC is touched.
   Setup installs to %LOCALAPPDATA%\SlenderApp, adds a Start menu shortcut, and installs the .NET 10 desktop runtime
-  if it is missing. The tray is built with this repo's artifacts\releases folder as its default update source, so shipping
-  an update is just running this script again: the installed app finds the higher version within 6 hours, or on "Check for updates".
+  if it is missing.
+  Updates ship through GitHub Releases on the public repo: the script downloads the latest release as the delta base,
+  bakes the repo URL in as the tray's update source, packs, and publishes release v<Version>. The GitHub token comes from
+  `gh auth token` at run time and is never written anywhere. HEAD must be committed and pushed first, so every release
+  matches a commit on GitHub. Installed apps find the new version within 6 hours, or on "Check for updates".
 .PARAMETER Version
-  Package version (semver). Default: the next patch above the newest version already in artifacts\releases (1.0.0 the first time).
+  Package version (semver). Default: the next patch above the newest version in artifacts\releases after the download.
+.PARAMETER LocalOnly
+  Build against the artifacts\releases folder as the update source and upload nothing (testing only).
 #>
 #Requires -Version 7
 [CmdletBinding()]
 param(
-    [string]$Version
+    [string]$Version,
+    [switch]$LocalOnly
 )
 $ErrorActionPreference = 'Stop'
 
@@ -26,10 +32,37 @@ $Artifacts    = Join-Path $RepoRoot 'artifacts'
 $Staging      = Join-Path $Artifacts 'staging'
 $Releases     = Join-Path $Artifacts 'releases'
 $PackId       = 'SlenderApp'   # install folder name; kept apart from %LOCALAPPDATA%\Slender (status, logs, sync state)
+$RepoUrl      = 'https://github.com/JesseAllomes/logi-options-slender'
 
 foreach ($p in $TrayProj, $SettingsProj, $Icon) {
     if (-not (Test-Path -LiteralPath $p)) { throw "Missing: $p" }
 }
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw 'dotnet SDK not found on PATH.' }
+
+$token = $null
+if (-not $LocalOnly) {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'GitHub CLI (gh) not found; run gh auth login, or use -LocalOnly.' }
+    $token = (& gh auth token 2>$null)
+    if ($LASTEXITCODE -ne 0 -or -not $token) { throw 'gh is not signed in; run gh auth login, or use -LocalOnly.' }
+    $dirty = & git -C $RepoRoot status --porcelain --untracked-files=no
+    if ($dirty) { throw 'Commit your changes first: a release must match a pushed commit.' }
+    & git -C $RepoRoot fetch --quiet origin
+    if ($LASTEXITCODE -ne 0) { throw "git fetch failed ($LASTEXITCODE)." }
+    $head = (& git -C $RepoRoot rev-parse HEAD).Trim()
+    & git -C $RepoRoot merge-base --is-ancestor $head origin/main
+    if ($LASTEXITCODE -ne 0) { throw 'Push first: HEAD is not on origin/main.' }
+
+    New-Item -ItemType Directory -Force -Path $Releases | Out-Null
+    Push-Location $RepoRoot
+    try {
+        & dotnet tool restore | Out-Null
+        # The latest published release becomes the delta base and the version floor. None yet = first release.
+        & dotnet vpk download github --repoUrl $RepoUrl --token $token --outputDir $Releases
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'No release downloaded from GitHub; packing without a GitHub delta base.' }
+    }
+    finally { Pop-Location }
+}
+
 if (-not $Version) {
     $newest = Get-ChildItem -LiteralPath $Releases -Filter "$PackId-*-full.nupkg" -File -ErrorAction SilentlyContinue |
         ForEach-Object { if ($_.Name -match ('^' + [regex]::Escape($PackId) + '-(\d+\.\d+\.\d+)(?:-[A-Za-z0-9.]+)?-full\.nupkg$')) { [version]$Matches[1] } } |
@@ -37,7 +70,7 @@ if (-not $Version) {
     $Version = if ($newest) { '{0}.{1}.{2}' -f $newest.Major, $newest.Minor, ($newest.Build + 1) } else { '1.0.0' }
     Write-Host "Version $Version (next patch above the newest in $Releases)"
 }
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw 'dotnet SDK not found on PATH.' }
+$updateSource = if ($LocalOnly) { $Releases } else { $RepoUrl }
 
 Push-Location $RepoRoot
 try {
@@ -55,7 +88,7 @@ try {
     # Tray: NativeAOT (5.3 MB private / 17.6 MB working set idle, docs/memory.md). The linker step needs vswhere on PATH.
     $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
     if ((Test-Path $installer) -and ($env:PATH -notlike "*$installer*")) { $env:PATH = "$installer;$env:PATH" }
-    & dotnet publish $TrayProj -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version "-p:SlenderUpdateSource=$Releases" -o $Staging --nologo
+    & dotnet publish $TrayProj -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version "-p:SlenderUpdateSource=$updateSource" -o $Staging --nologo
     if ($LASTEXITCODE -ne 0) { throw "Tray publish failed ($LASTEXITCODE)." }
     foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe') {
         if (-not (Test-Path -LiteralPath (Join-Path $Staging $exe))) { throw "Publish did not produce $exe." }
@@ -85,6 +118,13 @@ try {
     Copy-Item -LiteralPath $setup.FullName -Destination $target -Force
     Write-Host ("Built {0} ({1:N1} MB)" -f $target, ((Get-Item -LiteralPath $target).Length / 1MB))
     Write-Host "Update packages: $Releases"
+
+    if (-not $LocalOnly) {
+        & dotnet vpk upload github --repoUrl $RepoUrl --token $token --outputDir $Releases --publish `
+            --releaseName "Slender $Version" --tag "v$Version" --targetCommitish $head
+        if ($LASTEXITCODE -ne 0) { throw "vpk upload failed ($LASTEXITCODE)." }
+        Write-Host "Published $RepoUrl/releases/tag/v$Version"
+    }
 }
 finally {
     Pop-Location

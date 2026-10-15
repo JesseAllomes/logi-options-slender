@@ -52,7 +52,7 @@ public sealed class UpdateCoordinator : IDisposable
     public static readonly TimeSpan SettingsCloseTimeout = TimeSpan.FromSeconds(5);
 
     public const string UpToDateText = "Slender is up to date";
-    public const string UnreachableText = "Couldn't reach the update folder";
+    public const string UnreachableText = "Couldn't reach the update source";
     public const string NotSetUpText = "Updates aren't set up on this copy of Slender";
     public const string CloseSettingsText = "Close Slender Settings first, then choose Restart to update again";
     public const string ApplyFailedText = "Couldn't restart to update. It installs when Slender next exits";

@@ -50,6 +50,6 @@ The tray syncs at start, and a few seconds after you change a setting. It does n
 
 ## Self-update (optional)
 
-By default the tray looks in the `artifacts\releases` folder of the repo it was built from (`scripts\Build-Setup.ps1` bakes the path in), so shipping an update is just running `.\scripts\Build-Setup.ps1` again. Add `"updateSource"` to `slender.sync.json` only to override that: a folder path (or UNC share) holding the release files, or a GitHub repository URL. A build without the baked-in path (a dev build) and no `updateSource` checks nothing.
+By default the tray reads GitHub Releases on https://github.com/JesseAllomes/logi-options-slender (`scripts\Build-Setup.ps1` bakes the URL in), so shipping an update is commit, push, then `.\scripts\Build-Setup.ps1` (see `docs/install.md`). Add `"updateSource"` to `slender.sync.json` only to override that: a folder path (or UNC share) holding the release files, or a GitHub repository URL. A build without the baked-in path (a dev build) and no `updateSource` checks nothing.
 
 The tray checks 30 seconds after start, every 6 hours, and on demand (tray menu **Check for updates**, Settings, General **Check now**). A new version downloads in the background; a balloon and a **Restart to update** menu item then apply it at once, or it installs silently the next time Slender exits. Details in `docs/install.md`.

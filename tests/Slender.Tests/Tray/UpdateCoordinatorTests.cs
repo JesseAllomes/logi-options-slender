@@ -203,7 +203,7 @@ public sealed class UpdateCoordinatorTests
 
         await c.CheckNowAsync();
         Assert.Equal(1, h.Log.Errors);
-        Assert.Equal([(UpdateNoticeKind.Info, "Couldn't reach the update folder")], h.Notices);
+        Assert.Equal([(UpdateNoticeKind.Info, "Couldn't reach the update source")], h.Notices);
     }
 
     [Fact]
