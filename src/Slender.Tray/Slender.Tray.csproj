@@ -30,6 +30,14 @@
     <Content Include="..\Slender.Settings\Assets\Fonts\JetBrainsMono-Medium.ttf" Link="Assets\Fonts\JetBrainsMono-Medium.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(SlenderUpdateSource)' != ''">
+    <!-- Build-Setup.ps1 passes -p:SlenderUpdateSource=<artifactseleases>: the default update source baked into this build (slender.sync.json still overrides). -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SlenderUpdateSource</_Parameter1>
+      <_Parameter2>$(SlenderUpdateSource)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
   <ItemGroup>
     <!-- Cap the gen0 budget: tray keeps ~0.6 MB live but reserves ~20 MB of GC space otherwise (docs/memory.md #2).
          For NativeAOT this item is baked into the executable (runtimeconfig knobs are compiled in), so it applies there too. -->

@@ -13,7 +13,10 @@ public sealed record StatusSnapshot(
     int? KeyboardBattery = null,
     bool KeyboardCharging = false,
     bool PausedForOptionsPlus = false,
-    int? MouseDpi = null);
+    int? MouseDpi = null,
+    string? CurrentVersion = null,
+    string? AvailableVersion = null,
+    bool UpdateReady = false);
 
 /// <summary>
 /// Writes SlenderStatus to status.json (atomic replace) whenever Changed() is called, at most once per interval.
@@ -148,7 +151,10 @@ public sealed class StatusPublisher : IDisposable
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,
-            now);
+            now,
+            s.CurrentVersion,
+            s.AvailableVersion,
+            s.UpdateReady);
     }
 
     private static bool DefaultOptionsPlusRunning()

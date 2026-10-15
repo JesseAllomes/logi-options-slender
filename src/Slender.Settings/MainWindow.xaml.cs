@@ -419,7 +419,16 @@ public sealed partial class MainWindow : Window
         BuildRail();
         UpdateInfoBars();
         UpdateStageDim();
+        string versionRow = UpdateText.Version(_status.Status, string.Empty) + _status.TrayRunning;
+        if (_page == Page.General && versionRow != _versionRow)
+        {
+            RebuildAll(); // the tray found or downloaded an update
+        }
+
+        _versionRow = versionRow;
     }
+
+    private string _versionRow = string.Empty;
 
     private void ApplyPageVisibility()
     {

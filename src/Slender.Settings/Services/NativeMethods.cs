@@ -7,6 +7,15 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     internal static extern bool SetForegroundWindow(nint hwnd);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern nint FindWindowW(string className, string? windowName);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern uint RegisterWindowMessageW(string name);
+
+    [DllImport("user32.dll")]
+    internal static extern bool PostMessageW(nint hwnd, uint msg, nint wParam, nint lParam);
+
     [DllImport("user32.dll")]
     internal static extern uint GetDpiForWindow(nint hwnd);
 

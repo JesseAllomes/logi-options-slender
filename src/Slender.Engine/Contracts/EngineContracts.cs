@@ -266,9 +266,29 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 
 /// <summary>
 /// Written by the tray to %LOCALAPPDATA%\Slender\status.json whenever it changes (atomic replace); read by the settings app.
-/// Device ids: "mx-master-4", "ergo-k860".
+/// Device ids: "mx-master-4", "ergo-k860". The update fields are null/false when the tray has no update information
+/// (older tray, or not an installed copy): CurrentVersion is the running version, AvailableVersion a newer one that was
+/// found (downloading until UpdateReady), UpdateReady true once it is downloaded and "Restart and update" will apply it.
 /// </summary>
-public sealed record SlenderStatus(IReadOnlyList<DeviceState> Devices, bool OptionsPlusRunning, string? ForegroundApp, DateTimeOffset UpdatedAt);
+public sealed record SlenderStatus(
+    IReadOnlyList<DeviceState> Devices,
+    bool OptionsPlusRunning,
+    string? ForegroundApp,
+    DateTimeOffset UpdatedAt,
+    string? CurrentVersion = null,
+    string? AvailableVersion = null,
+    bool UpdateReady = false);
+
+/// <summary>
+/// How the settings app asks the tray to do update work: it posts these registered window messages (RegisterWindowMessage)
+/// to the tray's hidden window, found by class name. The tray does all the Velopack work.
+/// </summary>
+public static class UpdateMessages
+{
+    public const string TrayWindowClass = "Slender.Tray.Window";
+    public const string CheckName = "Slender.UpdateCheck";
+    public const string ApplyName = "Slender.UpdateApply";
+}
 
 /// <summary>Well-known locations. Config roams (%APPDATA%); status, assets and logs stay local (%LOCALAPPDATA%).</summary>
 public static class SlenderPaths
