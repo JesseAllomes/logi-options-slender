@@ -12,6 +12,8 @@ public static class ActionText
         ActionSpec.Excel excel => $"Excel: {excel.Command}",
         ActionSpec.MouseButton mouse => $"Mouse: {mouse.Button}",
         ActionSpec.ActionsRing => "Actions ring",
+        ActionSpec.Launch launch => $"Open: {launch.Target}",
+        ActionSpec.Disabled => "Off",
         _ => action.GetType().Name,
     };
 }

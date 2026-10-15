@@ -172,7 +172,7 @@ public sealed class SlenderEngine : IDisposable
     private void MaybeHaptic(ActionSpec action)
     {
         var h = _config.Haptics;
-        if (!h.Enabled) return;
+        if (!h.Enabled || action is ActionSpec.Disabled) return;
         var want = action is ActionSpec.ActionsRing ? h.OnActionsRing : h.OnButtonPress;
         if (!want) return;
         try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
@@ -245,7 +245,14 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             var cfg = _config;
-            if (ResolveAction(ThumbWheelBindingId) is ActionSpec.Keys keys)
+            var bound = ResolveAction(ThumbWheelBindingId);
+            if (bound is ActionSpec.Disabled)
+            {
+                e.Handled = true; // turned off: swallow the horizontal scroll
+                return;
+            }
+
+            if (bound is ActionSpec.Keys keys)
             {
                 e.Handled = true;
                 var notches = _accumulator.Add(e.Delta, 1, _clock());

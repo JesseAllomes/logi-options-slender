@@ -117,8 +117,39 @@ public static class ActionCatalog
         ActionSpec.Excel excel => new ActionLabel(ExcelName(excel.Command), ExcelChord(excel.Command) is { } c ? ChordParts(c) : []),
         ActionSpec.MouseButton mouse => new ActionLabel(MouseName(mouse.Button), []),
         ActionSpec.ActionsRing => new ActionLabel("Actions Ring", []),
+        ActionSpec.Launch launch => new ActionLabel(LaunchName(launch.Target), []),
+        ActionSpec.Disabled => new ActionLabel("Off", []),
         _ => new ActionLabel("Not assigned", []),
     };
+
+    /// <summary>"Open Excel" for an .exe or file, "Open example.com" for a URL, "Open Documents" for a folder, "Open app" for a Store app.</summary>
+    public static string LaunchName(string target)
+    {
+        string t = target.Trim();
+        if (t.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Open app";
+        }
+
+        if (Uri.TryCreate(t, UriKind.Absolute, out Uri? uri) && uri.Scheme is "http" or "https" && uri.Host.Length > 0)
+        {
+            return "Open " + (uri.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? uri.Host[4..] : uri.Host);
+        }
+
+        string name = Path.GetFileName(t.TrimEnd('\\', '/'));
+        if (name.Length == 0)
+        {
+            return t.Length == 0 ? "Open" : "Open " + t;
+        }
+
+        string ext = Path.GetExtension(name);
+        if (ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) || ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            name = Path.GetFileNameWithoutExtension(name);
+        }
+
+        return "Open " + name;
+    }
 
     public static string MouseName(string button) => button switch
     {
@@ -148,6 +179,11 @@ public static class ActionCatalog
 
     public static IReadOnlyList<ActionOption> ExcelOptions { get; } =
         Enum.GetValues<ExcelCommand>().Select(c => new ActionOption(ExcelName(c), new ActionSpec.Excel(c))).ToArray();
+
+    public static IReadOnlyList<ActionOption> OffOptions { get; } =
+    [
+        new("Turn off", new ActionSpec.Disabled()),
+    ];
 
     public static IReadOnlyList<ActionOption> RingOptions { get; } =
     [
