@@ -1,20 +1,20 @@
-<!-- drainclamp-build: state; schema=1; generation=65 -->
+<!-- drainclamp-build: state; schema=1; generation=67 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
-Slender = lean Windows replacement for Logi Options+ (MX Master 4 BLE PID B042 + ERGO K860 BLE PID B359). main @ 8aefde1, 453 tests.
+Slender = lean Windows replacement for Logi Options+ (MX Master 4 BLE PID B042 + ERGO K860 BLE PID B359). main @ d28ce04, 977 tests; shipped SlenderSetup 1.1.5 (in-app update).
 Modules -> responsibility -> entry:
-- src/Slender.Hidpp -> HID++ 2.0 over Windows HID (Transport/WindowsHidTransport*), HidppChannel (internal sends), HidppDevice (+HidppAllowlist: only listed feature/fn pairs; DFU/host-change/onboard-profiles blocked), LogiDeviceBase -> LogiMouse (diverts gesture/modeshift/sense only, thumbwheel invert, SmartShift, smooth scroll, DPI re-applied every connect; haptic play = 0x19B0 fn4) and LogiKeyboard (diverts, Fn lock 0x40A3, 0x1C00 onboard remap read/set/reset; PersistentRemap.cs encoder = 1 modifier max)
-- src/Slender.Engine -> SlenderEngine (hook buttons middle/back/forward + Excel thumb wheel + HID++ buttons), KeyboardRouter, OnboardSync (plan only, not wired), ExcelBridge (AOT IDispatch client ComDispatch + WM_HSCROLL fallback), LowLevelMouseHook, ForegroundAppWatcher, ActionExecutor/ChordParser (media keys, "Right|Left" wheel pairs); Config/ JsonConfigStore v2 + StatusJson (source-gen JSON); Contracts/ EngineContracts.cs (SlenderConfig v2, Pointer, Keyboard, SlenderStatus, SlenderPaths)
-- src/Slender.Tray -> raw Win32 tray (no WinForms), NativeAOT publish (5.3 MB private / 17.6 MB WS idle), OptionsPlusGuard (pauses while Options+ runs), StatusPublisher (status.json), config watcher, MemoryWatchdog (60/100 MB), Velopack hook, SyncService background sync; entry Program.cs
-- src/Slender.Settings -> WinUI 3 (WinAppSDK 1.8, framework-dependent .NET, ReadyToRun), locked design (.grok/product-ui), --popover mode (unfold, exits on dismiss), Point & scroll page, Compare grid, sign-in UI, firmware row; ~193 MB WS only while open
-- src/Slender.Sync -> MSAL personal MS account, OneDrive approot config sync (client id from slender.sync.json, not in repo)
-- tools/Slender.Probe (read-only by default; opt-in flags write device), tools/Slender.InputLog (K860 raw input logger)
-- scripts/Build-Setup.ps1 -> artifacts/SlenderSetup.exe (Velopack, 71.8 MB, unsigned); Install/Uninstall-Slender.ps1 fallback; Trim-OptionsPlus.ps1, Repair-ExcelAddins.ps1
-- docs/: protocol.md (all device facts), memory.md (audit), settings.md, sync.md, install.md, switch-over.md, baseline.md
-Assets: device renders/hotspots copied at runtime from C:/ProgramData/LogiOptionsPlus/depots to %LOCALAPPDATA%/Slender/assets; never committed.
-Device facts: survive power cycle = SmartShift threshold, haptics; NOT = DPI, thumb invert, hi-res, diverts. Options+ leaves diverts behind when its agent stops (Easy-Switch reconnect or Slender connect clears them).
-Machine state now: Options+ service STOPPED (until reboot); old Slender build (main Release bin, pid 15720) still running; LogiPluginService running (~180-700 MB). Worktrees: only .worktrees/ inside the repo; all merged ones removed 2026-10-15. Branch wt-mem kept (audit experiments).
+- src/Slender.Hidpp -> HID++ 2.0 over Windows HID (shared open, SwId 0x0B tray / 0x0C probe), HidppChannel, HidppDevice + HidppAllowlist (payload-aware; only listed setters; DFU/host-change/pairing/reset/onboard profiles blocked; raw XY only for CID 0x00C3/0x00D7), LogiMouse (diverts gesture/modeshift/sense, raw-XY gesture divert 0x33, thumb wheel 0x2150 hi-res divert on demand + invert, SmartShift threshold + torque, Sense Panel force 0x19C0 fn3 within 50-200% of first reading, haptic strength 0x19B0, DPI 200-8000, all re-applied on connect, null = leave device alone), LogiKeyboard (diverts, Fn lock per host 0x40A3, disable keys 0x4521, 0x1C00 onboard remap read/set/reset 1 modifier max), Inventory/ (read-only probe: vetted getters, NeverCall guard on send path)
+- src/Slender.Engine -> SlenderEngine (hook middle/back/forward; HID++ buttons; TapHold 350 ms; gesture swipes from raw XY or hook, cursor held either way; thumb wheel via IThumbWheelSource hook|HID with per-app divert policy; Excel columns; dual thumb wheel per-app mode; per-app divert sets with held-control wait; brightness; Text/Launch/Disabled actions), KeyboardRouter (same per-app/held rules, TapHold, spare keys, toggle), Ring/ (RingSession tap/hold/hold-only, folders, wheel adjust, thumb-wheel steering; RingLayout geometry; RingDefaults; RingSource), Import/ (Options+ settings.db + Logi Plugin Service ring importer, read-only copies), ThumbWheelModes, RingButtonPairing, GestureTracker, BrightnessController + WindowsMonitorBrightness (DDC/CI + LCD IOCTL, active power policy); Config/ JsonConfigStore v2 (source-gen, quarantine bad files); Contracts/EngineContracts.cs
+- src/Slender.Tray -> raw Win32 tray, NativeAOT (~13.3 MB exe), Ring/ Direct2D layered overlay (Bezel/Compass/Keypad, appearance from config) + ThumbWheelToast cursor label, UpdateCoordinator (baked releases source, 30 s/6 h/on-demand, balloon + Restart to update, closes Settings first), battery alerts, lock-key indicator, OptionsPlusGuard, StatusPublisher (status.json incl. versions, DPI, feel values, keyboard channel), MemoryWatchdog, SyncService; entry Program.cs
+- src/Slender.Settings -> WinUI 3 (locked design .grok/product-ui), pages: device stage, Point & scroll (feel sliders, dual thumb wheel), Haptics (0-100), Actions Ring (appearance + slot editor), General (import, keyboard disable keys/Fn per channel, version/updates); picker tabs incl. More (Launch/Text/Off/Press-Hold)
+- src/Slender.Sync -> MSAL personal MS account, OneDrive approot config sync (needs slender.sync.json client id; m14)
+- tools/Slender.Probe (read-only by default; --inventory), tools/Slender.InputLog
+- scripts/Build-Setup.ps1 -> artifacts/SlenderSetup.exe (Velopack, auto next patch, releases = update source)
+- docs/: protocol.md, devices/ (inventory reports + feature-gaps.md), actions-ring-optionsplus.md, ring-prototypes-round1.html, memory.md, install.md, sync.md, switch-over.md
+Assets: device renders and imported ring icons under %LOCALAPPDATA%/Slender/assets; never committed.
+Device facts: survive power cycle = SmartShift threshold, haptics; NOT = DPI, thumb invert, hi-res, diverts. Options+ is installed but disabled (kept for firmware updates); Logi Plugin Service holds the real Actions Ring config (Loupedeck72).
+Machine/tooling: per-user .NET SDK at %LOCALAPPDATA%/Microsoft/dotnet (PATH dotnet has none); AOT needs VS Installer on PATH for vswhere. Worktrees only under .worktrees/ (git-excluded); one empty locked folder .worktrees/probe clears on reboot. DrainClamp plugin patched locally for .NET bin/obj caches (upstream PR #1). Branch wt-mem kept (audit experiments).
 <!-- /DC:ARCH -->
 
 <!-- DC:DECISIONS -->
@@ -97,7 +97,6 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-14T22:34:01+00:00 627db5c1 m4+m5 merged: LL hook, foreground watcher, out-of-process Excel bridge (COM SmallScroll + WM_HSCROLL fallback), actions, profiles; 54 tests green; Excel/device behaviour unconfirmed
 - 2026-10-14T22:43:00+00:00 0631fb3c m3 merged + read-only probe confirmed BLE PID B042/idx 0xFF/CIDs; fixed: connect now undiverts Options+ leftovers + thumb wheel native; engine wired into tray; 102 tests
 - 2026-10-14T23:32:04+00:00 6fabb77f Settings UI locked (round 4); contracts v2 (hook buttons, config v2, status) at 7187832; m8 + m10 building in worktrees -m8/-m10
 - 2026-10-14T23:36:33+00:00 22f79d82 m8 merged: hook captures middle/back/forward, HID++ divert only gesture/modeshift/sense, allowlist enforced in HidppDevice; raw channel sends made internal; 134 tests
@@ -117,4 +116,5 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 - 2026-10-15T09:23:52+00:00 65bc4be7 m23 thumb wheel steers ring + m24 dual thumb wheel merged (795 tests, AOT clean); not yet shipped as an update
 - 2026-10-15T10:33:40+00:00 bf4a3720 m25 device inventory done: gaps = wheel resistance, Sense Panel force, haptic 0-100, DPI 200, hi-res/touch thumb wheel, raw-XY gestures; K860 disable keys, lock-key OSD, multi-platform, per-host Fn lock, 3 unused keys
 - 2026-10-15T11:10:03+00:00 82a52e7a Device feature round m26-m30 merged (977 tests, AOT clean): mouse feel, K860 extras, press/hold, precise thumb wheel + touch/tap, raw-XY gestures with cursor hold
+- 2026-10-15T11:12:32+00:00 72922479 State refresh: ARCH rewritten for 1.1.5 (m17-m30 done); open: m13 c4 live memory/Excel check, m14 sync, m15 onboard K860 UI, m16 firmware, m7 switch-over; to-dos t1 (forward-slash UNC, fixed in R2), t2 keyboard disconnect release
 <!-- /DC:LOG -->

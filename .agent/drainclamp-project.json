@@ -400,7 +400,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 233,
+  "rev": 234,
   "review": {
     "advice": [],
     "config": {
@@ -13168,8 +13168,8 @@
   "todos": [
     {
       "at": "2026-10-15T06:45:15+00:00",
-      "done": false,
-      "done_at": null,
+      "done": true,
+      "done_at": "2026-10-15T11:12:44+00:00",
       "id": "t1",
       "milestone": "m13",
       "text": "RingSlotText.IconFile: forward-slash UNC (//server/share/x.exe) still reaches File.Exists; treat '//' like '\\' (r9 residual)"
