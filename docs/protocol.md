@@ -183,3 +183,21 @@ Read-only probe 2026-10-15, Options+ running. Raw output: `.agent/probe/k860-rea
 - Thumb wheel binding (pseudo id 0xF150, `ActionSpec.Keys` only): `"Right|Left"` sends each chord per notch in its direction;
   a single chord is sent per notch right and the same chord with Shift toggled per notch left. Other actions fall back to the
   Excel column scroll / native pass-through.
+
+### What survives a power cycle (MX Master 4, tested 2026-10-15)
+
+Set before: DPI 1200 (default 1000), SmartShift threshold 21, thumb wheel invert 1, haptics on level 45.
+After switching the mouse off and on (`.agent/probe/persist-before.txt` / `persist-after.txt`):
+
+| Setting | Survives | Notes |
+|---|---|---|
+| SmartShift threshold (0x2111) | **yes** | 21 kept; also why Options+'s 22 was still there |
+| Haptic enable/level (0x19B0) | **yes** | level 45 kept |
+| DPI (0x2201) | no | back to 1000 |
+| Thumb wheel invert (0x2150) | no | back to 0 |
+| Hi-res wheel mode (0x2121) | no | 0 |
+| Button diverts / remaps (0x1B04) | no | temporary by spec |
+
+So on a new PC without Slender the mouse keeps SmartShift and haptics only. DPI, wheel direction and smooth scroll must be
+re-applied by Slender on every connect (already done for invert, SmartShift and smooth scroll; DPI needs wiring).
+Restored afterwards: SmartShift 22, thumb invert 1.
