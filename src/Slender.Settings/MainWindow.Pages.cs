@@ -227,9 +227,89 @@ public sealed partial class MainWindow
         refresh.Click += async (_, _) => await RefreshDevicePicturesAsync(refresh);
         AddRow("Device pictures", "Copied from Logi Options+ on this PC. Refresh them after Options+ updates.", refresh);
 
+        BuildFirmwareSection();
+
         AddSection("ABOUT");
         string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
         AddRow("Slender", $"Version {version}", new TextBlock());
+    }
+
+    private const string OptionsPlusExe = @"C:\Program Files\LogiOptionsPlus\logioptionsplus.exe";
+
+    /// <summary>One row per device whose firmware version the tray published (status.json). Nothing is shown when it did not.</summary>
+    private void BuildFirmwareSection()
+    {
+        bool any = false;
+        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
+        {
+            if (!_status.Firmware.TryGetValue(ControlCatalog.DeviceId(kind), out string? version))
+            {
+                continue;
+            }
+
+            if (!any)
+            {
+                AddSection("FIRMWARE");
+                any = true;
+            }
+
+            var update = new Button { Content = "Update firmware…", Style = Ui.Res<Style>("QuietButtonStyle") };
+            AutomationProperties.SetName(update, $"Update {ControlCatalog.DeviceName(kind)} firmware");
+            update.Click += async (_, _) => await ConfirmFirmwareUpdateAsync();
+            AddRow($"Firmware · {ControlCatalog.DeviceName(kind)}", $"Version {version}", update);
+        }
+    }
+
+    private async Task ConfirmFirmwareUpdateAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Update firmware",
+            Content = new TextBlock
+            {
+                Text = "Slender will open Logi Options+ to update firmware, then you can close it and Slender resumes.",
+                TextWrapping = TextWrapping.Wrap,
+            },
+            PrimaryButtonText = "Continue",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Root.XamlRoot,
+            RequestedTheme = ElementTheme.Dark,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        string? failure = null;
+        if (!File.Exists(OptionsPlusExe))
+        {
+            failure = "Logi Options+ isn't installed on this PC, so Slender can't update the firmware. Install Logi Options+ from logitech.com, then try again.";
+        }
+        else
+        {
+            try
+            {
+                using Process? p = Process.Start(new ProcessStartInfo(OptionsPlusExe) { UseShellExecute = true });
+            }
+            catch (Exception e) when (e is System.ComponentModel.Win32Exception or IOException)
+            {
+                Services.CrashLog.Write(e);
+                failure = "Logi Options+ couldn't be started. Open it from the Start menu to update the firmware.";
+            }
+        }
+
+        if (failure is not null)
+        {
+            await new ContentDialog
+            {
+                Title = "Can't open Logi Options+",
+                Content = new TextBlock { Text = failure, TextWrapping = TextWrapping.Wrap },
+                CloseButtonText = "OK",
+                XamlRoot = Root.XamlRoot,
+                RequestedTheme = ElementTheme.Dark,
+            }.ShowAsync();
+        }
     }
 
     private static void OpenFolder(string path)

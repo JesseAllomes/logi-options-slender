@@ -14,6 +14,28 @@ internal static class NativeMethods
     internal static extern bool IsIconic(nint hwnd);
 
     [DllImport("user32.dll")]
+    internal static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    internal static extern bool GetCursorPos(out Point point);
+
+    [DllImport("user32.dll")]
+    internal static extern nint MonitorFromPoint(Point point, uint flags);
+
+    [DllImport("shcore.dll")]
+    internal static extern int GetDpiForMonitor(nint monitor, int type, out uint dpiX, out uint dpiY);
+
+    [DllImport("dwmapi.dll")]
+    internal static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Point
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
     internal static extern bool ShowWindow(nint hwnd, int cmd);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
