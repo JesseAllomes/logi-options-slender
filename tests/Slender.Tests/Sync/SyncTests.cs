@@ -193,6 +193,61 @@ public sealed class SyncManifestTests : IDisposable
         Assert.Equal(SyncOutcome.NotConfigured, (await svc.SignInAsync()).Outcome);
         Assert.False(File.Exists(Path.Combine(_dir, "sync.json")));
     }
+
+    [Fact]
+    public async Task Manifest_save_retries_while_the_file_is_briefly_locked()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "slender-sync-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            string path = Path.Combine(dir, "sync.json");
+            new SyncManifest { RemoteETag = "old" }.Save(path);
+
+            var held = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            var release = Task.Run(async () =>
+            {
+                await Task.Delay(40);
+                held.Dispose();
+            });
+
+            new SyncManifest { RemoteETag = "new" }.Save(path);
+            await release;
+
+            Assert.Equal("new", SyncManifest.Load(path).RemoteETag);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Manifest_save_gives_up_when_the_file_stays_locked()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "slender-sync-test-" + Guid.NewGuid().ToString("N"));
+        FileStream? held = null;
+        try
+        {
+            string path = Path.Combine(dir, "sync.json");
+            new SyncManifest { RemoteETag = "old" }.Save(path);
+            held = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+            Exception? error = Record.Exception(() => new SyncManifest { RemoteETag = "new" }.Save(path));
+
+            Assert.True(error is IOException or UnauthorizedAccessException, "expected IOException or UnauthorizedAccessException but got " + (error?.GetType().Name ?? "no exception"));
+        }
+        finally
+        {
+            held?.Dispose();
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+    }
 }
 
 public sealed class SyncServiceTests : IDisposable

@@ -66,6 +66,7 @@ public sealed class UpdateCoordinator : IDisposable
     private readonly Action<UpdateNoticeKind, string> _notify;
     private readonly Action _changed;
     private readonly Action? _applying;
+    private readonly Action? _applyFailed;
     private readonly Func<TimeSpan, Action, IDisposable> _schedule;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly object _gate = new();
@@ -83,6 +84,7 @@ public sealed class UpdateCoordinator : IDisposable
         Action<UpdateNoticeKind, string> notify,
         Action changed,
         Action? applying = null,
+        Action? applyFailed = null,
         Func<TimeSpan, Action, IDisposable>? schedule = null)
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
@@ -91,6 +93,7 @@ public sealed class UpdateCoordinator : IDisposable
         _notify = notify ?? throw new ArgumentNullException(nameof(notify));
         _changed = changed ?? throw new ArgumentNullException(nameof(changed));
         _applying = applying;
+        _applyFailed = applyFailed;
         _schedule = schedule ?? DefaultSchedule;
     }
 
@@ -247,6 +250,8 @@ public sealed class UpdateCoordinator : IDisposable
         catch (Exception e) when (e is not OutOfMemoryException)
         {
             _log.Error("Restart to update failed", e);
+            try { _applyFailed?.Invoke(); }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { _log.Error("Restoring the tray icon failed", ex); }
             _notify(UpdateNoticeKind.Info, ApplyFailedText);
         }
         finally

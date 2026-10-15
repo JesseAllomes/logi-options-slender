@@ -128,7 +128,8 @@ static class Program
         _ = sync.StartAsync();
         using var updates = new UpdateCoordinator(
             new VelopackUpdateBackend(VelopackUpdateBackend.ResolveSource(syncSettings.UpdateSource)), new SettingsProcessCloser(), log,
-            app.NotifyUpdate, app.UpdateStateChanged, applying: app.PrepareForUpdateRestart);
+            app.NotifyUpdate, app.UpdateStateChanged, applying: app.PrepareForUpdateRestart,
+            applyFailed: app.RestoreAfterFailedRestart);
         app.AttachUpdates(updates);
         updates.Start();
 
@@ -150,7 +151,7 @@ static class Program
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);
-            _ = mouse.SetDpiAsync(changed.Pointer.Dpi, CancellationToken.None);
+            _ = mouse.SetDpiAsync(changed.Pointer.Dpi, CancellationToken.None).ContinueWith(_ => app.RefreshDpi(), TaskScheduler.Default);
         };
         app.Run();
         log.Info("Slender stopping");

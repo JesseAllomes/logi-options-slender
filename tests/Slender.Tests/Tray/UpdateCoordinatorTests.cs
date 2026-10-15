@@ -85,11 +85,13 @@ public sealed class UpdateCoordinatorTests
         public FakeSettings Settings = new();
         public CountingLog Log = new();
         public List<(UpdateNoticeKind Kind, string Text)> Notices = [];
-        public int Changes, Applying;
+        public int Changes, Applying, ApplyFailed;
+        public List<string> Order = [];
         public List<TimeSpan> Delays = [];
         public List<Action> Timers = [];
 
-        public UpdateCoordinator Create() => new(Backend, Settings, Log, (k, t) => Notices.Add((k, t)), () => Changes++, () => Applying++,
+        public UpdateCoordinator Create() => new(Backend, Settings, Log, (k, t) => { Order.Add("notice:" + t); Notices.Add((k, t)); }, () => Changes++, () => Applying++,
+            () => { Order.Add("applyFailed"); ApplyFailed++; },
             (delay, run) =>
             {
                 Delays.Add(delay);
@@ -333,6 +335,20 @@ public sealed class UpdateCoordinatorTests
         await c.ApplyAsync();
         Assert.Equal(UpdateCoordinator.ApplyFailedText, Assert.Single(h.Notices).Text);
         Assert.True(c.UpdateReady);
+    }
+
+    [Fact]
+    public async Task Failed_restart_restores_the_icon_before_saying_so()
+    {
+        var h = new Harness { Backend = { Found = "1.1.1", ApplyFails = new InvalidOperationException("no updater") } };
+        using UpdateCoordinator c = h.Create();
+        await c.CheckNowAsync();
+        h.Notices.Clear();
+        h.Order.Clear();
+        await c.ApplyAsync();
+        Assert.Equal(1, h.Applying);
+        Assert.Equal(1, h.ApplyFailed);
+        Assert.Equal(["applyFailed", "notice:" + UpdateCoordinator.ApplyFailedText], h.Order);
     }
 
     [Fact]

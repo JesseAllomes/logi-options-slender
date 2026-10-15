@@ -126,6 +126,28 @@ public class PerAppDivertTests
         WaitFor(() => kb.DivertCount == 3);
         Assert.Equal(new[] { KeyboardId.Mute }, kb.Diverts[2]);
     }
+
+    [Fact]
+    public void Disconnect_releases_held_controls_and_unblocks_divert_changes()
+    {
+        var mouse = new FakeMouse();
+        var fg = new FakeForeground();
+        var exec = new FakeExecutor();
+        using var engine = new SlenderEngine(mouse, new FakeHook(), fg, new FakeExcel(), exec, TeamsNone(), new ListLog(), new InlineQueue(), null)
+        {
+            ForegroundDebounceMs = 20,
+        };
+        engine.Start();
+        WaitFor(() => mouse.DivertCount == 1);
+
+        mouse.Press(ControlId.ModeShift, true);
+        mouse.Connect(false);
+        Assert.Contains(exec.Calls, c => c.Item1 is ActionSpec.Keys k && k.Chord == "F2" && !c.Item2);
+
+        fg.Switch("teams");
+        Assert.True(SpinWait.SpinUntil(() => mouse.DivertCount == 2, 500));
+        Assert.Equal(new[] { ControlId.SensePanel }, mouse.Diverts[1]);
+    }
 }
 
 public class BrightnessTests

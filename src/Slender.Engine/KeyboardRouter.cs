@@ -15,6 +15,7 @@ public sealed class KeyboardRouter : IDisposable
     private readonly IActionExecutor _executor;
     private readonly ILog _log;
     private readonly IWorkQueue _queue;
+    private readonly Func<long> _clock;
     private readonly object _gate = new();
     private readonly Dictionary<ushort, ActionSpec> _active = new(); // action used at press, replayed on release
     private readonly CancellationTokenSource _cts = new();
@@ -30,8 +31,9 @@ public sealed class KeyboardRouter : IDisposable
         : this(keyboard, foreground, executor, config, log, null) { }
 
     internal KeyboardRouter(ILogiKeyboard keyboard, IForegroundApp foreground, IActionExecutor executor,
-        SlenderConfig config, ILog? log, IWorkQueue? queue)
+        SlenderConfig config, ILog? log, IWorkQueue? queue, Func<long>? clock = null)
     {
+        _clock = clock ?? (() => Environment.TickCount64);
         _keyboard = keyboard;
         _foreground = foreground;
         _executor = executor;
@@ -75,11 +77,16 @@ public sealed class KeyboardRouter : IDisposable
     /// <summary>Quiet period after a foreground change before the divert set is recomputed; rapid switches collapse into one. Tests set 0.</summary>
     internal int ForegroundDebounceMs { get; set; } = 150;
 
-    private void OnForegroundChanged(object? sender, string? process)
+    /// <summary>Longest a divert change waits for a held key to be released (a lost release must not pin the old set forever).</summary>
+    internal const long HeldDivertWaitMs = 10_000;
+
+    private void OnForegroundChanged(object? sender, string? process) => ScheduleForegroundApply(_clock());
+
+    private void ScheduleForegroundApply(long since)
     {
         try
         {
-            if (ForegroundDebounceMs <= 0) { Apply(force: false); return; }
+            if (ForegroundDebounceMs <= 0) { ApplyUnlessHeld(since); return; }
             var cts = new CancellationTokenSource();
             lock (_gate)
             {
@@ -89,11 +96,27 @@ public sealed class KeyboardRouter : IDisposable
             }
             _ = Task.Delay(ForegroundDebounceMs, cts.Token).ContinueWith(t =>
             {
-                try { if (!t.IsCanceled && !_disposed) Apply(force: false); }
+                try { if (!t.IsCanceled && !_disposed) ApplyUnlessHeld(since); }
                 catch (Exception ex) { try { _log.Error("foreground divert failed", ex); } catch { } }
             }, TaskScheduler.Default);
         }
         catch (Exception ex) { try { _log.Error("foreground change handler failed", ex); } catch { } }
+    }
+
+    /// <summary>
+    /// Changing the divert set while a diverted key is held would lose its release (the device stops reporting it),
+    /// so the change waits until nothing is held, up to HeldDivertWaitMs.
+    /// </summary>
+    private void ApplyUnlessHeld(long since)
+    {
+        bool held;
+        lock (_gate) held = _active.Count > 0;
+        if (held && _clock() - since < HeldDivertWaitMs && ForegroundDebounceMs > 0)
+        {
+            ScheduleForegroundApply(since);
+            return;
+        }
+        Apply(force: false);
     }
 
     public void Start()

@@ -172,6 +172,9 @@ public sealed class TrayApplication : IDisposable
     /// <summary>Removes the tray icon right before an update restarts the process, so no ghost icon is left behind.</summary>
     public void PrepareForUpdateRestart() => RemoveIcon();
 
+    /// <summary>Puts the tray icon back when Restart to update failed after PrepareForUpdateRestart removed it.</summary>
+    public void RestoreAfterFailedRestart() => Post(AddIcon);
+
     /// <summary>Runs the message loop on the calling (creating) thread until Quit or a restart request.</summary>
     public unsafe void Run()
     {
@@ -713,6 +716,9 @@ public sealed class TrayApplication : IDisposable
             _status.Changed();
         }
     }
+
+    /// <summary>Re-reads the device DPI after Slender changed it, so status.json stays current.</summary>
+    public void RefreshDpi() => Post(() => _ = RefreshDpiAsync());
 
     private async Task RefreshDpiAsync()
     {

@@ -19,7 +19,7 @@ public sealed class LowLevelMouseHook : IInputHook
     private readonly HookButtonPairing _pairing = new();
     private volatile bool _captureMoves;
     private volatile bool _ringCapture;
-    private bool _leftSwallowed, _rightSwallowed; // hook thread only: the press was swallowed, so its release must be too
+    private readonly RingButtonPairing _ringPairing = new(); // hook thread only: a swallowed press swallows its release
     private int _anchorX, _anchorY;
     private bool _disposed;
 
@@ -39,7 +39,8 @@ public sealed class LowLevelMouseHook : IInputHook
 
     /// <summary>
     /// While on, left/right button presses and the vertical wheel are swallowed and reported through <see cref="RingInput"/>
-    /// (the Actions Ring consumes them). A swallowed press always swallows its release, even after capture ended.
+    /// (the Actions Ring consumes them). A swallowed press swallows its release, even after capture ended, unless the release
+    /// comes more than 5 s later (then it belongs to another click).
     /// </summary>
     public void SetRingCapture(bool on) => _ringCapture = on;
 
@@ -164,28 +165,12 @@ public sealed class LowLevelMouseHook : IInputHook
     /// <summary>Ring capture for left/right/wheel. Returns true to swallow.</summary>
     private bool RingMouse(int msg, NativeMethods.MSLLHOOKSTRUCT data)
     {
-        switch (msg)
-        {
-            case NativeMethods.WM_LBUTTONUP when _leftSwallowed:
-                _leftSwallowed = false;
-                return true;
-            case NativeMethods.WM_RBUTTONUP when _rightSwallowed:
-                _rightSwallowed = false;
-                return true;
-        }
-        if (!_ringCapture) return false;
-        HookRingKind kind;
-        var delta = 0;
-        switch (msg)
-        {
-            case NativeMethods.WM_LBUTTONDOWN: kind = HookRingKind.LeftDown; _leftSwallowed = true; break;
-            case NativeMethods.WM_RBUTTONDOWN: kind = HookRingKind.RightDown; _rightSwallowed = true; break;
-            case NativeMethods.WM_MOUSEWHEEL: kind = HookRingKind.Wheel; delta = (short)(data.MouseData >> 16); break;
-            default: return false; // an unpaired release passes through
-        }
+        var decision = _ringPairing.OnMessage(msg, data.Time, _ringCapture);
+        if (decision.Kind is not { } kind) return decision.Swallow;
+        var delta = kind == HookRingKind.Wheel ? (short)(data.MouseData >> 16) : 0;
         try { RingInput?.Invoke(this, new HookRingEventArgs(kind, delta)); }
         catch (Exception ex) { try { _log.Error("ring input handler failed", ex); } catch { } }
-        return true;
+        return decision.Swallow;
     }
 
     private static bool IsInjected(NativeMethods.MSLLHOOKSTRUCT d) =>

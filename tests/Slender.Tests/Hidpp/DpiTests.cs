@@ -53,4 +53,70 @@ public class DpiTests
             Assert.Equal(0, devNone.CountCalls(Dpi, 2) + devNone.CountCalls(Dpi, 3));
         }
     }
+
+    [Fact]
+    public async Task GetDpi_returns_the_device_value_when_connected()
+    {
+        var (mouse, _) = Create(null, 1600);
+        using (mouse)
+        {
+            await mouse.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => mouse.IsConnected);
+            Assert.Equal(1600, await mouse.GetDpiAsync(CancellationToken.None));
+        }
+    }
+
+    [Fact]
+    public async Task GetDpi_is_null_when_not_connected()
+    {
+        var (mouse, dev) = Create(null, 1600);
+        using (mouse)
+        {
+            Assert.False(mouse.IsConnected);
+            Assert.Null(await mouse.GetDpiAsync(CancellationToken.None));
+            Assert.Equal(0, dev.CountCalls(Dpi, 2));
+        }
+    }
+
+    [Fact]
+    public async Task GetDpi_is_null_when_the_device_reports_zero()
+    {
+        var (mouse, _) = Create(null, 0);
+        using (mouse)
+        {
+            await mouse.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => mouse.IsConnected);
+            Assert.Null(await mouse.GetDpiAsync(CancellationToken.None));
+        }
+    }
+
+    [Fact]
+    public async Task GetDpi_is_null_when_the_read_fails_with_a_HID_error()
+    {
+        var dev = new FakeDevice();
+        dev.Features[FeatureId.AdjustableDpi] = Dpi;
+        var transport = dev.NewTransport();
+        transport.OnWrite = w =>
+        {
+            if (w[2] == Dpi && (w[3] >> 4) == 2)
+            {
+                var error = new byte[HidppMessage.LongLength];
+                error[0] = HidppMessage.LongReportId;
+                error[1] = w[1];
+                error[2] = HidppMessage.Hidpp2ErrorFeature;
+                error[3] = Dpi;
+                error[4] = w[3];
+                error[5] = 2; // invalid argument
+                return [error];
+            }
+            return dev.Handle(w);
+        };
+        var factory = new FakeFactory();
+        factory.Enqueue(transport);
+        var o = Wait.FastOptions();
+        using var mouse = new LogiMouse(factory, o);
+        await mouse.StartAsync(CancellationToken.None);
+        await Wait.UntilAsync(() => mouse.IsConnected);
+        Assert.Null(await mouse.GetDpiAsync(CancellationToken.None));
+    }
 }

@@ -183,4 +183,26 @@ public class KeyboardRouterTests
         Assert.Empty(ex.Calls);
         r.Dispose(); // idempotent
     }
+
+    [Fact]
+    public void Keyboard_divert_change_waits_while_a_key_is_held()
+    {
+        var cfg = Cfg(false,
+            P(null, (KeyboardId.Mute, new ActionSpec.Keys("Ctrl+M"))),
+            P("teams", (KeyboardId.Mute, new ActionSpec.None())));
+        var (r, kb, fg, _, _) = Make(cfg);
+        using var router = r;
+        router.ForegroundDebounceMs = 20;
+        router.Start();
+        Assert.True(SpinWait.SpinUntil(() => kb.DivertCount == 1, 5000));
+
+        kb.Key(KeyboardId.Mute, true);
+        fg.Switch("teams"); // would un-divert the key and lose its release
+        Thread.Sleep(200);
+        Assert.Equal(1, kb.DivertCount);
+
+        kb.Key(KeyboardId.Mute, false);
+        Assert.True(SpinWait.SpinUntil(() => kb.DivertCount == 2, 5000));
+        Assert.Empty(kb.Diverts[1]);
+    }
 }

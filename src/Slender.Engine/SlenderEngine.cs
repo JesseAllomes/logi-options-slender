@@ -517,11 +517,33 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
-            if (!connected) AbortGesture(); // a held gesture button can never be released once the device is gone
+            if (!connected)
+            {
+                AbortGesture(); // a held gesture button can never be released once the device is gone
+                // The device is gone: its held controls will never report a release, so release their actions now.
+                KeyValuePair<ushort, ActionSpec>[] held;
+                lock (_gate) { held = [.. _active]; _active.Clear(); }
+                foreach (var (_, action) in held)
+                {
+                    if (action is ActionSpec.None) continue;
+                    try
+                    {
+                        if (action is ActionSpec.ActionsRing) RaiseRing(false);
+                        else _queue.Post(() => ReleaseHeld(action));
+                    }
+                    catch (Exception ex) { SafeLog("held control release failed", ex); }
+                }
+            }
             PublishStatus(connected);
             if (connected) _ = FetchBatteryAsync();
         }
         catch (Exception ex) { SafeLog("connection handler failed", ex); }
+    }
+
+    private void ReleaseHeld(ActionSpec action)
+    {
+        try { _executor.Execute(action, false); }
+        catch (Exception ex) { _log.Error("held control release failed", ex); }
     }
 
     private async Task FetchBatteryAsync()
