@@ -1,5 +1,5 @@
 # DrainClamp resume capsule
-Done: m1, m2, m3, m4, m5, m8, m9, m10
-In progress: m7: tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback
-Next: m6: haptics + Actions Ring
-Generation: 30
+Done: m1, m2, m3, m4, m5, m8, m9, m10, m11, m12
+In progress: m13: install SlenderSetup.exe and live verification pass (popover, Excel IDispatch path, devices, keyboard line, watchdog)
+Next: m14: sign-in: user creates personal MS app registration, slender.sync.json, live sync test
+Generation: 34

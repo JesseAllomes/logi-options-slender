@@ -1,16 +1,20 @@
-<!-- drainclamp-build: state; schema=1; generation=30 -->
+<!-- drainclamp-build: state; schema=1; generation=34 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
-Greenfield repo (no code yet). Target: native Windows tray app replacing Logi Options+ for an MX Master 4 (Bluetooth LE).
-Reference upstreams (read-only, untrusted, never built/run) in .agent/upstream/:
-- MouseControl (Mouser, MIT, Python/PySide6, ~18.7k lines core) -> best Windows reference: core/hid_gesture.py (HID++ over hidapi), core/mouse_hook_windows.py (LL hook + scroll injection), core/actions_ring.py + config.py (MX Master 4 haptics, Actions Ring), core/app_detector.py (per-app profiles), core/logi_devices.py (device catalog incl. MX Master 4)
-- MXControl (macOS Swift, README says MIT, no LICENSE file) -> clean HID++ 2.0 layering: Sources/MXControlHIDPP/{Transport,Protocol,Core,Features}, docs/reverse-engineering/
-- logi-options-plus-mini (Apache-2.0) -> official Options+ installer feature flags: logi-options-plus-mini.ps1 (analytics, flow, sso, update, dfu, logivoice, smartactions, actions-ring, device-recommendation)
-Baseline (2026-10-15, this PC): Options+ 2.8.981479, Logi Plugin Service 6.4.2.3414. RAM ~700MB: LogiPluginService 342, logioptionsplus_agent 262, updater 42, PluginServiceExt 21, appbroker 17, crashpad 19.
-Excel findings: two Logi add-ins load each start - LogiOptionsPlusExcelAddin (VSTO, HKCU Office\Excel\Addins, LoadBehavior 2, ~0.3s) and LogiExcelAddIn (PluginService VSTO, ~0.4-1.0s, hard-disabled by Excel Resiliency\DisabledItems after load crash; its dll path no longer exists). PERSONAL.XLSB also in DisabledItems. Excel faults 2026-10-05 (x3), 10-12, 10-14; module attribution not Logi-proven.
-Planned layout: src/Slender.Hidpp (transport+protocol+features), src/Slender.Engine (hooks, actions, profiles, Excel bridge), src/Slender.Tray (UI), tests/Slender.Tests, scripts/ (Options+ trim + Excel repair).
-Optimisation vectors: single process, no Electron/Qt; engine idle-sleeps on HID read; UI window created on demand and disposed on close; Excel via COM late-binding only while Excel is foreground; no VSTO add-in.
+Slender = lean Windows replacement for Logi Options+ (MX Master 4 BLE PID B042 + ERGO K860 BLE PID B359). main @ 8aefde1, 453 tests.
+Modules -> responsibility -> entry:
+- src/Slender.Hidpp -> HID++ 2.0 over Windows HID (Transport/WindowsHidTransport*), HidppChannel (internal sends), HidppDevice (+HidppAllowlist: only listed feature/fn pairs; DFU/host-change/onboard-profiles blocked), LogiDeviceBase -> LogiMouse (diverts gesture/modeshift/sense only, thumbwheel invert, SmartShift, smooth scroll, DPI re-applied every connect; haptic play = 0x19B0 fn4) and LogiKeyboard (diverts, Fn lock 0x40A3, 0x1C00 onboard remap read/set/reset; PersistentRemap.cs encoder = 1 modifier max)
+- src/Slender.Engine -> SlenderEngine (hook buttons middle/back/forward + Excel thumb wheel + HID++ buttons), KeyboardRouter, OnboardSync (plan only, not wired), ExcelBridge (AOT IDispatch client ComDispatch + WM_HSCROLL fallback), LowLevelMouseHook, ForegroundAppWatcher, ActionExecutor/ChordParser (media keys, "Right|Left" wheel pairs); Config/ JsonConfigStore v2 + StatusJson (source-gen JSON); Contracts/ EngineContracts.cs (SlenderConfig v2, Pointer, Keyboard, SlenderStatus, SlenderPaths)
+- src/Slender.Tray -> raw Win32 tray (no WinForms), NativeAOT publish (5.3 MB private / 17.6 MB WS idle), OptionsPlusGuard (pauses while Options+ runs), StatusPublisher (status.json), config watcher, MemoryWatchdog (60/100 MB), Velopack hook, SyncService background sync; entry Program.cs
+- src/Slender.Settings -> WinUI 3 (WinAppSDK 1.8, framework-dependent .NET, ReadyToRun), locked design (.grok/product-ui), --popover mode (unfold, exits on dismiss), Point & scroll page, Compare grid, sign-in UI, firmware row; ~193 MB WS only while open
+- src/Slender.Sync -> MSAL personal MS account, OneDrive approot config sync (client id from slender.sync.json, not in repo)
+- tools/Slender.Probe (read-only by default; opt-in flags write device), tools/Slender.InputLog (K860 raw input logger)
+- scripts/Build-Setup.ps1 -> artifacts/SlenderSetup.exe (Velopack, 71.8 MB, unsigned); Install/Uninstall-Slender.ps1 fallback; Trim-OptionsPlus.ps1, Repair-ExcelAddins.ps1
+- docs/: protocol.md (all device facts), memory.md (audit), settings.md, sync.md, install.md, switch-over.md, baseline.md
+Assets: device renders/hotspots copied at runtime from C:/ProgramData/LogiOptionsPlus/depots to %LOCALAPPDATA%/Slender/assets; never committed.
+Device facts: survive power cycle = SmartShift threshold, haptics; NOT = DPI, thumb invert, hi-res, diverts. Options+ leaves diverts behind when its agent stops (Easy-Switch reconnect or Slender connect clears them).
+Machine state now: Options+ service STOPPED (until reboot); old Slender build (main Release bin, pid 15720) still running; LogiPluginService running (~180-700 MB). Leftover locked worktree folders: logi-options-slender-m9, slender-wt-tray, slender-wt-settings (delete when unlocked). Branch wt-mem kept (audit experiments).
 <!-- /DC:ARCH -->
 
 <!-- DC:DECISIONS -->
@@ -35,23 +39,29 @@ Tray -> Win32 rewrite (no WinForms) built NativeAOT-ready, then NativeAOT publis
 Popover -> WinUI popover kept for looks; runs only while open (process exits when dismissed); unfolds into the full window (user)
 Leak guard -> tray memory watchdog: log + clean self-restart above a threshold (Options+ reached 14 GB; user)
 Onboard K860 -> dig deeper with an input logger before deciding (user)
+Subagents must never click/type on the desktop or launch UI windows without the user's go-ahead (Outlook clicks + pop-ups happened); never kill processes they did not start (python kill happened) (user)
+Onboard K860 -> one modifier max or media key (tested); multi-modifier per app via software divert, same as Options+ (tested)
+Live device writes and Options+ stops only with explicit user go-ahead in the current conversation; user authorised stopping Options+ processes/service only
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
 | id | goal | files | status | deps |
 |---|---|---|---|---|
-| m1 | protocol + baseline notes: MX Master 4 HID++ feature map (thumbwheel 0x2150, reprog 0x1B04, haptics, battery) from Mouser/MXControl, plus Options+ baseline | docs/protocol.md;docs/baseline.md | done | |
-| m2 | Options+ trim and Excel repair scripts (dry-run default, registry backup, re-enable PERSONAL.XLSB, drop stale LogiExcelAddIn) | scripts/Trim-OptionsPlus.ps1;scripts/Repair-ExcelAddins.ps1;docs/switch-over.md | done | m1 |
-| m3 | .NET 8 solution + HID++ core: BLE HID transport, device discovery, feature lookup, fake-transport tests | Slender.slnx;Directory.Build.props;src/Slender.Hidpp;tests/Slender.Tests | done | m1 |
-| m4 | Excel thumb wheel: divert thumbwheel, Excel-foreground detection, sideways scroll via COM, native fallback elsewhere | src/Slender.Engine;tests/Slender.Tests | done | m3 |
-| m5 | custom buttons: divert reprog controls, action engine, per-app profiles incl. Excel actions | src/Slender.Engine;tests/Slender.Tests | done | m4 |
-| m6 | haptics + Actions Ring | src/Slender.Engine;src/Slender.Tray;tests/Slender.Tests | pending | m5 |
-| m7 | tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback | src/Slender.Tray;docs/switch-over.md;tests/Slender.Tests | active | m6 |
-| m8 | hybrid button capture + HID++ write allowlist | src/Slender.Engine;src/Slender.Hidpp;tests/Slender.Tests | done | m3 |
-| m9 | keyboard support (ERGO K860): top-row keys, Fn lock | src/Slender.Hidpp;src/Slender.Engine;tests/Slender.Tests | done | m8 |
-| m10 | WinUI 3 settings app (product-ui locked design) | src/Slender.Settings;.grok/product-ui | done | m8 |
-| m11 | team round: engine gaps (media keys, thumb wheel per app, smooth scroll), tray keyboard status + installer, settings polish | src/Slender.Engine;src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings;scripts/Install-Slender.ps1;tests/Slender.Tests | active | m10 |
-| m12 | memory audit (Opus) and chosen reductions; tray popover decision | docs/memory.md;src/Slender.Tray;src/Slender.Settings | active | m10 |
+| m1 | protocol + baseline notes | docs/protocol.md;docs/baseline.md | done | |
+| m2 | Options+ trim and Excel repair scripts | scripts/Trim-OptionsPlus.ps1;scripts/Repair-ExcelAddins.ps1;docs/switch-over.md | done | m1 |
+| m3 | HID++ core + probe | src/Slender.Hidpp;tools/Slender.Probe | done | m1 |
+| m4 | Excel thumb wheel | src/Slender.Engine | done | m3 |
+| m5 | custom buttons + per-app profiles | src/Slender.Engine | done | m4 |
+| m8 | hybrid button capture + HID++ allowlist | src/Slender.Engine;src/Slender.Hidpp | done | m3 |
+| m9 | ERGO K860 support | src/Slender.Hidpp;src/Slender.Engine | done | m8 |
+| m10 | WinUI 3 settings app (locked design) | src/Slender.Settings | done | m8 |
+| m11 | team round: engine gaps, tray keyboard status, settings polish | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | done | m10 |
+| m12 | memory: Win32 AOT tray, gen0 cap, watchdog, popover, shared runtime | src/Slender.Tray;src/Slender.Settings;docs/memory.md | done | m10 |
+| m13 | install SlenderSetup.exe and live verification pass (popover, Excel IDispatch path, devices, keyboard line, watchdog) | scripts/Build-Setup.ps1;docs/install.md | active | m12 |
+| m14 | sign-in: user creates personal MS app registration, slender.sync.json, live sync test | src/Slender.Sync;docs/sync.md | pending | m13 |
+| m15 | onboard keys UI: contract KeyboardSettings.OnboardKeys + OnboardManaged, "Store on keyboard" in picker (1 modifier max), wire OnboardSync on connect/config change | src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/OnboardSync.cs;src/Slender.Settings;src/Slender.Tray | pending | m13 |
+| m16 | firmware: tray publishes device firmware versions (0x0003 read, allowlist), "Update firmware..." launches Options+ temporarily; set Options+ service to Manual after switch-over | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings | pending | m13 |
+| m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -73,4 +83,5 @@ Onboard K860 -> dig deeper with an input logger before deciding (user)
 - 2026-10-14T23:56:42+00:00 c3ee0158 Live test: Options+ service stopped (until reboot); haptic play = fn4 confirmed; thumb wheel invert applied from config (default on); m9 keyboard merged (151 tests); keyboard router not yet wired into tray
 - 2026-10-15T00:24:31+00:00 ac36d067 m10 merged (820c394, 265 tests); keyboard wired into tray; team launched: wt-engine, wt-tray, wt-settings (Sonnet), wt-mem (Opus audit)
 - 2026-10-15T01:57:21+00:00 09374121 Merged: Win32 tray (AOT 5.3 MB private), popover mode, setup.exe+sync, onboard (1 modifier max; Options+ uses software divert for multi-mod); 400+ tests
+- 2026-10-15T02:04:29+00:00 6a918951 Session wrap: SlenderSetup.exe 1.0.0 built (AOT tray, 71.8 MB); next = user quits old Slender, installs, 5-min live pass (m13)
 <!-- /DC:LOG -->

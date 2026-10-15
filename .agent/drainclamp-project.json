@@ -27,10 +27,37 @@
           ".agent/upstream/logi-options-plus-mini/logi-options-plus-mini.ps1"
         ]
       }
+    ],
+    "m13": [
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 10,
+        "goal": "User quits old Slender, runs artifacts/SlenderSetup.exe; verify tray starts (AOT), status.json, devices connect",
+        "id": "c1",
+        "note": "",
+        "targets": [
+          "scripts/Build-Setup.ps1",
+          "docs/install.md"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 20,
+        "goal": "Live pass with user: tray left-click popover + unfold, Excel thumb wheel via IDispatch, Back/Forward sheets, K860 battery line, memory after 1 h",
+        "id": "c2",
+        "note": "",
+        "targets": [
+          "src/Slender.Tray/Program.cs",
+          "src/Slender.Settings/MainWindow.Popover.cs",
+          "src/Slender.Engine/ExcelBridge.cs"
+        ]
+      }
     ]
   },
   "errors": [],
-  "rev": 4,
+  "rev": 6,
   "schema": 1,
   "time": [
     {
