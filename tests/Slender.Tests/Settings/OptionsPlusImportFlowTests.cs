@@ -41,6 +41,54 @@ public class OptionsPlusImportFlowTests : IDisposable
         Assert.All(p.Groups, g => Assert.NotEmpty(g.Lines));
     }
 
+    private static readonly string PluginStore = Path.Combine(AppContext.BaseDirectory, "Fixtures", "pluginservice");
+
+    [Fact]
+    public void PluginServiceRingWinsOverSettingsDbRingAndIsCounted()
+    {
+        var ring = Slender.Engine.Import.PluginServiceStore.Read(PluginStore);
+        string icons = Path.Combine(_dir, "assets", "ring");
+        ImportPreview without = OptionsPlusImportFlow.Prepare(SlenderConfig.Default, FakeDb("settings.db"), FakeDb("macros.db"), FixtureReader);
+        ImportPreview p = OptionsPlusImportFlow.Prepare(SlenderConfig.Default, FakeDb("settings.db"), FakeDb("macros.db"), FixtureReader, ring, new PluginServiceIcons(icons, _ => null));
+
+        Assert.True(p.CanImport);
+        Assert.Equal("Explore AI", p.Result!.Config.Profiles.Single(x => x.AppProcess is null).RingSlots![0].Name);
+        Assert.True(p.BindingCount > without.BindingCount);
+        Assert.DoesNotContain(p.Result.Notes, n => n.Where.Contains("radial-menu-virtual-device-", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PluginServiceRingAloneIsEnoughWhenSettingsDbIsMissing()
+    {
+        var ring = Slender.Engine.Import.PluginServiceStore.Read(PluginStore);
+        ImportPreview p = OptionsPlusImportFlow.Prepare(SlenderConfig.Default, Path.Combine(_dir, "nope.db"), null, _ => throw new InvalidOperationException("must not read"), ring);
+        Assert.True(p.CanImport);
+        Assert.Equal(3, p.ProfileCount); // All apps, Excel, PowerPoint
+    }
+
+    [Fact]
+    public void IconsAreCopiedOnlyWhenSavedAndNamedByContent()
+    {
+        string source = Path.Combine(_dir, "orig");
+        string images = Path.Combine(source, "ActionImages");
+        Directory.CreateDirectory(images);
+        File.WriteAllBytes(Path.Combine(images, "act.png"), [1, 2, 3]);
+        string target = Path.Combine(_dir, "assets", "ring");
+        var reads = new List<string>();
+        var icons = new PluginServiceIcons(target, path => { reads.Add(path); return File.Exists(path) ? File.ReadAllBytes(path) : null; });
+        var profile = new Slender.Engine.Import.PluginServiceProfile("@_x", "X", "{}", source);
+
+        string? icon = icons.For(profile, "act");
+        Assert.NotNull(icon);
+        Assert.StartsWith("file:" + target, icon);
+        Assert.False(Directory.Exists(target)); // nothing written until Save
+        Assert.Null(icons.For(profile, "missing"));
+
+        icons.Save();
+        Assert.True(File.Exists(icon!["file:".Length..]));
+        Assert.Equal(icon, new PluginServiceIcons(target, _ => [1, 2, 3]).For(profile, "other")); // same bytes, same file
+    }
+
     [Fact]
     public void MissingSettingsDbIsReportedAsNotFound()
     {

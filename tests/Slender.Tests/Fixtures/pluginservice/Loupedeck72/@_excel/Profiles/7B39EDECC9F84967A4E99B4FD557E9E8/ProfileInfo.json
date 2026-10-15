@@ -1,0 +1,281 @@
+{
+  "$type": "Loupedeck.Service.ApplicationProfile, LoupedeckService",
+  "name": "7B39EDECC9F84967A4E99B4FD557E9E8",
+  "profileFlags": "None",
+  "displayName": "Default Excel Profile",
+  "description": null,
+  "deviceType": "Loupedeck72",
+  "applicationName": "@_excel",
+  "nativePluginName": "Excel",
+  "hasNativePlugin": true,
+  "additionalNativePluginNames": [
+    "DefaultWin"
+  ],
+  "lastModifiedTimeUtc": "2026-05-29T04:17:59.0850306Z",
+  "profileSettings": {
+    "$type": "Loupedeck.DictionaryNoCase`1[[System.String, System.Private.CoreLib]], PluginApi"
+  },
+  "actionImages90": null,
+  "actionImages60": null,
+  "wheelImages": null,
+  "actionColors": null,
+  "layout": {
+    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayout7, LoupedeckService",
+    "deviceType": "Loupedeck72",
+    "profileFlags": "None",
+    "layoutModes": [
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutMode7, LoupedeckService",
+        "deviceType": "Loupedeck72",
+        "modeName": "main",
+        "parentModeName": null,
+        "actions": null,
+        "dynamicButtonPages": null,
+        "dynamicEncoderPages": null,
+        "workspaces": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutWorkspace7, LoupedeckService",
+            "name": "285717BD1470403091F148F9224454FA",
+            "displayName": "Workspace 1",
+            "description": null,
+            "pressPages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "79DECD499C2C478A958209328CBB9301",
+                "displayName": "Page (1)",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": "$@Generic___@ProfileAction___4A119B44829B4E33954F32F869C268F4",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": "$@Generic___@ProfileAction___9AC75543D7114171A294FFB5D8437EF4",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": "$@Generic___@ProfileAction___CB4188485EA449CAA15A0FA0822A64A2",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": "$@Generic___@AdjustmentAsCommand___$Excel#¤%&+?ChartStyleAdjustment",
+                    "rotateAction": "$Excel___ChartStyleAdjustment"
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": "$Excel___PasteValuesOnlyCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": "$Excel___PasteFormatOnlyCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": "$Excel___PasteSpecialDialogCommand",
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ],
+            "rotatePages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "DA45EA1412344C7E8F1DE9CB76544C2D",
+                "displayName": "Dial Page",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": null,
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "homeWorkspaceName": "285717BD1470403091F148F9224454FA"
+      }
+    ],
+    "folderPages": [
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+        "name": "9AC75543D7114171A294FFB5D8437EF4",
+        "displayName": "Folder",
+        "description": "",
+        "controls": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 0,
+            "pressAction": "$@Generic___@AdjustmentAsCommand___$Excel#¤%&+?TableColorAdjustment",
+            "rotateAction": "$Excel___TableColorAdjustment"
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 1,
+            "pressAction": "$Excel___InsertRowAboveCommand",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 2,
+            "pressAction": "$Excel___InsertColumnLeftCommand",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 3,
+            "pressAction": "$Excel___CreateTableCommand",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 4,
+            "pressAction": "$@Generic___@AdjustmentAsCommand___$Excel#¤%&+?TableStyleAdjustment",
+            "rotateAction": "$Excel___TableStyleAdjustment"
+          }
+        ]
+      }
+    ]
+  },
+  "macroCommands": [],
+  "macroAdjustments": [],
+  "profileCommands": [],
+  "profileAdjustments": [],
+  "conversionHistory": "2025-06-25T13:33:32.8135114Z ak 6.1.4.22574\r\n",
+  "packageName": "0061C61BAE514577A7E7EF1A33A97F86",
+  "packageVersion": "1.0.9320.28751",
+  "profileActions": [
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___4A119B44829B4E33954F32F869C268F4",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+KeyC___67830795___Ctrl+C___win-67#¤%&+?128#¤%&+?67830795#¤%&+?46"
+        },
+        "count": 1
+      },
+      "displayName": "Cut",
+      "description": "Activate a keyboard shortcut with a single press or hold down for continuous use like a keyboard key",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___9AC75543D7114171A294FFB5D8437EF4",
+      "templateActionName": "$@Generic___@OpenFolder",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "folderName": "9AC75543D7114171A294FFB5D8437EF4"
+        },
+        "count": 1
+      },
+      "displayName": "Tables",
+      "description": "",
+      "groupName": "Folders",
+      "superGroupName": "@navigation",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___CB4188485EA449CAA15A0FA0822A64A2",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Subtract___67700745___Ctrl+-___win-109#¤%&+?128#¤%&+?67700745#¤%&+?74"
+        },
+        "count": 1
+      },
+      "displayName": "Delete Row",
+      "description": "Activate a keyboard shortcut with a single press or hold down for continuous use like a keyboard key",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    }
+  ]
+}

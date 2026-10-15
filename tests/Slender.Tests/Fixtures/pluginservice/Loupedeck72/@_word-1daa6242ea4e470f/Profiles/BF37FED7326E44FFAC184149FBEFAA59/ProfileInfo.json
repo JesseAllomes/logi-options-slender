@@ -1,0 +1,172 @@
+{
+  "$type": "Loupedeck.Service.ApplicationProfile, LoupedeckService",
+  "name": "BF37FED7326E44FFAC184149FBEFAA59",
+  "profileFlags": "None",
+  "displayName": "Default Word Profile",
+  "description": "",
+  "deviceType": "Loupedeck72",
+  "applicationName": "@_word-1daa6242ea4e470f",
+  "nativePluginName": "Word-1DAA6242EA4E470F",
+  "hasNativePlugin": true,
+  "additionalNativePluginNames": [
+    "DefaultWin"
+  ],
+  "lastModifiedTimeUtc": "2025-11-19T09:21:16.618492Z",
+  "profileSettings": {
+    "$type": "Loupedeck.DictionaryNoCase`1[[System.String, System.Private.CoreLib]], PluginApi"
+  },
+  "actionImages90": null,
+  "actionImages60": null,
+  "wheelImages": null,
+  "actionColors": null,
+  "layout": {
+    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayout7, LoupedeckService",
+    "deviceType": "Loupedeck72",
+    "profileFlags": "None",
+    "layoutModes": [
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutMode7, LoupedeckService",
+        "deviceType": "Loupedeck72",
+        "modeName": "main",
+        "parentModeName": null,
+        "actions": null,
+        "dynamicButtonPages": null,
+        "dynamicEncoderPages": null,
+        "workspaces": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutWorkspace7, LoupedeckService",
+            "name": "080069175DF5443988D74E229AD98CBF",
+            "displayName": "Workspace 1",
+            "description": null,
+            "pressPages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "87497A072EAA437E894675F7F7334772",
+                "displayName": "Page (1)",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___9BBE809F1C8F48BC8A9AFC62A37B7B0D",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___7C0A60D14A6641BBB2F1821A2DC7B740",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___CA793BDA93DD4610B826FD828BAE9969",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___EA2FE283A04544AE852A2A8F169724B9",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___1060D83E88884CAE9CCB65A22D8DDD0A",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___7084FDC30E864241AB32E5F8BF216CD0",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___995BAE078EE64CC9838297CAB67762AB",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": "$Word-1DAA6242EA4E470F___VirtualCommand___67D3458154804260B70CEC8748053787",
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ],
+            "rotatePages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "62B8A46DB0EF4B179DFBE60364EFCB44",
+                "displayName": "Dial Page",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": null,
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "homeWorkspaceName": "080069175DF5443988D74E229AD98CBF"
+      }
+    ],
+    "folderPages": []
+  },
+  "macroCommands": [],
+  "macroAdjustments": [],
+  "profileCommands": [],
+  "profileAdjustments": [],
+  "conversionHistory": "2025-06-10T09:20:25.8010496Z ak 6.1.4.22574\r\n2025-09-02T11:29:02.1131540Z aq 6.2.1.643\r\n2025-11-19T13:26:17.2152374Z at 6.2.5.1514\r\n",
+  "packageName": "A1F7E481CED04EDBA19CB7031882CE53",
+  "packageVersion": "1.0.9455.27819",
+  "profileActions": []
+}

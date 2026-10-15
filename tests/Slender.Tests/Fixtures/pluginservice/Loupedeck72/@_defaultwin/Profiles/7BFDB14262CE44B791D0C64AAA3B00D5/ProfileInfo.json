@@ -1,0 +1,1758 @@
+{
+  "$type": "Loupedeck.Service.ApplicationProfile, LoupedeckService",
+  "name": "7BFDB14262CE44B791D0C64AAA3B00D5",
+  "profileFlags": "None",
+  "displayName": "Default General Profile",
+  "description": "",
+  "deviceType": "Loupedeck72",
+  "applicationName": "@_defaultwin",
+  "nativePluginName": "DefaultWin",
+  "hasNativePlugin": true,
+  "additionalNativePluginNames": [
+    "Spotify",
+    "BtcValue",
+    "Vlc",
+    "AiAssistant",
+    "Twitch",
+    "PhilipsHue",
+    "ObsStudio"
+  ],
+  "lastModifiedTimeUtc": "2026-07-21T00:15:03.651927Z",
+  "profileSettings": {
+    "$type": "Loupedeck.DictionaryNoCase`1[[System.String, System.Private.CoreLib]], PluginApi"
+  },
+  "actionImages90": null,
+  "actionImages60": null,
+  "wheelImages": null,
+  "actionColors": null,
+  "layout": {
+    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayout7, LoupedeckService",
+    "deviceType": "Loupedeck72",
+    "profileFlags": "None",
+    "layoutModes": [
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutMode7, LoupedeckService",
+        "deviceType": "Loupedeck72",
+        "modeName": "System",
+        "parentModeName": null,
+        "actions": null,
+        "dynamicButtonPages": null,
+        "dynamicEncoderPages": null,
+        "workspaces": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutWorkspace7, LoupedeckService",
+            "name": "739C52534F6745B7B65F3AA07D264128",
+            "displayName": "Workspace 1",
+            "description": null,
+            "pressPages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "B327A1DF992C42C8AD29C522412E37B8",
+                "displayName": "Page (1)",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": "$@Generic___@ProfileAction___B93AF79DDFEC4F37A1927E9139C236F7",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": "$@Generic___@ProfileAction___3645CD680F6141AE87772A631AD595DA",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": "$@Generic___@Macro___4C29B55B6794491380D7A2702A541439",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": "$DefaultWin___LockWorkstation",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": "$@Generic___@Macro___77B246FCB5104A83B009581493755F13",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": "$DefaultWin___MediaPlayPause",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": "$@Generic___@ProfileAction___742D6EFF62EA4B53977BB72140B43639",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": "$@Generic___@ProfileAction___D7B660CDB41A476B9077DD02D237604B",
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ],
+            "rotatePages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "AE0CB55C57E94A4EB9B258B28C0F3D2F",
+                "displayName": "Page (1)",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": null,
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "homeWorkspaceName": "739C52534F6745B7B65F3AA07D264128"
+      }
+    ],
+    "folderPages": [
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+        "name": "B93AF79DDFEC4F37A1927E9139C236F7",
+        "displayName": "Folder",
+        "description": "",
+        "controls": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 0,
+            "pressAction": "$@Generic___@Macro___249A6D14C4254259968016F8EAB8554A",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 1,
+            "pressAction": "$@Generic___@Macro___9ED448DF63A9422F8E4F9184ED10CB8B",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 2,
+            "pressAction": "$@Generic___@Macro___5382720B26384669A8E0CF3E83306F05",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 3,
+            "pressAction": "$@Generic___@Macro___41D9A5A8F27648B7B40E542E8EE610DC",
+            "rotateAction": null
+          }
+        ]
+      },
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+        "name": "D7B660CDB41A476B9077DD02D237604B",
+        "displayName": "Folder",
+        "description": "",
+        "controls": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 0,
+            "pressAction": "$@Generic___@Macro___A2C5A885CF964440A4F4DD209150DE1F",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 1,
+            "pressAction": "$@Generic___@Macro___4522B3F87D084FB88B19589089F4A280",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 2,
+            "pressAction": "$@Generic___@Macro___AA3722F985D241508746F7F09199E404",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 3,
+            "pressAction": "$@Generic___@Macro___6D93E75302A148008DE6236C119E63D0",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 4,
+            "pressAction": "$@Generic___@Macro___B0B3C8D71D8542D5912C74A41BA93852",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 5,
+            "pressAction": "$@Generic___@Macro___A9AB416B6EA8436FB4D60C21891EEBEA",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 6,
+            "pressAction": "$@Generic___@Macro___0F197CE5D3344D7F87FC48561677B677",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 7,
+            "pressAction": "$@Generic___@Macro___1ECEE8B5FDFB4335877DBC38FBF363C2",
+            "rotateAction": null
+          }
+        ]
+      },
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+        "name": "742D6EFF62EA4B53977BB72140B43639",
+        "displayName": "Folder",
+        "description": "",
+        "controls": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 0,
+            "pressAction": "$@Generic___@Macro___D2915D03C81048F98068AE675F7C627B",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 1,
+            "pressAction": "$@Generic___@Macro___EF6D93BDC2F74A738D266EE738A6B5E4",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 2,
+            "pressAction": "$@Generic___@Macro___2DEFE5B3EE1D44B29F9E8F227CEA36BB",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 3,
+            "pressAction": "$@Generic___@Macro___01341D74AE5548899CFB7BA2731B23A0",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 4,
+            "pressAction": "$@Generic___@Macro___7AFF976C26CC4B39A12A6A2FE04D7A4F",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 5,
+            "pressAction": "$@Generic___@Macro___AA7BEE44B5664EA097D5D03D2A6DE89F",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 6,
+            "pressAction": "$@Generic___@Macro___B3F170CD14AA479A80FA3D5D0037A48D",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 7,
+            "pressAction": "$@Generic___@Macro___CF814C1E48A94F13A32B8A959C0EA122",
+            "rotateAction": null
+          }
+        ]
+      },
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+        "name": "3645CD680F6141AE87772A631AD595DA",
+        "displayName": "Folder",
+        "description": "",
+        "controls": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 0,
+            "pressAction": "$@Generic___@ProfileAction___DF6349F193E34A6A95AD0A2AAFBACDB8",
+            "rotateAction": null
+          },
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+            "controlId": 1,
+            "pressAction": "$@Generic___@ProfileAction___6DCFDB0C72EF42E7AFFEF001C5AF7069",
+            "rotateAction": null
+          }
+        ]
+      }
+    ]
+  },
+  "macroCommands": [
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "1BECEA88A5CC4E538C045A0484332875",
+      "displayName": "Google",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-1.test"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "C2FF8968ED6B42D68E4605883A3BDE53",
+      "displayName": "Reply with chat GPT",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": false,
+      "actionEditorCommands": [
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "5BA1BFCEFD7447A79BFA02C2F483372B",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyC___4108___Cmd+C___"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "EC9C60F8C84B4191B60F680B14A829BB",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyV___4108___Cmd+V___"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "13AC344043104FDCBE3809EF0AC10E99",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "Return___4108___Return___"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "444326FA6BC5421BB1DB22BCAFF25752",
+          "templateName": "$@Generic___@SendText",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "text": "Please write a draft reply to the text in the following message. In addition, please create it assuming that you will reply with a chat tool such as Slack. Text below: ",
+            "useClipboard": "false"
+          }
+        }
+      ],
+      "isMultiState": false,
+      "actions": [
+        "5BA1BFCEFD7447A79BFA02C2F483372B",
+        "$@Generic___@ExecuteApplication___https://example-2.test/",
+        "$@Generic___@Sleep___3000",
+        "444326FA6BC5421BB1DB22BCAFF25752",
+        "$@Generic___@Sleep___500",
+        "EC9C60F8C84B4191B60F680B14A829BB",
+        "13AC344043104FDCBE3809EF0AC10E99",
+        "$@Generic___@Sleep___1"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "4D781EA8295B4AE586EA9177E8CCDBC6",
+      "displayName": "logioptionsplus",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___/Applications/logioptionsplus.app||"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "0DE0EF7E53394E48B90DFFBB53E1839B",
+      "displayName": "logioptionsplus",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___/Applications/logioptionsplus.app||"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "44B637C4C9904ECC9D1A334FD79FB58C",
+      "displayName": "New note",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": false,
+      "actionEditorCommands": [
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "0nNL7_Zn_tEZbPmiIWxCv",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+Space___4108___Cmd+Space___mac-49#¤%&+?1048584#¤%&+? #¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "piYRRfBGMGq9cFsXi0KRv",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "Return___4108___Return___mac-36#¤%&+?0#¤%&+?\r#¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "5DScD3_UTqPKNNnxfggbu",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyN___4108___Cmd+N___mac-45#¤%&+?1048584#¤%&+?n#¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "A89A097C848B4CDA8E33B3ABD4B117B9",
+          "templateName": "$@Generic___@SendText",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "text": "Notes",
+            "useClipboard": "false"
+          }
+        }
+      ],
+      "isMultiState": false,
+      "actions": [
+        "0nNL7_Zn_tEZbPmiIWxCv",
+        "A89A097C848B4CDA8E33B3ABD4B117B9",
+        "piYRRfBGMGq9cFsXi0KRv",
+        "5DScD3_UTqPKNNnxfggbu"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "46DF52CCC2CB4E32ADD1EF95CD56A9D6",
+      "displayName": "Open Browser",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-3.test"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "00518E68F5F54BD5B5376F0B70D017FF",
+      "displayName": "Chat GPT",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-4.test/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "5B102B01CB704278B8DC4DCB8FEFEAB0",
+      "displayName": "Ask Perplexity ",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-5.test/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "67DEFC60FF324DEE84B8F3C5F66B4A06",
+      "displayName": "Perplexity",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-5.test/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "2AD1FC548C494EA89408131326C55734",
+      "displayName": "Rephrase with Gemini",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-6.test/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "0609283930574764A2582801428F7A09",
+      "displayName": "Open MS Copilot",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-7.test/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "9D32B7F2F42F4E328EBE86988251DF37",
+      "displayName": "What is that? - Perplexity",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": false,
+      "actionEditorCommands": [
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "oCVocdYApiGX0EDR9scao",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyC___4108___Cmd+C___mac-8#¤%&+?1048584#¤%&+?c#¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "SXCInuzEty83BL7UzouA4",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyV___4108___Cmd+V___mac-9#¤%&+?1048584#¤%&+?v#¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "65I2i-Cu1Uo076hyupX7G",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "Return___4108___Return___mac-36#¤%&+?0#¤%&+?\r#¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "391C3B160DF14C6E9929ACA53A43A503",
+          "templateName": "$@Generic___@SendText",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "text": "What or who is \"",
+            "useClipboard": "false"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "B120A9EF55B247A29D533F846FD20942",
+          "templateName": "$@Generic___@SendText",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "text": "\" ?",
+            "useClipboard": "false"
+          }
+        }
+      ],
+      "isMultiState": false,
+      "actions": [
+        "oCVocdYApiGX0EDR9scao",
+        "$@Generic___@ExecuteApplication___https://example-8.test",
+        "$@Generic___@Sleep___1000",
+        "391C3B160DF14C6E9929ACA53A43A503",
+        "SXCInuzEty83BL7UzouA4",
+        "B120A9EF55B247A29D533F846FD20942",
+        "65I2i-Cu1Uo076hyupX7G"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "BF1AA42DD65E4CFE80EDDB23DA016CAE",
+      "displayName": "Reply with ChatGPT",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": false,
+      "actionEditorCommands": [
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "wtuIn7aTSIAGVwdrw20Vx",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyC___403249161___Ctrl+C___win-67#¤%&+?128#¤%&+?403249161#¤%&+?46"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "Y3gE1ld1txnOeH7F5rP9T",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyV___403249161___Ctrl+V___win-86#¤%&+?128#¤%&+?403249161#¤%&+?47"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "xYBaObTsrKMhwYanYMVNg",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "Return___4108___Return___mac-36#¤%&+?0#¤%&+?\r#¤%&+?com.apple.keylayout.SwissFrench"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "FA5A3B145DB24F15B33C749E388935FB",
+          "templateName": "$@Generic___@SendText",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "text": "Please write a draft reply to the text below. In addition, please create it assuming that you will reply with a chat tool such as Slack. Text below: ",
+            "useClipboard": "false"
+          }
+        }
+      ],
+      "isMultiState": false,
+      "actions": [
+        "wtuIn7aTSIAGVwdrw20Vx",
+        "$@Generic___@ExecuteApplication___https://example-4.test",
+        "$@Generic___@Sleep___1000",
+        "FA5A3B145DB24F15B33C749E388935FB",
+        "Y3gE1ld1txnOeH7F5rP9T",
+        "xYBaObTsrKMhwYanYMVNg"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "43CECB8DB9F743E29FC3DA0B25BFD11E",
+      "displayName": "Adobe Bridge 2024",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___/Applications/Adobe Bridge 2024/Adobe Bridge 2024.app||"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "E19699D2243349CCAD13E04DE517224D",
+      "displayName": "Ask Perplexity",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-9.test"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "BEB47B3C671A48C78AAA2E900168BC60",
+      "displayName": "Ask Perplexity",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___https://example-5.test/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "04F338502F064FD69779A16FD7D96A35",
+      "displayName": "Logi Options+",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___/Applications/logioptionsplus.app||"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "77B246FCB5104A83B009581493755F13",
+      "displayName": "Logi Options+",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files\\LogiOptionsPlus\\logioptionsplus.exe||||C:\\Program Files\\LogiOptionsPlus"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "88E1BE380D0E4AAF9B332AF0BDEEFF84",
+      "displayName": "New Note",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___shell:AppsFolder\\Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "AC0F64BC3E2141A1BB1508B9A2F1A22C",
+      "displayName": "New note",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Windows\\system32\\notepad.exe||||%HOMEDRIVE%%HOMEPATH%"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "4C29B55B6794491380D7A2702A541439",
+      "displayName": "New Note",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [],
+      "showAsSingleAction": false,
+      "actionEditorCommands": [
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "bmQTf51Mf81RBUwZOmpWi",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "ControlOrCommand+KeyN___67699721___Ctrl+N___"
+          }
+        }
+      ],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files\\Microsoft Office\\root\\Office16\\ONENOTE.EXE||||",
+        "$@Generic___@Sleep___1000",
+        "bmQTf51Mf81RBUwZOmpWi"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "249A6D14C4254259968016F8EAB8554A",
+      "displayName": "Claude",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___shell:AppsFolder\\Claude_pzs8sxrjxfjjc!Claude"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "9ED448DF63A9422F8E4F9184ED10CB8B",
+      "displayName": "ChatGPT",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___shell:AppsFolder\\OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0!ChatGPT"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "5382720B26384669A8E0CF3E83306F05",
+      "displayName": "Microsoft 365 Copilot",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___shell:AppsFolder\\Microsoft.MicrosoftOfficeHub_8wekyb3d8bbwe!Microsoft.MicrosoftOfficeHub"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "41D9A5A8F27648B7B40E542E8EE610DC",
+      "displayName": "Site 1",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-10.test/environments/Default-00000000-0000-0000-0000-000000000000/flows"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "4522B3F87D084FB88B19589089F4A280",
+      "displayName": "Site 2",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-11.test/banking/accounts"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "6D93E75302A148008DE6236C119E63D0",
+      "displayName": "Site 3",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-12.test/1498/clients"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "0F197CE5D3344D7F87FC48561677B677",
+      "displayName": "Site 4",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-13.test/home"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "A2C5A885CF964440A4F4DD209150DE1F",
+      "displayName": "Site 5",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-14.test/am/XUI/?realm=/alpha&authIndexType=service&authIndexValue=Provider%20Portal%20-%20Registration%20and%20Login#/"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "B0B3C8D71D8542D5912C74A41BA93852",
+      "displayName": "Site 6",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-15.test/sites/team"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "A9AB416B6EA8436FB4D60C21891EEBEA",
+      "displayName": "Site 7",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-16.test/app/homepage?locale=en-AU&tid=1"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "AA3722F985D241508746F7F09199E404",
+      "displayName": "Site 8",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-17.test/Public/Login?ReturnUrl=%2FEmployee%2F1000%2FTimesheets%2Ff%2F2025-08-31%2F1000"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "CF814C1E48A94F13A32B8A959C0EA122",
+      "displayName": "Site 9",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___C:\\Users\\someone\\Example Org\\Administration - Finance"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "B3F170CD14AA479A80FA3D5D0037A48D",
+      "displayName": "Site 10",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___C:\\Users\\someone\\Example Org\\Team - Documents"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "AA7BEE44B5664EA097D5D03D2A6DE89F",
+      "displayName": "Site 11",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___C:\\Users\\someone\\Example Org\\Payroll - General"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "7AFF976C26CC4B39A12A6A2FE04D7A4F",
+      "displayName": "Adobe Acrobat 2020",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files (x86)\\Adobe\\Acrobat 2020\\Acrobat\\Acrobat.exe||||"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "01341D74AE5548899CFB7BA2731B23A0",
+      "displayName": "Excel",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE||||"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "2DEFE5B3EE1D44B29F9E8F227CEA36BB",
+      "displayName": "Island",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files\\Island\\Island\\Application\\Island.exe||||C:\\Program Files\\Island\\Island\\Application"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "EF6D93BDC2F74A738D266EE738A6B5E4",
+      "displayName": "Microsoft Edge",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe||||C:\\Program Files (x86)\\Microsoft\\Edge\\Application"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "D2915D03C81048F98068AE675F7C627B",
+      "displayName": "Google Chrome",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@ExecuteApplication___C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe||||C:\\Program Files\\Google\\Chrome\\Application"
+      ]
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "1ECEE8B5FDFB4335877DBC38FBF363C2",
+      "displayName": "Site 12",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": true,
+      "actionEditorCommands": [],
+      "isMultiState": false,
+      "actions": [
+        "$@Generic___@OpenUrl___https://example-18.test/en-us/accessibility/excel/keyboard-shortcuts-in-excel"
+      ]
+    }
+  ],
+  "macroAdjustments": [
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileMacroAdjustment, LoupedeckService",
+      "isCommand": false,
+      "name": "C0CE2B0EC7DF4109AC1C64B132F9A66F",
+      "displayName": "Dial Adjustment",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "supportedOs": "All",
+      "supportedModes": [
+        "system"
+      ],
+      "showAsSingleAction": false,
+      "actionEditorCommands": [
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "436621C3B0C74DEBB9F9A1DC813FB7FE",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "Oem2___4108___Oem2___"
+          }
+        },
+        {
+          "$type": "Loupedeck.Service.MacroActionEditorCommand, LoupedeckService",
+          "name": "A089372B1C1B4D479987A46BA302453E",
+          "templateName": "$@Generic___@KeyboardKey",
+          "actionParameters": {
+            "$type": "System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+            "keyboardKey": "Period___4108___Period___"
+          }
+        }
+      ],
+      "actionsBefore": [
+        ""
+      ],
+      "actionsLeft": [
+        "436621C3B0C74DEBB9F9A1DC813FB7FE"
+      ],
+      "actionsRight": [
+        "A089372B1C1B4D479987A46BA302453E"
+      ],
+      "actionsReset": [],
+      "clickRateLimit": 9
+    }
+  ],
+  "profileCommands": [],
+  "profileAdjustments": [],
+  "conversionHistory": "2024-12-12T07:57:59.5373550Z KeyboardKeyConverter 6.0.2.21146\r\n2025-02-27T08:12:35.0546340Z KeyboardKeyConverter 6.1.0.21711\r\n2025-06-10T11:20:04.7654903Z ai 6.1.3.22547\r\n2026-09-01T22:22:22.5057736Z SendTextConverter 6.4.1.3246\r\n",
+  "packageName": "871E1F285D9F4FF69BBA70136E215012",
+  "packageVersion": "1.0.9343.24757",
+  "profileActions": [
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___AE430DF05B3A4609AD9DA8B3741CF8A3",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "Insert___269222921___Insert___"
+        },
+        "count": 1
+      },
+      "displayName": "Insert",
+      "description": "Send a keyboard shortcut",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___6C843ED915484BE8A9A40086BADC2B92",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Control+KeyQ___4108___Cmd+Ctrl+Q___mac-12#¤%&+?1310729#¤%&+?\u0011#¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Lock station",
+      "description": "Send a keyboard shortcut",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___E7A1401BACF2478D8104B93E09232A3A",
+      "templateActionName": "$@Generic___@ShellExecute",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "filePath": "/Users/someone/Downloads/In-situe_Flat_gif.png"
+        },
+        "count": 1
+      },
+      "displayName": "open",
+      "description": "Opens a specified file",
+      "groupName": "",
+      "superGroupName": "@desktop",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___025FB817297644F8A51B56A7A48EBCFD",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Control+KeyQ___4108___Cmd+Ctrl+Q___mac-12#¤%&+?1310729#¤%&+?\u0011#¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Lock",
+      "description": "Send a keyboard shortcut",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___BFD8280C42BF4AB98607423A8F1551B9",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Control+KeyQ___4108___Cmd+Ctrl+Q___mac-12#¤%&+?1310729#¤%&+?\u0011#¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Lock",
+      "description": "Send a keyboard shortcut",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___044D82BE30F0452399FE4F0E52E8878B",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Control+KeyQ___4108___Cmd+Ctrl+Q___mac-12#¤%&+?1310729#¤%&+?\u0011#¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Lock workstation",
+      "description": "Send a keyboard shortcut",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___4C97AF4400B24ED5BDD9AF0591338020",
+      "templateActionName": "$@Generic___@EasySwitch",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "device": "",
+          "channel": "",
+          "deviceDisplayName": "",
+          "channelDisplayName": ""
+        },
+        "count": 4
+      },
+      "displayName": "Easy Switch",
+      "description": "",
+      "groupName": "",
+      "superGroupName": "@desktop",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___6EBC615F492E46D5B683014B0E7C3F91",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Shift+Key5___4108___Cmd+Shift+5___mac-23#¤%&+?1179658#¤%&+?5#¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Screenshot",
+      "description": "Activate a keyboard shortcut with a single press or hold down for continuous use like a keyboard key",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___4FD0B45C7C87417DBA44F5C9F6808937",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "ControlOrCommand+Control+Space___4108___Cmd+Ctrl+Space___mac-49#¤%&+?1310729#¤%&+?\u0000#¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Emoji folder",
+      "description": "Activate a keyboard shortcut with a single press or hold down for continuous use like a keyboard key",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___325A5C4B327542458F513394E4BE4EEA",
+      "templateActionName": "$@Generic___@KeyboardKey",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "keyboardKey": "Space___4108___Space___mac-49#¤%&+?0#¤%&+? #¤%&+?com.apple.keylayout.SwissFrench"
+        },
+        "count": 1
+      },
+      "displayName": "Easy switch",
+      "description": "Activate a keyboard shortcut with a single press or hold down for continuous use like a keyboard key",
+      "groupName": "",
+      "superGroupName": "@macro",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___B93AF79DDFEC4F37A1927E9139C236F7",
+      "templateActionName": "$@Generic___@OpenFolder",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "folderName": "B93AF79DDFEC4F37A1927E9139C236F7"
+        },
+        "count": 1
+      },
+      "displayName": "Explore AI",
+      "description": "",
+      "groupName": "Folders",
+      "superGroupName": "@navigation",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___D7B660CDB41A476B9077DD02D237604B",
+      "templateActionName": "$@Generic___@OpenFolder",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "folderName": "D7B660CDB41A476B9077DD02D237604B"
+        },
+        "count": 1
+      },
+      "displayName": "WebLinks",
+      "description": "",
+      "groupName": "Folders",
+      "superGroupName": "@navigation",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___742D6EFF62EA4B53977BB72140B43639",
+      "templateActionName": "$@Generic___@OpenFolder",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "folderName": "742D6EFF62EA4B53977BB72140B43639"
+        },
+        "count": 1
+      },
+      "displayName": "Folders and Apps",
+      "description": "",
+      "groupName": "Folders",
+      "superGroupName": "@navigation",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___3645CD680F6141AE87772A631AD595DA",
+      "templateActionName": "$@Generic___@OpenFolder",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "folderName": "3645CD680F6141AE87772A631AD595DA"
+        },
+        "count": 1
+      },
+      "displayName": "Switch Device",
+      "description": "",
+      "groupName": "Folders",
+      "superGroupName": "@navigation",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___44095CFDF22E40C8A9C6FE8CD62821F7",
+      "templateActionName": "$@Generic___@EasySwitch",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "device": "2b042",
+          "deviceId": "2b042",
+          "deviceDisplayName": "MX Master 4",
+          "channel": "0",
+          "channelId": "0",
+          "channelDisplayName": "DESKTOP-EXAMPLE"
+        },
+        "count": 6
+      },
+      "displayName": "Easy-Switch 1 Device",
+      "description": "Switch one connected device between computers.",
+      "groupName": "",
+      "superGroupName": "@desktop",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___6DCFDB0C72EF42E7AFFEF001C5AF7069",
+      "templateActionName": "$@Generic___@EasySwitch2",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "device": "2b042",
+          "deviceId": "2b042",
+          "deviceDisplayName": "MX Master 4",
+          "channel": "1",
+          "channelId": "1",
+          "channelDisplayName": "Jesse's S25 Ultra",
+          "device2": "6b359",
+          "deviceId2": "6b359",
+          "deviceDisplayName2": "Ergo K860",
+          "channel2": "1",
+          "channelId2": "1",
+          "channelDisplayName2": "Jesse's S25 Ultra"
+        },
+        "count": 12
+      },
+      "displayName": "Phone",
+      "description": "Switch two connected devices between computers.",
+      "groupName": "",
+      "superGroupName": "@desktop",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    },
+    {
+      "$type": "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+      "isCommand": true,
+      "name": "$@Generic___@ProfileAction___DF6349F193E34A6A95AD0A2AAFBACDB8",
+      "templateActionName": "$@Generic___@EasySwitch2",
+      "actionParameters": {
+        "$type": "Loupedeck.ActionEditorActionParameters, PluginApi",
+        "parameters": {
+          "$type": "Loupedeck.StringDictionaryNoCase, PluginApi",
+          "device": "2b042",
+          "deviceId": "2b042",
+          "deviceDisplayName": "MX Master 4",
+          "channel": "0",
+          "channelId": "0",
+          "channelDisplayName": "DESKTOP-EXAMPLE",
+          "device2": "6b359",
+          "deviceId2": "6b359",
+          "deviceDisplayName2": "Ergo K860",
+          "channel2": "0",
+          "channelId2": "0",
+          "channelDisplayName2": "DESKTOP-EXAMPLE"
+        },
+        "count": 12
+      },
+      "displayName": "Work PC",
+      "description": "Switch two connected devices between computers.",
+      "groupName": "",
+      "superGroupName": "@desktop",
+      "isProfileAction": true,
+      "isMultiState": false,
+      "isResetCommand": false,
+      "adjustmentName": null,
+      "states": null
+    }
+  ]
+}

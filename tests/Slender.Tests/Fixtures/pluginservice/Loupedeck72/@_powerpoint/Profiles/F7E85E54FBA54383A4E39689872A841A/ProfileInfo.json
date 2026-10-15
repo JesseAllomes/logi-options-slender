@@ -1,0 +1,172 @@
+{
+  "$type": "Loupedeck.Service.ApplicationProfile, LoupedeckService",
+  "name": "F7E85E54FBA54383A4E39689872A841A",
+  "profileFlags": "None",
+  "displayName": "Default PowerPoint Profile",
+  "description": null,
+  "deviceType": "Loupedeck72",
+  "applicationName": "@_powerpoint",
+  "nativePluginName": "PowerPoint",
+  "hasNativePlugin": true,
+  "additionalNativePluginNames": [
+    "DefaultWin"
+  ],
+  "lastModifiedTimeUtc": "2025-07-07T08:11:54.6813362Z",
+  "profileSettings": {
+    "$type": "Loupedeck.DictionaryNoCase`1[[System.String, System.Private.CoreLib]], PluginApi"
+  },
+  "actionImages90": null,
+  "actionImages60": null,
+  "wheelImages": null,
+  "actionColors": null,
+  "layout": {
+    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayout7, LoupedeckService",
+    "deviceType": "Loupedeck72",
+    "profileFlags": "None",
+    "layoutModes": [
+      {
+        "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutMode7, LoupedeckService",
+        "deviceType": "Loupedeck72",
+        "modeName": "main",
+        "parentModeName": null,
+        "actions": null,
+        "dynamicButtonPages": null,
+        "dynamicEncoderPages": null,
+        "workspaces": [
+          {
+            "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutWorkspace7, LoupedeckService",
+            "name": "B93D43FD3A474DD1B1DF4F965DA10A69",
+            "displayName": "Workspace 1",
+            "description": null,
+            "pressPages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "6F5E51CDA30F47A49D485D037813549D",
+                "displayName": "Page (1)",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": "$PowerPoint___UndoCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": "$PowerPoint___SaveCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": "$PowerPoint___BringToFrontCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": "$PowerPoint___SendToBackCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": "$PowerPoint___ClosePresentationCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": "$PowerPoint___OpenPresentationCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": "$PowerPoint___DeleteSlidesCommand",
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": "$PowerPoint___DuplicateSlideCommand",
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ],
+            "rotatePages": [
+              {
+                "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutPage7, LoupedeckService",
+                "name": "6B83C20D456040249BCB5D1B0153C452",
+                "displayName": "Dial Page",
+                "description": null,
+                "controls": [
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 0,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 1,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 2,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 3,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 4,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 5,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 6,
+                    "pressAction": null,
+                    "rotateAction": null
+                  },
+                  {
+                    "$type": "Loupedeck.Service.Devices.Loupedeck7Devices.ProfileLayoutControl7, LoupedeckService",
+                    "controlId": 7,
+                    "pressAction": null,
+                    "rotateAction": null
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "homeWorkspaceName": "B93D43FD3A474DD1B1DF4F965DA10A69"
+      }
+    ],
+    "folderPages": []
+  },
+  "macroCommands": [],
+  "macroAdjustments": [],
+  "profileCommands": [],
+  "profileAdjustments": [],
+  "conversionHistory": "2025-07-03T13:37:20.9916649Z ao 6.1.4.22683\r\n",
+  "packageName": "9B7E268C1EC44F488D59E76B8DE566A8",
+  "packageVersion": "1.0.9319.20500",
+  "profileActions": []
+}

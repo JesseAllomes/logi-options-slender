@@ -1,0 +1,20 @@
+{
+  "$type": "Loupedeck.Service.SupportedApplicationInfo, LoupedeckService",
+  "name": "@_word-1daa6242ea4e470f",
+  "displayName": "Word",
+  "description": null,
+  "deviceType": "Loupedeck72",
+  "nativePluginName": "Word-1DAA6242EA4E470F",
+  "hasNativePlugin": true,
+  "processOrBundleName": null,
+  "modes": [
+    {
+      "$type": "Loupedeck.Service.ApplicationMode, LoupedeckService",
+      "name": "main",
+      "parentModeName": null,
+      "displayName": "Main"
+    }
+  ],
+  "defaultProfileName": "BF37FED7326E44FFAC184149FBEFAA59",
+  "isEnabled": true
+}

@@ -1,0 +1,20 @@
+{
+  "$type": "Loupedeck.Service.SupportedApplicationInfo, LoupedeckService",
+  "name": "@_excel",
+  "displayName": "Excel",
+  "description": null,
+  "deviceType": "Loupedeck72",
+  "nativePluginName": "Excel",
+  "hasNativePlugin": true,
+  "processOrBundleName": null,
+  "modes": [
+    {
+      "$type": "Loupedeck.Service.ApplicationMode, LoupedeckService",
+      "name": "main",
+      "parentModeName": null,
+      "displayName": "Main"
+    }
+  ],
+  "defaultProfileName": "7B39EDECC9F84967A4E99B4FD557E9E8",
+  "isEnabled": true
+}

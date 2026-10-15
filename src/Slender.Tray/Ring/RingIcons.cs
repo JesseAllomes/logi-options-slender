@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Slender.Tray.Ring;
 
 /// <summary>Loads a file's shell icon as premultiplied BGRA pixels.</summary>
@@ -6,6 +8,7 @@ internal static unsafe class FileIcons
     /// <summary>The icon of <paramref name="path"/> at about <paramref name="px"/> pixels square, or null when it has none.</summary>
     public static byte[]? Load(string path, int px)
     {
+        if (Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)) return PngImages.Load(path, px);
         nint icon = 0;
         try
         {
@@ -86,6 +89,96 @@ internal static unsafe class FileIcons
             if (dc != 0) RingNative.DeleteDC(dc);
             RingNative.ReleaseDC(0, screen);
         }
+    }
+}
+
+/// <summary>
+/// Loads a PNG (an imported action image) scaled to fit <c>px</c> square, as premultiplied BGRA, through the GDI+ flat API
+/// (plain blittable P/Invoke, so NativeAOT safe). GDI+ is started once and left running for the life of the tray.
+/// </summary>
+internal static unsafe class PngImages
+{
+    private const int PixelFormat32bppPArgb = 0x000E200B, ImageLockModeRead = 1, HighQualityBicubic = 7;
+    private static bool _started;
+    private static bool _failed;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct StartupInput { public uint Version; public nint DebugCallback; public int SuppressBackgroundThread, SuppressExternalCodecs; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect { public int X, Y, Width, Height; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BitmapData { public uint Width, Height; public int Stride, PixelFormat; public void* Scan0; public nuint Reserved; }
+
+    [DllImport("gdiplus.dll")] private static extern int GdiplusStartup(nuint* token, StartupInput* input, void* output);
+    [DllImport("gdiplus.dll")] private static extern int GdipCreateBitmapFromFile(char* file, nint* bitmap);
+    [DllImport("gdiplus.dll")] private static extern int GdipCreateBitmapFromScan0(int width, int height, int stride, int format, void* scan0, nint* bitmap);
+    [DllImport("gdiplus.dll")] private static extern int GdipGetImageWidth(nint image, uint* width);
+    [DllImport("gdiplus.dll")] private static extern int GdipGetImageHeight(nint image, uint* height);
+    [DllImport("gdiplus.dll")] private static extern int GdipGetImageGraphicsContext(nint image, nint* graphics);
+    [DllImport("gdiplus.dll")] private static extern int GdipGraphicsClear(nint graphics, uint color);
+    [DllImport("gdiplus.dll")] private static extern int GdipSetInterpolationMode(nint graphics, int mode);
+    [DllImport("gdiplus.dll")] private static extern int GdipDrawImageRectI(nint graphics, nint image, int x, int y, int width, int height);
+    [DllImport("gdiplus.dll")] private static extern int GdipBitmapLockBits(nint bitmap, Rect* rect, int flags, int format, BitmapData* data);
+    [DllImport("gdiplus.dll")] private static extern int GdipBitmapUnlockBits(nint bitmap, BitmapData* data);
+    [DllImport("gdiplus.dll")] private static extern int GdipDeleteGraphics(nint graphics);
+    [DllImport("gdiplus.dll")] private static extern int GdipDisposeImage(nint image);
+
+    public static byte[]? Load(string path, int px)
+    {
+        nint source = 0, target = 0, g = 0;
+        try
+        {
+            if (!Start()) return null;
+            fixed (char* p = path)
+            {
+                if (GdipCreateBitmapFromFile(p, &source) != 0 || source == 0) return null;
+            }
+
+            uint w = 0, h = 0;
+            if (GdipGetImageWidth(source, &w) != 0 || GdipGetImageHeight(source, &h) != 0 || w == 0 || h == 0) return null;
+            if (GdipCreateBitmapFromScan0(px, px, 0, PixelFormat32bppPArgb, null, &target) != 0 || target == 0) return null;
+            if (GdipGetImageGraphicsContext(target, &g) != 0 || g == 0) return null;
+            GdipGraphicsClear(g, 0);
+            GdipSetInterpolationMode(g, HighQualityBicubic);
+            var scale = Math.Min((double)px / w, (double)px / h);
+            int dw = Math.Max(1, (int)Math.Round(w * scale)), dh = Math.Max(1, (int)Math.Round(h * scale));
+            if (GdipDrawImageRectI(g, source, (px - dw) / 2, (px - dh) / 2, dw, dh) != 0) return null;
+
+            var rect = new Rect { Width = px, Height = px };
+            BitmapData data = default;
+            if (GdipBitmapLockBits(target, &rect, ImageLockModeRead, PixelFormat32bppPArgb, &data) != 0) return null;
+            try
+            {
+                var result = new byte[px * px * 4];
+                for (var y = 0; y < px; y++)
+                    new ReadOnlySpan<byte>((byte*)data.Scan0 + (long)y * data.Stride, px * 4).CopyTo(result.AsSpan(y * px * 4));
+                return result;
+            }
+            finally
+            {
+                GdipBitmapUnlockBits(target, &data);
+            }
+        }
+        catch { return null; }
+        finally
+        {
+            if (g != 0) GdipDeleteGraphics(g);
+            if (target != 0) GdipDisposeImage(target);
+            if (source != 0) GdipDisposeImage(source);
+        }
+    }
+
+    private static bool Start()
+    {
+        if (_started) return true;
+        if (_failed) return false;
+        nuint token;
+        var input = new StartupInput { Version = 1 };
+        if (GdiplusStartup(&token, &input, null) != 0) { _failed = true; return false; }
+        _started = true;
+        return true;
     }
 }
 

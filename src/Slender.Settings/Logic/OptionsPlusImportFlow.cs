@@ -23,6 +23,9 @@ public sealed record ImportPreview(
     int BindingCount,
     IReadOnlyList<ImportReportGroup> Groups)
 {
+    /// <summary>Runs after the import is saved (copies the ring's custom images into Slender's asset folder). Null when there is nothing to do.</summary>
+    public Action? AfterImport { get; init; }
+
     public bool CanImport => Status == ImportStatus.Ready && Result is not null;
 
     /// <summary>"3 profiles and 18 bindings will be set."</summary>
@@ -44,11 +47,20 @@ public sealed record ImportPreview(
 public static class OptionsPlusImportFlow
 {
     /// <summary>Reads both databases and runs the importer against <paramref name="current"/>. Never throws.</summary>
-    public static ImportPreview Prepare(SlenderConfig current, string? settingsDb = null, string? macrosDb = null, Func<string, string?>? readJson = null)
+    /// <param name="pluginProfiles">The Actions Ring from the Logi Plugin Service (<see cref="PluginServiceStore.Read"/>); when present it replaces the ring slots from settings.db. Null or empty = none.</param>
+    /// <param name="ringIcons">Supplies the custom image of a plugin-service action as a "file:" icon.</param>
+    public static ImportPreview Prepare(SlenderConfig current, string? settingsDb = null, string? macrosDb = null, Func<string, string?>? readJson = null,
+        IReadOnlyList<PluginServiceProfile>? pluginProfiles = null, PluginServiceIcons? ringIcons = null)
     {
+        bool havePlugin = pluginProfiles is { Count: > 0 };
         readJson ??= path => OptionsPlusDb.ReadJson(path);
         settingsDb ??= OptionsPlusDb.SettingsPath;
         macrosDb ??= OptionsPlusDb.MacrosPath;
+
+        if (!File.Exists(settingsDb) && havePlugin)
+        {
+            return Finish(current, new ImportResult(current, []), pluginProfiles, ringIcons);
+        }
 
         if (!File.Exists(settingsDb))
         {
@@ -81,8 +93,31 @@ public static class OptionsPlusImportFlow
             return Failed(ImportStatus.ReadError, "Options+ settings were not in a format Slender understands: " + e.Message);
         }
 
+        return Finish(current, result, pluginProfiles, ringIcons);
+    }
+
+    /// <summary>Lays the plugin-service ring (when there is one) over the settings.db result and counts what changes.</summary>
+    private static ImportPreview Finish(SlenderConfig current, ImportResult result, IReadOnlyList<PluginServiceProfile>? pluginProfiles, PluginServiceIcons? ringIcons)
+    {
+        if (pluginProfiles is { Count: > 0 })
+        {
+            // The old radial-menu slots in settings.db are not the user's real ring, so their notes would only mislead.
+            var notes = result.Notes.Where(n => !n.Where.Contains("radial-menu-virtual-device-", StringComparison.Ordinal)).ToList();
+            SlenderConfig config;
+            try
+            {
+                config = PluginServiceRingImporter.Apply(pluginProfiles, result.Config, notes, ringIcons is null ? null : ringIcons.For);
+            }
+            catch (Exception e)
+            {
+                return Failed(ImportStatus.ReadError, "The Actions Ring from Logi Plugin Service was not in a format Slender understands: " + e.Message);
+            }
+
+            result = new ImportResult(config, notes);
+        }
+
         (int profiles, int bindings) = CountChanges(current, result.Config);
-        return new ImportPreview(ImportStatus.Ready, "", result, profiles, bindings, Group(result.Notes));
+        return new ImportPreview(ImportStatus.Ready, "", result, profiles, bindings, Group(result.Notes)) { AfterImport = ringIcons is { HasPending: true } ? ringIcons.Save : null };
     }
 
     private static ImportPreview Failed(ImportStatus status, string message) => new(status, message, null, 0, 0, []);
@@ -94,12 +129,12 @@ public static class OptionsPlusImportFlow
         foreach (Profile p in after.Profiles)
         {
             Profile? old = before.Profiles.FirstOrDefault(o => string.Equals(o.AppProcess, p.AppProcess, StringComparison.OrdinalIgnoreCase));
-            if (old is not null && Same(old.Bindings, p.Bindings) && Same(old.KeyBindings, p.KeyBindings))
+            if (old is not null && Same(old.Bindings, p.Bindings) && Same(old.KeyBindings, p.KeyBindings) && SameRing(old.RingSlots, p.RingSlots))
             {
                 continue;
             }
 
-            int count = p.Bindings.Count + p.KeyBindings.Count;
+            int count = p.Bindings.Count + p.KeyBindings.Count + RingCount(p.RingSlots);
             if (count == 0)
             {
                 continue;
@@ -111,6 +146,18 @@ public static class OptionsPlusImportFlow
 
         return (profiles, bindings);
     }
+
+    private static bool SameRing(IReadOnlyList<RingSlot>? a, IReadOnlyList<RingSlot>? b) =>
+        a is null || b is null ? a is null && b is null : a.Count == b.Count && a.Zip(b).All(p => SameSlot(p.First, p.Second));
+
+    private static bool SameSlot(RingSlot a, RingSlot b) =>
+        a.Folder is null || b.Folder is null
+            ? a.Folder is null && b.Folder is null && a == b
+            : (a with { Folder = null }) == (b with { Folder = null }) && SameRing(a.Folder, b.Folder);
+
+    /// <summary>Filled ring slots, counting a folder's items as well as the folder.</summary>
+    private static int RingCount(IReadOnlyList<RingSlot>? ring) =>
+        ring is null ? 0 : ring.Where(s => !s.IsEmpty).Sum(s => 1 + (s.Folder?.Count(c => !c.IsEmpty) ?? 0));
 
     private static bool Same(IReadOnlyDictionary<ushort, ActionSpec> a, IReadOnlyDictionary<ushort, ActionSpec> b) =>
         a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out ActionSpec? other) && Equals(kv.Value, other));

@@ -239,7 +239,8 @@ internal sealed class RingPreview : UserControl
         return element;
     }
 
-    private static readonly DoubleCollection Dash = [4, 4];
+    /// <summary>A fresh collection each time: WinUI refuses one DoubleCollection shared by several shapes.</summary>
+    private static DoubleCollection Dash() => [4, 4];
 
     private void Wire(Shape hit, int index)
     {
@@ -338,48 +339,55 @@ internal sealed class RingPreview : UserControl
 
         for (int i = 0; i < RingLayout.SlotCount; i++)
         {
-            RingSlotView v = views[i];
-            double a = RingLayout.AngleOf(i);
-            bool on = Selected == i;
-            Path w = Wedge(cx, cy, m.InnerRadius, m.OuterRadius, a - 21.5, a + 21.5);
-            w.Fill = on ? Ui.Paper3 : Ui.Brush("Paper2Brush");
-            w.Stroke = v.IsEmpty ? Ui.Muted : Ui.Rule;
-            w.StrokeThickness = 1;
-            if (v.IsEmpty)
+            try
             {
-                w.StrokeDashArray = Dash;
-            }
+                RingSlotView v = views[i];
+                double a = RingLayout.AngleOf(i);
+                bool on = Selected == i;
+                Path w = Wedge(cx, cy, m.InnerRadius, m.OuterRadius, a - 21.5, a + 21.5);
+                w.Fill = on ? Ui.Paper3 : Ui.Brush("Paper2Brush");
+                w.Stroke = v.IsEmpty ? Ui.Muted : Ui.Rule;
+                w.StrokeThickness = 1;
+                if (v.IsEmpty)
+                {
+                    w.StrokeDashArray = Dash();
+                }
 
-            w.IsHitTestVisible = false;
-            _ring.Children.Add(w);
-            if (on)
+                w.IsHitTestVisible = false;
+                _ring.Children.Add(w);
+                if (on)
+                {
+                    Path soft = Wedge(cx, cy, m.InnerRadius, m.OuterRadius, a - 21.5, a + 21.5);
+                    soft.Fill = Brush(accent, 41);
+                    soft.IsHitTestVisible = false;
+                    _ring.Children.Add(soft);
+                    Path rim = Arc(cx, cy, 131 * k, a - 21, a + 21);
+                    rim.Stroke = Brush(accent);
+                    rim.StrokeThickness = 4;
+                    rim.StrokeStartLineCap = PenLineCap.Round;
+                    rim.StrokeEndLineCap = PenLineCap.Round;
+                    rim.IsHitTestVisible = false;
+                    _ring.Children.Add(rim);
+                }
+
+                (double sx, double sy) = RingLayout.SlotCenter(_appearance.Style, _appearance.Size, i);
+                double x = cx + sx, y = cy + sy;
+                bool label = ShowLabel(i) && !v.IsEmpty && _appearance.Labels == RingLabels.Always;
+                Icon(v, x, label ? y - 6 * k : y, 21 * k, on ? Brush(accent) : ink);
+                if (label)
+                {
+                    Label(v.Title, 9.5 * k, on ? ink : muted, x - 33 * k, y + 8 * k, 66 * k, TextAlignment.Center);
+                }
+
+                Path hit = Wedge(cx, cy, m.InnerRadius, m.OuterRadius, a - 22.5, a + 22.5);
+                Wire(hit, i);
+                _ring.Children.Add(hit);
+                Automate(hit, i, v);
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-                Path soft = Wedge(cx, cy, m.InnerRadius, m.OuterRadius, a - 21.5, a + 21.5);
-                soft.Fill = Brush(accent, 41);
-                soft.IsHitTestVisible = false;
-                _ring.Children.Add(soft);
-                Path rim = Arc(cx, cy, 131 * k, a - 21, a + 21);
-                rim.Stroke = Brush(accent);
-                rim.StrokeThickness = 4;
-                rim.StrokeStartLineCap = PenLineCap.Round;
-                rim.StrokeEndLineCap = PenLineCap.Round;
-                rim.IsHitTestVisible = false;
-                _ring.Children.Add(rim);
+                Services.CrashLog.Write(e); // skip this slot, keep the rest of the ring
             }
-
-            (double sx, double sy) = RingLayout.SlotCenter(_appearance.Style, _appearance.Size, i);
-            double x = cx + sx, y = cy + sy;
-            bool label = ShowLabel(i) && !v.IsEmpty && _appearance.Labels == RingLabels.Always;
-            Icon(v, x, label ? y - 6 * k : y, 21 * k, on ? Brush(accent) : ink);
-            if (label)
-            {
-                Label(v.Title, 9.5 * k, on ? ink : muted, x - 33 * k, y + 8 * k, 66 * k, TextAlignment.Center);
-            }
-
-            Path hit = Wedge(cx, cy, m.InnerRadius, m.OuterRadius, a - 22.5, a + 22.5);
-            Wire(hit, i);
-            _ring.Children.Add(hit);
-            Automate(hit, i, v);
         }
 
         var hub = new Ellipse { Width = 104 * k, Height = 104 * k, Fill = Ui.Brush("PaperBrush"), Stroke = Ui.Rule, StrokeThickness = 1 };
@@ -415,50 +423,57 @@ internal sealed class RingPreview : UserControl
 
         for (int i = 0; i < RingLayout.SlotCount; i++)
         {
-            RingSlotView v = views[i];
-            bool on = Selected == i;
-            (double sx, double sy) = RingLayout.SlotCenter(_appearance.Style, _appearance.Size, i);
-            double x = cx + sx, y = cy + sy;
-            var bubble = new Ellipse
+            try
             {
-                Width = 2 * m.BubbleRadius,
-                Height = 2 * m.BubbleRadius,
-                Fill = on ? Brush(accent) : Ui.Brush("PaperBrush"),
-                Stroke = v.IsEmpty ? Ui.Muted : on ? Brush(accent) : Ui.Rule,
-                StrokeThickness = 1.2,
-                IsHitTestVisible = false,
-            };
-            if (v.IsEmpty)
-            {
-                bubble.StrokeDashArray = Dash;
-            }
-
-            Add(bubble, x - m.BubbleRadius, y - m.BubbleRadius);
-            Icon(v, x, y, 19 * k, on ? Ui.Brush("PaperBrush") : Ui.Ink);
-            var hit = new Ellipse { Width = 2 * (m.BubbleRadius + 4 * k), Height = 2 * (m.BubbleRadius + 4 * k) };
-            Wire(hit, i);
-            Add(hit, x - m.BubbleRadius - 4 * k, y - m.BubbleRadius - 4 * k);
-            Automate(hit, i, v);
-
-            if (ShowLabel(i) && !v.IsEmpty || on)
-            {
-                double a = RingLayout.AngleOf(i);
-                double cos = Math.Cos(a * Math.PI / 180), sin = Math.Sin(a * Math.PI / 180);
-                Point lp = Pt(cx, cy, m.LabelRadius, a);
-                bool right = cos > 0.3, left = cos < -0.3;
-                double dx = right ? -14 * k : left ? 14 * k : 0;
-                double ty = sin < -0.9 ? lp.Y - 18 * k : sin > 0.9 ? lp.Y - 2 * k : lp.Y - 14 * k;
-                var stack = new StackPanel { Spacing = 0, IsHitTestVisible = false };
-                stack.Children.Add(Ui.Text(v.Title, (on ? 14 : 12) * k, v.IsEmpty ? Ui.Muted : Ui.Ink, null, Microsoft.UI.Text.FontWeights.SemiBold));
-                if (on && v.Sub.Length > 0)
+                RingSlotView v = views[i];
+                bool on = Selected == i;
+                (double sx, double sy) = RingLayout.SlotCenter(_appearance.Style, _appearance.Size, i);
+                double x = cx + sx, y = cy + sy;
+                var bubble = new Ellipse
                 {
-                    stack.Children.Add(Ui.Text(v.Sub, 10 * k, Ui.Muted, Ui.Mono));
+                    Width = 2 * m.BubbleRadius,
+                    Height = 2 * m.BubbleRadius,
+                    Fill = on ? Brush(accent) : Ui.Brush("PaperBrush"),
+                    Stroke = v.IsEmpty ? Ui.Muted : on ? Brush(accent) : Ui.Rule,
+                    StrokeThickness = 1.2,
+                    IsHitTestVisible = false,
+                };
+                if (v.IsEmpty)
+                {
+                    bubble.StrokeDashArray = Dash();
                 }
 
-                var pill = new Border { Background = Brush(Hex("#1B1F23"), 216), CornerRadius = new CornerRadius(6), Padding = new Thickness(7, 3, 7, 3), Child = stack, IsHitTestVisible = false };
-                double anchorX = lp.X + dx;
-                pill.SizeChanged += (_, e) => Canvas.SetLeft(pill, right ? anchorX : left ? anchorX - e.NewSize.Width : anchorX - e.NewSize.Width / 2);
-                Add(pill, anchorX, ty);
+                Add(bubble, x - m.BubbleRadius, y - m.BubbleRadius);
+                Icon(v, x, y, 19 * k, on ? Ui.Brush("PaperBrush") : Ui.Ink);
+                var hit = new Ellipse { Width = 2 * (m.BubbleRadius + 4 * k), Height = 2 * (m.BubbleRadius + 4 * k) };
+                Wire(hit, i);
+                Add(hit, x - m.BubbleRadius - 4 * k, y - m.BubbleRadius - 4 * k);
+                Automate(hit, i, v);
+
+                if (ShowLabel(i) && !v.IsEmpty || on)
+                {
+                    double a = RingLayout.AngleOf(i);
+                    double cos = Math.Cos(a * Math.PI / 180), sin = Math.Sin(a * Math.PI / 180);
+                    Point lp = Pt(cx, cy, m.LabelRadius, a);
+                    bool right = cos > 0.3, left = cos < -0.3;
+                    double dx = right ? -14 * k : left ? 14 * k : 0;
+                    double ty = sin < -0.9 ? lp.Y - 18 * k : sin > 0.9 ? lp.Y - 2 * k : lp.Y - 14 * k;
+                    var stack = new StackPanel { Spacing = 0, IsHitTestVisible = false };
+                    stack.Children.Add(Ui.Text(v.Title, (on ? 14 : 12) * k, v.IsEmpty ? Ui.Muted : Ui.Ink, null, Microsoft.UI.Text.FontWeights.SemiBold));
+                    if (on && v.Sub.Length > 0)
+                    {
+                        stack.Children.Add(Ui.Text(v.Sub, 10 * k, Ui.Muted, Ui.Mono));
+                    }
+
+                    var pill = new Border { Background = Brush(Hex("#1B1F23"), 216), CornerRadius = new CornerRadius(6), Padding = new Thickness(7, 3, 7, 3), Child = stack, IsHitTestVisible = false };
+                    double anchorX = lp.X + dx;
+                    pill.SizeChanged += (_, e) => Canvas.SetLeft(pill, right ? anchorX : left ? anchorX - e.NewSize.Width : anchorX - e.NewSize.Width / 2);
+                    Add(pill, anchorX, ty);
+                }
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                Services.CrashLog.Write(e); // skip this slot, keep the rest of the ring
             }
         }
 
@@ -485,56 +500,63 @@ internal sealed class RingPreview : UserControl
 
         for (int i = 0; i < RingLayout.SlotCount; i++)
         {
-            RingSlotView v = views[i];
-            bool on = Selected == i;
-            (int col, int row) = RingLayout.KeypadCell(i);
-            double x = ox + col * (kw + gap), y = oy + row * (kh + gap) + (on ? 2 : 0);
-            Add(new Rectangle { Width = kw, Height = kh, RadiusX = 8, RadiusY = 8, Fill = Brush(Hex("#15191C")), IsHitTestVisible = false }, x, y + 3);
-            var cap = new Rectangle
+            try
             {
-                Width = kw,
-                Height = kh,
-                RadiusX = 8,
-                RadiusY = 8,
-                Fill = on ? Ui.Paper3 : Ui.Brush("Paper2Brush"),
-                Stroke = on ? Brush(accent) : v.IsEmpty ? Ui.Muted : Ui.Rule,
-                StrokeThickness = on ? 1.6 : 1,
-                IsHitTestVisible = false,
-            };
-            if (v.IsEmpty && !on)
-            {
-                cap.StrokeDashArray = Dash;
-            }
-
-            Add(cap, x, y);
-            if (on)
-            {
-                Add(new Rectangle { Width = kw, Height = kh, RadiusX = 8, RadiusY = 8, Fill = Brush(accent, 41), IsHitTestVisible = false }, x, y);
-            }
-
-            bool label = ShowLabel(i);
-            if (v.IsEmpty)
-            {
-                Label(label ? "Empty" : "+", 13.5 * k, Ui.Muted, x + 12 * k, y + (label ? 30 : 22) * k, kw - 20 * k, TextAlignment.Left);
-            }
-            else if (label)
-            {
-                Icon(v, x + 12 * k + 8 * k, y + 16 * k, 16 * k, on ? Brush(accent) : Ui.Ink);
-                Label(v.Title, 13.5 * k, Ui.Ink, x + 12 * k, y + 30 * k, kw - 20 * k, TextAlignment.Left);
-                if (v.Sub.Length > 0)
+                RingSlotView v = views[i];
+                bool on = Selected == i;
+                (int col, int row) = RingLayout.KeypadCell(i);
+                double x = ox + col * (kw + gap), y = oy + row * (kh + gap) + (on ? 2 : 0);
+                Add(new Rectangle { Width = kw, Height = kh, RadiusX = 8, RadiusY = 8, Fill = Brush(Hex("#15191C")), IsHitTestVisible = false }, x, y + 3);
+                var cap = new Rectangle
                 {
-                    Label(v.Sub, 10 * k, Ui.Muted, x + 12 * k, y + 49 * k, kw - 20 * k, TextAlignment.Left, mono: true);
+                    Width = kw,
+                    Height = kh,
+                    RadiusX = 8,
+                    RadiusY = 8,
+                    Fill = on ? Ui.Paper3 : Ui.Brush("Paper2Brush"),
+                    Stroke = on ? Brush(accent) : v.IsEmpty ? Ui.Muted : Ui.Rule,
+                    StrokeThickness = on ? 1.6 : 1,
+                    IsHitTestVisible = false,
+                };
+                if (v.IsEmpty && !on)
+                {
+                    cap.StrokeDashArray = Dash();
                 }
-            }
-            else
-            {
-                Icon(v, x + kw / 2, y + kh / 2, 24 * k, on ? Brush(accent) : Ui.Ink);
-            }
 
-            var hit = new Rectangle { Width = kw, Height = kh, RadiusX = 8, RadiusY = 8 };
-            Wire(hit, i);
-            Add(hit, x, y);
-            Automate(hit, i, v);
+                Add(cap, x, y);
+                if (on)
+                {
+                    Add(new Rectangle { Width = kw, Height = kh, RadiusX = 8, RadiusY = 8, Fill = Brush(accent, 41), IsHitTestVisible = false }, x, y);
+                }
+
+                bool label = ShowLabel(i);
+                if (v.IsEmpty)
+                {
+                    Label(label ? "Empty" : "+", 13.5 * k, Ui.Muted, x + 12 * k, y + (label ? 30 : 22) * k, kw - 20 * k, TextAlignment.Left);
+                }
+                else if (label)
+                {
+                    Icon(v, x + 12 * k + 8 * k, y + 16 * k, 16 * k, on ? Brush(accent) : Ui.Ink);
+                    Label(v.Title, 13.5 * k, Ui.Ink, x + 12 * k, y + 30 * k, kw - 20 * k, TextAlignment.Left);
+                    if (v.Sub.Length > 0)
+                    {
+                        Label(v.Sub, 10 * k, Ui.Muted, x + 12 * k, y + 49 * k, kw - 20 * k, TextAlignment.Left, mono: true);
+                    }
+                }
+                else
+                {
+                    Icon(v, x + kw / 2, y + kh / 2, 24 * k, on ? Brush(accent) : Ui.Ink);
+                }
+
+                var hit = new Rectangle { Width = kw, Height = kh, RadiusX = 8, RadiusY = 8 };
+                Wire(hit, i);
+                Add(hit, x, y);
+                Automate(hit, i, v);
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                Services.CrashLog.Write(e); // skip this slot, keep the rest of the ring
+            }
         }
 
         double mx = ox + kw + gap, my = oy + kh + gap;
