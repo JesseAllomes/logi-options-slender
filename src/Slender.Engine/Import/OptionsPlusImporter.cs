@@ -79,6 +79,7 @@ public static partial class OptionsPlusImporter
         }
 
         ApplyGestureSwipes(profiles, state, merged);
+        ApplyRingSlots(profiles, state, merged);
         notes.Add(new(ImportNoteKind.Info, "Profiles", "Imported profiles replace the bindings of Slender profiles for the same app (including All apps and the built-in Excel sheet buttons); other Slender profiles were kept."));
         return new ImportResult(result with { Profiles = merged }, notes);
     }
@@ -152,8 +153,7 @@ public static partial class OptionsPlusImporter
             if (rest.Length > 1 && rest[0] == 'c' && ushort.TryParse(rest.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out ushort cid))
             {
                 where = $"{profile.DisplayName} / {device} c{cid}" + (isMouse ? $" ({MouseControlName(cid)})" : label.Length > 0 ? $" ({label})" : "");
-                if (isRadial) ReportRadialItem(card, where, state);
-                else ConvertButton(card, cid, isMouse, where, state, isMouse ? defaultMouse : defaultKeys, isMouse ? mouse : keys);
+                if (!isRadial) ConvertButton(card, cid, isMouse, where, state, isMouse ? defaultMouse : defaultKeys, isMouse ? mouse : keys);
             }
             else if (isRadial)
             {
@@ -294,12 +294,6 @@ public static partial class OptionsPlusImporter
                 state.Notes.Add(new(ImportNoteKind.Unmapped, where, $"Thumb wheel adapter '{impl ?? Str(card, "id")}' has no Slender equivalent."));
                 break;
         }
-    }
-
-    private static void ReportRadialItem(JsonObject card, string where, State state)
-    {
-        string d = Str(card, "attribute") == "FOLDER" ? "empty folder" : DescribeCard(card, state.Macros);
-        state.Notes.Add(new(ImportNoteKind.Unmapped, where, $"Actions ring item ({d}); Slender's actions ring is not configured from Options+ items."));
     }
 
     // ---- device settings ----
