@@ -85,6 +85,21 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         catch (HidppException) { return false; }
     }
 
+    /// <summary>Reads the current sensor DPI (0x2201 fn2, read only); null when disconnected or the read fails.</summary>
+    public async Task<int?> GetDpiAsync(CancellationToken ct)
+    {
+        var s = CurrentSession;
+        if (s == null || !IsConnected) return null;
+        try
+        {
+            var p = (await s.Device.CallAsync(FeatureId.AdjustableDpi, 2, new byte[] { 0 }, ct).ConfigureAwait(false)).Params;
+            var dpi = (p[1] << 8) | p[2];
+            return dpi > 0 ? dpi : null;
+        }
+        catch (HidppException) { return null; }
+        catch (ObjectDisposedException) { return null; }
+    }
+
     /// <summary>Sets pointer speed now (if connected) and on every reconnect; null leaves the device value alone.</summary>
     public async Task SetDpiAsync(int? dpi, CancellationToken ct)
     {

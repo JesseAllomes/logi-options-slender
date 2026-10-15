@@ -24,10 +24,12 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly IForegroundApp _foreground;
     private readonly ILog _log;
     private readonly IShellLauncher _shell;
+    private readonly IBrightnessController _brightness;
 
-    public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null)
+    public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null)
     {
         _shell = shell ?? new ShellLauncher();
+        _brightness = brightness ?? new BrightnessController(new WindowsMonitorBrightness(), log);
         _excel = excel;
         _foreground = foreground;
         _log = log ?? NullLog.Instance;
@@ -81,6 +83,9 @@ public sealed class ActionExecutor : IActionExecutor
                     break;
                 case ActionSpec.Disabled:
                     break; // swallowed by the router; nothing runs
+                case ActionSpec.Brightness b:
+                    if (pressed) _brightness.Adjust(b.StepPercent); // queued off this thread; presses coalesce
+                    break;
                 case ActionSpec.ActionsRing:
                     if (pressed) ActionsRingRequested?.Invoke(this, EventArgs.Empty);
                     break;

@@ -76,7 +76,8 @@ internal sealed class FakeForeground : IForegroundApp
 {
     public string? ProcessName { get; set; }
     public nint WindowHandle { get; set; } = 42;
-    public event EventHandler<string?>? Changed { add { } remove { } }
+    public event EventHandler<string?>? Changed;
+    public void Switch(string? process) { ProcessName = process; Changed?.Invoke(this, process); }
 }
 
 internal sealed class FakeExcel : IExcelBridge

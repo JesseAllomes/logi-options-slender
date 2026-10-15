@@ -20,6 +20,7 @@ public sealed class KeyboardRouter : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private volatile SlenderConfig _config;
     private IReadOnlyList<ushort> _diverted = [];
+    private CancellationTokenSource? _foregroundDebounce;
     private bool? _fnLock;
     private Task _chain = Task.CompletedTask;
     private bool _started, _disposed;
@@ -51,6 +52,50 @@ public sealed class KeyboardRouter : IDisposable
             .Order()
             .ToList();
 
+    /// <summary>
+    /// Keys to divert while <paramref name="process"/> is in front: the app's own entry wins (an explicit None leaves the key
+    /// native), else the default profile's binding; diverted only when the effective binding is not None.
+    /// </summary>
+    public static IReadOnlyList<ushort> ComputeDivertSet(SlenderConfig config, string? process)
+    {
+        var profile = ProfileResolver.Resolve(config, process);
+        var def = ProfileResolver.Default(config);
+        return config.Profiles
+            .SelectMany(p => p.KeyBindings.Keys)
+            .Distinct()
+            .Where(key =>
+            {
+                var effective = profile.KeyBindings.TryGetValue(key, out var own) && own is not null ? own : Bound(def, key);
+                return effective is not null and not ActionSpec.None;
+            })
+            .Order()
+            .ToList();
+    }
+
+    /// <summary>Quiet period after a foreground change before the divert set is recomputed; rapid switches collapse into one. Tests set 0.</summary>
+    internal int ForegroundDebounceMs { get; set; } = 150;
+
+    private void OnForegroundChanged(object? sender, string? process)
+    {
+        try
+        {
+            if (ForegroundDebounceMs <= 0) { Apply(force: false); return; }
+            var cts = new CancellationTokenSource();
+            lock (_gate)
+            {
+                if (_disposed) return;
+                _foregroundDebounce?.Cancel();
+                _foregroundDebounce = cts;
+            }
+            _ = Task.Delay(ForegroundDebounceMs, cts.Token).ContinueWith(t =>
+            {
+                try { if (!t.IsCanceled && !_disposed) Apply(force: false); }
+                catch (Exception ex) { try { _log.Error("foreground divert failed", ex); } catch { } }
+            }, TaskScheduler.Default);
+        }
+        catch (Exception ex) { try { _log.Error("foreground change handler failed", ex); } catch { } }
+    }
+
     public void Start()
     {
         lock (_gate)
@@ -60,6 +105,7 @@ public sealed class KeyboardRouter : IDisposable
             _started = true;
         }
         _keyboard.KeyChanged += OnKey;
+        _foreground.Changed += OnForegroundChanged;
         try { _ = ObserveAsync(_keyboard.StartAsync(_cts.Token), "keyboard start"); }
         catch (Exception ex) { _log.Error("keyboard start failed", ex); }
         Apply(force: true);
@@ -76,7 +122,7 @@ public sealed class KeyboardRouter : IDisposable
 
     private void Apply(bool force)
     {
-        var set = ComputeDivertSet(_config);
+        var set = ComputeDivertSet(_config, _foreground.ProcessName);
         var fn = _config.Keyboard.FnLock;
         lock (_gate)
         {
@@ -163,6 +209,8 @@ public sealed class KeyboardRouter : IDisposable
             _disposed = true;
         }
         _keyboard.KeyChanged -= OnKey;
+        _foreground.Changed -= OnForegroundChanged;
+        lock (_gate) _foregroundDebounce?.Cancel();
         _cts.Cancel();
         _queue.Dispose();
         _cts.Dispose();
