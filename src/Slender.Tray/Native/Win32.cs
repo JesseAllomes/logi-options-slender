@@ -82,6 +82,7 @@ internal static unsafe class Win32
     [DllImport("user32.dll")] public static extern void PostQuitMessage(int code);
     [DllImport("user32.dll")] public static extern int PostMessageW(nint hwnd, uint msg, nint w, nint l);
     [DllImport("user32.dll")] public static extern int DestroyWindow(nint hwnd);
+    [DllImport("user32.dll")] public static extern short GetKeyState(int virtualKey);
     [DllImport("user32.dll")] public static extern nuint SetTimer(nint hwnd, nuint id, uint elapseMs, nint proc);
     [DllImport("user32.dll")] public static extern int KillTimer(nint hwnd, nuint id);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern uint RegisterWindowMessageW(char* name);

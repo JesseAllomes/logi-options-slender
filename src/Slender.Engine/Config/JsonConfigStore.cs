@@ -120,7 +120,9 @@ public sealed class JsonConfigStore : IConfigStore
             dto.LaunchAtLogin)
         {
             Pointer = ToPointer(dto.Pointer),
-            Keyboard = new KeyboardSettings(dto.Keyboard?.FnLock ?? false),
+            Keyboard = dto.Keyboard is { } k
+                ? new KeyboardSettings(k.FnLock, (byte)(k.DisabledKeys & 0x1F), k.ShowLockKeyChanges, k.FnLockChannel1, k.FnLockChannel2, k.FnLockChannel3, k.IdentifySpareKeys)
+                : new KeyboardSettings(),
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
             Ring = ToRingAppearance(dto.Ring),
         };
@@ -277,7 +279,16 @@ public sealed class JsonConfigStore : IConfigStore
                 SensePanelForce = config.Pointer.SensePanelForce,
                 SensePanelBaseline = config.Pointer.SensePanelBaseline,
             },
-            Keyboard = new KeyboardDto { FnLock = config.Keyboard.FnLock },
+            Keyboard = new KeyboardDto
+            {
+                FnLock = config.Keyboard.FnLock,
+                DisabledKeys = config.Keyboard.DisabledKeys,
+                ShowLockKeyChanges = config.Keyboard.ShowLockKeyChanges,
+                FnLockChannel1 = config.Keyboard.FnLockChannel1,
+                FnLockChannel2 = config.Keyboard.FnLockChannel2,
+                FnLockChannel3 = config.Keyboard.FnLockChannel3,
+                IdentifySpareKeys = config.Keyboard.IdentifySpareKeys,
+            },
             BatteryAlerts = new BatteryAlertsDto
             {
                 Enabled = config.BatteryAlerts.Enabled,
@@ -434,6 +445,12 @@ public sealed class JsonConfigStore : IConfigStore
     internal sealed class KeyboardDto
     {
         public bool FnLock { get; set; }
+        public byte DisabledKeys { get; set; }
+        public bool ShowLockKeyChanges { get; set; } = true;
+        public bool? FnLockChannel1 { get; set; }
+        public bool? FnLockChannel2 { get; set; }
+        public bool? FnLockChannel3 { get; set; }
+        public bool IdentifySpareKeys { get; set; }
     }
 
     internal sealed class ProfileDto

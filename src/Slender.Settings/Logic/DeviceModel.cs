@@ -80,7 +80,14 @@ public static class ControlCatalog
         new(10, "Calculator", "Calculator"),
         new(234, "Look up", "Look up"),
         new(111, "Lock", "Lock"),
+        // Spare divertable controls found by the 2026-10-15 inventory; labels from Solaar's task names (SpareKeys).
+        new(KeyboardId.Spare00EB, SpareKeys.Label(KeyboardId.Spare00EB), "Not assigned"),
+        new(KeyboardId.Spare00EC, SpareKeys.Label(KeyboardId.Spare00EC), "Not assigned"),
+        new(KeyboardId.Spare0101, SpareKeys.Label(KeyboardId.Spare0101), "Not assigned"),
     ];
+
+    /// <summary>The three spare keys, bindable like the rest but with no spot on the keyboard picture.</summary>
+    public static IReadOnlyList<ControlInfo> SpareKeyControls => KeyboardControls.Where(c => SpareKeys.IsSpare(c.Id)).ToList();
 
     public static IReadOnlyList<ControlInfo> For(DeviceKind kind) => kind == DeviceKind.Mouse ? MouseControls : KeyboardControls;
 

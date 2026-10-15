@@ -24,6 +24,8 @@ public sealed class KeyboardRouter : IDisposable
     private IReadOnlyList<ushort> _diverted = [];
     private CancellationTokenSource? _foregroundDebounce;
     private bool? _fnLock;
+    private byte? _disabledKeys;
+    private string? _channelFn;
     private Task _chain = Task.CompletedTask;
     private bool _started, _disposed;
 
@@ -52,9 +54,14 @@ public sealed class KeyboardRouter : IDisposable
             .SelectMany(p => p.KeyBindings)
             .Where(kv => kv.Value is not null and not ActionSpec.None)
             .Select(kv => kv.Key)
+            .Concat(IdentifyKeys(config))
             .Distinct()
             .Order()
             .ToList();
+
+    /// <summary>The spare keys, diverted (temporary divert only) while Settings' Identify panel is open.</summary>
+    private static IEnumerable<ushort> IdentifyKeys(SlenderConfig config) =>
+        config.Keyboard.IdentifySpareKeys ? SpareKeys.All.Select(k => k.Cid) : [];
 
     /// <summary>
     /// Keys to divert while <paramref name="process"/> is in front: the app's own entry wins (an explicit None leaves the key
@@ -72,6 +79,8 @@ public sealed class KeyboardRouter : IDisposable
                 var effective = profile.KeyBindings.TryGetValue(key, out var own) && own is not null ? own : Bound(def, key);
                 return effective is not null and not ActionSpec.None;
             })
+            .Concat(IdentifyKeys(config))
+            .Distinct()
             .Order()
             .ToList();
     }
@@ -149,6 +158,9 @@ public sealed class KeyboardRouter : IDisposable
     {
         var set = ComputeDivertSet(_config, _foreground.ProcessName);
         var fn = _config.Keyboard.FnLock;
+        var disabled = _config.Keyboard.DisabledKeys;
+        var channels = _config.Keyboard.FnLockChannels;
+        var channelKey = string.Join(',', channels.Select(c => c is null ? "-" : c.Value ? "1" : "0"));
         lock (_gate)
         {
             if (_disposed) return;
@@ -164,6 +176,22 @@ public sealed class KeyboardRouter : IDisposable
                 _fnLock = fn;
                 _chain = _chain.ContinueWith(_ => Safe(() => _keyboard.SetFnLockAsync(fn, _cts.Token), "set Fn lock"),
                     TaskScheduler.Default).Unwrap();
+            }
+            if (force || _channelFn != channelKey)
+            {
+                _channelFn = channelKey;
+                _chain = _chain.ContinueWith(_ => Safe(() => _keyboard.SetChannelFnLockAsync(channels, _cts.Token), "set Fn lock per channel"),
+                    TaskScheduler.Default).Unwrap();
+            }
+            if (force || _disabledKeys != disabled)
+            {
+                _disabledKeys = disabled;
+                _chain = _chain.ContinueWith(_ => Safe(async () =>
+                {
+                    var back = await _keyboard.SetDisabledKeysAsync((DisabledKeys)disabled, _cts.Token).ConfigureAwait(false);
+                    if (back is { } b && (byte)b != disabled)
+                        _log.Info($"disabled keys read back as 0x{(byte)b:X2}, asked for 0x{disabled:X2}");
+                }, "set disabled keys"), TaskScheduler.Default).Unwrap();
             }
         }
     }
@@ -193,6 +221,11 @@ public sealed class KeyboardRouter : IDisposable
     {
         try
         {
+            if (SpareKeys.IsSpare(e.ControlId) && _config.Keyboard.IdentifySpareKeys)
+            {
+                if (e.Pressed) SpareKeyIdentified?.Invoke(this, e.ControlId); // Identify: report only, run nothing
+                return;
+            }
             ActionSpec action;
             if (e.Pressed)
             {
@@ -250,6 +283,9 @@ public sealed class KeyboardRouter : IDisposable
         if (!held) RunAction(action, true);
         RunAction(action, false);
     }
+
+    /// <summary>A spare key went down while Identify is on (raised on the router's worker thread).</summary>
+    public event EventHandler<ushort>? SpareKeyIdentified;
 
     /// <summary>A key bound to "Switch thumb wheel mode" went down; the engine owns the mode (raised on the router's worker thread).</summary>
     public event EventHandler? ThumbWheelToggleRequested;

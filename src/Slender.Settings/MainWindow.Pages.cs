@@ -318,6 +318,7 @@ public sealed partial class MainWindow
         AddSection("KEYBOARD");
         AddRow("F-keys first (Fn lock)", "Function keys act as F1 to F12 without holding Fn.",
             PageToggle("F-keys first", c.Keyboard.FnLock, on => _config.Update(x => x with { Keyboard = x.Keyboard with { FnLock = on } })));
+        BuildKeyboardExtras(c);
 
         AddSection("FILES");
         var open = new Button { Content = "Open folder", Style = Ui.Res<Style>("QuietButtonStyle") };

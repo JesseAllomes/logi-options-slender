@@ -26,9 +26,17 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
         KeyboardId.NextTrack, KeyboardId.Mute, KeyboardId.VolumeDown, KeyboardId.VolumeUp,
         KeyboardId.ScreenCapture, KeyboardId.Calculator, KeyboardId.LookUp, KeyboardId.Lock,
         KeyboardId.EasySwitch1, KeyboardId.EasySwitch2, KeyboardId.EasySwitch3,
+        // Spare controls (flags 0x464/0x474 in the 2026-10-15 inventory): divertable, diverted only while bound.
+        KeyboardId.Spare00EB, KeyboardId.Spare00EC, KeyboardId.Spare0101,
     ];
 
+    /// <summary>Easy-Switch channels on the K860 (0x40A3 host indices 0..2).</summary>
+    public const int ChannelCount = 3;
+
     private bool? _fnDesired;
+    private DisabledKeys? _disabledDesired;
+    private bool?[] _channelFnDesired = new bool?[ChannelCount];
+    private volatile int _currentChannel = -1;
 
     public LogiKeyboard(IHidppTransportFactory factory, LogiKeyboardOptions? options = null)
         : base(factory, options ?? new LogiKeyboardOptions()) { }
@@ -41,11 +49,100 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
 
     protected override void DispatchControl(ButtonEvent e) => KeyChanged?.Invoke(this, e);
 
+    public int? CurrentChannel => _currentChannel is var c and >= 0 ? c : null;
+
     protected override async Task ApplyAfterDivertsAsync(Session s, CancellationToken ct)
     {
         bool? fn;
-        lock (State) fn = _fnDesired;
+        DisabledKeys? disabled;
+        bool?[] channels;
+        lock (State) { fn = _fnDesired; disabled = _disabledDesired; channels = (bool?[])_channelFnDesired.Clone(); }
         if (fn is { } on) await TrySetFnAsync(s, on, ct).ConfigureAwait(false);
+        await ApplyChannelsAsync(s, channels, ct).ConfigureAwait(false);
+        if (disabled is { } keys) await TrySetDisabledAsync(s, keys, ct).ConfigureAwait(false);
+    }
+
+    protected override void ResetAppliedState() => _currentChannel = -1;
+
+    /// <summary>
+    /// 0x40A3 per host. Solaar settings_templates.py K375sFnSwap: request = [host, state] (write fn1), reply state is the byte after
+    /// the host (read_skip_byte_count 1, fn0). Solaar takes the host byte from 0x1815 HostsInfo; Slender may not call that (blocked), so
+    /// explicit indices 0-2 are used (the 2026-10-15 probe read all three) and the current channel is inferred: the one channel whose
+    /// read matches a read with host 0xFF, when exactly one does.
+    /// </summary>
+    private async Task ApplyChannelsAsync(Session s, bool?[] channels, CancellationToken ct)
+    {
+        try
+        {
+            if (await s.Device.GetFeatureIndexAsync(KeyboardFeatureId.FnInversionMultiHost, ct).ConfigureAwait(false) == null) return;
+            for (int i = 0; i < ChannelCount; i++)
+            {
+                if (channels[i] is not { } want) continue;
+                await s.Device.CallAsync(KeyboardFeatureId.FnInversionMultiHost, 1,
+                    new byte[] { (byte)i, want ? (byte)1 : (byte)0 }, ct).ConfigureAwait(false);
+            }
+            _currentChannel = await InferChannelAsync(s, ct).ConfigureAwait(false) ?? -1;
+        }
+        catch (HidppException) { }
+    }
+
+    private static async Task<int?> InferChannelAsync(Session s, CancellationToken ct)
+    {
+        var now = (await s.Device.CallAsync(KeyboardFeatureId.FnInversionMultiHost, 0, new byte[] { CurrentHost }, ct).ConfigureAwait(false)).Params[1];
+        int match = -1;
+        for (int i = 0; i < ChannelCount; i++)
+        {
+            var v = (await s.Device.CallAsync(KeyboardFeatureId.FnInversionMultiHost, 0, new byte[] { (byte)i }, ct).ConfigureAwait(false)).Params[1];
+            if (v != now) continue;
+            if (match >= 0) return null; // ambiguous
+            match = i;
+        }
+        return match >= 0 ? match : null;
+    }
+
+    public async Task SetChannelFnLockAsync(IReadOnlyList<bool?> channels, CancellationToken ct)
+    {
+        var wanted = new bool?[ChannelCount];
+        for (int i = 0; i < ChannelCount && i < channels.Count; i++) wanted[i] = channels[i];
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            lock (State) _channelFnDesired = wanted;
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return;
+            await ApplyChannelsAsync(s, wanted, ct).ConfigureAwait(false);
+        }
+        finally { Gate.Release(); }
+    }
+
+    /// <summary>
+    /// 0x4521 per Solaar settings_templates.py DisableKeyboardKeys: fn0 = capability mask (byte 0), fn1 = read (byte 0),
+    /// fn2 = write (one mask byte). Only bits the keyboard says it can switch off are sent. Returns the mask read back.
+    /// </summary>
+    private static async Task<DisabledKeys?> TrySetDisabledAsync(Session s, DisabledKeys keys, CancellationToken ct)
+    {
+        try
+        {
+            if (await s.Device.GetFeatureIndexAsync(KeyboardFeatureId.DisableKeys, ct).ConfigureAwait(false) == null) return null;
+            var caps = (await s.Device.CallAsync(KeyboardFeatureId.DisableKeys, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params[0];
+            var mask = (byte)((byte)keys & caps);
+            await s.Device.CallAsync(KeyboardFeatureId.DisableKeys, 2, new byte[] { mask }, ct).ConfigureAwait(false);
+            return (DisabledKeys)(await s.Device.CallAsync(KeyboardFeatureId.DisableKeys, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params[0];
+        }
+        catch (HidppException) { return null; }
+    }
+
+    public async Task<DisabledKeys?> SetDisabledKeysAsync(DisabledKeys keys, CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            lock (State) _disabledDesired = keys;
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return null; // applied on (re)connect
+            return await TrySetDisabledAsync(s, keys, ct).ConfigureAwait(false);
+        }
+        finally { Gate.Release(); }
     }
 
     private static async Task<bool> TrySetFnAsync(Session s, bool on, CancellationToken ct)

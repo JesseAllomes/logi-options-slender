@@ -145,6 +145,9 @@ static class Program
         // Dual thumb wheel: the top button (engine or keyboard) flips the app's mode; a short label near the cursor says which.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
         engine.ThumbWheelModeChanged += (_, e) => app.PostToUi(() => toast.Show(ThumbWheelToast.TextFor(e)));
+        app.LockKeyChanged += (_, text) => toast.Show(text);
+        // Settings' "Identify" panel: the tray writes which spare key was pressed where Settings can read it.
+        keys.SpareKeyIdentified += (_, cid) => SpareKeyReport.Write(SyncPaths.StateDirectory, cid, log);
         keys.ThumbWheelToggleRequested += (_, _) => engine.ToggleThumbWheelMode();
         engine.StatusChanged += (_, status) =>
         {

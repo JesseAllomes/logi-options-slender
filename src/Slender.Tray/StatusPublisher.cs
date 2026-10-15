@@ -17,7 +17,8 @@ public sealed record StatusSnapshot(
     string? CurrentVersion = null,
     string? AvailableVersion = null,
     bool UpdateReady = false,
-    MouseValues? MouseValues = null);
+    MouseValues? MouseValues = null,
+    int? KeyboardChannel = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -170,7 +171,7 @@ public sealed class StatusPublisher : IDisposable
         return new SlenderStatus(
             [
                 MouseDeviceState(s),
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging),
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null },
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,

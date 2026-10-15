@@ -258,7 +258,33 @@ public sealed record PointerSettings(
     int? SensePanelForce = null, // 0x19C0 force threshold in device units; null leaves the device alone
     int? SensePanelBaseline = null); // the first reading Slender saw from the mouse; the safe band for SensePanelForce is 50%-200% of it
 
-public sealed record KeyboardSettings(bool FnLock = false);
+/// <summary>
+/// ERGO K860 settings. DisabledKeys is a <see cref="DisabledKeys"/> mask (0x4521, applied on the keyboard itself). ShowLockKeyChanges
+/// shows a short cursor label when Caps Lock or Num Lock flips. FnLockChannel1..3 are Fn inversion per Easy-Switch channel
+/// (0x40A3); null leaves that channel alone. IdentifySpareKeys is set only while Settings' "Identify" panel is open: the tray
+/// then diverts the three spare keys and reports which one was pressed.
+/// </summary>
+public sealed record KeyboardSettings(
+    bool FnLock = false,
+    byte DisabledKeys = 0,
+    bool ShowLockKeyChanges = true,
+    bool? FnLockChannel1 = null,
+    bool? FnLockChannel2 = null,
+    bool? FnLockChannel3 = null,
+    bool IdentifySpareKeys = false)
+{
+    /// <summary>The three per-channel values in channel order (0-2).</summary>
+    public IReadOnlyList<bool?> FnLockChannels => [FnLockChannel1, FnLockChannel2, FnLockChannel3];
+
+    /// <summary>A copy with channel <paramref name="index"/> (0-2) set.</summary>
+    public KeyboardSettings WithChannel(int index, bool? value) => index switch
+    {
+        0 => this with { FnLockChannel1 = value },
+        1 => this with { FnLockChannel2 = value },
+        2 => this with { FnLockChannel3 = value },
+        _ => throw new ArgumentOutOfRangeException(nameof(index)),
+    };
+}
 
 /// <summary>Low-battery notification: once per discharge when a device drops to the threshold while not charging; re-armed by charging or rising above it.</summary>
 public sealed record BatteryAlertSettings(bool Enabled = true, int MouseThresholdPercent = 15, int KeyboardThresholdPercent = 10);
@@ -312,6 +338,9 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
     public int? SensePanelForceMax { get; init; }
     /// <summary>Current haptic strength 0-100 (0x19B0); null when unknown.</summary>
     public int? HapticStrength { get; init; }
+
+    /// <summary>Easy-Switch channel (0-2) the keyboard is on, when it could be told; null when unknown or not a keyboard.</summary>
+    public int? Channel { get; init; }
 }
 
 /// <summary>
