@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=57 -->
+<!-- drainclamp-build: state; schema=1; generation=61 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -50,6 +50,8 @@ Builder worktrees -> only under logi-options-slender/.worktrees/<name> (ignored 
 Gate 6 decisions (rounds R2-R6 of m13) -> orchestrator records fix for every finding the refuter confirms and the Opus adjudicator upholds; asks the user only when recommending waive/dismiss or when a finding argues against a recorded decision (user 2026-10-15)
 Thumb wheel modes -> per-app mode remembered until flipped back, for the life of the tray process (not persisted); browsers preset to tabs (Ctrl+Tab/Ctrl+Shift+Tab); toggle is an action bound to the top (mode shift) button per app (user 2026-10-15)
 Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight one slot per notch; main wheel keeps adjusting volume/brightness slots (user 2026-10-15)
+Custom firmware -> not pursued (signed-only updates; hardware route irreversible; Slender already covers the gains) (user 2026-10-15)
+Device probe -> read-only inventory: enumerate every feature (incl. hidden/engineering), call only documented getters from a vetted table, list-only for DFU/host/pairing/reset/onboard-profile and unknown features; own SwId so it runs beside the tray (user 2026-10-15)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -77,6 +79,7 @@ Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight
 | m22 | brightness keys (monitor under cursor: WMI internal panel, DDC/CI externals), pointer speed (tray reads DPI via 0x2201, Settings DPI control, importer), per-app divert so explicit None restores native mode shift | src/Slender.Engine;src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings | done | m19 |
 | m23 | thumb wheel steers the Actions Ring: while open, thumb wheel moves the highlight one slot per notch (haptic tick), swallowed so the app below never scrolls | src/Slender.Engine/Ring;src/Slender.Engine/LowLevelMouseHook.cs;src/Slender.Engine/RingButtonPairing.cs;src/Slender.Tray/Ring | done | m20 |
 | m24 | thumb wheel modes: per-app second thumb-wheel function (browsers preset to tabs), "Switch thumb wheel mode" action for the top button, per-app mode kept until flipped back, haptic bump + short label at the cursor, Settings rows | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | done | m22 |
+| m25 | device inventory: read-only probe of every HID++ feature on MX Master 4 and K860 (getters only), reports in docs/devices/, gap analysis of features Slender could add | tools/Slender.Probe;docs/devices | done | m22 |
 | m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m24 |
 <!-- /DC:ROADMAP -->
 
@@ -88,7 +91,6 @@ Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-14T22:21:54+00:00 3cbc90c3 m1 done: docs/baseline.md + docs/protocol.md; .NET 10 scaffold + shared contracts (Hidpp/Engine) committed as worktree base
 - 2026-10-14T22:33:15+00:00 dd0e7bc5 m2 done: Trim-OptionsPlus.ps1 + Repair-ExcelAddins.ps1 (report default, -Apply gated, reg backups) + switch-over.md merged; not yet run for real
 - 2026-10-14T22:34:01+00:00 627db5c1 m4+m5 merged: LL hook, foreground watcher, out-of-process Excel bridge (COM SmallScroll + WM_HSCROLL fallback), actions, profiles; 54 tests green; Excel/device behaviour unconfirmed
 - 2026-10-14T22:43:00+00:00 0631fb3c m3 merged + read-only probe confirmed BLE PID B042/idx 0xFF/CIDs; fixed: connect now undiverts Options+ leftovers + thumb wheel native; engine wired into tray; 102 tests
@@ -108,4 +110,5 @@ Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight
 - 2026-10-15T06:45:16+00:00 9b38a586 Gate 6 R1 (final, base 8aefde1): 20 candidates, 18 fixed (da0bf66, 723 tests), 2 refuted; verdict NOT-RUN because the packet cap left 57/105 files unreviewed
 - 2026-10-15T07:56:53+00:00 d88f8c74 Gate 6 m13 REVIEW-PASS: 5 rounds (R1 final + R2-R5 --only batches around the 1500-line cap), 105 files, 46 fixed, 9 refuted, 0 waived; 763 tests; DrainClamp bin/obj cache fix -> PR #1
 - 2026-10-15T09:23:52+00:00 65bc4be7 m23 thumb wheel steers ring + m24 dual thumb wheel merged (795 tests, AOT clean); not yet shipped as an update
+- 2026-10-15T10:33:40+00:00 bf4a3720 m25 device inventory done: gaps = wheel resistance, Sense Panel force, haptic 0-100, DPI 200, hi-res/touch thumb wheel, raw-XY gestures; K860 disable keys, lock-key OSD, multi-platform, per-host Fn lock, 3 unused keys
 <!-- /DC:LOG -->

@@ -284,6 +284,20 @@
           "src/Slender.Settings"
         ]
       }
+    ],
+    "m25": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T10:33:40+00:00",
+        "est_min": 60,
+        "goal": "Inventory probe + run + gap report",
+        "id": "c1",
+        "note": "Probe --inventory (SwId 0x0C, vetted getters, NeverCall guard on send path); MX4 45 features 92 reads 0 errors, K860 29 features 119 reads 0 errors; docs/devices/feature-gaps.md",
+        "targets": [
+          "tools/Slender.Probe",
+          "docs/devices"
+        ]
+      }
     ]
   },
   "errors": [
@@ -321,7 +335,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 220,
+  "rev": 222,
   "review": {
     "advice": [],
     "config": {
@@ -13077,6 +13091,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-15T09:14:29+00:00"
+    },
+    {
+      "end": "2026-10-15T10:33:40+00:00",
+      "id": "s5",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-15T10:33:40+00:00"
     }
   ],
   "todos": [
