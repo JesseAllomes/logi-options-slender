@@ -67,12 +67,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-15T22:28:27+00:00",
         "est_min": 5,
         "goal": "Memory check after 1 h of use (tray private/WS vs docs/memory.md budget) and Excel thumb wheel/sheets confirmation",
         "id": "c4",
-        "note": "",
+        "note": "1 h sample 2026-10-16: tray commit 8.8 -> 11.2 MB flat from 17 min on, private WS ~6 MB, WS 36 MB, 12 threads, 8 s CPU in 53 min (docs/memory.md target 11-13; pre-AOT 23.8). Excel thumb wheel + sheets pass (user). Tray restarted ~09:22 for the 1.1.6 update",
         "targets": [
           "docs/memory.md"
         ]
@@ -438,7 +438,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 240,
+  "rev": 241,
   "review": {
     "advice": [],
     "config": {
@@ -13208,6 +13208,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-15T21:54:49+00:00"
+    },
+    {
+      "end": "2026-10-15T22:28:27+00:00",
+      "id": "s7",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-15T22:28:27+00:00"
     }
   ],
   "todos": [

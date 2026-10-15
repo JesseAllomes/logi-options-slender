@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=69 -->
+<!-- drainclamp-build: state; schema=1; generation=73 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -68,7 +68,7 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 | m10 | WinUI 3 settings app (locked design) | src/Slender.Settings | done | m8 |
 | m11 | team round: engine gaps, tray keyboard status, settings polish | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | done | m10 |
 | m12 | memory: Win32 AOT tray, gen0 cap, watchdog, popover, shared runtime | src/Slender.Tray;src/Slender.Settings;docs/memory.md | done | m10 |
-| m13 | install SlenderSetup.exe and live verification pass (popover, Excel IDispatch path, devices, keyboard line, watchdog) | scripts/Build-Setup.ps1;docs/install.md | active | m12 |
+| m13 | install SlenderSetup.exe and live verification pass (popover, Excel IDispatch path, devices, keyboard line, watchdog) | scripts/Build-Setup.ps1;docs/install.md | done | m12 |
 | m14 | sign-in: user creates personal MS app registration, slender.sync.json, live sync test | src/Slender.Sync;docs/sync.md | pending | m13 |
 | m15 | onboard keys UI: contract KeyboardSettings.OnboardKeys + OnboardManaged, "Store on keyboard" in picker (1 modifier max), wire OnboardSync on connect/config change | src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/OnboardSync.cs;src/Slender.Settings;src/Slender.Tray | pending | m13 |
 | m16 | firmware: tray publishes device firmware versions (0x0003 read, allowlist), "Update firmware..." launches Options+ temporarily; set Options+ service to Manual after switch-over | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings | pending | m13 |
@@ -98,9 +98,6 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-14T23:32:04+00:00 6fabb77f Settings UI locked (round 4); contracts v2 (hook buttons, config v2, status) at 7187832; m8 + m10 building in worktrees -m8/-m10
-- 2026-10-14T23:36:33+00:00 22f79d82 m8 merged: hook captures middle/back/forward, HID++ divert only gesture/modeshift/sense, allowlist enforced in HidppDevice; raw channel sends made internal; 134 tests
-- 2026-10-14T23:56:42+00:00 c3ee0158 Live test: Options+ service stopped (until reboot); haptic play = fn4 confirmed; thumb wheel invert applied from config (default on); m9 keyboard merged (151 tests); keyboard router not yet wired into tray
 - 2026-10-15T00:24:31+00:00 ac36d067 m10 merged (820c394, 265 tests); keyboard wired into tray; team launched: wt-engine, wt-tray, wt-settings (Sonnet), wt-mem (Opus audit)
 - 2026-10-15T01:57:21+00:00 09374121 Merged: Win32 tray (AOT 5.3 MB private), popover mode, setup.exe+sync, onboard (1 modifier max; Options+ uses software divert for multi-mod); 400+ tests
 - 2026-10-15T02:04:29+00:00 6a918951 Session wrap: SlenderSetup.exe 1.0.0 built (AOT tray, 71.8 MB); next = user quits old Slender, installs, 5-min live pass (m13)
@@ -118,4 +115,7 @@ Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + 
 - 2026-10-15T11:10:03+00:00 82a52e7a Device feature round m26-m30 merged (977 tests, AOT clean): mouse feel, K860 extras, press/hold, precise thumb wheel + touch/tap, raw-XY gestures with cursor hold
 - 2026-10-15T11:12:32+00:00 72922479 State refresh: ARCH rewritten for 1.1.5 (m17-m30 done); open: m13 c4 live memory/Excel check, m14 sync, m15 onboard K860 UI, m16 firmware, m7 switch-over; to-dos t1 (forward-slash UNC, fixed in R2), t2 keyboard disconnect release
 - 2026-10-15T21:51:04+00:00 8c83d2cd m13 c4 live check: Excel thumb wheel + sheets pass (user); tray 8.8 MB commit at 8 min, 1 h sampler running (.agent/memory-samples-2026-10-16.txt); Settings 219 MB commit while open (note). m31 added: thumb wheel card on the stage (user chose card on click, labels Scroll right / Scroll left)
+- 2026-10-15T21:56:50+00:00 ee4bd2da m31 built and committed 7050cdc (985 tests, -warnaserror clean): thumb wheel card on the stage. Not yet seen live: needs Build-Setup.ps1 + in-app update, then click the thumb wheel on the mouse stage. m13 c4 memory sample still running
+- 2026-10-15T22:04:11+00:00 981b2667 m31 shipped: SlenderSetup 1.1.6 built 09:04 Melbourne (delta 1.1.5->1.1.6 in artifacts/releases); tray picks it up within 30 s / on Check for updates; awaiting user's live look at the card
+- 2026-10-15T22:28:27+00:00 e1338ec4 m13 c4 done: 1 h memory sample flat at ~11 MB commit (.agent/memory-samples-2026-10-16.txt); m13 all chunks done, close after the user's live look at 1.1.6
 <!-- /DC:LOG -->
