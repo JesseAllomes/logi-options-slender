@@ -42,12 +42,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-15T06:05:08+00:00",
         "est_min": 20,
         "goal": "Live pass with user: tray left-click popover + unfold, Excel thumb wheel via IDispatch, Back/Forward sheets, K860 battery line, memory after 1 h",
         "id": "c2",
-        "note": "",
+        "note": "User: 'seems better' on 1.1.2. Verified: in-app update 1.1.1->1.1.2 downloaded 16:38:19 and restarted 16:38:28; plugin-service ring imported (default 8 slots, 4 folders; Excel, PowerPoint rings); no new Settings errors; tray 11 MB private / 42 MB WS",
         "targets": [
           "src/Slender.Tray/Program.cs",
           "src/Slender.Settings/MainWindow.Popover.cs",
@@ -64,6 +64,17 @@
         "targets": [
           "src/Slender.Tray/SelfUpdate.cs",
           "scripts/Build-Setup.ps1"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 5,
+        "goal": "Memory check after 1 h of use (tray private/WS vs docs/memory.md budget) and Excel thumb wheel/sheets confirmation",
+        "id": "c4",
+        "note": "",
+        "targets": [
+          "docs/memory.md"
         ]
       }
     ],
@@ -279,7 +290,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 43,
+  "rev": 45,
   "schema": 1,
   "time": [
     {
@@ -295,6 +306,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-15T03:09:13+00:00"
+    },
+    {
+      "end": "2026-10-15T06:05:08+00:00",
+      "id": "s3",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-15T06:05:08+00:00"
     }
   ],
   "todos": [],
