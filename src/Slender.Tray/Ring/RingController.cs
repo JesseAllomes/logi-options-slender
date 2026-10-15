@@ -177,9 +177,9 @@ public sealed unsafe class RingController : IDisposable
         var cells = RingRenderer.Cells(_session.Slots, _icons, _iconPx);
         var accent = RingColor.TryParse(_appearance.Accent) ?? RingColor.Rgb(0xD9925F);
         RingRenderer.Draw(_canvas, new RingFrame(_appearance.Style, _metrics, accent, _appearance.Labels, cells, _session.Selected, _session.FolderName));
-        if (initial && !RingNative.ClientAreaAnimationEnabled())
+        if (initial && RingNative.ClientAreaAnimationEnabled())
         {
-            _fadeStart = Now; // reduced motion: a short fade instead of popping in
+            _fadeStart = Now; // a short fade in; with Windows animations off the ring appears at once
             _canvas.Present(_hwnd, _left, _top, 0);
         }
         else _canvas.Present(_hwnd, _left, _top, CurrentAlpha());
