@@ -39,7 +39,19 @@ public static class StatusJson
         try
         {
             File.WriteAllText(temp, Serialize(status), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            File.Move(temp, path, overwrite: true);
+            // A reader (the settings app), antivirus or the indexer can hold either file for a moment; retry briefly.
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temp, path, overwrite: true);
+                    break;
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException && attempt < 6)
+                {
+                    Thread.Sleep(15 * attempt);
+                }
+            }
         }
         catch
         {
