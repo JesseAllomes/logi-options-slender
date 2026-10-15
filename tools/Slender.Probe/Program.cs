@@ -276,6 +276,20 @@ if (k860)
             if (gm != null) Console.WriteLine($"      mapping: {LogiKeyboard.ParseMapping(cid, gm.Params)} status 0x{gm.Params[7]:X2} raw {Hex(gm.Params[..8])}");
         }
 
+        // --onboard-hosts=<cid>: read that control's mapping for host 0, 1, 2 and 0xFF.
+        if (args.FirstOrDefault(a => a.StartsWith("--onboard-hosts=", StringComparison.Ordinal)) is { } hostsArg
+            && ushort.TryParse(hostsArg["--onboard-hosts=".Length..], out var hc))
+        {
+            Console.WriteLine($"\n== --onboard-hosts CID {hc} ==");
+            foreach (byte h in new byte[] { 0, 1, 2, 0xFF })
+            {
+                var r = await Try(device, $"getMapping host 0x{h:X2}", PersistentRemapId.Feature, PersistentRemapId.FnGetMapping, (byte)(hc >> 8), (byte)hc, h);
+                if (r != null) Console.WriteLine($"  host 0x{h:X2}: {LogiKeyboard.ParseMapping(hc, r.Params)} raw {Hex(r.Params[..8])}");
+            }
+        }
+        byte onboardHost = args.FirstOrDefault(a => a.StartsWith("--onboard-host=", StringComparison.Ordinal)) is { } oh
+            && byte.TryParse(oh["--onboard-host=".Length..], out var ohv) ? ohv : PersistentRemapId.CurrentHost;
+
         // Opt-in, WRITES KEYBOARD FLASH: --onboard-set=<cid>:<chord> (fn4) and --onboard-reset=<cid> (fn5 factory reset).
         if (args.FirstOrDefault(a => a.StartsWith("--onboard-set=", StringComparison.Ordinal)) is { } setArg
             && setArg["--onboard-set=".Length..].Split(':', 2) is [var cidText, var chord] && ushort.TryParse(cidText, out var setCid))
@@ -284,16 +298,16 @@ if (k860)
             var ab = action.ToBytes();
             Console.WriteLine($"\n== --onboard-set CID {setCid} = {chord} ({action}) ==");
             await Try(device, "setMapping (fn4)", PersistentRemapId.Feature, PersistentRemapId.FnSetMapping,
-                (byte)(setCid >> 8), (byte)setCid, PersistentRemapId.CurrentHost, ab[0], ab[1], ab[2], ab[3]);
-            var after = await Try(device, "read back (fn3)", PersistentRemapId.Feature, PersistentRemapId.FnGetMapping, (byte)(setCid >> 8), (byte)setCid, PersistentRemapId.CurrentHost);
+                (byte)(setCid >> 8), (byte)setCid, onboardHost, ab[0], ab[1], ab[2], ab[3]);
+            var after = await Try(device, "read back (fn3)", PersistentRemapId.Feature, PersistentRemapId.FnGetMapping, (byte)(setCid >> 8), (byte)setCid, onboardHost);
             if (after != null) Console.WriteLine($"  now: {LogiKeyboard.ParseMapping(setCid, after.Params)}");
         }
         if (args.FirstOrDefault(a => a.StartsWith("--onboard-reset=", StringComparison.Ordinal)) is { } resetArg
             && ushort.TryParse(resetArg["--onboard-reset=".Length..], out var resetCid))
         {
             Console.WriteLine($"\n== --onboard-reset CID {resetCid} ==");
-            await Try(device, "reset (fn5)", PersistentRemapId.Feature, PersistentRemapId.FnReset, (byte)(resetCid >> 8), (byte)resetCid, PersistentRemapId.CurrentHost);
-            var after = await Try(device, "read back (fn3)", PersistentRemapId.Feature, PersistentRemapId.FnGetMapping, (byte)(resetCid >> 8), (byte)resetCid, PersistentRemapId.CurrentHost);
+            await Try(device, "reset (fn5)", PersistentRemapId.Feature, PersistentRemapId.FnReset, (byte)(resetCid >> 8), (byte)resetCid, onboardHost);
+            var after = await Try(device, "read back (fn3)", PersistentRemapId.Feature, PersistentRemapId.FnGetMapping, (byte)(resetCid >> 8), (byte)resetCid, onboardHost);
             if (after != null) Console.WriteLine($"  now: {LogiKeyboard.ParseMapping(resetCid, after.Params)}");
         }
     }

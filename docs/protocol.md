@@ -274,3 +274,13 @@ any of them; they are stored in `OnboardSync.K860ObservedDefaults` as "observed"
 - **No write has been sent to a real keyboard.** Unverified on device: fn4 and fn5 reply shapes, whether 0xFF is accepted as host on
   writes, whether a write takes effect immediately, three-modifier masks, and whether a Key remap of a CID that currently reads
   Empty (brightness) is honoured.
+
+### 0x1C00 live write test (ERGO K860 over BLE, 2026-10-15)
+
+- fn4 setMapping with host 0xFF is accepted (`…0B4B` reply, no error) and stored in host slot 0 (this PC, Easy-Switch 1);
+  0xFF reads alias host 0. Status byte becomes 1 (remapped). Format matches the factory entries exactly.
+- Effect: the key **stops sending its factory action** (Calculator no longer opens) but **no new keystroke is seen by
+  Windows**, both for Win+Shift+S (Key 0x16 mods 0x0A) and Ctrl+Shift+Esc (Key 0x29 mods 0x03), before and after an
+  Easy-Switch reconnect.
+- fn5 reset works: the key reads back Consumer 0x0192 and Calculator opens again. Key left at factory.
+- Open question: where the remapped report goes (vendor collection / needs host software?). Not usable until explained.
