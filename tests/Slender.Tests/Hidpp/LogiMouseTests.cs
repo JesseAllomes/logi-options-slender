@@ -293,4 +293,36 @@ public class LogiMouseTests
         factory.Enqueue(dev.NewTransport());
         await Wait.UntilAsync(() => mouse.IsConnected);
     }
+
+    [Fact]
+    public async Task Thumb_divert_uses_fn2_and_keeps_the_invert_bit_in_both_modes()
+    {
+        var f = new FakeFactory();
+        var dev = new FakeDevice();
+        dev.Handlers[(FakeDevice.Thumb, 1)] = _ => [0, 0];
+        dev.Handlers[(FakeDevice.Thumb, 2)] = _ => [];
+        dev.Handlers[(FakeDevice.Thumb, 0)] = _ => [0, 20, 0, 120, 0, 0x03, 0x03, 0xE8];
+        var t = dev.NewTransport();
+        f.Enqueue(t);
+        using var mouse = new LogiMouse(f, Wait.FastOptions());
+        await mouse.StartAsync(CancellationToken.None);
+        await Wait.UntilAsync(() => mouse.IsConnected);
+        await Wait.UntilAsync(() => mouse.ThumbWheelTouchSupported == true); // caps 0x03: timestamp + touch
+        await mouse.SetThumbWheelInvertAsync(true, CancellationToken.None);
+        Assert.True(await mouse.TrySetThumbWheelDivertedAsync(true, CancellationToken.None));
+        Assert.True(await mouse.TrySetThumbWheelDivertedAsync(false, CancellationToken.None));
+        var sets = t.Writes.Where(w => w[2] == FakeDevice.Thumb && w[3] >> 4 == 2).Select(w => (w[4], w[5])).ToList();
+        Assert.Contains(((byte)1, (byte)1), sets); // diverted + inverted
+        Assert.Equal(((byte)0, (byte)1), sets[^1]); // native again, still inverted
+    }
+
+    [Fact]
+    public async Task Thumb_divert_reports_false_when_the_device_rejects_it_or_is_gone()
+    {
+        var (mouse, _, _, _) = Create(d => d.Handlers[(FakeDevice.Thumb, 1)] = _ => throw new InvalidOperationException());
+        using (mouse)
+        {
+            Assert.False(await mouse.TrySetThumbWheelDivertedAsync(true, CancellationToken.None)); // not connected yet
+        }
+    }
 }

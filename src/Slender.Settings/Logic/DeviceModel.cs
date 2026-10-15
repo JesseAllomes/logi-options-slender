@@ -20,6 +20,12 @@ public static class DeviceIds
     /// <summary>The thumb wheel is not a HID++ control id; Slender stores its binding under this pseudo id.</summary>
     public const ushort ThumbWheelPseudoId = 0xF150;
 
+    /// <summary>Thumb wheel touch (finger resting on the wheel; press on touch, release on lift). Needs the wheel diverted in that app.</summary>
+    public const ushort ThumbWheelTouchPseudoId = 0xF151;
+
+    /// <summary>Thumb wheel tap (touch then lift within 250 ms and under a quarter notch of rotation). Needs the wheel diverted in that app.</summary>
+    public const ushort ThumbWheelTapPseudoId = 0xF152;
+
     /// <summary>Gesture swipes are not controls either: pseudo ids 0xF1C0 + (int)GestureDirection, stored in Profile.GestureSwipes.</summary>
     public const ushort SwipePseudoIdBase = 0xF1C0;
 
@@ -49,6 +55,8 @@ public static class ControlCatalog
         new(ControlId.Middle, "Middle click", "Middle click"),
         new(ControlId.ModeShift, "Mode shift", "Ratchet / free-spin"),
         new(DeviceIds.ThumbWheelPseudoId, "Thumb wheel", "Scroll sideways"),
+        new(DeviceIds.ThumbWheelTouchPseudoId, "Thumb wheel touch", "Not assigned"),
+        new(DeviceIds.ThumbWheelTapPseudoId, "Thumb wheel tap", "Not assigned"),
         new(ControlId.Forward, "Forward", "Forward"),
         new(ControlId.Back, "Back", "Back"),
         new(ControlId.Gesture, "Gesture click", "Not assigned"),
@@ -60,6 +68,10 @@ public static class ControlCatalog
     ];
 
     /// <summary>The four swipe rows, in Up, Down, Left, Right order.</summary>
+    /// <summary>The thumb wheel touch and tap rows, shown next to the thumb wheel.</summary>
+    public static IReadOnlyList<ControlInfo> ThumbTouchControls =>
+        MouseControls.Where(c => c.Id is DeviceIds.ThumbWheelTouchPseudoId or DeviceIds.ThumbWheelTapPseudoId).ToList();
+
     public static IReadOnlyList<ControlInfo> SwipeControls => MouseControls.Where(c => DeviceIds.TryGetSwipe(c.Id, out _)).ToList();
 
     public static IReadOnlyList<ControlInfo> KeyboardControls { get; } =

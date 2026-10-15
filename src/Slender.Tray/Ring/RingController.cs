@@ -63,6 +63,26 @@ public sealed unsafe class RingController : IDisposable
 
     public bool IsOpen => _session?.IsOpen == true;
 
+    /// <summary>Raised (UI thread) when the ring opens (true) or is torn down (false); the engine diverts the thumb wheel while it is open.</summary>
+    public event Action<bool>? OpenChanged;
+
+    private bool _announcedOpen;
+
+    private void AnnounceOpen(bool open)
+    {
+        if (_announcedOpen == open) return;
+        _announcedOpen = open;
+        try { OpenChanged?.Invoke(open); }
+        catch (Exception ex) { _log.Error("ring open handler failed", ex); }
+    }
+
+    /// <summary>Thumb wheel rotation from HID++ (the wheel is diverted, so the hook sees none). Any thread; 1/120 notch units.</summary>
+    public void OnDivertedThumbWheel(int delta)
+    {
+        if (_disposed) return;
+        _post(() => HandleInput(HookRingKind.ThumbWheel, delta));
+    }
+
     /// <summary>The ring trigger went down or up. A press while closed opens the ring; while open it goes to the state machine.</summary>
     public void OnTrigger(bool pressed, bool holdOnly = false)
     {
@@ -149,6 +169,7 @@ public sealed unsafe class RingController : IDisposable
         _hook.SetRingCapture(true);
         Win32.SetTimer(_hwnd, TimerId, TimerMs, 0);
         SamplePointer(); // baseline selection (the ring opens under the cursor, or at the monitor centre)
+        AnnounceOpen(true);
     }
 
     private void CreateWindow()
@@ -297,6 +318,7 @@ public sealed unsafe class RingController : IDisposable
         _session = null;
         _fadeStart = 0;
         if (ReferenceEquals(s_current, this)) s_current = null;
+        AnnounceOpen(false);
     }
 
     [UnmanagedCallersOnly]

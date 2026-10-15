@@ -87,8 +87,11 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
             thumb = _thumbDesired; invert = _thumbInvertDesired; smartShift = _smartShiftDesired; smooth = _smoothDesired; dpi = _dpiDesired;
             torque = _torqueDesired; force = _forceDesired; haptic = _hapticDesired;
         }
-        if (await TrySetThumbAsync(s, thumb, invert, ct).ConfigureAwait(false) && thumb)
-            lock (State) _thumbApplied = true;
+        if (await TrySetThumbAsync(s, thumb, invert, ct).ConfigureAwait(false))
+        {
+            if (thumb) lock (State) _thumbApplied = true;
+            await ReadThumbCapsAsync(s, ct).ConfigureAwait(false); // only when the wheel answered: no extra wait on a device without 0x2150
+        }
         if (smartShift is { } ss) await TrySetSmartShiftAsync(s, ss, ct).ConfigureAwait(false);
         if (smooth is { } sm) await TrySetSmoothScrollAsync(s, sm, ct).ConfigureAwait(false);
         if (dpi is { } d) await TrySetDpiAsync(s, d, ct).ConfigureAwait(false);
@@ -413,19 +416,47 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         finally { Gate.Release(); }
     }
 
-    public async Task SetThumbWheelDivertedAsync(bool diverted, CancellationToken ct)
+    public async Task SetThumbWheelDivertedAsync(bool diverted, CancellationToken ct) =>
+        _ = await TrySetThumbWheelDivertedAsync(diverted, ct).ConfigureAwait(false);
+
+    /// <summary>
+    /// 0x2150 fn2 [divert, invert, 0]: the divert bit and the invert bit share one call, and the user's invert is always sent.
+    /// Connected and accepted = true. Connected but rejected = the old state stays (desired is not changed). Disconnected = the
+    /// wish is remembered and applied on the next connect, but this returns false.
+    /// </summary>
+    public async Task<bool> TrySetThumbWheelDivertedAsync(bool diverted, CancellationToken ct)
     {
         await Gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             bool? invert;
-            lock (State) { _thumbDesired = diverted; invert = _thumbInvertDesired; }
+            lock (State) invert = _thumbInvertDesired;
             var s = CurrentSession;
-            if (s == null || !IsConnected) return;
-            if (await TrySetThumbAsync(s, diverted, invert, ct).ConfigureAwait(false))
-                lock (State) _thumbApplied = diverted;
+            if (s == null || !IsConnected)
+            {
+                lock (State) _thumbDesired = diverted;
+                return false;
+            }
+            if (!await TrySetThumbAsync(s, diverted, invert, ct).ConfigureAwait(false)) return false;
+            lock (State) { _thumbDesired = diverted; _thumbApplied = diverted; }
+            return true;
         }
         finally { Gate.Release(); }
+    }
+
+    private int _thumbTouch = -1; // -1 unknown, 0 no, 1 yes
+
+    /// <summary>0x2150 getInfo caps bit1 (touch), read on every connect.</summary>
+    public bool? ThumbWheelTouchSupported => _thumbTouch < 0 ? null : _thumbTouch == 1;
+
+    private async Task ReadThumbCapsAsync(Session s, CancellationToken ct)
+    {
+        try
+        {
+            var info = await s.Device.CallAsync(FeatureId.ThumbWheel, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false);
+            _thumbTouch = (info.Params[5] & 0x02) != 0 ? 1 : 0;
+        }
+        catch (HidppException) { _thumbTouch = -1; }
     }
 
     // ---- haptics ------------------------------------------------------------------------------

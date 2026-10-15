@@ -191,7 +191,8 @@ public static class ActionCatalog
     /// </summary>
     public static bool CanTapHold(DeviceKind kind, ushort controlId) =>
         kind == DeviceKind.Keyboard || (controlId != Slender.Hidpp.ControlId.Gesture
-            && controlId != DeviceIds.ThumbWheelPseudoId && !DeviceIds.TryGetSwipe(controlId, out _));
+            && controlId != DeviceIds.ThumbWheelPseudoId && controlId != DeviceIds.ThumbWheelTouchPseudoId
+            && controlId != DeviceIds.ThumbWheelTapPseudoId && !DeviceIds.TryGetSwipe(controlId, out _));
 
     /// <summary>Builds a Press / Hold action; false when either half is itself a Press / Hold (not allowed) or null.</summary>
     public static bool TryBuildTapHold(ActionSpec? tap, ActionSpec? hold, out ActionSpec.TapHold result)
