@@ -2,6 +2,7 @@ using Slender.Hidpp;
 using Slender.Hidpp.Transport;
 
 // Slender.Probe: read-only HID++ explorer for the MX Master 4. Prints raw hex for everything.
+// --inventory writes a JSON + Markdown device inventory (read-only getters only, see Slender.Hidpp.Inventory).
 // Opt-in flags change device state and restore it afterwards: --haptic-test, --divert-test, --thumbwheel-test.
 
 string deviceArg = args.SkipWhile(a => a != "--device").Skip(1).FirstOrDefault() ?? "mx4";
@@ -12,8 +13,18 @@ bool divert = args.Contains("--divert-test");
 bool thumb = args.Contains("--thumbwheel-test");
 if (args.Contains("--help") || args.Contains("-h"))
 {
-    Console.WriteLine("Slender.Probe [--device mx4|k860] [--haptic-test] [--divert-test] [--thumbwheel-test]\nDefault is read-only.");
+    Console.WriteLine("Slender.Probe [--device mx4|k860] [--haptic-test] [--divert-test] [--thumbwheel-test]\nSlender.Probe --inventory [--device mx4|k860|all] [--out <folder, default docs/devices>]  (read-only inventory, SwId 0x0C)\nDefault is read-only.");
     return 0;
+}
+
+if (args.Contains("--inventory"))
+{
+    if (haptic || divert || thumb)
+    {
+        Console.WriteLine("--inventory is read-only and cannot be combined with the state-changing flags.");
+        return 1;
+    }
+    return await InventoryCli.RunAsync(args);
 }
 
 if (k860 && (haptic || divert || thumb))
