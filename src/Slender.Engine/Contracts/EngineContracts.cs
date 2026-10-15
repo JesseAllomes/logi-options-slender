@@ -124,6 +124,11 @@ public abstract record ActionSpec
     public sealed record Brightness(int StepPercent) : ActionSpec;
     /// <summary>Types the text as Unicode input into the foreground app (a saved snippet).</summary>
     public sealed record Text(string Value) : ActionSpec;
+    /// <summary>
+    /// Flips the thumb wheel between its normal function and the app's second role (ThumbWheelModes.SecondFor). Does
+    /// nothing in an app whose dual thumb wheel is off. The mode is remembered per app until flipped back, while Slender runs.
+    /// </summary>
+    public sealed record ToggleThumbWheelMode : ActionSpec;
 }
 
 /// <summary>Executes actions in the foreground app.</summary>
@@ -160,6 +165,12 @@ public sealed record Profile(string? AppProcess, IReadOnlyDictionary<ushort, Act
     public IReadOnlyList<RingSlot>? RingSlots { get; init; }
 
     public const int RingSlotCount = 8;
+
+    /// <summary>
+    /// "Dual thumb wheel": the thumb wheel's second role, used after ToggleThumbWheelMode flips it. Null = follow the
+    /// default profile, then the built-in preset (browsers: tabs). Enabled = false turns dual mode off for this app.
+    /// </summary>
+    public ThumbWheelSecond? ThumbWheelAlt { get; init; }
 }
 
 /// <summary>
@@ -178,6 +189,12 @@ public sealed record RingSlot(ActionSpec Action)
 
     public static RingSlot Empty { get; } = new(new ActionSpec.None());
 }
+
+/// <summary>
+/// The thumb wheel's second role: <paramref name="Forward"/> runs once per notch forward (right),
+/// <paramref name="Back"/> once per notch back (left). Any action; ActionSpec.None does nothing for that direction.
+/// </summary>
+public sealed record ThumbWheelSecond(bool Enabled, ActionSpec Forward, ActionSpec Back);
 
 public enum RingStyle { Bezel, Compass, Keypad }
 

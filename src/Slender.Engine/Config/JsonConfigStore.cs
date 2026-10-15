@@ -103,6 +103,9 @@ public sealed class JsonConfigStore : IConfigStore
                 ExePath = string.IsNullOrWhiteSpace(p.ExePath) ? null : p.ExePath,
                 GestureSwipes = ParseSwipes(p.GestureSwipes),
                 RingSlots = p.RingSlots is null ? null : ToRing(p.RingSlots, allowFolders: true),
+                ThumbWheelAlt = p.ThumbWheelAlt is { } tw
+                    ? new ThumbWheelSecond(tw.Enabled, tw.Forward ?? new ActionSpec.None(), tw.Back ?? new ActionSpec.None())
+                    : null,
             });
         }
 
@@ -308,6 +311,9 @@ public sealed class JsonConfigStore : IConfigStore
                     ? null
                     : profile.GestureSwipes.ToDictionary(kv => kv.Key.ToString().ToLowerInvariant(), kv => kv.Value),
                 RingSlots = profile.RingSlots is null ? null : FromRing(profile.RingSlots),
+                ThumbWheelAlt = profile.ThumbWheelAlt is { } tw
+                    ? new ThumbWheelSecondDto { Enabled = tw.Enabled, Forward = tw.Forward, Back = tw.Back }
+                    : null,
             });
         }
 
@@ -370,6 +376,13 @@ public sealed class JsonConfigStore : IConfigStore
         public RingDto? Ring { get; set; }
     }
 
+    internal sealed class ThumbWheelSecondDto
+    {
+        public bool Enabled { get; set; }
+        public ActionSpec? Forward { get; set; }
+        public ActionSpec? Back { get; set; }
+    }
+
     internal sealed class RingSlotDto
     {
         public ActionSpec? Action { get; set; }
@@ -418,6 +431,7 @@ public sealed class JsonConfigStore : IConfigStore
         public Dictionary<string, ActionSpec>? KeyBindings { get; set; }
         public Dictionary<string, ActionSpec>? GestureSwipes { get; set; }
         public List<RingSlotDto>? RingSlots { get; set; }
+        public ThumbWheelSecondDto? ThumbWheelAlt { get; set; }
     }
 
     internal sealed class ExcelDto

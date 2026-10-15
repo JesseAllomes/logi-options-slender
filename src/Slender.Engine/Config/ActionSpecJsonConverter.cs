@@ -28,6 +28,7 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "disabled" => new ActionSpec.Disabled(),
             "brightness" => new ActionSpec.Brightness(ReadInt(root, "step")),
             "text" => new ActionSpec.Text(ReadString(root, "value")),
+            "toggleThumbWheel" => new ActionSpec.ToggleThumbWheelMode(),
             _ => throw new FormatException($"Unknown action type '{type}'."),
         };
     }
@@ -70,6 +71,9 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.Text text:
                 writer.WriteString("type", "text");
                 writer.WriteString("value", text.Value);
+                break;
+            case ActionSpec.ToggleThumbWheelMode:
+                writer.WriteString("type", "toggleThumbWheel");
                 break;
             default:
                 throw new NotSupportedException($"Unsupported action {value.GetType().Name}.");
