@@ -31,6 +31,9 @@ public static class ChordParser
             ["Comma"] = new(0xBC, false), ["Period"] = new(0xBE, false),
             ["Minus"] = new(0xBD, false), ["Plus"] = new(0xBB, false), ["Equals"] = new(0xBB, false),
             ["Semicolon"] = new(0xBA, false), ["Slash"] = new(0xBF, false),
+            ["MediaPlayPause"] = new(0xB3, false), ["MediaNext"] = new(0xB0, false),
+            ["MediaPrevious"] = new(0xB1, false), ["MediaStop"] = new(0xB2, false),
+            ["VolumeMute"] = new(0xAD, false), ["VolumeDown"] = new(0xAE, false), ["VolumeUp"] = new(0xAF, false),
             ["Backslash"] = new(0xDC, false), ["Backtick"] = new(0xC0, false),
         };
         for (var c = 'A'; c <= 'Z'; c++) d[c.ToString()] = new KeyStroke(c, false);

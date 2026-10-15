@@ -6,6 +6,8 @@ public sealed class LogiMouseOptions : LogiDeviceOptions
     public bool? ThumbWheelInvert { get; init; }
     /// <summary>SmartShift auto free-spin to apply on every connect (0x2111); null keeps whatever the device has.</summary>
     public SmartShiftSetting? SmartShift { get; init; }
+    /// <summary>High-resolution wheel (0x2121 bit1) to apply on every connect; bit0 (target) is always kept cleared. null keeps the device's value.</summary>
+    public bool? SmoothScroll { get; init; }
 }
 
 /// <summary>SmartShift: Enabled = auto switch to free-spin when the wheel is flicked; Threshold 1-50 (Options+ sensitivity).</summary>
@@ -25,12 +27,14 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
     private bool _thumbApplied;
     private bool? _thumbInvertDesired;
     private SmartShiftSetting? _smartShiftDesired;
+    private bool? _smoothDesired;
 
     public LogiMouse(IHidppTransportFactory factory, LogiMouseOptions? options = null)
         : base(factory, options ?? new LogiMouseOptions())
     {
         _thumbInvertDesired = (options ?? new LogiMouseOptions()).ThumbWheelInvert;
         _smartShiftDesired = (options ?? new LogiMouseOptions()).SmartShift;
+        _smoothDesired = (options ?? new LogiMouseOptions()).SmoothScroll;
     }
 
     public override string Name => "MX Master 4";
@@ -53,10 +57,46 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         bool thumb;
         bool? invert;
         SmartShiftSetting? smartShift;
-        lock (State) { thumb = _thumbDesired; invert = _thumbInvertDesired; smartShift = _smartShiftDesired; }
+        bool? smooth;
+        lock (State) { thumb = _thumbDesired; invert = _thumbInvertDesired; smartShift = _smartShiftDesired; smooth = _smoothDesired; }
         if (await TrySetThumbAsync(s, thumb, invert, ct).ConfigureAwait(false) && thumb)
             lock (State) _thumbApplied = true;
         if (smartShift is { } ss) await TrySetSmartShiftAsync(s, ss, ct).ConfigureAwait(false);
+        if (smooth is { } sm) await TrySetSmoothScrollAsync(s, sm, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 0x2121 read-modify-write: bit1 = high-resolution wheel on/off; bit0 (divert to software) is always cleared so the
+    /// wheel stays native HID. Other bits are kept. No write when the byte already matches.
+    /// </summary>
+    internal static byte ComputeWheelMode(byte current, bool hiRes) =>
+        (byte)((hiRes ? current | 0x02 : current & ~0x02) & ~0x01);
+
+    private static async Task<bool> TrySetSmoothScrollAsync(Session s, bool hiRes, CancellationToken ct)
+    {
+        try
+        {
+            var mode = (await s.Device.CallAsync(FeatureId.HiResWheel, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params[0];
+            var wanted = ComputeWheelMode(mode, hiRes);
+            if (wanted != mode)
+                await s.Device.CallAsync(FeatureId.HiResWheel, 2, new[] { wanted }, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (HidppException) { return false; }
+    }
+
+    /// <summary>Sets smooth (hi-res) scrolling now (if connected) and on every reconnect.</summary>
+    public async Task SetSmoothScrollAsync(bool enabled, CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            lock (State) _smoothDesired = enabled;
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return;
+            await TrySetSmoothScrollAsync(s, enabled, ct).ConfigureAwait(false);
+        }
+        finally { Gate.Release(); }
     }
 
     /// <summary>
