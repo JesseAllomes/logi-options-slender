@@ -253,6 +253,37 @@
           "src/Slender.Tray"
         ]
       }
+    ],
+    "m23": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T09:14:29+00:00",
+        "est_min": 40,
+        "goal": "wt-ring-thumb: thumb wheel steers the open ring",
+        "id": "c1",
+        "note": "4d11837 merged: HookRingKind.ThumbWheel, hwheel to ring first while open, RingSession.OnThumbWheel 120/step with tick, sets _sawSlot; 776 tests, AOT clean",
+        "targets": [
+          "src/Slender.Engine/Ring/RingSession.cs",
+          "src/Slender.Engine/RingButtonPairing.cs",
+          "src/Slender.Engine/LowLevelMouseHook.cs",
+          "src/Slender.Tray/Ring/RingController.cs"
+        ]
+      }
+    ],
+    "m24": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T09:23:51+00:00",
+        "est_min": 90,
+        "goal": "wt-dual-thumb: dual thumb wheel engine, toggle, cursor label, Settings rows",
+        "id": "c1",
+        "note": "cea6994 merged (4b2bc74) + flip bump on main haptics switch: per-app mode, Forward/Back per notch, ThumbWheelToast 900 ms, Settings section on Point & scroll, toggle in pickers; 795 tests, AOT clean",
+        "targets": [
+          "src/Slender.Engine/SlenderEngine.cs",
+          "src/Slender.Tray",
+          "src/Slender.Settings"
+        ]
+      }
     ]
   },
   "errors": [
@@ -290,7 +321,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 216,
+  "rev": 220,
   "review": {
     "advice": [],
     "config": {
@@ -13039,6 +13070,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-15T06:05:08+00:00"
+    },
+    {
+      "end": "2026-10-15T09:23:51+00:00",
+      "id": "s4",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-15T09:14:29+00:00"
     }
   ],
   "todos": [

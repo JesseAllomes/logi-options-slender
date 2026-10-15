@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=53 -->
+<!-- drainclamp-build: state; schema=1; generation=57 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -48,6 +48,8 @@ Options+ import -> one-time, read-only (copy settings.db first, never write Opti
 Actions Ring -> own ring drawn by the AOT tray; styles Bezel, Compass, Keypad (round-1 prototypes 1-3) switchable in Settings with colour, opacity and layout options; folder slots open nested apps/web pages/actions like Options+; feature parity researched before build (user 2026-10-15)
 Builder worktrees -> only under logi-options-slender/.worktrees/<name> (ignored via .git/info/exclude); remove each once merged; nothing else in the personal folder (user 2026-10-15)
 Gate 6 decisions (rounds R2-R6 of m13) -> orchestrator records fix for every finding the refuter confirms and the Opus adjudicator upholds; asks the user only when recommending waive/dismiss or when a finding argues against a recorded decision (user 2026-10-15)
+Thumb wheel modes -> per-app mode remembered until flipped back, for the life of the tray process (not persisted); browsers preset to tabs (Ctrl+Tab/Ctrl+Shift+Tab); toggle is an action bound to the top (mode shift) button per app (user 2026-10-15)
+Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight one slot per notch; main wheel keeps adjusting volume/brightness slots (user 2026-10-15)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -73,7 +75,9 @@ Gate 6 decisions (rounds R2-R6 of m13) -> orchestrator records fix for every fin
 | m20 | own Actions Ring: Win32 overlay in the AOT tray at the cursor on Sense Panel press, 8 slots per profile (any ActionSpec), haptic tick, slot editor in Settings, importer maps radial menu c408-415 | src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Tray;src/Slender.Settings;src/Slender.Engine/Import | done | m19 |
 | m21 | gesture swipes: hold gesture button + move (LL hook deltas, cursor frozen) -> up/down/left/right/click actions per profile; importer maps Options+ gesture nested cards | src/Slender.Engine;src/Slender.Settings;src/Slender.Engine/Import | done | m19 |
 | m22 | brightness keys (monitor under cursor: WMI internal panel, DDC/CI externals), pointer speed (tray reads DPI via 0x2201, Settings DPI control, importer), per-app divert so explicit None restores native mode shift | src/Slender.Engine;src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings | done | m19 |
-| m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m22 |
+| m23 | thumb wheel steers the Actions Ring: while open, thumb wheel moves the highlight one slot per notch (haptic tick), swallowed so the app below never scrolls | src/Slender.Engine/Ring;src/Slender.Engine/LowLevelMouseHook.cs;src/Slender.Engine/RingButtonPairing.cs;src/Slender.Tray/Ring | done | m20 |
+| m24 | thumb wheel modes: per-app second thumb-wheel function (browsers preset to tabs), "Switch thumb wheel mode" action for the top button, per-app mode kept until flipped back, haptic bump + short label at the cursor, Settings rows | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | done | m22 |
+| m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m24 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -103,4 +107,5 @@ Gate 6 decisions (rounds R2-R6 of m13) -> orchestrator records fix for every fin
 - 2026-10-15T06:05:08+00:00 7a156dbb Live pass on 1.1.2: in-app update worked end to end, real ring imported, no new errors; 1 h memory check pending
 - 2026-10-15T06:45:16+00:00 9b38a586 Gate 6 R1 (final, base 8aefde1): 20 candidates, 18 fixed (da0bf66, 723 tests), 2 refuted; verdict NOT-RUN because the packet cap left 57/105 files unreviewed
 - 2026-10-15T07:56:53+00:00 d88f8c74 Gate 6 m13 REVIEW-PASS: 5 rounds (R1 final + R2-R5 --only batches around the 1500-line cap), 105 files, 46 fixed, 9 refuted, 0 waived; 763 tests; DrainClamp bin/obj cache fix -> PR #1
+- 2026-10-15T09:23:52+00:00 65bc4be7 m23 thumb wheel steers ring + m24 dual thumb wheel merged (795 tests, AOT clean); not yet shipped as an update
 <!-- /DC:LOG -->
