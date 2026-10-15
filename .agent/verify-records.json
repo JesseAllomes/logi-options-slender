@@ -1,0 +1,23 @@
+{
+  "tier:milestone": {
+    "digest": "tier",
+    "tree": "sha256:f62399466197f7da",
+    "status": "pass",
+    "when": "2026-10-15T07:56:07+00:00",
+    "log": "verify.log"
+  },
+  "dotnet-build": {
+    "digest": "sha256:31035b7d3793",
+    "tree": "sha256:f62399466197f7da",
+    "status": "pass",
+    "when": "2026-10-15T07:56:06+00:00",
+    "log": "C:/Users/user/AppData/Local/Temp/claude/C--Users-user-Projects-work/f37beda0-a0af-4b7d-9c51-0d71436036fc/scratchpad/verify-build.log"
+  },
+  "dotnet-test": {
+    "digest": "sha256:0c6172b17553",
+    "tree": "sha256:f62399466197f7da",
+    "status": "pass",
+    "when": "2026-10-15T07:56:07+00:00",
+    "log": "C:/Users/user/AppData/Local/Temp/claude/C--Users-user-Projects-work/f37beda0-a0af-4b7d-9c51-0d71436036fc/scratchpad/verify-test.log"
+  }
+}
