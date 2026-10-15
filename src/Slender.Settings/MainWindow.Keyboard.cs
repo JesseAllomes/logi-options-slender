@@ -1,0 +1,148 @@
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls;
+using Slender.Engine;
+using Slender.Hidpp;
+using Slender.Settings.Logic;
+using Slender.Settings.Views;
+using Slender.Sync;
+
+namespace Slender.Settings;
+
+/// <summary>ERGO K860 extras: keys switched off on the keyboard, the Caps/Num Lock label, Fn lock per Easy-Switch channel, spare keys.</summary>
+public sealed partial class MainWindow
+{
+    private DispatcherQueueTimer? _identifyTimer;
+    private DateTimeOffset _identifyOpened;
+    private ushort _identified;
+
+    /// <summary>Rows added under KEYBOARD on the General page.</summary>
+    private void BuildKeyboardExtras(SlenderConfig c)
+    {
+        foreach ((DisabledKeys key, string name) in KeyboardOps.DisableChoices)
+        {
+            DisabledKeys captured = key;
+            AddRow($"Turn off {name}", captured == DisabledKeys.CapsLock ? "Switched off on the keyboard itself, so it also works when Slender is closed." : null,
+                PageToggle($"Turn off {name}", KeyboardOps.IsDisabled(c.Keyboard, captured),
+                    on => _config.Update(x => x with { Keyboard = KeyboardOps.SetDisabled(x.Keyboard, captured, on) })));
+        }
+
+        AddRow("Show Caps Lock and Num Lock changes", "A short label near the pointer when either one flips, while the K860 is connected.",
+            PageToggle("Show Caps Lock and Num Lock changes", c.Keyboard.ShowLockKeyChanges,
+                on => _config.Update(x => x with { Keyboard = x.Keyboard with { ShowLockKeyChanges = on } })));
+
+        int? current = _status.Device(DeviceIds.Keyboard)?.Channel;
+        for (int i = 0; i < LogiKeyboard.ChannelCount; i++)
+        {
+            int channel = i;
+            var choice = new ComboBox { MinWidth = 170 };
+            foreach (string text in KeyboardOps.ChannelChoices)
+            {
+                choice.Items.Add(text);
+            }
+
+            choice.SelectedIndex = KeyboardOps.ChoiceIndex(c.Keyboard.FnLockChannels[channel]);
+            AutomationProperties.SetName(choice, $"Fn lock on Easy-Switch channel {channel + 1}");
+            choice.SelectionChanged += (_, _) =>
+            {
+                bool? value = KeyboardOps.FromChoiceIndex(choice.SelectedIndex);
+                _config.Update(x => x with { Keyboard = x.Keyboard.WithChannel(channel, value) });
+            };
+            AddRow(KeyboardOps.ChannelTitle(channel, current), channel == 0 ? "Fn lock for each Easy-Switch channel. Applied when the keyboard connects." : null, choice);
+        }
+    }
+
+    /// <summary>The spare keys under the keyboard picture: bind them like the others, plus an Identify helper.</summary>
+    private void AddSpareKeysRow()
+    {
+        if (_kbList is null)
+        {
+            return;
+        }
+
+        string appName = _app is null ? "All apps" : ProfileOps.AppName(ProfileOps.Find(_config.Config, _app)!);
+        var heading = Ui.Text(_app is null ? "Spare keys" : $"Spare keys in {appName}", 12, Ui.Muted, Ui.Heading);
+        heading.Margin = new Thickness(0, 10, 0, 0);
+        _kbList.Children.Add(heading);
+
+        bool identifying = _config.Config.Keyboard.IdentifySpareKeys;
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        foreach (ControlInfo info in ControlCatalog.SpareKeyControls)
+        {
+            bool hit = identifying && _identified == info.Id;
+            var panel = new StackPanel { Spacing = 1 };
+            panel.Children.Add(Ui.Text(info.Name, 11.5, Ui.Muted));
+            panel.Children.Add(Ui.Text(hit ? "You pressed this one" : PlainActionText(info), 13));
+            var button = new Button
+            {
+                Style = Ui.Res<Style>("PlainButtonStyle"),
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(9, 4, 9, 4),
+                Height = LabelHeight,
+                MinWidth = 160,
+                Background = hit ? Ui.MarkSoft : Ui.Brush("RailTransparent"),
+                BorderBrush = hit ? Ui.Mark : Ui.Brush("RuleBrush"),
+                Content = panel,
+            };
+            AutomationProperties.SetName(button, info.Name + ": " + PlainActionText(info));
+            ControlInfo captured = info;
+            button.Click += (_, _) => ShowPicker(button, captured);
+            row.Children.Add(button);
+        }
+
+        var identify = new Button
+        {
+            Content = identifying ? "Stop identifying" : "Identify",
+            Style = Ui.Res<Style>("QuietButtonStyle"),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        ToolTipService.SetToolTip(identify, "Press a spare key on the keyboard to see which one it is. Needs the tray running.");
+        identify.Click += (_, _) => ToggleIdentify();
+        row.Children.Add(identify);
+        _kbList.Children.Add(row);
+    }
+
+    private void ToggleIdentify()
+    {
+        if (_config.Config.Keyboard.IdentifySpareKeys)
+        {
+            StopIdentify();
+        }
+        else
+        {
+            _identified = 0;
+            _identifyOpened = DateTimeOffset.UtcNow;
+            _config.Update(c => c with { Keyboard = c.Keyboard with { IdentifySpareKeys = true } });
+            _identifyTimer ??= DispatcherQueue.CreateTimer();
+            _identifyTimer.Interval = TimeSpan.FromMilliseconds(250);
+            _identifyTimer.IsRepeating = true;
+            _identifyTimer.Tick -= OnIdentifyTick;
+            _identifyTimer.Tick += OnIdentifyTick;
+            _identifyTimer.Start();
+        }
+
+        RefreshKeyboardList();
+    }
+
+    /// <summary>Turns Identify off (the tray then returns the spare keys to native). Safe to call when it is not running.</summary>
+    private void StopIdentify()
+    {
+        _identifyTimer?.Stop();
+        if (_config.Config.Keyboard.IdentifySpareKeys)
+        {
+            _config.Update(c => c with { Keyboard = c.Keyboard with { IdentifySpareKeys = false } });
+        }
+    }
+
+    private void OnIdentifyTick(DispatcherQueueTimer sender, object args)
+    {
+        if (SpareKeyReport.Read(SyncPaths.StateDirectory) is { } hit && hit.At > _identifyOpened && hit.Cid != _identified)
+        {
+            _identified = hit.Cid;
+            RefreshKeyboardList();
+        }
+    }
+}

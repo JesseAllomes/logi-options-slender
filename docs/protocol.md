@@ -309,3 +309,12 @@ diverts on connect for this reason.
 
 Model for Slender: any chord per app = software path (divert + inject, needs Slender running); "store on keyboard"
 (works on any PC without software) = one modifier max or a media key.
+
+## ERGO K860 extras (m27)
+
+Layouts from Solaar (lib/logitech_receiver/settings_templates.py, special_keys.py), cited in code comments.
+
+- 0x4521 DisableKeys: fn0 capability mask (K860: 0x1F), fn1 read mask, fn2 write one mask byte. Bits: Caps 0x01, Num 0x02, Scroll 0x04, Insert 0x08, Win 0x10. Allowlisted fn0-2.
+- 0x40A3 per Easy-Switch channel: fn0 read [host] -> [host, state], fn1 write [host, state] with host 0-2 (already allowlisted). The current channel is inferred from reads (unique match against a host 0xFF read); 0x1814/0x1815 stay blocked.
+- Not called: 0x4220 LockKeyState (Solaar lists only the feature id, no function layout; the tray polls GetKeyState instead) and 0x4531 MultiPlatform (Solaar documents only the current-host write, so no per-channel platform).
+- Spare controls 0x00EB / 0x00EC / 0x0101 (tasks 182 / 184 / 214): divertable via 0x1B04 (temporary divert only). Solaar TASK table: 0x00B8 "Second_Left_Click", 0x00D6 "MultiPlatform_Menu / Show Hide Virtual Keyboard / Launchpad"; 0x00B6 is not named.

@@ -15,12 +15,14 @@ namespace Slender.Tray;
 public sealed class TrayApplication : IDisposable
 {
     private const uint WM_TRAY = Win32.WM_APP + 1, WM_POST = Win32.WM_APP + 2;
-    private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4;
+    private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4, TimerLockKeys = 5;
     private const uint CmdExcel = 2, CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8;
     private const string WindowClass = UpdateMessages.TrayWindowClass;
 
     private static readonly uint BatteryIntervalMs = (uint)TimeSpan.FromMinutes(5).TotalMilliseconds;
     private static readonly uint KeyboardBatteryIntervalMs = (uint)TimeSpan.FromMinutes(10).TotalMilliseconds;
+    private const uint LockKeyPollMs = 250;
+    private const int VkCapital = 0x14, VkNumLock = 0x90;
     private static readonly uint GuardIntervalMs = (uint)OptionsPlusGuard.PollInterval.TotalMilliseconds;
 
     // The window procedure is a static unmanaged callback; there is exactly one tray window per process.
@@ -57,6 +59,7 @@ public sealed class TrayApplication : IDisposable
     private string _keyboardText = string.Empty;
     private UpdateCoordinator? _updates;
     private bool _readyBalloonShown;
+    private readonly LockKeyIndicatorState _lockKeys = new();
 
     public unsafe TrayApplication(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null, IForegroundApp? foreground = null, ILog? log = null, ILogiKeyboard? keyboard = null, OptionsPlusGuard? guard = null, MemoryWatchdog? watchdog = null, string? statusPath = null)
     {
@@ -71,7 +74,7 @@ public sealed class TrayApplication : IDisposable
             () => new StatusSnapshot(
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
                 _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi,
-                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false),
+                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _keyboard?.CurrentChannel),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -143,6 +146,9 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Raised on the UI thread after every successful save.</summary>
     public event EventHandler<SlenderConfig>? ConfigChanged;
+
+    /// <summary>Caps Lock or Num Lock flipped ("Caps Lock on"); raised on the UI thread, only while the K860 is connected and the option is on.</summary>
+    public event EventHandler<string>? LockKeyChanged;
 
     public SlenderConfig Config => _config;
 
@@ -232,6 +238,7 @@ public sealed class TrayApplication : IDisposable
             Win32.KillTimer(h, TimerKeyboard);
             Win32.KillTimer(h, TimerGuard);
             Win32.KillTimer(h, TimerWatchdog);
+            Win32.KillTimer(h, TimerLockKeys);
             _hwnd = 0;
             Win32.DestroyWindow(h);
             fixed (char* cls = WindowClass)
@@ -375,6 +382,9 @@ public sealed class TrayApplication : IDisposable
                 break;
             case TimerGuard:
                 EvaluateGuard();
+                break;
+            case TimerLockKeys:
+                PollLockKeys();
                 break;
             case TimerWatchdog:
                 if (_watchdog?.Check() == WatchdogVerdict.Restart)
@@ -582,6 +592,7 @@ public sealed class TrayApplication : IDisposable
     private void OnConfigFileChanged(object? sender, SlenderConfig config) => Post(() =>
     {
         _config = config;
+        SyncLockKeyPolling();
         SyncStartup();
         ConfigChanged?.Invoke(this, _config);
     });
@@ -633,6 +644,38 @@ public sealed class TrayApplication : IDisposable
         _status.Changed();
     }
 
+    /// <summary>
+    /// The poll timer runs only while the K860 is connected and "Show Caps Lock and Num Lock changes" is on. Windows' own toggle state
+    /// is read with GetKeyState (no keyboard hook, no raw input); 0x4220 LockKeyState has no publicly documented function layout.
+    /// </summary>
+    private void SyncLockKeyPolling()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_keyboardConnected && _config.Keyboard.ShowLockKeyChanges)
+        {
+            StartTimer(TimerLockKeys, LockKeyPollMs);
+        }
+        else
+        {
+            StopTimer(TimerLockKeys);
+            _lockKeys.Reset();
+        }
+    }
+
+    private void PollLockKeys()
+    {
+        bool enabled = _keyboardConnected && _config.Keyboard.ShowLockKeyChanges;
+        string? text = _lockKeys.Update(enabled, (Win32.GetKeyState(VkCapital) & 1) != 0, (Win32.GetKeyState(VkNumLock) & 1) != 0);
+        if (text is not null)
+        {
+            LockKeyChanged?.Invoke(this, text);
+        }
+    }
+
     private void OnKeyboardConnectionChanged(object? sender, bool connected) =>
         Post(() => SetKeyboardConnected(connected));
 
@@ -644,6 +687,7 @@ public sealed class TrayApplication : IDisposable
         }
 
         _keyboardConnected = connected;
+        SyncLockKeyPolling();
         if (connected)
         {
             StartTimer(TimerKeyboard, KeyboardBatteryIntervalMs);
@@ -841,6 +885,7 @@ public sealed class TrayApplication : IDisposable
         if (saved)
         {
             _config = next;
+            SyncLockKeyPolling();
             ConfigChanged?.Invoke(this, _config);
         }
 

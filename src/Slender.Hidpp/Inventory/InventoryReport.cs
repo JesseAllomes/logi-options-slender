@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,6 +15,9 @@ public static class InventoryReport
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    // Reflection-based JSON: only the probe tool calls this (never the tray), so the AOT/trim requirement is declared here instead of failing the tray publish.
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Probe tool only; the tray never calls it.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Probe tool only; the tray never calls it.")]
     public static string ToJson(DeviceInventory inv) => JsonSerializer.Serialize(inv, JsonOptions);
 
     private static string Cell(string? s) => (s ?? "").Replace("|", "\\|").Replace("\r", " ").Replace("\n", " ");

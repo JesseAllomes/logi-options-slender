@@ -22,6 +22,15 @@ internal sealed class FakeKeyboard : ILogiKeyboard
         return ThrowOnDivert ? Task.FromException(new InvalidOperationException("boom")) : Task.CompletedTask;
     }
     public Task SetFnLockAsync(bool enabled, CancellationToken ct) { lock (FnLocks) FnLocks.Add(enabled); return Task.CompletedTask; }
+    public List<DisabledKeys> Disabled { get; } = [];
+    public List<bool?[]> Channels { get; } = [];
+    public int? CurrentChannel => null;
+    public Task<DisabledKeys?> SetDisabledKeysAsync(DisabledKeys keys, CancellationToken ct)
+    {
+        lock (Disabled) Disabled.Add(keys);
+        return Task.FromResult<DisabledKeys?>(keys);
+    }
+    public Task SetChannelFnLockAsync(IReadOnlyList<bool?> channels, CancellationToken ct) { lock (Channels) Channels.Add(channels.ToArray()); return Task.CompletedTask; }
     public Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct) => Task.FromResult<BatteryStatus?>(null);
     public void Dispose() { }
     public void Key(ushort id, bool pressed) => KeyChanged?.Invoke(this, new ButtonEvent(id, pressed));

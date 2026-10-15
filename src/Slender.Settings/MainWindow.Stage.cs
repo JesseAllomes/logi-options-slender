@@ -405,6 +405,7 @@ public sealed partial class MainWindow
             _kbList.Children.Add(Ui.Text(_app is null
                 ? "Select a key on the keyboard to change what it does."
                 : $"Nothing changed. Select a key to change what it does in {appName}.", 13, Ui.Muted));
+            AddSpareKeysRow();
             return;
         }
 
@@ -443,6 +444,7 @@ public sealed partial class MainWindow
         }
 
         _kbList.Children.Add(grid);
+        AddSpareKeysRow();
     }
 
     // ---- no Options+ assets: a plain, designed list of controls ----

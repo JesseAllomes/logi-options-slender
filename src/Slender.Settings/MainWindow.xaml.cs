@@ -218,6 +218,7 @@ public sealed partial class MainWindow : Window
         }
 
         _deferred?.Cancel();
+        StopIdentify();
         _config.Dispose();
         _status.Dispose();
         if (_popoverStarted)

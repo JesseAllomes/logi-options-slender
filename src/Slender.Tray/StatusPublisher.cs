@@ -16,7 +16,8 @@ public sealed record StatusSnapshot(
     int? MouseDpi = null,
     string? CurrentVersion = null,
     string? AvailableVersion = null,
-    bool UpdateReady = false);
+    bool UpdateReady = false,
+    int? KeyboardChannel = null);
 
 /// <summary>
 /// Writes SlenderStatus to status.json (atomic replace) whenever Changed() is called, at most once per interval.
@@ -147,7 +148,7 @@ public sealed class StatusPublisher : IDisposable
         return new SlenderStatus(
             [
                 new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging) { Dpi = s.MouseConnected ? s.MouseDpi : null },
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging),
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null },
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,
