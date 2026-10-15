@@ -1,4 +1,5 @@
 using Slender.Engine;
+using Slender.Engine.Config;
 using Slender.Hidpp;
 
 namespace Slender.Tray;
@@ -14,6 +15,9 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private readonly IConfigStore _store;
     private readonly ILogiMouse? _mouse;
+    private readonly IForegroundApp? _foreground;
+    private readonly StatusPublisher _status;
+    private readonly ConfigFileWatcher? _watcher;
     private readonly StartupRegistration _startup;
     private readonly Control _uiProxy;
     private readonly ContextMenuStrip _menu;
@@ -30,10 +34,14 @@ public sealed class TrayApplicationContext : ApplicationContext
     private BatteryStatus? _battery;
     private bool _disposed;
 
-    public TrayApplicationContext(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null)
+    public TrayApplicationContext(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null, IForegroundApp? foreground = null, ILog? log = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _mouse = mouse;
+        _foreground = foreground;
+        _status = new StatusPublisher(
+            () => new StatusSnapshot(_connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName),
+            log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
         _config = store.Load();
 
@@ -95,6 +103,18 @@ public sealed class TrayApplicationContext : ApplicationContext
             SetConnected(_mouse.IsConnected);
         }
 
+        if (_foreground is not null)
+        {
+            _foreground.Changed += OnForegroundChanged;
+        }
+
+        if (store is JsonConfigStore json)
+        {
+            _watcher = new ConfigFileWatcher(json);
+            _watcher.Changed += OnConfigFileChanged;
+        }
+
+        _status.PublishNow();
         _tray.Visible = true;
     }
 
@@ -113,8 +133,20 @@ public sealed class TrayApplicationContext : ApplicationContext
                 _mouse.ConnectionChanged -= OnMouseConnectionChanged;
             }
 
+            if (_foreground is not null)
+            {
+                _foreground.Changed -= OnForegroundChanged;
+            }
+
+            _watcher?.Dispose();
             _batteryTimer.Stop();
             _batteryTimer.Dispose();
+
+            // Leave an honest last status behind: the tray is gone, so nothing is connected through it.
+            _connected = false;
+            _battery = null;
+            _status.PublishNow();
+            _status.Dispose();
             _lifetime.Cancel();
             _lifetime.Dispose();
             _tray.Visible = false;
@@ -124,6 +156,36 @@ public sealed class TrayApplicationContext : ApplicationContext
         }
 
         base.Dispose(disposing);
+    }
+
+    private void OnForegroundChanged(object? sender, string? process) => _status.Changed();
+
+    /// <summary>config.json was changed by another process (the settings app): reload and apply it.</summary>
+    private void OnConfigFileChanged(object? sender, SlenderConfig config) => Post(() =>
+    {
+        _config = config;
+        SyncStartup();
+        RefreshChecks();
+        ConfigChanged?.Invoke(this, _config);
+    });
+
+    private void SyncStartup()
+    {
+        try
+        {
+            if (_config.LaunchAtLogin && !_startup.IsEnabled)
+            {
+                _startup.Enable();
+            }
+            else if (!_config.LaunchAtLogin && _startup.IsEnabled)
+            {
+                _startup.Disable();
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Non-fatal: the saved preference stays; the next change retries.
+        }
     }
 
     private void OnMouseConnectionChanged(object? sender, bool connected) =>
@@ -167,6 +229,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         }
 
         UpdateStatus();
+        _status.Changed();
     }
 
     private async Task RefreshBatteryAsync()
@@ -186,6 +249,7 @@ public sealed class TrayApplicationContext : ApplicationContext
 
             _battery = status ?? _battery;
             UpdateStatus();
+            _status.Changed();
         }
         catch (OperationCanceledException)
         {
@@ -244,9 +308,13 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void OnSettingsClicked(object? sender, EventArgs e)
     {
-        // Created on click, disposed on close.
-        using var form = new SettingsForm(_config, ApplyChange);
-        form.ShowDialog();
+        if (!SettingsLauncher.Launch())
+        {
+            ShowError("Could not start Slender Settings. Reinstall Slender or run it from its own folder.");
+        }
+
+        // The window reads status.json when it opens; make sure it is current.
+        _status.Changed();
     }
 
     /// <summary>Saves through the store, then raises ConfigChanged. Returns false on a failed save.</summary>
@@ -256,6 +324,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         try
         {
             _store.Save(next);
+            _watcher?.NoteOwnWrite();
             saved = true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)

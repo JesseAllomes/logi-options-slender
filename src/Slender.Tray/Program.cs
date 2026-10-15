@@ -39,7 +39,7 @@ static class Program
         var executor = new ActionExecutor(excel, foreground, log);
         using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, store.Load(), log);
 
-        using var context = new TrayApplicationContext(store, mouse);
+        using var context = new TrayApplicationContext(store, mouse, foreground: foreground, log: log);
         context.ConfigChanged += (_, config) => engine.ApplyConfig(config);
         engine.Start();
 

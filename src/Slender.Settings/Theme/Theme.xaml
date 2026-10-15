@@ -1,0 +1,167 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Default">
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Overrides.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Overrides.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Graphite and copper. Values are exactly the roles in .grok/product-ui/theme.md. Dark only. -->
+
+  <Color x:Key="PaperColor">#1B1F23</Color>
+  <Color x:Key="Paper2Color">#22282D</Color>
+  <Color x:Key="Paper2HoverColor">#262C32</Color>
+  <Color x:Key="Paper2ActiveColor">#2A3137</Color>
+  <Color x:Key="Paper3Color">#2A3137</Color>
+  <Color x:Key="Paper3HoverColor">#303840</Color>
+  <Color x:Key="Paper3ActiveColor">#343C43</Color>
+  <Color x:Key="RuleColor">#343C43</Color>
+  <Color x:Key="InkColor">#ECEFF1</Color>
+  <Color x:Key="InkDisabledColor">#6B747B</Color>
+  <Color x:Key="MutedColor">#8F989F</Color>
+  <Color x:Key="MarkColor">#D9925F</Color>
+  <Color x:Key="MarkHoverColor">#E3A272</Color>
+  <Color x:Key="MarkActiveColor">#C9824F</Color>
+  <Color x:Key="MarkDisabledColor">#5E4A3C</Color>
+  <Color x:Key="MarkSoftColor">#29D9925F</Color>
+  <Color x:Key="LiveColor">#6CCB9A</Color>
+  <Color x:Key="WarnColor">#E3B04B</Color>
+  <Color x:Key="DangerColor">#E06A5C</Color>
+  <Color x:Key="FocusColor">#F2B38A</Color>
+
+  <!-- The window ground is slightly see-through so Mica shows. Opaque roles below sit on top of it. -->
+  <SolidColorBrush x:Key="WindowGroundBrush" Color="#CC1B1F23" />
+  <SolidColorBrush x:Key="RailTransparent" Color="Transparent" />
+  <SolidColorBrush x:Key="PaperBrush" Color="{StaticResource PaperColor}" />
+  <SolidColorBrush x:Key="Paper2Brush" Color="{StaticResource Paper2Color}" />
+  <SolidColorBrush x:Key="Paper2HoverBrush" Color="{StaticResource Paper2HoverColor}" />
+  <SolidColorBrush x:Key="RailBrush" Color="#D922282D" />
+  <SolidColorBrush x:Key="Paper3Brush" Color="{StaticResource Paper3Color}" />
+  <SolidColorBrush x:Key="Paper3HoverBrush" Color="{StaticResource Paper3HoverColor}" />
+  <SolidColorBrush x:Key="Paper3ActiveBrush" Color="{StaticResource Paper3ActiveColor}" />
+  <SolidColorBrush x:Key="RuleBrush" Color="{StaticResource RuleColor}" />
+  <SolidColorBrush x:Key="InkBrush" Color="{StaticResource InkColor}" />
+  <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+  <SolidColorBrush x:Key="MarkBrush" Color="{StaticResource MarkColor}" />
+  <SolidColorBrush x:Key="MarkHoverBrush" Color="{StaticResource MarkHoverColor}" />
+  <SolidColorBrush x:Key="MarkActiveBrush" Color="{StaticResource MarkActiveColor}" />
+  <SolidColorBrush x:Key="MarkSoftBrush" Color="{StaticResource MarkSoftColor}" />
+  <SolidColorBrush x:Key="LiveBrush" Color="{StaticResource LiveColor}" />
+  <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource WarnColor}" />
+  <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+  <SolidColorBrush x:Key="FocusBrush" Color="{StaticResource FocusColor}" />
+  <SolidColorBrush x:Key="HotspotFillBrush" Color="#D91B1F23" />
+  <SolidColorBrush x:Key="LeaderBrush" Color="#99D9925F" />
+
+  <!-- Type. Archivo (Expanded, 800) for the app heading only; Sora 600 for rail and popover headings; JetBrains Mono for key caps. -->
+  <FontFamily x:Key="DisplayFont">ms-appx:///Assets/Fonts/ArchivoExpanded-ExtraBold.ttf#Archivo Expanded ExtraBold</FontFamily>
+  <FontFamily x:Key="HeadingFont">ms-appx:///Assets/Fonts/Sora-SemiBold.ttf#Sora SemiBold</FontFamily>
+  <FontFamily x:Key="MonoFont">ms-appx:///Assets/Fonts/JetBrainsMono-Medium.ttf#JetBrains Mono Medium</FontFamily>
+
+  <CornerRadius x:Key="RadiusSmall">6</CornerRadius>
+  <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
+  <CornerRadius x:Key="RadiusLarge">10</CornerRadius>
+  <CornerRadius x:Key="RadiusPopover">12</CornerRadius>
+
+
+  <!-- Flyout surface: Acrylic on paper-2. -->
+  <AcrylicBrush x:Key="FlyoutAcrylicBrush" TintColor="#22282D" TintOpacity="0.88" FallbackColor="#22282D" />
+
+  <Style x:Key="PickerFlyoutPresenterStyle" TargetType="FlyoutPresenter">
+    <Setter Property="Background" Value="{StaticResource FlyoutAcrylicBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="MinWidth" Value="340" />
+    <Setter Property="MaxWidth" Value="380" />
+    <Setter Property="IsDefaultShadowEnabled" Value="True" />
+  </Style>
+
+  <Style x:Key="PopFlyoutPresenterStyle" TargetType="FlyoutPresenter">
+    <Setter Property="Background" Value="{StaticResource FlyoutAcrylicBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="MinWidth" Value="260" />
+    <Setter Property="IsDefaultShadowEnabled" Value="True" />
+  </Style>
+
+  <!-- A chrome-less button: used for hotspots, labels, rail tiles and app tiles. Hover and selection are drawn by the content. -->
+  <Style x:Key="PlainButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="FocusVisualMargin" Value="-2" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Chrome"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.92" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.8" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Chrome.Opacity" Value="0.45" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <ContentPresenter HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="PrimaryPillStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="14,5" />
+  </Style>
+
+  <Style x:Key="QuietButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+    <Setter Property="Padding" Value="14,5" />
+  </Style>
+
+  <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+  </Style>
+
+  <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+  </Style>
+</ResourceDictionary>
