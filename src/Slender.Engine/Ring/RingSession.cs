@@ -36,7 +36,7 @@ public sealed class RingSession
     private RingSlot? _folder;
     private int? _pointerSlot;
     private bool _hasPointer, _sawSlot;
-    private int _wheelRemainder;
+    private int _wheelRemainder, _thumbRemainder;
 
     /// <summary>Opens with the trigger held (the normal case: the ring opens on press).</summary>
     public RingSession(IReadOnlyList<RingSlot> slots, RingMetrics metrics, long now)
@@ -47,6 +47,7 @@ public sealed class RingSession
         _pressAt = now;
         _lastInput = now;
         _wheelRemainder = 0;
+        _thumbRemainder = 0;
         Phase = RingPhase.Holding;
     }
 
@@ -164,6 +165,28 @@ public sealed class RingSession
         for (var i = 0; i < notches && IsOpen; i++) Adjust?.Invoke(this, action);
     }
 
+    /// <summary>
+    /// Thumb wheel over the ring: each 120-unit step moves the highlight one slot (forward = clockwise), with the hover tick.
+    /// Counts as a deliberate selection, so releasing a held trigger runs the highlighted slot.
+    /// </summary>
+    public void OnThumbWheel(int delta, long now)
+    {
+        if (!IsOpen) return;
+        _lastInput = now;
+        _thumbRemainder += delta;
+        var steps = Math.Clamp(Math.Abs(_thumbRemainder) / 120, 0, 10);
+        if (steps == 0) return;
+        var dir = Math.Sign(_thumbRemainder);
+        _thumbRemainder -= dir * steps * 120;
+        var n = Profile.RingSlotCount;
+        for (var i = 0; i < steps; i++)
+        {
+            var next = Selected is { } s ? ((s + dir) % n + n) % n : dir > 0 ? 0 : n - 1;
+            _sawSlot = true;
+            SetSelected(next, tick: true);
+        }
+    }
+
     /// <summary>Call periodically while open; closes after <see cref="IdleTimeoutMs"/> without input.</summary>
     public void Tick(long now)
     {
@@ -198,6 +221,7 @@ public sealed class RingSession
         {
             _folder = item;
             Slots = RingSource.Normalize(item.Folder);
+            _thumbRemainder = 0;
             Phase = RingPhase.Open; // a folder opened by a hold-release stays open for hover + click
             Haptic?.Invoke(this, RingHaptic.Bump);
             Raise();
@@ -212,6 +236,7 @@ public sealed class RingSession
     {
         _folder = null;
         Slots = _root;
+        _thumbRemainder = 0;
         Raise();
     }
 

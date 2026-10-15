@@ -45,6 +45,8 @@ internal sealed class RingButtonPairing
                 return new RingDecision(true, HookRingKind.RightDown);
             case NativeMethods.WM_MOUSEWHEEL:
                 return new RingDecision(true, HookRingKind.Wheel);
+            case NativeMethods.WM_MOUSEHWHEEL:
+                return new RingDecision(true, HookRingKind.ThumbWheel);
             default:
                 return new RingDecision(false, null); // an unpaired release passes through
         }

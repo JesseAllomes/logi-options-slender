@@ -38,7 +38,7 @@ public sealed class LowLevelMouseHook : IInputHook
     public event EventHandler<HookRingEventArgs>? RingInput;
 
     /// <summary>
-    /// While on, left/right button presses and the vertical wheel are swallowed and reported through <see cref="RingInput"/>
+    /// While on, left/right button presses and both wheels are swallowed and reported through <see cref="RingInput"/>
     /// (the Actions Ring consumes them). A swallowed press swallows its release, even after capture ended, unless the release
     /// comes more than 5 s later (then it belongs to another click).
     /// </summary>
@@ -130,6 +130,7 @@ public sealed class LowLevelMouseHook : IInputHook
                 else if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
                     var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                    if (!IsInjected(data) && RingMouse(msg, data)) return 1; // ring capture takes the thumb wheel first
                     if (!IsInjected(data))
                     {
                         var delta = (short)(data.MouseData >> 16);
@@ -167,7 +168,7 @@ public sealed class LowLevelMouseHook : IInputHook
     {
         var decision = _ringPairing.OnMessage(msg, data.Time, _ringCapture);
         if (decision.Kind is not { } kind) return decision.Swallow;
-        var delta = kind == HookRingKind.Wheel ? (short)(data.MouseData >> 16) : 0;
+        var delta = kind is HookRingKind.Wheel or HookRingKind.ThumbWheel ? (short)(data.MouseData >> 16) : 0;
         try { RingInput?.Invoke(this, new HookRingEventArgs(kind, delta)); }
         catch (Exception ex) { try { _log.Error("ring input handler failed", ex); } catch { } }
         return decision.Swallow;

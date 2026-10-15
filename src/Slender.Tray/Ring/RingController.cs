@@ -223,6 +223,10 @@ public sealed unsafe class RingController : IDisposable
                     session.OnPointer(dx, dy, Now);
                     session.OnWheel(delta, Now);
                     break;
+                case HookRingKind.ThumbWheel:
+                    session.OnPointer(dx, dy, Now);
+                    session.OnThumbWheel(delta, Now);
+                    break;
             }
         }
         catch (Exception ex)

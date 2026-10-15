@@ -49,6 +49,18 @@ public class RingButtonPairingTests
     }
 
     [Fact]
+    public void Thumb_wheel_is_swallowed_only_while_capture_is_on()
+    {
+        var p = new RingButtonPairing();
+        var on = p.OnMessage(Native.WM_MOUSEHWHEEL, 1_000, capture: true);
+        Assert.True(on.Swallow);
+        Assert.Equal(HookRingKind.ThumbWheel, on.Kind);
+        var off = p.OnMessage(Native.WM_MOUSEHWHEEL, 1_100, capture: false);
+        Assert.False(off.Swallow);
+        Assert.Null(off.Kind);
+    }
+
+    [Fact]
     public void Other_messages_are_never_swallowed()
     {
         var p = new RingButtonPairing();

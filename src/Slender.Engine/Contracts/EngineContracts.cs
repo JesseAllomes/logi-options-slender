@@ -36,7 +36,7 @@ public sealed class HookMoveEventArgs(int dx, int dy) : EventArgs
     public bool Handled { get; set; }
 }
 
-public enum HookRingKind { LeftDown, RightDown, Wheel }
+public enum HookRingKind { LeftDown, RightDown, Wheel, ThumbWheel }
 
 /// <summary>An input the Actions Ring consumed. Delta (wheel) is in WHEEL_DELTA units, positive = up.</summary>
 public sealed class HookRingEventArgs(HookRingKind kind, int delta) : EventArgs
