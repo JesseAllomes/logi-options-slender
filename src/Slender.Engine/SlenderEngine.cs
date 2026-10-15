@@ -564,10 +564,10 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("thumb wheel mode handler failed", ex); }
     }
 
+    /// <summary>A mode flip is feedback the user needs, so it follows only the main haptics switch (not "on every button press").</summary>
     private void PlayFlipHaptic()
     {
-        var h = _config.Haptics;
-        if (!h.Enabled || !h.OnButtonPress) return;
+        if (!_config.Haptics.Enabled) return;
         try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
         catch (Exception ex) { _log.Error("haptic failed", ex); }
     }

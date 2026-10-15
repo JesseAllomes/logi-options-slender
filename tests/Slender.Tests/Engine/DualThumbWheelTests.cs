@@ -164,5 +164,9 @@ public class DualThumbWheelTests
         var off = new Rig(Cfg() with { Haptics = new HapticSettings(false) });
         off.Flip();
         Assert.Empty(off.Mouse.Haptics);
+        // The default settings (button-press haptics off) still bump on a flip: it is feedback, not decoration.
+        var defaults = new Rig(Cfg() with { Haptics = new HapticSettings() });
+        defaults.Flip();
+        Assert.Single(defaults.Mouse.Haptics);
     }
 }
