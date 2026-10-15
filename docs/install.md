@@ -4,7 +4,7 @@ Slender installs per user, no admin rights, from one file: `SlenderSetup.exe`.
 
 ## Install
 
-1. Build it once (needs the .NET 10 SDK and PowerShell 7): `.\scripts\Build-Setup.ps1` produces `artifacts\SlenderSetup.exe` (`-Version 1.0.1` sets the version).
+1. Build it once (needs the .NET 10 SDK and PowerShell 7): `.\scripts\Build-Setup.ps1` produces `artifacts\SlenderSetup.exe` (the version is the next patch above the newest in `artifacts\releases`, 1.0.0 the first time; `-Version 1.2.0` overrides it).
 2. Run `SlenderSetup.exe`. It installs to `%LOCALAPPDATA%\SlenderApp`, adds a Start menu shortcut "Slender", installs the .NET 10 desktop runtime if it is missing, and starts the tray. No admin prompt.
 3. Optional: turn on **Launch at login** in Settings, General (or the tray menu). It is the same `Slender` Run value either way, and uninstalling removes it.
 
@@ -16,7 +16,18 @@ If Options+ is running, the tray still starts but the mouse and keyboard engines
 
 ## Update
 
-Run a newer `SlenderSetup.exe` over the top, or let Slender update itself: set `"updateSource"` in `slender.sync.json` to a folder holding the contents of `artifacts\releases` (or a GitHub repository URL). Updates download in the background and install the next time Slender exits. With no `updateSource` nothing is checked. Config is untouched. See `docs/sync.md`.
+Slender updates itself from the `artifacts\releases` folder of the repo it was built from: `scripts\Build-Setup.ps1` bakes that path into the tray as the default update source.
+
+**To ship an update, run `.\scripts\Build-Setup.ps1`.** With no `-Version` it picks the next patch above the newest one in `artifacts\releases` and prints it. Nothing else is needed.
+
+- The installed Slender checks 30 seconds after it starts, then every 6 hours, and when you choose **Check for updates** in the tray menu or **Check now** in Settings, General (the last row of the page shows `Version 1.1.0 · up to date`, or `1.1.1 ready`).
+- A new version downloads in the background, then a balloon says "Slender 1.1.1 is ready. Click to restart and update." and the tray menu gets **Restart to update (1.1.1)** at the top (Settings, General has **Restart and update**). Either one closes Settings if it is open (it asks the window to close and waits 5 seconds; if it stays open you are told to close it) and restarts into the new version.
+- If you ignore it, the update installs silently the next time Slender exits.
+- A source that cannot be reached is logged once and otherwise ignored; only **Check for updates** tells you ("Couldn't reach the update folder").
+- A `"updateSource"` in `slender.sync.json` overrides the baked-in folder (a folder, UNC share or GitHub repository URL). A dev build without the baked-in path has no source and checks nothing.
+- Builds made before this feature have no baked-in source: install one new `SlenderSetup.exe` over them once, and later versions arrive by themselves. Config is untouched. See `docs/sync.md`.
+
+Running a newer `SlenderSetup.exe` over the top still works too.
 
 ## Uninstall
 

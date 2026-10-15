@@ -241,8 +241,36 @@ public sealed partial class MainWindow
         BuildFirmwareSection();
 
         AddSection("ABOUT");
-        string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
-        AddRow("Slender", $"Version {version}", new TextBlock());
+        BuildVersionRow();
+    }
+
+    /// <summary>The version row: what the tray published about updates (status.json) and two buttons that ask the tray to act.</summary>
+    private void BuildVersionRow()
+    {
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var check = new Button { Content = "Check now", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = _status.TrayRunning };
+        check.Click += (_, _) => AskTray(UpdateMessages.CheckName);
+        buttons.Children.Add(check);
+        if (_status.Status?.UpdateReady == true)
+        {
+            var apply = new Button { Content = "Restart and update", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = _status.TrayRunning };
+            apply.Click += (_, _) => AskTray(UpdateMessages.ApplyName);
+            buttons.Children.Add(apply);
+        }
+
+        string own = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
+        AddRow("Slender", UpdateText.Version(_status.Status, own), buttons);
+    }
+
+    /// <summary>Posts one of the registered update messages to the tray's hidden window. The tray does the update work.</summary>
+    private static void AskTray(string messageName)
+    {
+        nint tray = Services.NativeMethods.FindWindowW(UpdateMessages.TrayWindowClass, null);
+        uint message = Services.NativeMethods.RegisterWindowMessageW(messageName);
+        if (tray != 0 && message != 0)
+        {
+            Services.NativeMethods.PostMessageW(tray, message, 0, 0);
+        }
     }
 
     private const string OptionsPlusExe = @"C:\Program Files\LogiOptionsPlus\logioptionsplus.exe";

@@ -9,7 +9,8 @@ internal static unsafe class Win32
     public const uint WM_LBUTTONUP = 0x0202, WM_RBUTTONUP = 0x0205, WM_APP = 0x8000;
     public const uint NIM_ADD = 0, NIM_MODIFY = 1, NIM_DELETE = 2;
     public const uint NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4, NIF_INFO = 0x10;
-    public const uint NIIF_WARNING = 2;
+    public const uint NIIF_INFO = 1, NIIF_WARNING = 2;
+    public const uint NIN_BALLOONUSERCLICK = 0x405, WM_CLOSE = 0x0010;
     public const uint MF_STRING = 0, MF_GRAYED = 1, MF_CHECKED = 8, MF_SEPARATOR = 0x800;
     public const uint TPM_RIGHTBUTTON = 2, TPM_BOTTOMALIGN = 0x20, TPM_RETURNCMD = 0x100;
     public const uint IMAGE_ICON = 1, LR_DEFAULTCOLOR = 0;
@@ -94,5 +95,7 @@ internal static unsafe class Win32
     [DllImport("user32.dll")] public static extern int TrackPopupMenu(nint menu, uint flags, int x, int y, int reserved, nint hwnd, nint rect);
     [DllImport("user32.dll")] public static extern int GetCursorPos(POINT* pt);
     [DllImport("user32.dll")] public static extern int SetForegroundWindow(nint hwnd);
+    [DllImport("user32.dll")] public static extern int EnumWindows(delegate* unmanaged<nint, nint, int> proc, nint lParam);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(nint hwnd, uint* processId);
     [DllImport("shell32.dll")] public static extern int Shell_NotifyIconW(uint message, NOTIFYICONDATAW* data);
 }

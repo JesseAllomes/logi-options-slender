@@ -16,8 +16,8 @@ public sealed class TrayApplication : IDisposable
 {
     private const uint WM_TRAY = Win32.WM_APP + 1, WM_POST = Win32.WM_APP + 2;
     private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4;
-    private const uint CmdExcel = 2, CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6;
-    private const string WindowClass = "Slender.Tray.Window";
+    private const uint CmdExcel = 2, CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8;
+    private const string WindowClass = UpdateMessages.TrayWindowClass;
 
     private static readonly uint BatteryIntervalMs = (uint)TimeSpan.FromMinutes(5).TotalMilliseconds;
     private static readonly uint KeyboardBatteryIntervalMs = (uint)TimeSpan.FromMinutes(10).TotalMilliseconds;
@@ -39,6 +39,7 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
+    private readonly uint _updateCheckMessage, _updateApplyMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -54,6 +55,8 @@ public sealed class TrayApplication : IDisposable
     private bool _disposed;
     private string _statusText = string.Empty;
     private string _keyboardText = string.Empty;
+    private UpdateCoordinator? _updates;
+    private bool _readyBalloonShown;
 
     public unsafe TrayApplication(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null, IForegroundApp? foreground = null, ILog? log = null, ILogiKeyboard? keyboard = null, OptionsPlusGuard? guard = null, MemoryWatchdog? watchdog = null, string? statusPath = null)
     {
@@ -67,7 +70,8 @@ public sealed class TrayApplication : IDisposable
         _status = new StatusPublisher(
             () => new StatusSnapshot(
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
-                _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi),
+                _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi,
+                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -77,6 +81,16 @@ public sealed class TrayApplication : IDisposable
         fixed (char* tb = "TaskbarCreated")
         {
             _taskbarCreated = Win32.RegisterWindowMessageW(tb);
+        }
+
+        fixed (char* check = UpdateMessages.CheckName)
+        {
+            _updateCheckMessage = Win32.RegisterWindowMessageW(check);
+        }
+
+        fixed (char* apply = UpdateMessages.ApplyName)
+        {
+            _updateApplyMessage = Win32.RegisterWindowMessageW(apply);
         }
 
         CreateWindow();
@@ -134,6 +148,29 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>True when the loop ended because the memory watchdog asked for a restart.</summary>
     public bool RestartRequested { get; private set; }
+
+    /// <summary>
+    /// Connects the update coordinator (built after the tray, because its callbacks need it). The tray then offers
+    /// "Check for updates" and "Restart to update", answers the settings app's update messages and publishes the update state.
+    /// </summary>
+    public void AttachUpdates(UpdateCoordinator updates)
+    {
+        _updates = updates;
+        _status.Changed();
+    }
+
+    /// <summary>The update state changed (found, downloaded). Safe from any thread.</summary>
+    public void UpdateStateChanged() => Post(() => _status.Changed());
+
+    /// <summary>Shows an update balloon. Safe from any thread.</summary>
+    public void NotifyUpdate(UpdateNoticeKind kind, string text) => Post(() =>
+    {
+        ShowBalloon("Slender", text, warning: false);
+        _readyBalloonShown = kind == UpdateNoticeKind.Ready; // after ShowBalloon, which clears it
+    });
+
+    /// <summary>Removes the tray icon right before an update restarts the process, so no ghost icon is left behind.</summary>
+    public void PrepareForUpdateRestart() => RemoveIcon();
 
     /// <summary>Runs the message loop on the calling (creating) thread until Quit or a restart request.</summary>
     public unsafe void Run()
@@ -263,6 +300,14 @@ public sealed class TrayApplication : IDisposable
                 case Win32.WM_LBUTTONUP:
                     OpenSettings(popover: true);
                     break;
+                case Win32.NIN_BALLOONUSERCLICK:
+                    if (_readyBalloonShown)
+                    {
+                        _readyBalloonShown = false;
+                        _ = _updates?.ApplyAsync();
+                    }
+
+                    break;
             }
 
             return true;
@@ -278,6 +323,18 @@ public sealed class TrayApplication : IDisposable
                 }
             }
 
+            return true;
+        }
+
+        if (msg != 0 && msg == _updateCheckMessage)
+        {
+            _ = _updates?.CheckNowAsync();
+            return true;
+        }
+
+        if (msg != 0 && msg == _updateApplyMessage)
+        {
+            _ = _updates?.ApplyAsync();
             return true;
         }
 
@@ -406,8 +463,9 @@ public sealed class TrayApplication : IDisposable
         _iconAdded = Win32.Shell_NotifyIconW(Win32.NIM_ADD, &nid) != 0;
     }
 
-    private unsafe void ShowBalloon(string title, string text)
+    private unsafe void ShowBalloon(string title, string text, bool warning = true)
     {
+        _readyBalloonShown = false; // a click now belongs to this balloon, not an earlier "ready" one
         if (!_iconAdded || _hwnd == 0)
         {
             return;
@@ -415,7 +473,7 @@ public sealed class TrayApplication : IDisposable
 
         Win32.NOTIFYICONDATAW nid = IconData();
         nid.uFlags |= Win32.NIF_INFO;
-        nid.dwInfoFlags = Win32.NIIF_WARNING;
+        nid.dwInfoFlags = warning ? Win32.NIIF_WARNING : Win32.NIIF_INFO;
         title.AsSpan(0, Math.Min(title.Length, 63)).CopyTo(new Span<char>(nid.szInfoTitle, 64));
         text.AsSpan(0, Math.Min(text.Length, 255)).CopyTo(new Span<char>(nid.szInfo, 256));
         Win32.Shell_NotifyIconW(Win32.NIM_MODIFY, &nid);
@@ -461,12 +519,19 @@ public sealed class TrayApplication : IDisposable
 
         try
         {
+            if (_updates is { UpdateReady: true } ready)
+            {
+                Append(menu, 0, CmdUpdateApply, $"Restart to update ({ready.AvailableVersion})");
+                Win32.AppendMenuW(menu, Win32.MF_SEPARATOR, 0, null);
+            }
+
             Append(menu, Win32.MF_GRAYED, 1, _statusText);
             Append(menu, Win32.MF_GRAYED, 1, _keyboardText);
             Append(menu, _config.Excel.ThumbWheelScrollsColumns ? Win32.MF_CHECKED : 0, CmdExcel, "Excel: thumb wheel scrolls columns");
             Append(menu, _config.Haptics.Enabled ? Win32.MF_CHECKED : 0, CmdHaptics, "Haptics");
             Append(menu, _config.LaunchAtLogin ? Win32.MF_CHECKED : 0, CmdLaunch, "Launch at login");
             Append(menu, 0, CmdSettings, "Settings…");
+            Append(menu, 0, CmdUpdateCheck, "Check for updates");
             Win32.AppendMenuW(menu, Win32.MF_SEPARATOR, 0, null);
             Append(menu, 0, CmdQuit, "Quit");
 
@@ -488,6 +553,12 @@ public sealed class TrayApplication : IDisposable
                     break;
                 case CmdSettings:
                     OpenSettings(popover: false);
+                    break;
+                case CmdUpdateApply:
+                    _ = _updates?.ApplyAsync();
+                    break;
+                case CmdUpdateCheck:
+                    _ = _updates?.CheckNowAsync();
                     break;
                 case CmdQuit:
                     Win32.DestroyWindow(_hwnd);

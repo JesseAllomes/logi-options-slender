@@ -126,7 +126,11 @@ static class Program
         SyncSettings syncSettings = SyncSettings.LoadDefault();
         using var sync = new BackgroundSync(SyncServiceFactory.Create(), log);
         _ = sync.StartAsync();
-        _ = SelfUpdate.CheckAsync(syncSettings.UpdateSource, log);
+        using var updates = new UpdateCoordinator(
+            new VelopackUpdateBackend(VelopackUpdateBackend.ResolveSource(syncSettings.UpdateSource)), new SettingsProcessCloser(), log,
+            app.NotifyUpdate, app.UpdateStateChanged, applying: app.PrepareForUpdateRestart);
+        app.AttachUpdates(updates);
+        updates.Start();
 
         // Actions Ring overlay: window and drawing resources exist only while it is open (docs/actions-ring-optionsplus.md).
         using var ring = new RingController(() => engine.Config, foreground, hook, engine.RunRingAction, engine.PlayRingHaptic, app.PostToUi, log);
@@ -150,6 +154,11 @@ static class Program
         };
         app.Run();
         log.Info("Slender stopping");
+        if (!app.RestartRequested)
+        {
+            updates.ApplyOnExitIfReady(); // an update nobody restarted for installs silently now
+        }
+
         return app.RestartRequested;
     }
 }
