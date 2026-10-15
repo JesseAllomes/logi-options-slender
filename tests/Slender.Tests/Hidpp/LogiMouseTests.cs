@@ -122,7 +122,7 @@ public class LogiMouseTests
 
             foreach (var cid in new[] { ControlId.Middle, ControlId.Back, ControlId.Forward, ControlId.Gesture, ControlId.ModeShift, ControlId.SensePanel })
                 Assert.Contains(t.Writes, w => w[2] == FakeDevice.Reprog && w[3] >> 4 == 3
-                    && w[4] == (byte)(cid >> 8) && w[5] == (byte)cid && w[6] == 0x02);
+                    && w[4] == (byte)(cid >> 8) && w[5] == (byte)cid && w[6] == (cid == ControlId.Gesture ? 0x22 : 0x02)); // gesture undivert also clears raw XY
             Assert.Contains(t.Writes, w => w[2] == FakeDevice.Thumb && w[3] >> 4 == 2 && w[4] == 0 && w[5] == 1);
         }
     }
@@ -135,7 +135,7 @@ public class LogiMouseTests
         await Wait.UntilAsync(() => mouse.IsConnected);
         await mouse.SetDivertedControlsAsync([ControlId.Gesture], CancellationToken.None);
         mouse.Dispose();
-        Assert.Contains(t.Writes, w => w[2] == FakeDevice.Reprog && w[5] == (byte)ControlId.Gesture && w[6] == 0x02);
+        Assert.Contains(t.Writes, w => w[2] == FakeDevice.Reprog && w[5] == (byte)ControlId.Gesture && w[6] == 0x22); // undivert also clears raw XY
         Assert.True(t.Disposed);
     }
 

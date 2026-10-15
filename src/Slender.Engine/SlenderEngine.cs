@@ -46,6 +46,9 @@ public sealed class SlenderEngine : IDisposable
     private CancellationTokenSource? _foregroundDebounce;
     private Task _divertChain = Task.CompletedTask;
     private volatile bool _gesturePlainClick; // this press had no swipes configured: the legacy press/release path
+    private volatile bool _gestureRaw;        // this press is fed by device raw XY (no hook capture, no swallowing)
+    private IReadOnlyList<ushort> _rawXy = [];
+    private volatile int _deviceDpi;          // last DPI read from the mouse; 0 = unknown
     private bool _started, _disposed;
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
@@ -92,6 +95,7 @@ public sealed class SlenderEngine : IDisposable
         _hook.HorizontalWheel += OnWheel;
         _hook.ButtonChanged += OnHookButton;
         _hook.MouseMoved += OnHookMove;
+        _mouse.RawXyMoved += OnRawXy;
         _foreground.Changed += OnForegroundChanged;
         try { _hook.Start(); }
         catch (Exception ex) { _log.Error("mouse hook failed to start; thumb wheel will not scroll Excel", ex); }
@@ -150,6 +154,23 @@ public sealed class SlenderEngine : IDisposable
         return [.. set];
     }
 
+    /// <summary>
+    /// The controls to divert WITH raw XY while <paramref name="process"/> is in front: the gesture button when a swipe is bound
+    /// for the effective profile (same rule as the gesture divert); a click-only binding keeps the plain divert.
+    /// </summary>
+    public static IReadOnlyList<ushort> ComputeRawXySet(SlenderConfig config, string? process)
+    {
+        var profile = ProfileResolver.Resolve(config, process);
+        var def = ProfileResolver.Default(config);
+        foreach (var dir in Enum.GetValues<GestureDirection>())
+        {
+            var effective = profile.GestureSwipes.TryGetValue(dir, out var own) && own is not null ? own
+                : def.GestureSwipes.TryGetValue(dir, out var d) ? d : null;
+            if (effective is not null and not ActionSpec.None) return [ControlId.Gesture];
+        }
+        return [];
+    }
+
     private static bool IsHidppControl(ushort id) => id is ControlId.Gesture or ControlId.ModeShift or ControlId.SensePanel;
 
     /// <summary>Quiet period after a foreground change before the divert set is recomputed; rapid switches collapse into one. Tests set 0.</summary>
@@ -200,18 +221,20 @@ public sealed class SlenderEngine : IDisposable
     private void Rediverts(bool force)
     {
         var set = ComputeDivertSet(_config, _foreground.ProcessName);
+        var raw = ComputeRawXySet(_config, _foreground.ProcessName);
         lock (_gate)
         {
-            if (!force && _diverted.SequenceEqual(set)) return;
+            if (!force && _diverted.SequenceEqual(set) && _rawXy.SequenceEqual(raw)) return;
             _diverted = set;
+            _rawXy = raw;
             // Serialise diverts so a slow earlier call cannot overwrite a newer one.
-            _divertChain = _divertChain.ContinueWith(_ => SafeDivert(set), TaskScheduler.Default).Unwrap();
+            _divertChain = _divertChain.ContinueWith(_ => SafeDivert(set, raw), TaskScheduler.Default).Unwrap();
         }
     }
 
-    private Task SafeDivert(IReadOnlyList<ushort> set)
+    private Task SafeDivert(IReadOnlyList<ushort> set, IReadOnlyList<ushort> raw)
     {
-        try { return ObserveAsync(_mouse.SetDivertedControlsAsync(set, _cts.Token), "set diverted controls"); }
+        try { return ObserveAsync(_mouse.SetDivertedControlsAsync(set, raw, _cts.Token), "set diverted controls"); }
         catch (Exception ex) { _log.Error("set diverted controls failed", ex); return Task.CompletedTask; }
     }
 
@@ -362,7 +385,10 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("ring haptic failed", ex); }
     }
 
-    // ---- gesture button (HID thread: press/release; hook thread: moves) ----
+    // ---- gesture button (HID thread: press/release and raw XY moves; hook thread: hook moves) ----
+    // Two move sources feed the one GestureTracker. Preferred: the device's own raw XY deltas (the gesture button was diverted
+    // with raw XY, so the cursor never moves and nothing is swallowed). Fallback: the low-level mouse hook captures and swallows
+    // moves while the button is held (device without raw XY, or the raw XY divert was refused).
 
     /// <summary>Returns true if the gesture path handled the event; false = fall back to the plain press/release binding.</summary>
     private bool OnGestureButton(ButtonEvent e)
@@ -373,12 +399,21 @@ public sealed class SlenderEngine : IDisposable
             {
                 _gesturePlainClick = !AnySwipeBound();
                 if (_gesturePlainClick) return false;
-                _gesture.Begin(_clock());
-                _hook.SetMoveCapture(true);
+                _gestureRaw = _mouse.IsRawXyActive(ControlId.Gesture);
+                if (_gestureRaw)
+                {
+                    _gesture.Begin(_clock(), GestureTracker.RawThresholdFor(EffectiveDpi()));
+                }
+                else
+                {
+                    _gesture.Begin(_clock());
+                    _hook.SetMoveCapture(true);
+                }
                 return true;
             }
             if (_gesturePlainClick) { _gesturePlainClick = false; return false; }
-            _hook.SetMoveCapture(false); // always, even if the gesture already timed out
+            if (!_gestureRaw) _hook.SetMoveCapture(false); // always on the hook path, even if the gesture already timed out
+            _gestureRaw = false;
             var (live, direction) = _gesture.End(_clock());
             if (live) _queue.Post(() => RunGesture(direction));
             return true;
@@ -401,9 +436,30 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { SafeLog("hook move handler failed", ex); }
     }
 
+    /// <summary>Raw XY delta from the device while the gesture button is held (HID thread). Ignored unless a raw gesture is live.</summary>
+    private void OnRawXy(object? sender, RawXyEvent e)
+    {
+        try
+        {
+            if (_gestureRaw) _gesture.Add(e.Dx, e.Dy, _clock()); // a timed-out gesture just stops accumulating; End reports it dead
+        }
+        catch (Exception ex) { SafeLog("raw XY handler failed", ex); }
+    }
+
+    /// <summary>Sensor DPI for scaling the raw threshold: the configured DPI, else the last one read from the device, else the reference.</summary>
+    private int EffectiveDpi() => _config.Pointer.Dpi ?? (_deviceDpi > 0 ? _deviceDpi : GestureTracker.ReferenceDpi);
+
+    private async Task FetchDpiAsync()
+    {
+        try { if (await _mouse.GetDpiAsync(_cts.Token).ConfigureAwait(false) is { } dpi) _deviceDpi = dpi; }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { _log.Error("dpi read failed", ex); }
+    }
+
     private void AbortGesture()
     {
         _gesture.Cancel();
+        _gestureRaw = false;
         try { _hook.SetMoveCapture(false); } catch { }
     }
 
@@ -699,7 +755,7 @@ public sealed class SlenderEngine : IDisposable
                 }
             }
             PublishStatus(connected);
-            if (connected) _ = FetchBatteryAsync();
+            if (connected) { _ = FetchBatteryAsync(); _ = FetchDpiAsync(); }
         }
         catch (Exception ex) { SafeLog("connection handler failed", ex); }
     }
@@ -740,6 +796,7 @@ public sealed class SlenderEngine : IDisposable
             _disposed = true;
         }
         _mouse.ButtonChanged -= OnButton;
+        _mouse.RawXyMoved -= OnRawXy;
         _mouse.ConnectionChanged -= OnConnection;
         _hook.HorizontalWheel -= OnWheel;
         _hook.ButtonChanged -= OnHookButton;

@@ -16,6 +16,10 @@ internal sealed class FakeMouse : ILogiMouse
     public event EventHandler<bool>? ConnectionChanged;
     public event EventHandler<ButtonEvent>? ButtonChanged;
     public event EventHandler<ThumbWheelEvent>? ThumbWheelMoved { add { } remove { } }
+    public event EventHandler<RawXyEvent>? RawXyMoved;
+    public List<ushort[]> RawDiverts { get; } = [];
+    public bool RawActive;
+    public int? Dpi;
     public List<ushort[]> Diverts { get; } = [];
     public List<byte> Haptics { get; } = [];
     public bool ThrowOnHaptic;
@@ -27,6 +31,14 @@ internal sealed class FakeMouse : ILogiMouse
         lock (Diverts) Diverts.Add(ids.ToArray());
         return Task.CompletedTask;
     }
+    public Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> ids, IReadOnlyCollection<ushort> raw, CancellationToken ct)
+    {
+        lock (RawDiverts) RawDiverts.Add(raw.ToArray());
+        return SetDivertedControlsAsync(ids, ct);
+    }
+    public bool IsRawXyActive(ushort id) => RawActive && id == ControlId.Gesture;
+    public Task<int?> GetDpiAsync(CancellationToken ct) => Task.FromResult(Dpi);
+    public void RawMove(int dx, int dy) => RawXyMoved?.Invoke(this, new RawXyEvent(dx, dy));
     public Task SetThumbWheelDivertedAsync(bool d, CancellationToken ct) => Task.CompletedTask;
     public Task PlayHapticAsync(byte w, CancellationToken ct)
     {
