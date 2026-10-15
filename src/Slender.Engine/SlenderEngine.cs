@@ -1,3 +1,4 @@
+using Slender.Engine.Ring;
 using Slender.Hidpp;
 
 namespace Slender.Engine;
@@ -51,7 +52,11 @@ public sealed class SlenderEngine : IDisposable
         _clock = clock ?? (() => Environment.TickCount64);
     }
 
+    /// <summary>Raised on press of an ActionsRing control (the tray opens the ring). Press and release are both on <see cref="RingTrigger"/>.</summary>
     public event EventHandler? ActionsRingRequested;
+
+    /// <summary>The ring trigger control went down (Pressed) or up. Raised on the engine thread.</summary>
+    public event EventHandler<RingTriggerEventArgs>? RingTrigger;
     public event EventHandler<EngineStatus>? StatusChanged;
 
     public SlenderConfig Config => _config;
@@ -220,7 +225,7 @@ public sealed class SlenderEngine : IDisposable
                 lock (_gate) _active[e.ControlId] = action;
                 if (action is ActionSpec.None) return;
                 MaybeHaptic(action);
-                if (action is ActionSpec.ActionsRing) { RaiseRing(); return; }
+                if (action is ActionSpec.ActionsRing) { RaiseRing(true); return; }
             }
             else
             {
@@ -228,7 +233,8 @@ public sealed class SlenderEngine : IDisposable
                 {
                     if (!_active.Remove(e.ControlId, out action!)) return;
                 }
-                if (action is ActionSpec.None or ActionSpec.ActionsRing) return;
+                if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
+                if (action is ActionSpec.None) return;
             }
             _executor.Execute(action, e.Pressed);
         }
@@ -258,10 +264,44 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("haptic failed", ex); }
     }
 
-    private void RaiseRing()
+    private void RaiseRing(bool pressed)
     {
-        try { ActionsRingRequested?.Invoke(this, EventArgs.Empty); }
-        catch (Exception ex) { _log.Error("ActionsRingRequested handler failed", ex); }
+        try
+        {
+            if (pressed) ActionsRingRequested?.Invoke(this, EventArgs.Empty);
+            RingTrigger?.Invoke(this, new RingTriggerEventArgs(pressed));
+        }
+        catch (Exception ex) { _log.Error("ring trigger handler failed", ex); }
+    }
+
+    /// <summary>
+    /// Runs a ring slot's action on the engine queue (press then release), so it reaches the app that was in front once the
+    /// ring window is gone. Also used for the wheel steps of an adjustable slot.
+    /// </summary>
+    public void RunRingAction(ActionSpec action)
+    {
+        try
+        {
+            _queue.Post(() =>
+            {
+                try
+                {
+                    _executor.Execute(action, true);
+                    _executor.Execute(action, false);
+                }
+                catch (Exception ex) { _log.Error("ring action failed", ex); }
+            });
+        }
+        catch (Exception ex) { SafeLog("ring action dispatch failed", ex); }
+    }
+
+    /// <summary>A haptic pulse for the ring (tick = selection changed, bump = a slot ran), if haptics and the ring option are on.</summary>
+    public void PlayRingHaptic(RingHaptic kind)
+    {
+        var h = _config.Haptics;
+        if (!h.Enabled || !h.OnActionsRing) return;
+        try { _ = ObserveAsync(_mouse.PlayHapticAsync(kind == RingHaptic.Tick ? RingHaptics.HoverWaveform : RingHaptics.RunWaveform, _cts.Token), "ring haptic"); }
+        catch (Exception ex) { _log.Error("ring haptic failed", ex); }
     }
 
     // ---- gesture button (HID thread: press/release; hook thread: moves) ----
@@ -349,7 +389,7 @@ public sealed class SlenderEngine : IDisposable
     private void RunGestureAction(ActionSpec action)
     {
         MaybeHaptic(action);
-        if (action is ActionSpec.ActionsRing) { RaiseRing(); return; }
+        if (action is ActionSpec.ActionsRing) { RaiseRing(true); RaiseRing(false); return; } // a swipe is a tap: the ring stays open
         _executor.Execute(action, true);
         _executor.Execute(action, false);
     }
@@ -395,9 +435,9 @@ public sealed class SlenderEngine : IDisposable
             if (pressed)
             {
                 MaybeHaptic(action);
-                if (action is ActionSpec.ActionsRing) { RaiseRing(); return; }
+                if (action is ActionSpec.ActionsRing) { RaiseRing(true); return; }
             }
-            else if (action is ActionSpec.ActionsRing) return;
+            else if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
             _executor.Execute(action, pressed);
         }
         catch (Exception ex) { _log.Error("hook button action failed", ex); }

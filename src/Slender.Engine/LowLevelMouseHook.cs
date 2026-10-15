@@ -18,6 +18,8 @@ public sealed class LowLevelMouseHook : IInputHook
     private nint _hook;
     private readonly HookButtonPairing _pairing = new();
     private volatile bool _captureMoves;
+    private volatile bool _ringCapture;
+    private bool _leftSwallowed, _rightSwallowed; // hook thread only: the press was swallowed, so its release must be too
     private int _anchorX, _anchorY;
     private bool _disposed;
 
@@ -32,6 +34,14 @@ public sealed class LowLevelMouseHook : IInputHook
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
 
     public event EventHandler<HookMoveEventArgs>? MouseMoved;
+
+    public event EventHandler<HookRingEventArgs>? RingInput;
+
+    /// <summary>
+    /// While on, left/right button presses and the vertical wheel are swallowed and reported through <see cref="RingInput"/>
+    /// (the Actions Ring consumes them). A swallowed press always swallows its release, even after capture ended.
+    /// </summary>
+    public void SetRingCapture(bool on) => _ringCapture = on;
 
     public void SetMoveCapture(bool on)
     {
@@ -110,6 +120,12 @@ public sealed class LowLevelMouseHook : IInputHook
                         }
                     }
                 }
+                else if (msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_LBUTTONUP
+                         or NativeMethods.WM_RBUTTONDOWN or NativeMethods.WM_RBUTTONUP or NativeMethods.WM_MOUSEWHEEL)
+                {
+                    var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                    if (!IsInjected(data) && RingMouse(msg, data)) return 1; // swallow
+                }
                 else if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
                     var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
@@ -145,6 +161,33 @@ public sealed class LowLevelMouseHook : IInputHook
         return NativeMethods.CallNextHookEx(0, nCode, wParam, lParam);
     }
 
+    /// <summary>Ring capture for left/right/wheel. Returns true to swallow.</summary>
+    private bool RingMouse(int msg, NativeMethods.MSLLHOOKSTRUCT data)
+    {
+        switch (msg)
+        {
+            case NativeMethods.WM_LBUTTONUP when _leftSwallowed:
+                _leftSwallowed = false;
+                return true;
+            case NativeMethods.WM_RBUTTONUP when _rightSwallowed:
+                _rightSwallowed = false;
+                return true;
+        }
+        if (!_ringCapture) return false;
+        HookRingKind kind;
+        var delta = 0;
+        switch (msg)
+        {
+            case NativeMethods.WM_LBUTTONDOWN: kind = HookRingKind.LeftDown; _leftSwallowed = true; break;
+            case NativeMethods.WM_RBUTTONDOWN: kind = HookRingKind.RightDown; _rightSwallowed = true; break;
+            case NativeMethods.WM_MOUSEWHEEL: kind = HookRingKind.Wheel; delta = (short)(data.MouseData >> 16); break;
+            default: return false; // an unpaired release passes through
+        }
+        try { RingInput?.Invoke(this, new HookRingEventArgs(kind, delta)); }
+        catch (Exception ex) { try { _log.Error("ring input handler failed", ex); } catch { } }
+        return true;
+    }
+
     private static bool IsInjected(NativeMethods.MSLLHOOKSTRUCT d) =>
         (d.Flags & (NativeMethods.LLMHF_INJECTED | NativeMethods.LLMHF_LOWER_IL_INJECTED)) != 0;
 
@@ -166,7 +209,9 @@ public sealed class LowLevelMouseHook : IInputHook
         HorizontalWheel = null;
         ButtonChanged = null;
         MouseMoved = null;
+        RingInput = null;
         _captureMoves = false;
+        _ringCapture = false;
         if (t is null) return;
         if (_threadId != 0) NativeMethods.PostThreadMessage(_threadId, NativeMethods.WM_QUIT, 0, 0);
         t.Join(1000); // the thread unhooks itself on exit

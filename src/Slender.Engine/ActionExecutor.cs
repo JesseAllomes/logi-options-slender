@@ -25,9 +25,11 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly ILog _log;
     private readonly IShellLauncher _shell;
     private readonly IBrightnessController _brightness;
+    private readonly ITextSender _text;
 
-    public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null)
+    public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null, ITextSender? text = null)
     {
+        _text = text ?? new SendInputTextSender();
         _shell = shell ?? new ShellLauncher();
         _brightness = brightness ?? new BrightnessController(new WindowsMonitorBrightness(), log);
         _excel = excel;
@@ -85,6 +87,9 @@ public sealed class ActionExecutor : IActionExecutor
                     break; // swallowed by the router; nothing runs
                 case ActionSpec.Brightness b:
                     if (pressed) _brightness.Adjust(b.StepPercent); // queued off this thread; presses coalesce
+                    break;
+                case ActionSpec.Text t:
+                    if (pressed && t.Value.Length > 0 && !_text.Send(TextInput.Build(t.Value))) _log.Error("SendInput failed for text snippet");
                     break;
                 case ActionSpec.ActionsRing:
                     if (pressed) ActionsRingRequested?.Invoke(this, EventArgs.Empty);

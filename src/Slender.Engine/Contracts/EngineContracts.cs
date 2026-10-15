@@ -18,6 +18,12 @@ public interface IInputHook : IDisposable
     /// <summary>Turns move reporting on (anchoring at the current cursor position) or off. Off by default.</summary>
     void SetMoveCapture(bool on) { }
 
+    /// <summary>Left/right presses and the vertical wheel while ring capture is on (<see cref="SetRingCapture"/>); always swallowed.</summary>
+    event EventHandler<HookRingEventArgs>? RingInput { add { } remove { } }
+
+    /// <summary>While on, the Actions Ring owns the left/right buttons and the vertical wheel. Off by default.</summary>
+    void SetRingCapture(bool on) { }
+
     void Start();
 }
 
@@ -28,6 +34,15 @@ public sealed class HookMoveEventArgs(int dx, int dy) : EventArgs
 
     /// <summary>Set true to swallow the move.</summary>
     public bool Handled { get; set; }
+}
+
+public enum HookRingKind { LeftDown, RightDown, Wheel }
+
+/// <summary>An input the Actions Ring consumed. Delta (wheel) is in WHEEL_DELTA units, positive = up.</summary>
+public sealed class HookRingEventArgs(HookRingKind kind, int delta) : EventArgs
+{
+    public HookRingKind Kind { get; } = kind;
+    public int Delta { get; } = delta;
 }
 
 public sealed class HookWheelEventArgs(int delta) : EventArgs
@@ -263,4 +278,10 @@ public static class SlenderPaths
     public static string StatusFile => Path.Combine(LocalDirectory, "status.json");
     public static string AssetsDirectory => Path.Combine(LocalDirectory, "assets");
     public static string LogsDirectory => Path.Combine(LocalDirectory, "logs");
+}
+
+/// <summary>The control bound to the Actions Ring went down or up.</summary>
+public sealed class RingTriggerEventArgs(bool pressed) : EventArgs
+{
+    public bool Pressed { get; } = pressed;
 }

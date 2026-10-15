@@ -25,6 +25,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The ring overlay draws Sora and JetBrains Mono from Assets\Fonts next to the exe (the same files the settings app ships); without them it falls back to Segoe UI Variable and Consolas. -->
+    <Content Include="..\Slender.Settings\Assets\Fonts\Sora-SemiBold.ttf" Link="Assets\Fonts\Sora-SemiBold.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\Slender.Settings\Assets\Fonts\JetBrainsMono-Medium.ttf" Link="Assets\Fonts\JetBrainsMono-Medium.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Cap the gen0 budget: tray keeps ~0.6 MB live but reserves ~20 MB of GC space otherwise (docs/memory.md #2).
          For NativeAOT this item is baked into the executable (runtimeconfig knobs are compiled in), so it applies there too. -->
     <RuntimeHostConfigurationOption Include="System.GC.Gen0MaxBudget" Value="1048576" />

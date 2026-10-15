@@ -344,6 +344,8 @@ public sealed class TrayApplication : IDisposable
     }
 
     /// <summary>Runs an action on the UI thread. Safe from any thread; dropped after dispose.</summary>
+    public void PostToUi(Action action) => Post(action);
+
     private void Post(Action action)
     {
         nint h = _hwnd;

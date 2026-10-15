@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Slender.Engine;
 using Slender.Engine.Config;
+using Slender.Engine.Ring;
+using Slender.Tray.Ring;
 using Slender.Hidpp;
 using Slender.Hidpp.Transport;
 using Slender.Sync;
@@ -125,6 +127,16 @@ static class Program
         using var sync = new BackgroundSync(SyncServiceFactory.Create(), log);
         _ = sync.StartAsync();
         _ = SelfUpdate.CheckAsync(syncSettings.UpdateSource, log);
+
+        // Actions Ring overlay: window and drawing resources exist only while it is open (docs/actions-ring-optionsplus.md).
+        using var ring = new RingController(() => engine.Config, foreground, hook, engine.RunRingAction, engine.PlayRingHaptic, app.PostToUi, log);
+        EventHandler<RingTriggerEventArgs> onTrigger = (_, e) => app.PostToUi(() => ring.OnTrigger(e.Pressed));
+        engine.RingTrigger += onTrigger;
+        keys.RingTrigger += onTrigger;
+        engine.StatusChanged += (_, status) =>
+        {
+            if (!status.Connected) app.PostToUi(() => ring.Close(RingCloseReason.DeviceLost));
+        };
 
         app.ConfigChanged += (_, changed) =>
         {

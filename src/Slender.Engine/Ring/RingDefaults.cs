@@ -3,6 +3,8 @@ namespace Slender.Engine.Ring;
 /// <summary>The Options+ default Actions Ring, used until a profile defines its own slots.</summary>
 public static class RingDefaults
 {
+    public const string FolderName = "Folder";
+
     /// <summary>
     /// Clockwise from the top: Cut, Copy, Paste, Forward, Back, Undo, Redo, an empty folder "Folder".
     /// A new list on every call, so callers may keep and edit it.
@@ -16,7 +18,7 @@ public static class RingDefaults
         new(new ActionSpec.MouseButton("Back")) { Name = "Back" },
         new(new ActionSpec.Keys("Ctrl+Z")) { Name = "Undo" },
         new(new ActionSpec.Keys("Ctrl+Y")) { Name = "Redo" },
-        EmptyFolder("Folder"),
+        EmptyFolder(FolderName),
     ];
 
     /// <summary>A folder with no actions in it (RingSlotCount empty children).</summary>
