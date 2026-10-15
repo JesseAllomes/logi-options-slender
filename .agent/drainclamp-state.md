@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=25 -->
+<!-- drainclamp-build: state; schema=1; generation=27 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -41,7 +41,9 @@ Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/Lo
 | m7 | tray app, config UI, launch at login, memory budget check, Options+ retirement with rollback | src/Slender.Tray;docs/switch-over.md;tests/Slender.Tests | active | m6 |
 | m8 | hybrid button capture + HID++ write allowlist | src/Slender.Engine;src/Slender.Hidpp;tests/Slender.Tests | done | m3 |
 | m9 | keyboard support (ERGO K860): top-row keys, Fn lock | src/Slender.Hidpp;src/Slender.Engine;tests/Slender.Tests | done | m8 |
-| m10 | WinUI 3 settings app (product-ui locked design) | src/Slender.Settings;.grok/product-ui | active | m8 |
+| m10 | WinUI 3 settings app (product-ui locked design) | src/Slender.Settings;.grok/product-ui | done | m8 |
+| m11 | team round: engine gaps (media keys, thumb wheel per app, smooth scroll), tray keyboard status + installer, settings polish | src/Slender.Engine;src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings;scripts/Install-Slender.ps1;tests/Slender.Tests | active | m10 |
+| m12 | memory audit (Opus) and chosen reductions; tray popover decision | docs/memory.md;src/Slender.Tray;src/Slender.Settings | active | m10 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -61,4 +63,5 @@ Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/Lo
 - 2026-10-14T23:32:04+00:00 6fabb77f Settings UI locked (round 4); contracts v2 (hook buttons, config v2, status) at 7187832; m8 + m10 building in worktrees -m8/-m10
 - 2026-10-14T23:36:33+00:00 22f79d82 m8 merged: hook captures middle/back/forward, HID++ divert only gesture/modeshift/sense, allowlist enforced in HidppDevice; raw channel sends made internal; 134 tests
 - 2026-10-14T23:56:42+00:00 c3ee0158 Live test: Options+ service stopped (until reboot); haptic play = fn4 confirmed; thumb wheel invert applied from config (default on); m9 keyboard merged (151 tests); keyboard router not yet wired into tray
+- 2026-10-15T00:24:31+00:00 ac36d067 m10 merged (820c394, 265 tests); keyboard wired into tray; team launched: wt-engine, wt-tray, wt-settings (Sonnet), wt-mem (Opus audit)
 <!-- /DC:LOG -->
