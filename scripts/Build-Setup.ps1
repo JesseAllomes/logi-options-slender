@@ -2,7 +2,7 @@
 .SYNOPSIS
   Build artifacts\SlenderSetup.exe, the all-in-one Velopack installer (per user, no admin).
 .DESCRIPTION
-  Publishes the tray (framework-dependent, win-x64) and the settings app (self-contained) into one staging folder,
+  Publishes the tray (NativeAOT, win-x64) and the settings app (framework-dependent) into one staging folder,
   then runs `vpk pack` (the local tool from .config\dotnet-tools.json) to produce the installer and update packages.
   Output goes under artifacts\ (git-ignored). Nothing is installed and nothing on this PC is touched.
   Setup installs to %LOCALAPPDATA%\SlenderApp, adds a Start menu shortcut, and installs the .NET 10 desktop runtime
@@ -41,9 +41,13 @@ try {
     if (Test-Path -LiteralPath $Staging) { Remove-Item -LiteralPath $Staging -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $Staging, $Releases | Out-Null
 
-    & dotnet publish $SettingsProj -c Release -r win-x64 --self-contained true -o $Staging --nologo
+    # Settings: framework-dependent so it shares .NET runtime pages (docs/memory.md); vpk --framework installs the runtime.
+    & dotnet publish $SettingsProj -c Release -r win-x64 --self-contained false -o $Staging --nologo
     if ($LASTEXITCODE -ne 0) { throw "Settings publish failed ($LASTEXITCODE)." }
-    & dotnet publish $TrayProj -c Release -r win-x64 --self-contained false -p:Version=$Version -o $Staging --nologo
+    # Tray: NativeAOT (5.3 MB private / 17.6 MB working set idle, docs/memory.md). The linker step needs vswhere on PATH.
+    $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+    if ((Test-Path $installer) -and ($env:PATH -notlike "*$installer*")) { $env:PATH = "$installer;$env:PATH" }
+    & dotnet publish $TrayProj -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version -o $Staging --nologo
     if ($LASTEXITCODE -ne 0) { throw "Tray publish failed ($LASTEXITCODE)." }
     foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe') {
         if (-not (Test-Path -LiteralPath (Join-Path $Staging $exe))) { throw "Publish did not produce $exe." }
