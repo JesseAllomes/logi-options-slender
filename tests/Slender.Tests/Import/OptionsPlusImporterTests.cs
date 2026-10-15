@@ -21,6 +21,28 @@ public class OptionsPlusImporterTests
         Result.Notes.Where(n => n.Kind == kind).Select(n => n.Where + ": " + n.Message).ToList();
 
     [Fact]
+    public void ImportedConfigSurvivesSaveAndLoad()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "slender-import-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new Slender.Engine.Config.JsonConfigStore(dir);
+            store.Save(Result.Config);
+            SlenderConfig loaded = store.Load();
+
+            Assert.Equal(Result.Config.Profiles.Count, loaded.Profiles.Count);
+            Profile def = loaded.Profiles.Single(p => p.AppProcess is null);
+            Assert.Equal(new ActionSpec.Launch("https://chatgpt.com/"), def.Bindings[ControlId.ModeShift]);
+            Assert.Equal(new ActionSpec.Keys("Alt+I"), loaded.Profiles.Single(p => p.AppProcess == "excel").Bindings[ControlId.Back]);
+            Assert.Equal(Default.KeyBindings.Count, def.KeyBindings.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ExcelBackButtonIsAltI()
     {
         Assert.Equal(new ActionSpec.Keys("Alt+I"), App("excel").Bindings[ControlId.Back]);
