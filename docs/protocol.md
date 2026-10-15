@@ -298,3 +298,14 @@ One modifier works; with two or more the firmware drops all of them. The encoder
 Open: the user reports Options+ offers two-modifier shortcuts for these keys; next step is to set one in Options+ and
 read 0x1C00 / 0x1B04 to see whether Options+ stores it onboard (different encoding) or handles it in software (divert).
 Key 10 reset to factory after the tests.
+
+### How Options+ does two-modifier shortcuts (ERGO K860, 2026-10-15)
+
+With Options+ set to Calculator = Ctrl+Shift+Esc: 0x1C00 still held the factory Calculator action in every host slot,
+and 0x1B04 reported CID 0x000A **diverted** (`000A01000A`). Options+ handles multi-modifier shortcuts in software by
+diverting the key. When its agent was stopped it left 0x000A, 0x006E, 0x006F, 0x00BF, 0x00C7, 0x00C8 (and others)
+diverted, so those keys went dead until an Easy-Switch reconnect cleared them. Slender's keyboard path resets leftover
+diverts on connect for this reason.
+
+Model for Slender: any chord per app = software path (divert + inject, needs Slender running); "store on keyboard"
+(works on any PC without software) = one modifier max or a media key.
