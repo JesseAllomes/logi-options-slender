@@ -53,6 +53,18 @@
           "src/Slender.Settings/MainWindow.Popover.cs",
           "src/Slender.Engine/ExcelBridge.cs"
         ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T04:56:46+00:00",
+        "est_min": 40,
+        "goal": "In-app updates: baked-in local releases source, 6-hourly + on-demand check, balloon/menu 'Restart to update', Settings version row; rebuild 1.1.0 before user installs",
+        "id": "c3",
+        "note": "3ab86c8 merged (73bf370): UpdateCoordinator (30 s, 6 h, on-demand, single-flight), balloon + menu Restart to update, Settings version row, baked SlenderUpdateSource (AOT attribute read proven with probe), Build-Setup auto next patch; 687 tests; SlenderSetup 1.1.1 built",
+        "targets": [
+          "src/Slender.Tray/SelfUpdate.cs",
+          "scripts/Build-Setup.ps1"
+        ]
       }
     ],
     "m17": [
@@ -233,7 +245,7 @@
     ]
   },
   "errors": [],
-  "rev": 35,
+  "rev": 37,
   "schema": 1,
   "time": [
     {
@@ -244,7 +256,7 @@
       "start": "2026-10-14T22:14:03+00:00"
     },
     {
-      "end": "2026-10-15T04:29:12+00:00",
+      "end": "2026-10-15T04:56:46+00:00",
       "id": "s2",
       "note": "",
       "source": "auto",
