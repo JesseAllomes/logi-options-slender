@@ -16,7 +16,11 @@ public sealed record StatusSnapshot(
     int? MouseDpi = null,
     string? CurrentVersion = null,
     string? AvailableVersion = null,
-    bool UpdateReady = false);
+    bool UpdateReady = false,
+    MouseValues? MouseValues = null);
+
+/// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
+public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
 
 /// <summary>
 /// Writes SlenderStatus to status.json (atomic replace) whenever Changed() is called, at most once per interval.
@@ -25,6 +29,25 @@ public sealed record StatusSnapshot(
 /// </summary>
 public sealed class StatusPublisher : IDisposable
 {
+    private static DeviceState MouseDeviceState(StatusSnapshot s)
+    {
+        var state = new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging)
+        {
+            Dpi = s.MouseConnected ? s.MouseDpi : null,
+        };
+        if (!s.MouseConnected || s.MouseValues is not { } v) return state;
+        // The safe band for the Sense Panel force is 50%-200% of the first reading (LogiMouse.SensePanelBand).
+        var band = v.SensePanelBaseline is { } b ? Slender.Hidpp.LogiMouse.SensePanelBand(b) : ((int, int)?)null;
+        return state with
+        {
+            WheelResistance = v.WheelResistance,
+            SensePanelForce = v.SensePanelForce,
+            SensePanelForceMin = band?.Item1,
+            SensePanelForceMax = band?.Item2,
+            HapticStrength = v.HapticStrength,
+        };
+    }
+
     public static readonly TimeSpan MinInterval = TimeSpan.FromMilliseconds(500);
     public static readonly TimeSpan OptionsPlusCacheTime = TimeSpan.FromSeconds(30);
     public const string OptionsPlusProcess = "logioptionsplus_agent";
@@ -146,7 +169,7 @@ public sealed class StatusPublisher : IDisposable
 
         return new SlenderStatus(
             [
-                new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging) { Dpi = s.MouseConnected ? s.MouseDpi : null },
+                MouseDeviceState(s),
                 new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging),
             ],
             _optionsValue || s.PausedForOptionsPlus,

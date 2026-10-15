@@ -85,4 +85,16 @@ public interface ILogiMouse : IDisposable
 
     /// <summary>Current sensor DPI (0x2201 read); null when disconnected or unsupported.</summary>
     Task<int?> GetDpiAsync(CancellationToken ct) => Task.FromResult<int?>(null);
+
+    /// <summary>Current wheel resistance 0-100 (0x2111 torque); null when disconnected or unsupported.</summary>
+    Task<int?> GetWheelResistanceAsync(CancellationToken ct) => Task.FromResult<int?>(null);
+
+    /// <summary>Current Sense Panel force reading (0x19C0); null when disconnected or unsupported.</summary>
+    Task<int?> GetSensePanelForceAsync(CancellationToken ct) => Task.FromResult<int?>(null);
+
+    /// <summary>Current haptic strength 0-100 (0x19B0); null when disconnected or unsupported.</summary>
+    Task<int?> GetHapticStrengthAsync(CancellationToken ct) => Task.FromResult<int?>(null);
+
+    /// <summary>First Sense Panel force reading seen (the anchor of the safe band); null until known.</summary>
+    int? SensePanelBaseline => null;
 }

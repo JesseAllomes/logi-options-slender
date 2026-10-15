@@ -221,7 +221,18 @@ public enum GestureDirection
     Right,
 }
 
-public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnButtonPress = false, bool OnActionsRing = true);
+/// <summary>
+/// Strength (0-100) overrides Level when set; null keeps the 4-notch Level mapping (0-3 to device 25/50/75/100).
+/// Persisted loosely: old configs have no Strength.
+/// </summary>
+public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnButtonPress = false, bool OnActionsRing = true, int? Strength = null)
+{
+    /// <summary>Device haptic level 0-100: Strength when set, else the Level notch mapped to 25/50/75/100.</summary>
+    public int EffectiveStrength => Strength is { } s ? Math.Clamp(s, 0, 100) : (Math.Clamp(Level, 0, 3) + 1) * 25;
+
+    /// <summary>The notch (0-3) nearest a 0-100 strength, so the quick presets stay lit sensibly.</summary>
+    public static int NotchFor(int strength) => Math.Clamp((strength + 12) / 25 - 1, 0, 3);
+}
 
 public sealed record ExcelSettings(bool ThumbWheelScrollsColumns = true, int ColumnsPerNotch = 1);
 
@@ -232,7 +243,10 @@ public sealed record PointerSettings(
     int SmartShiftThreshold = 22, // matches the value Options+ left on this user's MX Master 4 (2026-10-15)
     bool InvertWheel = false,
     bool InvertThumbWheel = true, // true matches the Options+ setting found on this user's MX Master 4 (2026-10-15)
-    bool SmoothScroll = false); // 0x2121 hi-res native reports; off until the user opts in
+    bool SmoothScroll = false, // 0x2121 hi-res native reports; off until the user opts in
+    int? WheelResistance = null, // 0x2111 tunable torque 0-100; null leaves the device alone
+    int? SensePanelForce = null, // 0x19C0 force threshold in device units; null leaves the device alone
+    int? SensePanelBaseline = null); // the first reading Slender saw from the mouse; the safe band for SensePanelForce is 50%-200% of it
 
 public sealed record KeyboardSettings(bool FnLock = false);
 
@@ -279,6 +293,15 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 {
     /// <summary>Current pointer speed read from the mouse (0x2201); null when unknown or not a mouse.</summary>
     public int? Dpi { get; init; }
+    /// <summary>Current scroll wheel resistance 0-100 (0x2111 torque); null when unknown.</summary>
+    public int? WheelResistance { get; init; }
+    /// <summary>Current Sense Panel force reading in device units (0x19C0); null when unknown.</summary>
+    public int? SensePanelForce { get; init; }
+    /// <summary>Safe band for SensePanelForce (50%-200% of the first reading); null when unknown.</summary>
+    public int? SensePanelForceMin { get; init; }
+    public int? SensePanelForceMax { get; init; }
+    /// <summary>Current haptic strength 0-100 (0x19B0); null when unknown.</summary>
+    public int? HapticStrength { get; init; }
 }
 
 /// <summary>

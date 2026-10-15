@@ -6,7 +6,8 @@ namespace Slender.Tests.Settings;
 public sealed class PointerAndLabelTests
 {
     [Theory]
-    [InlineData(0, 400)]
+    [InlineData(0, 200)]
+    [InlineData(200, 200)]
     [InlineData(400, 400)]
     [InlineData(1612, 1600)]
     [InlineData(1625, 1650)]

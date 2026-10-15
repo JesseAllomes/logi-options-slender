@@ -48,6 +48,38 @@ public sealed class StatusPublisherTests : IDisposable
     }
 
     [Fact]
+    public void Mouse_feel_values_and_force_band_are_published_while_connected()
+    {
+        var h = new Harness();
+        h.Snapshot = h.Snapshot with { MouseValues = new MouseValues(75, 3887, 3887, 45) };
+        using StatusPublisher publisher = h.Create();
+
+        publisher.Changed();
+
+        DeviceState mouse = Assert.Single(h.Written).Devices[0];
+        Assert.Equal(75, mouse.WheelResistance);
+        Assert.Equal(3887, mouse.SensePanelForce);
+        Assert.Equal(1943, mouse.SensePanelForceMin);
+        Assert.Equal(7774, mouse.SensePanelForceMax);
+        Assert.Equal(45, mouse.HapticStrength);
+    }
+
+    [Fact]
+    public void Mouse_feel_values_are_hidden_when_the_mouse_is_disconnected()
+    {
+        var h = new Harness();
+        h.Snapshot = new StatusSnapshot(false, null, false, null, MouseValues: new MouseValues(75, 3887, 3887, 45));
+        using StatusPublisher publisher = h.Create();
+
+        publisher.Changed();
+
+        DeviceState mouse = Assert.Single(h.Written).Devices[0];
+        Assert.Null(mouse.WheelResistance);
+        Assert.Null(mouse.SensePanelForceMin);
+        Assert.Null(mouse.HapticStrength);
+    }
+
+    [Fact]
     public void Idle_publisher_schedules_nothing()
     {
         var h = new Harness();

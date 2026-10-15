@@ -147,6 +147,26 @@ public sealed partial class MainWindow
         AddRow("Invert main wheel", "Spin the wheel toward you to scroll up.",
             PageToggle("Invert main wheel", c.Pointer.InvertWheel, on => Edit(p => p with { InvertWheel = on })));
 
+        AddRow("Wheel resistance", "How hard the wheel is to turn in ratchet mode. Default keeps the mouse's own setting.",
+            DefaultableSlider("Wheel resistance", 0, 100, 1, c.Pointer.WheelResistance,
+                () => _status.Device("mx-master-4")?.WheelResistance, PointerMapping.WheelResistanceText,
+                v => Edit(p => p with { WheelResistance = v }), 75));
+
+        DeviceState? mouse = _status.Device("mx-master-4");
+        if (mouse is { SensePanelForceMin: { } fMin, SensePanelForceMax: { } fMax })
+        {
+            int? SliderNow() => _status.Device("mx-master-4")?.SensePanelForce is { } f ? PointerMapping.ForceToSlider(f, fMin, fMax) : null;
+            AddRow("Sense Panel press force", "How hard you press the thumb panel before it counts. Light to Firm. Default keeps the mouse's own setting.",
+                DefaultableSlider("Sense Panel press force", 0, 100, 1,
+                    c.Pointer.SensePanelForce is { } saved ? PointerMapping.ForceToSlider(saved, fMin, fMax) : null, SliderNow,
+                    v => PointerMapping.ForceText(v),
+                    v => Edit(p => p with { SensePanelForce = v is { } s ? PointerMapping.SliderToForce(s, fMin, fMax) : null }), 50));
+        }
+        else
+        {
+            AddRow("Sense Panel press force", "Appears once the tray has read your mouse.", Ui.Text("Not available yet", 13, Ui.Muted));
+        }
+
         int? DeviceDpi() => _status.Device("mx-master-4")?.Dpi; // what the mouse reports now (status.json); shown while the speed is Default
         int RestDpi() => DeviceDpi() is { } dd ? PointerMapping.SnapDpi(dd) : PointerMapping.DpiShown;
         Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? RestDpi(),
@@ -209,6 +229,64 @@ public sealed partial class MainWindow
         BuildDualThumbSection();
     }
 
+    /// <summary>
+    /// A slider with a Default button, like the pointer speed row: null = Slender leaves the device alone and the readout shows
+    /// the mouse's own value (from status.json); moving the slider saves a value. Values are in slider units.
+    /// </summary>
+    private FrameworkElement DefaultableSlider(string name, double min, double max, double step, int? saved, Func<int?> deviceValue,
+        Func<double, string> format, Action<int?> save, int fallback)
+    {
+        int Rest() => deviceValue() is { } d ? Math.Clamp(d, (int)min, (int)max) : fallback;
+        Slider slider = PageSlider(name, min, max, step, saved ?? Rest(), v => { }, format, out TextBlock text);
+        text.Width = 120;
+        bool setting = false;
+        void ShowDefault(bool isDefault)
+        {
+            text.Text = isDefault ? (deviceValue() is { } d ? $"Default ({format(Math.Clamp(d, min, max))})" : "Default") : format(slider.Value);
+            text.Opacity = isDefault ? 0.6 : 1;
+        }
+
+        ShowDefault(saved is null);
+        slider.ValueChanged += (_, e) =>
+        {
+            if (setting)
+            {
+                return;
+            }
+
+            ShowDefault(false);
+            save((int)Math.Round(e.NewValue));
+        };
+        var reset = new Button { Content = "Default", Style = Ui.Res<Style>("QuietButtonStyle") };
+        reset.Click += (_, _) =>
+        {
+            setting = true;
+            slider.Value = Rest();
+            setting = false;
+            ShowDefault(true);
+            save(null);
+        };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        row.Children.Add(slider);
+        row.Children.Add(text);
+        row.Children.Add(reset);
+        bool IsDefault() => text.Opacity < 1;
+        void OnStatus()
+        {
+            if (IsDefault())
+            {
+                setting = true;
+                slider.Value = Rest();
+                setting = false;
+                ShowDefault(true);
+            }
+        }
+
+        _status.Changed += OnStatus;
+        row.Unloaded += (_, _) => _status.Changed -= OnStatus;
+        return row;
+    }
+
     private void BuildHapticsPage()
     {
         SlenderConfig c = _config.Config;
@@ -216,10 +294,11 @@ public sealed partial class MainWindow
         AddRow("Haptic feedback", "The mouse taps back when something happens.",
             PageToggle("Haptic feedback", c.Haptics.Enabled, on => _config.Update(x => x with { Haptics = x.Haptics with { Enabled = on } })));
 
-        Slider level = PageSlider("Haptic feel", 0, 3, 1, c.Haptics.Level,
-            v => _config.Update(x => x with { Haptics = x.Haptics with { Level = (int)v } }), v => HapticNames[(int)v], out TextBlock levelText);
+        // 0-100 strength; the four notches in the bottom bar stay as quick presets (25/50/75/100) and the slider moves them too.
+        Slider level = PageSlider("Haptic strength", 0, 100, 5, c.Haptics.EffectiveStrength,
+            v => _config.Update(x => x with { Haptics = x.Haptics with { Strength = (int)v, Level = HapticSettings.NotchFor((int)v) } }), v => $"{(int)v}", out TextBlock levelText);
         levelText.Width = 80;
-        AddRow("Haptic feel", "How strong the tap is.", WithReadout(level, levelText));
+        AddRow("Haptic strength", "How strong the tap is, 0 to 100. The four notches at the bottom are quick presets.", WithReadout(level, levelText));
 
         AddRow("When you press a button", null,
             PageToggle("Haptics on button press", c.Haptics.OnButtonPress, on => _config.Update(x => x with { Haptics = x.Haptics with { OnButtonPress = on } })));

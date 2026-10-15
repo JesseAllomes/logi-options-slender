@@ -383,10 +383,9 @@ public static partial class OptionsPlusImporter
         if (h["isGlobalHapticsEnabled"] is JsonValue g && g.TryGetValue(out bool global)) result = result with { Enabled = global };
         if (h["hapticFeedbackLevel"] is JsonValue lv && lv.TryGetValue(out double level))
         {
-            // Options+ 0-100 -> Slender's four notches 0-3 (Very light .. Strong), nearest notch.
+            // Options+ 0-100 is Slender's Strength exactly; Level keeps the nearest of the four presets for the quick notches.
             int notch = Math.Clamp((int)Math.Round(level / 100.0 * 3, MidpointRounding.AwayFromZero), 0, 3);
-            result = result with { Level = notch };
-            notes.Add(new(ImportNoteKind.Approximated, where, $"Haptic strength {level:0} (0-100) became notch {notch} of 0-3."));
+            result = result with { Level = notch, Strength = Math.Clamp((int)Math.Round(level), 0, 100) };
         }
         if (h["eventSourceSettings"] is JsonObject sources)
         {

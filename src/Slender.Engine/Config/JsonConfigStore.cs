@@ -115,7 +115,8 @@ public sealed class JsonConfigStore : IConfigStore
             CurrentVersion,
             profiles,
             new ExcelSettings(excel.ThumbWheelScrollsColumns, Math.Clamp(excel.ColumnsPerNotch, 1, 10)),
-            new HapticSettings(haptics.Enabled, Math.Clamp(haptics.Level, 0, 3), haptics.OnButtonPress, haptics.OnActionsRing),
+            new HapticSettings(haptics.Enabled, Math.Clamp(haptics.Level, 0, 3), haptics.OnButtonPress, haptics.OnActionsRing,
+                haptics.Strength is { } strength ? Math.Clamp(strength, 0, 100) : null),
             dto.LaunchAtLogin)
         {
             Pointer = ToPointer(dto.Pointer),
@@ -146,11 +147,15 @@ public sealed class JsonConfigStore : IConfigStore
         }
 
         return new PointerSettings(
-            p.Dpi is { } dpi ? Math.Clamp(dpi, 100, 32000) : null,
+            p.Dpi is { } dpi ? Math.Clamp(dpi, 200, 8000) : null,
             p.SmartShiftEnabled,
             Math.Clamp(p.SmartShiftThreshold, 1, 255),
             p.InvertWheel,
-            p.InvertThumbWheel);
+            p.InvertThumbWheel,
+            p.SmoothScroll,
+            p.WheelResistance is { } wr ? Math.Clamp(wr, 0, 100) : null,
+            p.SensePanelForce is { } spf ? Math.Clamp(spf, 1, 0xFFFF) : null,
+            p.SensePanelBaseline is { } spb ? Math.Clamp(spb, 1, 0xFFFF) : null);
     }
 
     private static Dictionary<GestureDirection, ActionSpec> ParseSwipes(Dictionary<string, ActionSpec>? raw)
@@ -258,6 +263,7 @@ public sealed class JsonConfigStore : IConfigStore
                 Level = config.Haptics.Level,
                 OnButtonPress = config.Haptics.OnButtonPress,
                 OnActionsRing = config.Haptics.OnActionsRing,
+                Strength = config.Haptics.Strength,
             },
             Pointer = new PointerDto
             {
@@ -266,6 +272,10 @@ public sealed class JsonConfigStore : IConfigStore
                 SmartShiftThreshold = config.Pointer.SmartShiftThreshold,
                 InvertWheel = config.Pointer.InvertWheel,
                 InvertThumbWheel = config.Pointer.InvertThumbWheel,
+                SmoothScroll = config.Pointer.SmoothScroll,
+                WheelResistance = config.Pointer.WheelResistance,
+                SensePanelForce = config.Pointer.SensePanelForce,
+                SensePanelBaseline = config.Pointer.SensePanelBaseline,
             },
             Keyboard = new KeyboardDto { FnLock = config.Keyboard.FnLock },
             BatteryAlerts = new BatteryAlertsDto
@@ -415,6 +425,10 @@ public sealed class JsonConfigStore : IConfigStore
         public int SmartShiftThreshold { get; set; } = 12;
         public bool InvertWheel { get; set; }
         public bool InvertThumbWheel { get; set; }
+        public bool SmoothScroll { get; set; }
+        public int? WheelResistance { get; set; }
+        public int? SensePanelForce { get; set; }
+        public int? SensePanelBaseline { get; set; }
     }
 
     internal sealed class KeyboardDto
@@ -446,5 +460,6 @@ public sealed class JsonConfigStore : IConfigStore
         public int Level { get; set; } = 2;
         public bool OnButtonPress { get; set; }
         public bool OnActionsRing { get; set; } = true;
+        public int? Strength { get; set; }
     }
 }
