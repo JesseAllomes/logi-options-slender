@@ -1,0 +1,387 @@
+{
+ "macro_infos": {
+  "macroInfos": [
+   {
+    "cards": [
+     {
+      "attribute": "MACRO_PLAYBACK",
+      "macro": {
+       "inputSequence": {
+        "componentLists": [
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Ctrl",
+             "hidUsage": 224,
+             "isDown": true,
+             "virtualKeyId": "VK_LCONTROL"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 112
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Shift",
+             "hidUsage": 225,
+             "isDown": true,
+             "virtualKeyId": "VK_LSHIFT"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 112
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Down",
+             "hidUsage": 81,
+             "isDown": true
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 32
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Shift",
+             "hidUsage": 225,
+             "virtualKeyId": "VK_LSHIFT"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Ctrl",
+             "hidUsage": 224,
+             "virtualKeyId": "VK_LCONTROL"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Down",
+             "hidUsage": 81
+            }
+           }
+          ]
+         }
+        ],
+        "defaultDelay": 21,
+        "showUpDown": true
+       },
+       "type": "INPUT_SEQUENCE"
+      },
+      "tags": [
+       "PRESET_TAG_KEY_OR_BUTTON"
+      ]
+     },
+     {
+      "attribute": "MACRO_PLAYBACK",
+      "macro": {
+       "delay": {
+        "durationMs": 100
+       },
+       "type": "DELAY"
+      }
+     },
+     {
+      "attribute": "MACRO_PLAYBACK",
+      "macro": {
+       "inputSequence": {
+        "componentLists": [
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Ctrl",
+             "hidUsage": 224,
+             "isDown": true,
+             "virtualKeyId": "VK_LCONTROL"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 48
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Shift",
+             "hidUsage": 225,
+             "isDown": true,
+             "virtualKeyId": "VK_LSHIFT"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 113
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Right",
+             "hidUsage": 79,
+             "isDown": true
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 47
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Right",
+             "hidUsage": 79
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 64
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Shift",
+             "hidUsage": 225,
+             "virtualKeyId": "VK_LSHIFT"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Ctrl",
+             "hidUsage": 224,
+             "virtualKeyId": "VK_LCONTROL"
+            }
+           }
+          ]
+         }
+        ],
+        "defaultDelay": 21,
+        "showUpDown": true
+       },
+       "type": "INPUT_SEQUENCE"
+      },
+      "tags": [
+       "PRESET_TAG_KEY_OR_BUTTON"
+      ]
+     }
+    ],
+    "customCategories": {},
+    "description": "Select Table Contents Down and Right",
+    "id": "840aa8e0-99cb-47c6-840a-d5cc1e4ae63c",
+    "lastEditTimestamp": "1780029332182",
+    "name": "Select Table Contents",
+    "platform": "WIN",
+    "usageCount": 33
+   },
+   {
+    "cards": [
+     {
+      "attribute": "MACRO_PLAYBACK",
+      "macro": {
+       "inputSequence": {
+        "componentLists": [
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Num Enter",
+             "hidUsage": 88,
+             "isDown": true
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Num Enter",
+             "hidUsage": 88
+            }
+           }
+          ]
+         }
+        ],
+        "defaultDelay": 21
+       },
+       "type": "INPUT_SEQUENCE"
+      },
+      "tags": [
+       "PRESET_TAG_KEY_OR_BUTTON"
+      ]
+     },
+     {
+      "attribute": "MACRO_PLAYBACK",
+      "macro": {
+       "delay": {
+        "durationMs": 3000
+       },
+       "type": "DELAY"
+      }
+     },
+     {
+      "attribute": "MACRO_PLAYBACK",
+      "macro": {
+       "inputSequence": {
+        "componentLists": [
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Ctrl",
+             "hidUsage": 224,
+             "isDown": true,
+             "virtualKeyId": "VK_LCONTROL"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 128
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "W",
+             "hidUsage": 26,
+             "isDown": true,
+             "virtualKeyId": "VK_W"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 80
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "W",
+             "hidUsage": 26,
+             "virtualKeyId": "VK_W"
+            }
+           }
+          ]
+         },
+         {
+          "components": [
+           {
+            "delay": {
+             "durationMs": 21
+            }
+           },
+           {
+            "keyboard": {
+             "displayName": "Ctrl",
+             "hidUsage": 224,
+             "virtualKeyId": "VK_LCONTROL"
+            }
+           }
+          ]
+         }
+        ],
+        "defaultDelay": 21,
+        "showUpDown": true
+       },
+       "type": "INPUT_SEQUENCE"
+      },
+      "tags": [
+       "PRESET_TAG_KEY_OR_BUTTON"
+      ]
+     }
+    ],
+    "customCategories": {},
+    "id": "a288b2cb-79eb-4aa0-bd09-7f93e5f9744e",
+    "lastEditTimestamp": "1780274873120",
+    "name": "Enter and close tab (Ado",
+    "platform": "WIN",
+    "usageCount": 24
+   }
+  ]
+ },
+ "macros_settings_transferred": true
+}
