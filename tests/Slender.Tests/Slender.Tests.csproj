@@ -11,6 +11,8 @@
   <ItemGroup>
     <!-- Sanitised Options+ settings.db / macros.db JSON blobs for the importer tests. -->
     <None Update="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Sanitised Logi Plugin Service store (Applications\Loupedeck72\...) for the Actions Ring importer tests. -->
+    <None Update="Fixtures\pluginservice\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

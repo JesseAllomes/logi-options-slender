@@ -1,0 +1,20 @@
+{
+  "$type": "Loupedeck.Service.SupportedApplicationInfo, LoupedeckService",
+  "name": "@_defaultwin",
+  "displayName": "System plugin",
+  "description": null,
+  "deviceType": "Loupedeck72",
+  "nativePluginName": "DefaultWin",
+  "hasNativePlugin": true,
+  "processOrBundleName": null,
+  "modes": [
+    {
+      "$type": "Loupedeck.Service.ApplicationMode, LoupedeckService",
+      "name": "System",
+      "parentModeName": null,
+      "displayName": "System"
+    }
+  ],
+  "defaultProfileName": "7BFDB14262CE44B791D0C64AAA3B00D5",
+  "isEnabled": true
+}

@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Slender.Engine;
+using Slender.Engine.Import;
 using Slender.Settings.Logic;
 using Slender.Settings.Views;
 
@@ -22,7 +23,12 @@ public sealed partial class MainWindow
         try
         {
             _config.Flush(); // the file on disk must match what is on screen before it is backed up
-            ImportPreview preview = await Task.Run(() => OptionsPlusImportFlow.Prepare(_config.Config));
+            ImportPreview preview = await Task.Run(() =>
+            {
+                // The real Actions Ring lives in Logi Plugin Service, not in settings.db; it wins when present.
+                IReadOnlyList<PluginServiceProfile> ring = PluginServiceStore.Read();
+                return OptionsPlusImportFlow.Prepare(_config.Config, pluginProfiles: ring, ringIcons: new PluginServiceIcons());
+            });
             if (!preview.CanImport)
             {
                 await ShowImportMessageAsync("Can't import from Options+", preview.Message);
@@ -46,6 +52,7 @@ public sealed partial class MainWindow
                 return;
             }
 
+            preview.AfterImport?.Invoke(); // the ring's images first, so the saved config never points at a missing file
             _config.Update(_ => preview.Result!.Config);
             _config.Flush();
             RebuildAll();
@@ -66,7 +73,7 @@ public sealed partial class MainWindow
         var summary = Ui.Text(preview.Summary, 13);
         summary.TextWrapping = TextWrapping.Wrap;
         panel.Children.Add(summary);
-        var note = Ui.Text("Your current settings are backed up first. Profiles for the same apps are replaced; others are kept.", 12, Ui.Muted);
+        var note = Ui.Text("Your current settings are backed up first. Profiles for the same apps are replaced, and the Actions Ring comes from Logi Plugin Service when it is there; other profiles are kept.", 12, Ui.Muted);
         note.TextWrapping = TextWrapping.Wrap;
         panel.Children.Add(note);
 

@@ -1,0 +1,20 @@
+{
+  "$type": "Loupedeck.Service.SupportedApplicationInfo, LoupedeckService",
+  "name": "@_powerpoint",
+  "displayName": "PowerPoint",
+  "description": null,
+  "deviceType": "Loupedeck72",
+  "nativePluginName": "PowerPoint",
+  "hasNativePlugin": true,
+  "processOrBundleName": null,
+  "modes": [
+    {
+      "$type": "Loupedeck.Service.ApplicationMode, LoupedeckService",
+      "name": "main",
+      "parentModeName": null,
+      "displayName": "Main"
+    }
+  ],
+  "defaultProfileName": "F7E85E54FBA54383A4E39689872A841A",
+  "isEnabled": true
+}
