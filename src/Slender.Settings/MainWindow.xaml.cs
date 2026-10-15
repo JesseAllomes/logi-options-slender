@@ -32,6 +32,8 @@ public sealed partial class MainWindow : Window
     /// <summary>Test hook: SLENDER_CONFIG_DIR redirects config.json and window state to another folder.</summary>
     private static readonly string? ConfigDirOverride = Environment.GetEnvironmentVariable("SLENDER_CONFIG_DIR") is { Length: > 0 } d ? d : null;
 
+    private static readonly string? StatusFileOverride = ConfigDirOverride is null ? null : Path.Combine(ConfigDirOverride, "status.json");
+
     private static readonly string UiPath = Path.Combine(ConfigDirOverride ?? SlenderPaths.LocalDirectory, "settings-ui.json");
 
     private readonly UiState _ui = UiState.Load(UiPath);
@@ -50,36 +52,62 @@ public sealed partial class MainWindow : Window
     private nint _hwnd;
     private double _scale = 1;
 
-    public MainWindow()
+    public MainWindow(bool popover = false)
     {
         InitializeComponent();
         _kind = _ui.Device == DeviceIds.Keyboard ? DeviceKind.Keyboard : DeviceKind.Mouse;
         _app = _ui.App;
 
         _config = new ConfigService(ConfigDirOverride is null ? new JsonConfigStore() : new JsonConfigStore(ConfigDirOverride), DispatcherQueue);
-        _status = new StatusMonitor(DispatcherQueue);
+        _status = new StatusMonitor(DispatcherQueue, StatusFileOverride, light: popover);
         _icons = new IconService(_assets.IconsDirectory);
-
-        SetUpWindow();
-        BuildInfoBars();
-        AddAccelerators();
 
         _config.Changed += OnConfigChanged;
         _status.Changed += OnStatusChanged;
         Closed += OnClosed;
-        Root.Loaded += async (_, _) => await InitializeAsync();
+
+        if (popover)
+        {
+            // Compact tray popover: only its own content is built; the full window is built when it unfolds (MainWindow.Popover.cs).
+            SetUpPopover();
+            return;
+        }
+
+        SetUpWindow();
+        BuildInfoBars();
+        AddAccelerators();
+        Shell.Loaded += async (_, _) => await InitializeAsync();
     }
+
+    private Task<bool>? _assetsTask;
+
+    /// <summary>Copies/loads the device renders once (off the UI thread). The popover defers it; the window awaits it.</summary>
+    private Task<bool> EnsureAssetsAsync() => _assetsTask ??= Task.Run(() =>
+    {
+        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
+        {
+            _devices[kind] = _assets.Ensure(kind);
+        }
+
+        return true;
+    });
 
     private ProfileView CurrentProfile => new(_config.Config, _app);
 
     private async Task InitializeAsync()
     {
         // Copying the renders from Options+ happens off the UI thread, and only when they are not cached yet.
-        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
+        await EnsureAssetsAsync();
+        PrepareFull();
+        if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_SHOT") is { Length: > 0 } shot)
         {
-            _devices[kind] = await Task.Run(() => _assets.Ensure(kind));
+            await SaveSnapshotAsync(shot); // test hook: renders this window's own XAML tree to a PNG, then closes
         }
+    }
 
+    /// <summary>Everything the full window needs once the device renders are known: validates the app, builds all regions.</summary>
+    private void PrepareFull()
+    {
         if (_app is not null && ProfileOps.Find(_config.Config, _app) is null)
         {
             _app = null;
@@ -93,17 +121,13 @@ public sealed partial class MainWindow : Window
         _ready = true;
         RebuildAll();
         FocusSelectedHotspot(keyboard: false); // no focus ring until the user presses a key
-        if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_SHOT") is { Length: > 0 } shot)
-        {
-            await SaveSnapshotAsync(shot); // test hook: renders this window's own XAML tree to a PNG, then closes
-        }
     }
 
     private async Task SaveSnapshotAsync(string path)
     {
         await Task.Delay(2500);
         var target = new Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap();
-        await target.RenderAsync(Root);
+        await target.RenderAsync(Shell);
         Windows.Storage.Streams.IBuffer pixels = await target.GetPixelsAsync();
         using var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
         Windows.Graphics.Imaging.BitmapEncoder encoder = await Windows.Graphics.Imaging.BitmapEncoder.CreateAsync(Windows.Graphics.Imaging.BitmapEncoder.PngEncoderId, stream);
@@ -128,7 +152,12 @@ public sealed partial class MainWindow : Window
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _scale = NativeMethods.GetDpiForWindow(_hwnd) / 96.0;
         AppWindow.Resize(new SizeInt32((int)(_ui.Width * _scale), (int)(_ui.Height * _scale)));
+        ApplyFullChrome();
+    }
 
+    /// <summary>Icon, minimum size and caption button colours of the full window (also applied when the popover unfolds).</summary>
+    private void ApplyFullChrome()
+    {
         string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Slender.ico");
         if (File.Exists(icon))
         {
@@ -158,6 +187,11 @@ public sealed partial class MainWindow : Window
     /// <summary>Called by the tray (through the single-instance event) to show this window again.</summary>
     public void BringToFront()
     {
+        if (_popoverActive)
+        {
+            return;
+        }
+
         if (NativeMethods.IsIconic(_hwnd))
         {
             NativeMethods.ShowWindow(_hwnd, 9); // SW_RESTORE
@@ -169,17 +203,26 @@ public sealed partial class MainWindow : Window
 
     private void OnClosed(object sender, WindowEventArgs args)
     {
-        _ui.Device = DeviceIds_For(_kind);
-        _ui.App = _app;
-        if (AppWindow.Size.Width > 0 && _scale > 0)
+        if (!_popoverActive) // a popover that never unfolded must not overwrite the remembered window size
         {
-            _ui.Width = (int)(AppWindow.Size.Width / _scale);
-            _ui.Height = (int)(AppWindow.Size.Height / _scale);
+            _ui.Device = DeviceIds_For(_kind);
+            _ui.App = _app;
+            if (AppWindow.Size.Width > 0 && _scale > 0)
+            {
+                _ui.Width = (int)(AppWindow.Size.Width / _scale);
+                _ui.Height = (int)(AppWindow.Size.Height / _scale);
+            }
+
+            _ui.Save(UiPath);
         }
 
-        _ui.Save(UiPath);
+        _deferred?.Cancel();
         _config.Dispose();
         _status.Dispose();
+        if (_popoverStarted)
+        {
+            Application.Current.Exit(); // nothing may linger once the popover is dismissed
+        }
     }
 
     private static string DeviceIds_For(DeviceKind kind) => ControlCatalog.DeviceId(kind);
@@ -326,6 +369,12 @@ public sealed partial class MainWindow : Window
 
     private void OnConfigChanged()
     {
+        if (_popoverActive)
+        {
+            RefreshPopover();
+            return;
+        }
+
         if (!_ready)
         {
             return;
@@ -351,6 +400,12 @@ public sealed partial class MainWindow : Window
 
     private void OnStatusChanged()
     {
+        if (_popoverActive)
+        {
+            RefreshPopover();
+            return;
+        }
+
         if (!_ready)
         {
             return;

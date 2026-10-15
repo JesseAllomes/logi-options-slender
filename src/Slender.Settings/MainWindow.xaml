@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Slender">
 
+  <Grid x:Name="Shell" RequestedTheme="Dark">
   <Grid x:Name="Root" Background="{StaticResource WindowGroundBrush}" RequestedTheme="Dark">
     <Grid.RowDefinitions>
       <RowDefinition Height="40" />
@@ -90,5 +91,9 @@
         <StackPanel x:Name="StripPanel" Padding="8,12,8,12" Spacing="4" />
       </ScrollViewer>
     </Border>
+  </Grid>
+
+  <!-- Tray popover mode: built in code by MainWindow.Popover.cs; collapsed until then. -->
+  <Grid x:Name="PopRoot" Visibility="Collapsed" Background="Transparent" />
   </Grid>
 </Window>

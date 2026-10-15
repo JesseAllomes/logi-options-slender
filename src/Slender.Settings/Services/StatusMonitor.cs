@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.UI.Dispatching;
 using Slender.Engine;
 using Slender.Engine.Config;
+using Slender.Settings.Logic;
 
 namespace Slender.Settings.Services;
 
@@ -19,9 +20,19 @@ public sealed class StatusMonitor : IDisposable
     private readonly DispatcherQueueTimer _debounce;
     private readonly DispatcherQueueTimer _poll;
 
-    public StatusMonitor(DispatcherQueue queue)
+    private readonly string _statusFile;
+    private readonly bool _light;
+    private bool _full;
+
+    /// <summary>
+    /// <paramref name="statusFile"/> defaults to the tray's status.json (a test hook points it elsewhere). In <paramref name="light"/>
+    /// mode (the tray popover) there is no 30 s poll and no Options+ process scan until <see cref="EnableFull"/> is called.
+    /// </summary>
+    public StatusMonitor(DispatcherQueue queue, string? statusFile = null, bool light = false)
     {
         _queue = queue;
+        _statusFile = statusFile ?? SlenderPaths.StatusFile;
+        _light = light;
         Refresh();
 
         _debounce = queue.CreateTimer();
@@ -33,12 +44,16 @@ public sealed class StatusMonitor : IDisposable
         _poll.Interval = TimeSpan.FromSeconds(30);
         _poll.IsRepeating = true;
         _poll.Tick += (_, _) => Refresh(raise: true);
-        _poll.Start();
+        if (!light)
+        {
+            _poll.Start();
+        }
 
         try
         {
-            Directory.CreateDirectory(SlenderPaths.LocalDirectory);
-            _watcher = new FileSystemWatcher(SlenderPaths.LocalDirectory, Path.GetFileName(SlenderPaths.StatusFile))
+            string dir = Path.GetDirectoryName(_statusFile)!;
+            Directory.CreateDirectory(dir);
+            _watcher = new FileSystemWatcher(dir, Path.GetFileName(_statusFile))
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.CreationTime,
             };
@@ -63,7 +78,21 @@ public sealed class StatusMonitor : IDisposable
     /// <summary>True when Logi Options+ (its agent process) is running. Checked locally, so it is fresh without the tray.</summary>
     public bool OptionsPlusRunning { get; private set; }
 
+    /// <summary>Device id to firmware version, when the tray publishes one. Empty when the field is absent.</summary>
+    public IReadOnlyDictionary<string, string> Firmware { get; private set; } = new Dictionary<string, string>();
+
     public event Action? Changed;
+
+    /// <summary>Leaves light mode: starts the 30 s poll and checks Options+ now.</summary>
+    public void EnableFull()
+    {
+        if (_light && !_full)
+        {
+            _full = true;
+            _poll.Start();
+            Refresh(raise: true);
+        }
+    }
 
     public DeviceState? Device(string id) => Status?.Devices.FirstOrDefault(d => d.Id == id);
 
@@ -82,20 +111,34 @@ public sealed class StatusMonitor : IDisposable
 
     private void Refresh(bool raise = false)
     {
-        SlenderStatus? status = StatusJson.TryRead(SlenderPaths.StatusFile);
+        string? text = ReadText();
+        SlenderStatus? status = text is null ? null : StatusJson.Parse(text);
         bool tray = IsTrayRunning();
-        bool options = IsOptionsPlusRunning();
+        bool options = !_light || _full ? IsOptionsPlusRunning() : OptionsPlusRunning;
         if (raise && status?.UpdatedAt == Status?.UpdatedAt && tray == TrayRunning && options == OptionsPlusRunning)
         {
             return;
         }
 
         Status = status;
+        Firmware = PopoverModel.ParseFirmware(text);
         TrayRunning = tray;
         OptionsPlusRunning = options;
         if (raise)
         {
             Changed?.Invoke();
+        }
+    }
+
+    private string? ReadText()
+    {
+        try
+        {
+            return File.Exists(_statusFile) ? File.ReadAllText(_statusFile, System.Text.Encoding.UTF8) : null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 
