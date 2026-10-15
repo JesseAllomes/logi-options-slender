@@ -30,12 +30,12 @@
     ],
     "m13": [
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-15T03:09:13+00:00",
         "est_min": 10,
         "goal": "User quits old Slender, runs artifacts/SlenderSetup.exe; verify tray starts (AOT), status.json, devices connect",
         "id": "c1",
-        "note": "",
+        "note": "Installed via SlenderSetup to %LOCALAPPDATA%/SlenderApp; AOT tray (13.5 MB exe, 9 MB private, 26 MB WS) started 14:02; status.json live; MX Master 4 65% + K860 100% connected; Options+ not running; old main-bin Slender gone. settings.log NRE at 12:45 was the wt-pop dev build, not the install.",
         "targets": [
           "scripts/Build-Setup.ps1",
           "docs/install.md"
@@ -54,10 +54,186 @@
           "src/Slender.Engine/ExcelBridge.cs"
         ]
       }
+    ],
+    "m17": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:16:09+00:00",
+        "est_min": 5,
+        "goal": "Contract BatteryAlertSettings (done on main fb2adcb)",
+        "id": "c1",
+        "note": "BatteryAlertSettings on SlenderConfig.BatteryAlerts (main fb2adcb)",
+        "targets": [
+          "src/Slender.Engine/Contracts/EngineContracts.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:19:38+00:00",
+        "est_min": 40,
+        "goal": "wt-battery: config DTO + tray balloon notification + re-arm logic + tests",
+        "id": "c2",
+        "note": "wt-battery 3e3309d merged: BatteryAlertState (fire once, re-arm on charge/above), NIF_INFO balloon, config DTO clamp 1-99; 461 tests",
+        "targets": [
+          "src/Slender.Tray/TrayApplication.cs",
+          "src/Slender.Tray/Native/Win32.cs",
+          "src/Slender.Engine/Config/JsonConfigStore.cs"
+        ]
+      }
+    ],
+    "m18": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:16:09+00:00",
+        "est_min": 5,
+        "goal": "Contract Launch/Disabled (done on main fb2adcb)",
+        "id": "c1",
+        "note": "ActionSpec.Launch(Target, Arguments) + ActionSpec.Disabled (main fb2adcb)",
+        "targets": [
+          "src/Slender.Engine/Contracts/EngineContracts.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:22:12+00:00",
+        "est_min": 60,
+        "goal": "wt-actions: JSON converter, ActionExecutor launch, Disabled swallow in hook/divert/K860, Settings picker (Open app browse, Turn off) + tests",
+        "id": "c2",
+        "note": "wt-actions 0a35f73 merged (814e5a9): converter launch/disabled, IShellLauncher press-only, Disabled thumb wheel swallow + no haptic, picker 'More' tab; main 468 tests green",
+        "targets": [
+          "src/Slender.Engine",
+          "src/Slender.Settings"
+        ]
+      }
+    ],
+    "m19": [
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 60,
+        "goal": "wt-import: OptionsPlusImporter (settings.db read-only copy) -> SlenderConfig + report, tests on fixture",
+        "id": "c1",
+        "note": "",
+        "targets": [
+          "src/Slender.Engine/Import"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:40:39+00:00",
+        "est_min": 30,
+        "goal": "Settings 'Import from Options+' with preview/backup; live import of user's profiles",
+        "id": "c2",
+        "note": "wt-import-ui 04d5830 merged (e71e1e2): Import... row (preview, backup to config.backup-*.json), explicit per-app None = pass-through, comma key sequences (Acrobat macro), 511 tests. Limit: diverted controls (mode shift) do nothing under None until per-app divert",
+        "targets": [
+          "src/Slender.Settings",
+          "docs/switch-over.md"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:40:42+00:00",
+        "est_min": 5,
+        "goal": "Decide with user: gesture swipes, Actions Ring items, pointer speed, brightness keys (gaps from import report)",
+        "id": "c3",
+        "note": "User wants all gaps built: gesture swipes, own Actions Ring, brightness keys, pointer speed -> m20-m22",
+        "targets": [
+          "src/Slender.Engine/Import/OptionsPlusImporter.cs"
+        ]
+      }
+    ],
+    "m20": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:57:08+00:00",
+        "est_min": 10,
+        "goal": "Ring prototypes round 1 published (artifact 1UdQ7C7DFRu6caugxHF17Y); waiting for user pick",
+        "id": "c1",
+        "note": "User picked 1 Bezel, 2 Compass, 3 Keypad as switchable styles; wants in-app style/colour/opacity/layout settings and folder slots (apps, web pages, etc.); Sonnet researching Options+ ring feature set first",
+        "targets": [
+          "src/Slender.Tray"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T04:02:09+00:00",
+        "est_min": 20,
+        "goal": "Options+ Actions Ring feature inventory (Sonnet research) -> ring contract incl. folders + appearance settings",
+        "id": "c2",
+        "note": "Inventory in docs/actions-ring-optionsplus.md: tap or hold modes, 8 slots, folders (1 level, 9 sub), ANALOG volume/brightness slots, name+icon per slot, size S/M/L only appearance option",
+        "targets": [
+          "src/Slender.Engine/Contracts/EngineContracts.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T04:09:23+00:00",
+        "est_min": 20,
+        "goal": "Contracts: RingSlot/RingAppearance/Text + RingLayout (done 096431e)",
+        "id": "c3",
+        "note": "096431e: RingSlot(Name, Icon, Folder 1 level), RingAppearance persisted with fallbacks, ActionSpec.Text, RingLayout geometry/selection/placement; 567 tests; design lock updated",
+        "targets": [
+          "src/Slender.Engine/Ring/RingLayout.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T04:29:12+00:00",
+        "est_min": 120,
+        "goal": "wt-ring-tray: overlay (D2D layered), tap/hold, folders, wheel adjust, haptics, Text executor",
+        "id": "c4",
+        "note": "ba142db merged (125659a) + fade fix 6e486cf: RingSession tap/hold, D2D layered overlay, RegisterHotKey keys, ring capture in hook, Text via KEYEVENTF_UNICODE; 661 tests; AOT tray +330 KB; SlenderSetup 1.1.0 built (72.1 MB)",
+        "targets": [
+          "src/Slender.Tray",
+          "src/Slender.Engine/SlenderEngine.cs",
+          "src/Slender.Engine/ActionExecutor.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-15T04:23:53+00:00",
+        "est_min": 90,
+        "goal": "wt-ring-settings: Actions Ring page (appearance + preview editor), Type text picker, importer ring/folder",
+        "id": "c5",
+        "note": "69350d1 merged (6f5a411): Actions Ring page (gear bar), RingPreview editor, RingOps, RingGlyphs, RingDefaults, Type text, importer ring c408-c415 + folder; 596 tests; UI unseen",
+        "targets": [
+          "src/Slender.Settings",
+          "src/Slender.Engine/Import"
+        ]
+      }
+    ],
+    "m21": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:55:43+00:00",
+        "est_min": 60,
+        "goal": "wt-gestures: GestureTracker + hook move capture, swipe rows in Settings, importer gestures",
+        "id": "c1",
+        "note": "c3cda32 merged (09630d7): 50 px threshold, 10 s timeout, moves swallowed only while held; unmapped: pan/zoom presets, bare Win key",
+        "targets": [
+          "src/Slender.Engine/GestureTracker.cs",
+          "src/Slender.Engine/SlenderEngine.cs"
+        ]
+      }
+    ],
+    "m22": [
+      {
+        "done": true,
+        "done_at": "2026-10-15T03:55:43+00:00",
+        "est_min": 60,
+        "goal": "wt-device: Brightness action (DDC/CI + LCD IOCTL), DPI readout in status.json, per-app divert with debounce",
+        "id": "c1",
+        "note": "3108b37 merged (f217ec6) + held-control divert deferral (601d1d7); 554 tests; brightness P/Invokes untested on real monitors",
+        "targets": [
+          "src/Slender.Engine",
+          "src/Slender.Hidpp/LogiMouse.cs",
+          "src/Slender.Tray"
+        ]
+      }
     ]
   },
   "errors": [],
-  "rev": 6,
+  "rev": 35,
   "schema": 1,
   "time": [
     {
@@ -66,6 +242,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-14T22:14:03+00:00"
+    },
+    {
+      "end": "2026-10-15T04:29:12+00:00",
+      "id": "s2",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-15T03:09:13+00:00"
     }
   ],
   "todos": [],

@@ -1,18 +1,64 @@
 {
   "schema": 1,
   "root": "C:/Users/user/Projects/personal/logi-options-slender",
-  "head": "",
+  "head": "34d37facc6c0f7885bb53ecc843d7b11406f98d9",
   "dirty_fingerprint": "b9a8816e585d5eaae36410a797c929afa619999265d5b3e4b5cebab270c98a51",
   "dirty_files": 0,
   "verify_config_fingerprint": "00ce9ee58ad8770625f9898500af160bb6ba911f48358a89368194ce77da1176",
-  "verify_block_fingerprint": "absent",
-  "verify_entries": 0,
+  "verify_block_fingerprint": "5f5bea8ca7cf2882dfd2c04443c75ae033074c33c977bde0f3b4b31eb27ba141",
+  "verify_entries": 2,
   "config_files": [],
-  "generated": "2026-10-14T22:04:53+00:00",
+  "generated": "2026-10-15T03:07:50+00:00",
   "scan": {
-    "files": 0,
-    "lines": 0,
-    "depth2": [],
+    "files": 191,
+    "lines": 22944,
+    "depth2": [
+      {
+        "path": "src/Slender.Settings",
+        "files": 55,
+        "lines": 9182
+      },
+      {
+        "path": "tests/Slender.Tests",
+        "files": 31,
+        "lines": 5132
+      },
+      {
+        "path": "src/Slender.Engine",
+        "files": 28,
+        "lines": 2620
+      },
+      {
+        "path": "src/Slender.Hidpp",
+        "files": 24,
+        "lines": 2125
+      },
+      {
+        "path": "src/Slender.Tray",
+        "files": 24,
+        "lines": 1820
+      },
+      {
+        "path": "src/Slender.Sync",
+        "files": 13,
+        "lines": 920
+      },
+      {
+        "path": "scripts",
+        "files": 5,
+        "lines": 617
+      },
+      {
+        "path": "tools/Slender.Probe",
+        "files": 7,
+        "lines": 389
+      },
+      {
+        "path": "tools/Slender.InputLog",
+        "files": 4,
+        "lines": 139
+      }
+    ],
     "skipped_links": []
   },
   "stack": [

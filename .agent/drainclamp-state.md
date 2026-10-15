@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=34 -->
+<!-- drainclamp-build: state; schema=1; generation=45 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -42,6 +42,10 @@ Onboard K860 -> dig deeper with an input logger before deciding (user)
 Subagents must never click/type on the desktop or launch UI windows without the user's go-ahead (Outlook clicks + pop-ups happened); never kill processes they did not start (python kill happened) (user)
 Onboard K860 -> one modifier max or media key (tested); multi-modifier per app via software divert, same as Options+ (tested)
 Live device writes and Options+ stops only with explicit user go-ahead in the current conversation; user authorised stopping Options+ processes/service only
+Options+ is disabled, not uninstalled; keep it installed for firmware updates (user 2026-10-15)
+New scope (user 2026-10-15): 15% mouse charge alert, open custom apps from a key, turn a key off, migrate all Options+ profile settings
+Options+ import -> one-time, read-only (copy settings.db first, never write Options+ files); unmapped items listed in a report, never silently dropped (agent default)
+Actions Ring -> own ring drawn by the AOT tray; styles Bezel, Compass, Keypad (round-1 prototypes 1-3) switchable in Settings with colour, opacity and layout options; folder slots open nested apps/web pages/actions like Options+; feature parity researched before build (user 2026-10-15)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -61,16 +65,20 @@ Live device writes and Options+ stops only with explicit user go-ahead in the cu
 | m14 | sign-in: user creates personal MS app registration, slender.sync.json, live sync test | src/Slender.Sync;docs/sync.md | pending | m13 |
 | m15 | onboard keys UI: contract KeyboardSettings.OnboardKeys + OnboardManaged, "Store on keyboard" in picker (1 modifier max), wire OnboardSync on connect/config change | src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/OnboardSync.cs;src/Slender.Settings;src/Slender.Tray | pending | m13 |
 | m16 | firmware: tray publishes device firmware versions (0x0003 read, allowlist), "Update firmware..." launches Options+ temporarily; set Options+ service to Manual after switch-over | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings | pending | m13 |
-| m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16 |
+| m17 | low-battery alert: tray notification "plug in to charge" when MX Master 4 <= 15% and not charging; once per discharge, re-arm after charging or >= 20%; threshold in config | src/Slender.Tray;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/Config | done | m13 |
+| m18 | actions: "Open app/file/URL" (ActionSpec.Launch: exe incl. Store apps, file/folder, URL; browse picker) and "Turn off" (ActionSpec.Disabled swallows the button/key on hook, HID++ divert and K860 paths) | src/Slender.Engine;src/Slender.Settings | done | m13 |
+| m19 | Options+ import: read-only copy of settings.db (+macros.db) -> Slender config: default + per-app profiles (Island, Acrobat, Edge, Excel, Teams), mouse buttons, K860 keys, DPI/SmartShift/thumb wheel/haptics; backup current config; preview + report of anything unmapped; "Import from Options+" in Settings | src/Slender.Engine/Import;src/Slender.Settings;docs/switch-over.md | done | m18 |
+| m20 | own Actions Ring: Win32 overlay in the AOT tray at the cursor on Sense Panel press, 8 slots per profile (any ActionSpec), haptic tick, slot editor in Settings, importer maps radial menu c408-415 | src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Tray;src/Slender.Settings;src/Slender.Engine/Import | done | m19 |
+| m21 | gesture swipes: hold gesture button + move (LL hook deltas, cursor frozen) -> up/down/left/right/click actions per profile; importer maps Options+ gesture nested cards | src/Slender.Engine;src/Slender.Settings;src/Slender.Engine/Import | done | m19 |
+| m22 | brightness keys (monitor under cursor: WMI internal panel, DDC/CI externals), pointer speed (tray reads DPI via 0x2201, Settings DPI control, importer), per-app divert so explicit None restores native mode shift | src/Slender.Engine;src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings | done | m19 |
+| m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m22 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
-```json
 [
   {"id": "dotnet-build", "argv": ["dotnet", "build", "Slender.slnx", "-warnaserror"], "cwd": ".", "tier": "fast", "timeout_s": 300},
   {"id": "dotnet-test", "argv": ["dotnet", "test", "Slender.slnx", "--nologo"], "cwd": ".", "tier": "milestone", "timeout_s": 600}
 ]
-```
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
@@ -84,4 +92,8 @@ Live device writes and Options+ stops only with explicit user go-ahead in the cu
 - 2026-10-15T00:24:31+00:00 ac36d067 m10 merged (820c394, 265 tests); keyboard wired into tray; team launched: wt-engine, wt-tray, wt-settings (Sonnet), wt-mem (Opus audit)
 - 2026-10-15T01:57:21+00:00 09374121 Merged: Win32 tray (AOT 5.3 MB private), popover mode, setup.exe+sync, onboard (1 modifier max; Options+ uses software divert for multi-mod); 400+ tests
 - 2026-10-15T02:04:29+00:00 6a918951 Session wrap: SlenderSetup.exe 1.0.0 built (AOT tray, 71.8 MB); next = user quits old Slender, installs, 5-min live pass (m13)
+- 2026-10-15T03:17:31+00:00 55959850 m13/c1 verified install; scope added m17 battery alert, m18 launch/turn-off actions, m19 Options+ import; contracts on main fb2adcb; Sonnet agents on wt-battery, wt-actions, wt-import
+- 2026-10-15T03:40:43+00:00 08d82604 m17-m19 merged to main (e71e1e2, 511 tests): battery alert, Launch/Disabled actions, Options+ importer + UI; user asked for all import gaps -> m20 own ring, m21 gestures, m22 brightness/DPI/per-app divert
+- 2026-10-15T03:55:44+00:00 75bd84c4 m21 gestures + m22 brightness/DPI/per-app divert merged (601d1d7, 554 tests); m20 ring prototypes round 1 shown, waiting for pick
+- 2026-10-15T04:29:13+00:00 72b3ac42 m20 Actions Ring merged (6e486cf, 661 tests): 3 switchable styles, folders, appearance page, import; SlenderSetup 1.1.0 built; next = user installs and runs m13/c2 live pass covering m17-m22 + ring
 <!-- /DC:LOG -->
