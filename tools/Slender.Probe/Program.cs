@@ -256,6 +256,26 @@ if (k860)
             if (g != null) Console.WriteLine($"  params: {Hex(g.Params[..6])}");
         }
     }
+    Console.WriteLine("\n== 0x1C00 persistent remappable action (READ ONLY: fn0-3) ==");
+    var pidx = await device.GetFeatureIndexAsync(PersistentRemapId.Feature, ct);
+    Console.WriteLine($"0x1C00 -> {(pidx is { } pv ? $"index {pv}" : "absent")}");
+    if (pidx != null)
+    {
+        var caps = await Try(device, "getCapabilities (fn0)", PersistentRemapId.Feature, PersistentRemapId.FnGetCapabilities);
+        if (caps != null) Console.WriteLine($"  capabilities: 0x{(caps.Params[0] << 8) | caps.Params[1]:X4} raw {Hex(caps.Params[..8])}");
+        var pc = await Try(device, "getCount (fn1)", PersistentRemapId.Feature, PersistentRemapId.FnGetCount);
+        int pn = pc?.Params[0] ?? 0;
+        Console.WriteLine($"  count: {pn} raw {(pc == null ? "-" : Hex(pc.Params[..8]))}");
+        for (byte i = 0; i < pn; i++)
+        {
+            var ci = await Try(device, $"getCidInfo({i}) (fn2)", PersistentRemapId.Feature, PersistentRemapId.FnGetCidInfo, i, PersistentRemapId.CurrentHost);
+            if (ci == null) continue;
+            ushort cid = (ushort)((ci.Params[0] << 8) | ci.Params[1]);
+            Console.WriteLine($"  [{i}] CID 0x{cid:X4} ({cid}) info {Hex(ci.Params[..8])}");
+            var gm = await Try(device, $"getMapping(0x{cid:X4}) (fn3)", PersistentRemapId.Feature, PersistentRemapId.FnGetMapping, (byte)(cid >> 8), (byte)cid, PersistentRemapId.CurrentHost);
+            if (gm != null) Console.WriteLine($"      mapping: {LogiKeyboard.ParseMapping(cid, gm.Params)} status 0x{gm.Params[7]:X2} raw {Hex(gm.Params[..8])}");
+        }
+    }
 }
 
 Console.WriteLine("\nDone.");

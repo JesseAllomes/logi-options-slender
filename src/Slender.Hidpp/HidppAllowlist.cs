@@ -38,6 +38,10 @@ public static class HidppAllowlist
         [0x2201] = 3,
         // ERGO K860 Fn inversion (multi-host variant, the only one the keyboard exposes): fn0 get, fn1 set. Keyboard path only.
         [0x40A3] = 1,
+        // ERGO K860 Persistent Remappable Action: fn0-3 are reads (capabilities, count, cid info, mapping).
+        // fn4 (set mapping) and fn5 (reset) WRITE PERSISTENT KEYBOARD MEMORY that survives power cycles and applies on every
+        // PC. Only LogiKeyboard's onboard methods may call them (keyboard path only). See docs/protocol.md.
+        [PersistentRemapId.Feature] = PersistentRemapId.FnReset,
     };
 
     public static bool IsAllowed(ushort featureId, byte function) =>
