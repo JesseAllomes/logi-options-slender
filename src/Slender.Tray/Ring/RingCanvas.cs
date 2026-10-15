@@ -358,6 +358,14 @@ internal sealed unsafe class RingCanvas : IDisposable
             ((delegate* unmanaged<nint, int, int>)Slot(format, 3))(format, align < 0 ? 0 : align > 0 ? 1 : 2); // text alignment
             ((delegate* unmanaged<nint, int, int>)Slot(format, 4))(format, 2); // paragraph: centred vertically
             ((delegate* unmanaged<nint, int, int>)Slot(format, 5))(format, 1); // no wrap
+            // Trim to the layout width with an ellipsis: DWRITE_TRIMMING { granularity = character (1), delimiter = 0, delimiterCount = 0 }.
+            var trimming = stackalloc int[3] { 1, 0, 0 };
+            nint sign = 0;
+            if (((delegate* unmanaged<nint, nint, nint*, int>)Slot(_dwrite, 20))(_dwrite, format, &sign) >= 0 && sign != 0)
+            {
+                ((delegate* unmanaged<nint, int*, nint, int>)Slot(format, 9))(format, trimming, sign); // SetTrimming
+                Release(sign); // the format holds its own reference
+            }
         }
         _formats[key] = format;
         return format;

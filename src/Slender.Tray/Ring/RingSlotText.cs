@@ -100,7 +100,7 @@ public static class RingSlotText
 
     /// <summary>
     /// The file whose icon the slot shows: "file:path", or a Launch target that is an exe or shortcut when no icon is set. Null otherwise.
-    /// Network paths are never probed.
+    /// Only local drives are used: UNC paths (either slash) and mapped network drives are never probed.
     /// </summary>
     public static string? IconFile(RingSlot slot)
     {
@@ -110,13 +110,31 @@ public static class RingSlotText
         else if (!slot.IsFolder && slot.Action is ActionSpec.Launch l && !IsUrl(l.Target)
             && (l.Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || l.Target.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)))
             path = l.Target;
-        if (path is null || path.StartsWith(@"\\", StringComparison.Ordinal) || !Path.IsPathFullyQualified(path)) return null;
+        if (path is null || !IsLocal(path)) return null;
         return path;
     }
 
-    /// <summary>Cuts text to about <paramref name="maxChars"/> characters with an ellipsis.</summary>
-    public static string Fit(string text, int maxChars) =>
-        text.Length <= maxChars || maxChars < 2 ? text : string.Concat(text.AsSpan(0, maxChars - 1).TrimEnd(), "…");
+    private static bool IsLocal(string path)
+    {
+        if (path.StartsWith(@"\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal)
+            || path.StartsWith(@"\/", StringComparison.Ordinal) || path.StartsWith(@"/\", StringComparison.Ordinal)) return false;
+        if (!Path.IsPathFullyQualified(path)) return false;
+        try
+        {
+            var root = Path.GetPathRoot(path);
+            return root is not null && new DriveInfo(root).DriveType is not (DriveType.Network or DriveType.NoRootDirectory);
+        }
+        catch (Exception e) when (e is ArgumentException or IOException) { return false; }
+    }
+
+    /// <summary>Cuts text to about <paramref name="maxChars"/> characters with an ellipsis, never splitting a surrogate pair.</summary>
+    public static string Fit(string text, int maxChars)
+    {
+        if (text.Length <= maxChars || maxChars < 2) return text;
+        int cut = maxChars - 1;
+        if (char.IsHighSurrogate(text[cut - 1])) cut--;
+        return string.Concat(text.AsSpan(0, cut).TrimEnd(), "…");
+    }
 
     private static bool IsUrl(string target) => target.Contains("://", StringComparison.Ordinal) || target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase);
 

@@ -56,6 +56,16 @@ public sealed class RingLayoutTests
     }
 
     [Fact]
+    public void Ring_larger_than_the_work_area_is_centred_on_it()
+    {
+        // Bezel Large extent 180 DIP at 200% = 360 px; the 720 px ring does not fit a 600 x 500 work area.
+        var large = RingLayout.Metrics(RingStyle.Bezel, RingSize.Large);
+        var (x, y) = RingLayout.Place(RingPosition.AtCursor, 10, 10, 0, 0, 600, 500, large, 2.0);
+        Assert.Equal(300, x);
+        Assert.Equal(250, y);
+    }
+
+    [Fact]
     public void Ring_slots_folders_appearance_and_text_round_trip()
     {
         string dir = Path.Combine(Path.GetTempPath(), "slender-ring-" + Guid.NewGuid().ToString("N"));

@@ -146,8 +146,9 @@ internal static class RingRenderer
             var dx = cos > 0.3 ? -14 * k : cos < -0.3 ? 14 * k : 0;
             var ty = sin < -0.9 ? y - 8 * k : sin > 0.9 ? y + 4 * k : y - 5 * k;
             var name = cell.IsEmpty ? "Empty" : cell.Name;
-            c.HaloText(RingSlotText.Fit(name, 18), RingFont.Label, 15 * k, x + dx, ty - 4 * k, cell.IsEmpty ? Muted : Ink, Paper, align, 150 * k);
-            if (!cell.IsEmpty) c.HaloText(RingSlotText.Fit(cell.Shortcut, 22), RingFont.Mono, 10.5 * k, x + dx, ty + 13 * k, Muted, Paper, align, 150 * k);
+            var room = align == 0 ? 150 * k : m.Extent - Math.Abs(x + dx - cx) - 4 * k;
+            c.HaloText(RingSlotText.Fit(name, 18), RingFont.Label, 15 * k, x + dx, ty - 4 * k, cell.IsEmpty ? Muted : Ink, Paper, align, Math.Min(150 * k, room));
+            if (!cell.IsEmpty) c.HaloText(RingSlotText.Fit(cell.Shortcut, 22), RingFont.Mono, 10.5 * k, x + dx, ty + 13 * k, Muted, Paper, align, Math.Min(150 * k, room));
         }
         else if (f.FolderName is { } folder)
             c.HaloText(RingSlotText.Fit(folder, 16), RingFont.Label, 13 * k, cx, cy + 26 * k, Ink, Paper, maxWidth: 120 * k);
