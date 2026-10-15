@@ -18,4 +18,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Cap the gen0 budget: tray keeps ~0.6 MB live but reserves ~20 MB of GC space otherwise (docs/memory.md #2). -->
+    <RuntimeHostConfigurationOption Include="System.GC.Gen0MaxBudget" Value="1048576" />
+  </ItemGroup>
+
 </Project>
