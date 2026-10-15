@@ -24,6 +24,8 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "excel" => new ActionSpec.Excel(ParseCommand(ReadString(root, "command"))),
             "mouseButton" => new ActionSpec.MouseButton(ReadString(root, "button")),
             "actionsRing" => new ActionSpec.ActionsRing(),
+            "launch" => new ActionSpec.Launch(ReadString(root, "target"), ReadOptionalString(root, "arguments")),
+            "disabled" => new ActionSpec.Disabled(),
             _ => throw new FormatException($"Unknown action type '{type}'."),
         };
     }
@@ -51,6 +53,14 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.ActionsRing:
                 writer.WriteString("type", "actionsRing");
                 break;
+            case ActionSpec.Launch launch:
+                writer.WriteString("type", "launch");
+                writer.WriteString("target", launch.Target);
+                if (launch.Arguments is not null) writer.WriteString("arguments", launch.Arguments);
+                break;
+            case ActionSpec.Disabled:
+                writer.WriteString("type", "disabled");
+                break;
             default:
                 throw new NotSupportedException($"Unsupported action {value.GetType().Name}.");
         }
@@ -67,6 +77,9 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
 
         throw new FormatException($"Missing string property '{name}'.");
     }
+
+    private static string? ReadOptionalString(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out JsonElement el) && el.ValueKind == JsonValueKind.String ? el.GetString() : null;
 
     private static ExcelCommand ParseCommand(string text)
     {

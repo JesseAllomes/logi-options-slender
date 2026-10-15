@@ -18,17 +18,17 @@ public sealed partial class MainWindow
 
     private static readonly PickerTab[] MouseTabs =
     [
-        new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("default", "Default"),
+        new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
     ];
 
     private static readonly PickerTab[] ThumbTabs =
     [
-        new("twoway", "Two-way"), new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("default", "Default"),
+        new("twoway", "Two-way"), new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
     ];
 
     private static readonly PickerTab[] KeyboardTabs =
     [
-        new("keys", "Keys"), new("app", "App"), new("media", "Media"), new("default", "Default"),
+        new("keys", "Keys"), new("app", "App"), new("media", "Media"), new("more", "More"), new("default", "Default"),
     ];
 
     /// <summary>
@@ -64,6 +64,7 @@ public sealed partial class MainWindow
             ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
+            ActionSpec.Launch or ActionSpec.Disabled => "more",
             _ => "default",
         };
 
@@ -130,6 +131,8 @@ public sealed partial class MainWindow
                 return OptionList(ActionCatalog.ExcelOptions, own, commit);
             case "ring":
                 return OptionList(ActionCatalog.RingOptions, own, commit);
+            case "more":
+                return MoreTab(info, own, commit);
             case "app":
                 return OptionList(ActionCatalog.KeyboardAppOptions, own, commit);
             case "media":
@@ -149,6 +152,65 @@ public sealed partial class MainWindow
                 var option = new ActionOption(text, new ActionSpec.None());
                 return OptionList([option], own is null ? new ActionSpec.None() : null, a => commit(null));
         }
+    }
+
+    /// <summary>
+    /// "Turn off" plus (not for the thumb wheel) "Open app or file...". A .lnk is launched as is, so Windows resolves it and keeps
+    /// its arguments. A URL, folder or Store app ("shell:AppsFolder\AUMID") can be typed instead of browsed.
+    /// </summary>
+    private (FrameworkElement Content, FrameworkElement? Focus) MoreTab(ControlInfo info, ActionSpec? own, Action<ActionSpec?> commit)
+    {
+        (FrameworkElement off, FrameworkElement? focus) = OptionList(ActionCatalog.OffOptions, own, commit);
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(off);
+        if (info.Id == DeviceIds.ThumbWheelPseudoId)
+        {
+            return (panel, focus);
+        }
+
+        string current = (own as ActionSpec.Launch)?.Target ?? string.Empty;
+        var browse = new Button { Content = "Open app or file...", Style = Ui.Res<Style>("QuietButtonStyle") };
+        var box = new TextBox { PlaceholderText = "Or type a URL, folder or app path", Text = current };
+        var save = new Button { Content = "Save", Style = Ui.Res<Style>("PrimaryPillStyle"), IsEnabled = false };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, "URL, folder or app path to open");
+
+        box.TextChanged += (_, _) => save.IsEnabled = box.Text.Trim().Length > 0 && box.Text.Trim() != current;
+        void Save()
+        {
+            string text = box.Text.Trim().Trim('"');
+            if (text.Length > 0)
+            {
+                commit(new ActionSpec.Launch(text));
+            }
+        }
+
+        save.Click += (_, _) => Save();
+        box.KeyDown += (_, e) =>
+        {
+            if (e.Key == VirtualKey.Enter)
+            {
+                e.Handled = true;
+                Save();
+            }
+        };
+        browse.Click += async (_, _) =>
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, _hwnd);
+            picker.FileTypeFilter.Add("*");
+            Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
+            if (file is not null)
+            {
+                commit(new ActionSpec.Launch(file.Path));
+            }
+        };
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        row.Children.Add(save);
+        panel.Children.Add(browse);
+        panel.Children.Add(box);
+        panel.Children.Add(row);
+        return (panel, focus);
     }
 
     private static (FrameworkElement Content, FrameworkElement? Focus) OptionList(IReadOnlyList<ActionOption> options, ActionSpec? current, Action<ActionSpec?> commit)
