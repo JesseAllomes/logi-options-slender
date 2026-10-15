@@ -4,7 +4,15 @@ using Slender.Engine.Config;
 namespace Slender.Tray;
 
 /// <summary>What the tray knows right now; StatusPublisher turns it into a SlenderStatus.</summary>
-public sealed record StatusSnapshot(bool MouseConnected, int? MouseBattery, bool MouseCharging, string? ForegroundApp);
+public sealed record StatusSnapshot(
+    bool MouseConnected,
+    int? MouseBattery,
+    bool MouseCharging,
+    string? ForegroundApp,
+    bool KeyboardConnected = false,
+    int? KeyboardBattery = null,
+    bool KeyboardCharging = false,
+    bool PausedForOptionsPlus = false);
 
 /// <summary>
 /// Writes SlenderStatus to status.json (atomic replace) whenever Changed() is called, at most once per interval.
@@ -135,10 +143,9 @@ public sealed class StatusPublisher : IDisposable
         return new SlenderStatus(
             [
                 new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging),
-                // Keyboard support is a later milestone: report it as not connected.
-                new DeviceState("ergo-k860", "ERGO K860", Connected: false, BatteryPercent: null, Charging: false),
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging),
             ],
-            _optionsValue,
+            _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,
             now);
     }

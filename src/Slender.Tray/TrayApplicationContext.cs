@@ -14,7 +14,14 @@ public sealed class TrayApplicationContext : ApplicationContext
     private static readonly int BatteryIntervalMs = (int)TimeSpan.FromMinutes(5).TotalMilliseconds;
 
     private readonly IConfigStore _store;
+    private static readonly int KeyboardBatteryIntervalMs = (int)TimeSpan.FromMinutes(10).TotalMilliseconds;
+
     private readonly ILogiMouse? _mouse;
+    private readonly ILogiKeyboard? _keyboard;
+    private readonly OptionsPlusGuard? _guard;
+    private readonly System.Windows.Forms.Timer _guardTimer;
+    private readonly System.Windows.Forms.Timer _keyboardTimer;
+    private readonly ToolStripMenuItem _keyboardItem;
     private readonly IForegroundApp? _foreground;
     private readonly StatusPublisher _status;
     private readonly ConfigFileWatcher? _watcher;
@@ -32,15 +39,22 @@ public sealed class TrayApplicationContext : ApplicationContext
     private SlenderConfig _config;
     private bool _connected;
     private BatteryStatus? _battery;
+    private bool _keyboardConnected;
+    private BatteryStatus? _keyboardBattery;
+    private bool _paused;
     private bool _disposed;
 
-    public TrayApplicationContext(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null, IForegroundApp? foreground = null, ILog? log = null)
+    public TrayApplicationContext(IConfigStore store, ILogiMouse? mouse, StartupRegistration? startup = null, IForegroundApp? foreground = null, ILog? log = null, ILogiKeyboard? keyboard = null, OptionsPlusGuard? guard = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _mouse = mouse;
+        _keyboard = keyboard;
+        _guard = guard;
         _foreground = foreground;
         _status = new StatusPublisher(
-            () => new StatusSnapshot(_connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName),
+            () => new StatusSnapshot(
+                _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
+                _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused),
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
         _config = store.Load();
@@ -50,6 +64,7 @@ public sealed class TrayApplicationContext : ApplicationContext
 
         _menu = new ContextMenuStrip();
         _statusItem = new ToolStripMenuItem { Enabled = false };
+        _keyboardItem = new ToolStripMenuItem { Enabled = false };
         _excelItem = new ToolStripMenuItem("Excel: thumb wheel scrolls columns") { CheckOnClick = true };
         _excelItem.Click += OnExcelClicked;
         _hapticsItem = new ToolStripMenuItem("Haptics") { CheckOnClick = true };
@@ -63,6 +78,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         _menu.Items.AddRange(new ToolStripItem[]
         {
             _statusItem,
+            _keyboardItem,
             _excelItem,
             _hapticsItem,
             _launchItem,
@@ -81,6 +97,12 @@ public sealed class TrayApplicationContext : ApplicationContext
         // Timer exists but stays stopped until a mouse is connected.
         _batteryTimer = new System.Windows.Forms.Timer { Interval = BatteryIntervalMs };
         _batteryTimer.Tick += (_, _) => _ = RefreshBatteryAsync();
+
+        // Both timers exist but stay stopped until needed (keyboard connected / Options+ detected).
+        _keyboardTimer = new System.Windows.Forms.Timer { Interval = KeyboardBatteryIntervalMs };
+        _keyboardTimer.Tick += (_, _) => _ = RefreshKeyboardBatteryAsync();
+        _guardTimer = new System.Windows.Forms.Timer { Interval = (int)OptionsPlusGuard.PollInterval.TotalMilliseconds };
+        _guardTimer.Tick += (_, _) => EvaluateGuard();
 
         RefreshChecks();
         UpdateStatus();
@@ -103,6 +125,12 @@ public sealed class TrayApplicationContext : ApplicationContext
             SetConnected(_mouse.IsConnected);
         }
 
+        if (_keyboard is not null)
+        {
+            _keyboard.ConnectionChanged += OnKeyboardConnectionChanged;
+            SetKeyboardConnected(_keyboard.IsConnected);
+        }
+
         if (_foreground is not null)
         {
             _foreground.Changed += OnForegroundChanged;
@@ -114,6 +142,7 @@ public sealed class TrayApplicationContext : ApplicationContext
             _watcher.Changed += OnConfigFileChanged;
         }
 
+        EvaluateGuard();
         _status.PublishNow();
         _tray.Visible = true;
     }
@@ -138,13 +167,24 @@ public sealed class TrayApplicationContext : ApplicationContext
                 _foreground.Changed -= OnForegroundChanged;
             }
 
+            if (_keyboard is not null)
+            {
+                _keyboard.ConnectionChanged -= OnKeyboardConnectionChanged;
+            }
+
             _watcher?.Dispose();
+            _guardTimer.Stop();
+            _guardTimer.Dispose();
+            _keyboardTimer.Stop();
+            _keyboardTimer.Dispose();
             _batteryTimer.Stop();
             _batteryTimer.Dispose();
 
             // Leave an honest last status behind: the tray is gone, so nothing is connected through it.
             _connected = false;
             _battery = null;
+            _keyboardConnected = false;
+            _keyboardBattery = null;
             _status.PublishNow();
             _status.Dispose();
             _lifetime.Cancel();
@@ -232,6 +272,86 @@ public sealed class TrayApplicationContext : ApplicationContext
         _status.Changed();
     }
 
+    private void OnKeyboardConnectionChanged(object? sender, bool connected) =>
+        Post(() => SetKeyboardConnected(connected));
+
+    private void SetKeyboardConnected(bool connected)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _keyboardConnected = connected;
+        if (connected)
+        {
+            _keyboardTimer.Start();
+            _ = RefreshKeyboardBatteryAsync();
+        }
+        else
+        {
+            _keyboardTimer.Stop();
+            _keyboardBattery = null;
+        }
+
+        UpdateStatus();
+        _status.Changed();
+    }
+
+    private async Task RefreshKeyboardBatteryAsync()
+    {
+        if (_disposed || !_keyboardConnected || _keyboard is null)
+        {
+            return;
+        }
+
+        try
+        {
+            BatteryStatus? status = await _keyboard.GetBatteryAsync(_lifetime.Token);
+            if (_disposed || !_keyboardConnected)
+            {
+                return;
+            }
+
+            _keyboardBattery = status ?? _keyboardBattery;
+            UpdateStatus();
+            _status.Changed();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // Keep the last known value.
+        }
+    }
+
+    /// <summary>Probes Options+; starts the engines once it is gone. The 30 s timer runs only while paused.</summary>
+    private void EvaluateGuard()
+    {
+        if (_guard is null || _disposed)
+        {
+            return;
+        }
+
+        bool paused = _guard.Evaluate();
+        if (paused)
+        {
+            _guardTimer.Start();
+        }
+        else
+        {
+            _guardTimer.Stop();
+        }
+
+        if (paused != _paused)
+        {
+            _paused = paused;
+            UpdateStatus();
+            _status.Changed();
+        }
+    }
+
     private async Task RefreshBatteryAsync()
     {
         if (_disposed || !_connected || _mouse is null)
@@ -262,11 +382,10 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void UpdateStatus()
     {
-        _statusItem.Text = !_connected
-            ? "MX Master 4 — not connected"
-            : _battery is { } b
-                ? $"MX Master 4 — connected, {b.Percent}%{(b.Charging ? " charging" : string.Empty)}"
-                : "MX Master 4 — connected";
+        _statusItem.Text = _paused
+            ? TrayText.Paused
+            : TrayText.Device("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false);
+        _keyboardItem.Text = TrayText.Device("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false);
     }
 
     private void RefreshChecks()

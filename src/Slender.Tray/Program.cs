@@ -8,6 +8,22 @@ namespace Slender.Tray;
 
 static class Program
 {
+    private static bool IsOptionsPlusRunning()
+    {
+        Process[] found = Process.GetProcessesByName(StatusPublisher.OptionsPlusProcess);
+        try
+        {
+            return found.Length > 0;
+        }
+        finally
+        {
+            foreach (Process p in found)
+            {
+                p.Dispose();
+            }
+        }
+    }
+
     [STAThread]
     static void Main()
     {
@@ -18,15 +34,6 @@ static class Program
         }
 
         ApplicationConfiguration.Initialize();
-
-        // Options+ and Slender must never both own HID++ diverts (docs/switch-over.md).
-        if (Process.GetProcessesByName("logioptionsplus_agent").Length > 0)
-        {
-            MessageBox.Show(
-                "Logi Options+ is running. Quit it first; both cannot control the mouse at the same time.",
-                "Slender", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
 
         var log = new FileLog();
         log.Info("Slender starting");
@@ -49,7 +56,14 @@ static class Program
         using var keyboard = new LogiKeyboard(new WindowsHidTransportFactory(WindowsHidTransportFactory.ErgoK860ProductIds));
         using var keys = new KeyboardRouter(keyboard, foreground, executor, config, log);
 
-        using var context = new TrayApplicationContext(store, mouse, foreground: foreground, log: log);
+        // Options+ and Slender must never both own HID++ diverts (docs/switch-over.md): the engines wait for it to go.
+        var guard = new OptionsPlusGuard(IsOptionsPlusRunning, () =>
+        {
+            engine.Start();
+            keys.Start();
+        });
+
+        using var context = new TrayApplicationContext(store, mouse, foreground: foreground, log: log, keyboard: keyboard, guard: guard);
         context.ConfigChanged += (_, changed) =>
         {
             engine.ApplyConfig(changed);
@@ -57,9 +71,6 @@ static class Program
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
         };
-        engine.Start();
-        keys.Start();
-
         Application.Run(context);
         log.Info("Slender stopping");
     }

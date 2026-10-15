@@ -50,7 +50,11 @@ Rollback: re-run with all features, `-Keep analytics,flow,sso,update,dfu,backlig
    ```powershell
    .\scripts\Repair-ExcelAddins.ps1 -Apply -DisableLogiAddins
    ```
-4. Start Slender.
+4. Install and start Slender with the installer (see docs/install.md):
+   ```powershell
+   .\scripts\Install-Slender.ps1 -Apply -LaunchAtLogin
+   ```
+   If Options+ is still running, Slender starts paused (tray shows "Paused - Logi Options+ is running") and takes over within 30 seconds of Options+ exiting.
 
 ## C. Full rollback to Options+
 
