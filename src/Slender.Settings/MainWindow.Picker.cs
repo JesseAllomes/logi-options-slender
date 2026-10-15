@@ -411,8 +411,15 @@ public sealed partial class MainWindow
         };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(recorder, "Key recorder. Press a shortcut.");
 
-        recorder.PreviewKeyDown += (_, e) =>
+        // Keys are captured anywhere in the picker while this tab is showing, not only when the recorder has focus:
+        // after clicking the Keys tab, focus can stay on the tab strip and the shortcut would otherwise be lost.
+        void OnKey(object sender, KeyRoutedEventArgs e)
         {
+            if (!recorder.IsLoaded || e.Handled)
+            {
+                return;
+            }
+
             ushort vk = (ushort)e.Key;
             bool ctrl = Down(VirtualKey.Control);
             bool alt = Down(VirtualKey.Menu);
@@ -424,6 +431,12 @@ public sealed partial class MainWindow
             {
                 e.Handled = true;
                 return;
+            }
+
+            object? focused = recorder.XamlRoot is null ? null : FocusManager.GetFocusedElement(recorder.XamlRoot);
+            if (plain && (vk == (ushort)VirtualKey.Enter || vk == (ushort)VirtualKey.Space) && (ReferenceEquals(focused, save) || ReferenceEquals(focused, cancel)))
+            {
+                return; // let Save and Cancel act on their own keys
             }
 
             if (plain && vk == (ushort)VirtualKey.Enter)
@@ -453,7 +466,20 @@ public sealed partial class MainWindow
             hint.Text = "Press Enter to save, or press other keys to change it.";
             recorded = chord;
             Show();
-        };
+        }
+
+        if (flyout.Content is UIElement pickerRoot)
+        {
+            pickerRoot.PreviewKeyDown += OnKey;
+            recorder.Unloaded += (_, _) => pickerRoot.PreviewKeyDown -= OnKey;
+        }
+        else
+        {
+            recorder.PreviewKeyDown += OnKey;
+        }
+
+        // Focus once the recorder is really in the tree; Focus() before that is silently ignored.
+        recorder.Loaded += (_, _) => recorder.Focus(FocusState.Keyboard);
 
         save.Click += (_, _) =>
         {
