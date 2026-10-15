@@ -3,6 +3,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Slender.Engine\Slender.Engine.csproj" />
     <ProjectReference Include="..\Slender.Hidpp\Slender.Hidpp.csproj" />
+    <ProjectReference Include="..\Slender.Sync\Slender.Sync.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -3,6 +3,8 @@ using Slender.Engine;
 using Slender.Engine.Config;
 using Slender.Hidpp;
 using Slender.Hidpp.Transport;
+using Slender.Sync;
+using Velopack;
 
 namespace Slender.Tray;
 
@@ -27,6 +29,20 @@ static class Program
     [STAThread]
     static void Main()
     {
+        // Velopack install/update/uninstall hooks. Must run first: during setup the exe is started with hook arguments and exits here.
+        VelopackApp.Build()
+            .OnBeforeUninstallFastCallback(_ =>
+            {
+                try
+                {
+                    StartupRegistration.ForCurrentProcess().Disable(); // the launch-at-login Run value would otherwise dangle
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                {
+                }
+            })
+            .Run();
+
         using var singleInstance = new SingleInstance();
         if (!singleInstance.IsFirstInstance)
         {
@@ -37,7 +53,7 @@ static class Program
 
         var log = new FileLog();
         log.Info("Slender starting");
-        IConfigStore store = new JsonConfigStore();
+        IConfigStore store = SyncPaths.Override is { } configDir ? new JsonConfigStore(configDir) : new JsonConfigStore(); // SLENDER_CONFIG_DIR: test hook shared with the settings app
 
         var config = store.Load();
         using var mouse = new LogiMouse(new WindowsHidTransportFactory(),
@@ -66,8 +82,15 @@ static class Program
         });
 
         using var context = new TrayApplicationContext(store, mouse, foreground: foreground, log: log, keyboard: keyboard, guard: guard);
+        // Settings sync (OneDrive app folder). Inert until the user has set up sign-in and signed in; never blocks the tray.
+        SyncSettings syncSettings = SyncSettings.LoadDefault();
+        using var sync = new BackgroundSync(SyncServiceFactory.Create(), log);
+        _ = sync.StartAsync();
+        _ = SelfUpdate.CheckAsync(syncSettings.UpdateSource, log);
+
         context.ConfigChanged += (_, changed) =>
         {
+            sync.NotifyConfigChanged();
             engine.ApplyConfig(changed);
             keys.ApplyConfig(changed);
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
