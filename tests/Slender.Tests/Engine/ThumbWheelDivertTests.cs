@@ -304,6 +304,41 @@ public class ThumbWheelDivertTests
     }
 
     [Fact]
+    public void Tab_mode_keeps_ctrl_held_when_the_touch_flag_drops_mid_turn()
+    {
+        var cfg = WithDefault(new() { [ControlId.ModeShift] = new ActionSpec.ToggleThumbWheelMode() });
+        var exec = new FakeKeyExecutor();
+        var r = new Rig(cfg, "msedge", executor: exec);
+        r.Engine.ToggleThumbWheelMode();
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+
+        r.Mouse.Rotate(0, touch: true);
+        r.Mouse.Rotate(120, touch: true);
+        r.Mouse.Rotate(120, touch: false); // touch flag drops while still turning
+        r.Mouse.Rotate(120, touch: true);
+
+        Assert.Equal(1, exec.Events.Count(e => e.Key.Vk == 0xA2 && !e.Up)); // Ctrl pressed once for the whole turn
+        Assert.DoesNotContain(exec.Events, e => e.Key.Vk == 0xA2 && e.Up);
+        Assert.Equal(3, exec.Events.Count(e => e.Key.Vk == 0x09 && !e.Up));
+    }
+
+    [Fact]
+    public void Outside_tab_mode_lifting_the_thumb_releases_a_held_wheel_shortcut()
+    {
+        var cfg = WithDefault(new() { [SlenderEngine.ThumbWheelBindingId] = new ActionSpec.Keys("Ctrl+Tab") });
+        var exec = new FakeKeyExecutor();
+        var r = new Rig(cfg, "notepad", executor: exec);
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+
+        r.Mouse.Rotate(0, touch: true);
+        r.Mouse.Rotate(120, touch: true);
+        Assert.DoesNotContain(exec.Events, e => e.Key.Vk == 0xA2 && e.Up);
+        r.Mouse.Rotate(0, touch: false); // thumb lifted
+
+        Assert.Contains(exec.Events, e => e.Key.Vk == 0xA2 && e.Up);
+    }
+
+    [Fact]
     public void Touch_only_divert_still_side_scrolls()
     {
         var exec = new FakeKeyExecutor();

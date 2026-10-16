@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=85 -->
+<!-- drainclamp-build: state; schema=1; generation=86 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -105,7 +105,6 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T04:29:13+00:00 72b3ac42 m20 Actions Ring merged (6e486cf, 661 tests): 3 switchable styles, folders, appearance page, import; SlenderSetup 1.1.0 built; next = user installs and runs m13/c2 live pass covering m17-m22 + ring
 - 2026-10-15T04:56:47+00:00 030f8f86 In-app updates merged (73bf370, 687 tests); SlenderSetup 1.1.1 built with baked releases source; user installs once, later updates arrive in-app
 - 2026-10-15T05:27:40+00:00 401e20f1 Live-test fixes merged (0ec5761, 703 tests): ring preview crash, plugin-service ring import, key recorder; SlenderSetup 1.1.2 built as first in-app update
 - 2026-10-15T06:05:08+00:00 7a156dbb Live pass on 1.1.2: in-app update worked end to end, real ring imported, no new errors; 1 h memory check pending
@@ -125,4 +124,5 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 - 2026-10-16T01:34:33+00:00 2ebfc1d9 m33 built (user idea: hold Ctrl while the wheel turns, send only Tab): WheelKeyHold + engine release triggers, 1402 tests. Known gap left open: switching back from tab mode drops side-scroll turns until the wheel pauses 150 ms (undivert waits for quiet); not fixed yet
 - 2026-10-16T01:45:14+00:00 3369d1a2 m34 built (user: every update reset Fn lock): config fnLock was true and was pushed on every start, overriding Fn+Esc. Now the keyboard owns it; 1410 tests. Decision: keyboard state wins, Slender mirrors it
 - 2026-10-16T01:52:32+00:00 c233d22d m35 built: unclaimed diverted turns pass through as native side scroll, 1413 tests. Assumption to check live: diverted 0x2150 rotation already follows the invert bit (user has invert on); if the side scroll right after leaving tab mode runs the wrong way, negate in PassThroughSideScroll
+- 2026-10-16T02:16:48+00:00 d066df98 m33 follow-up (user: Edge tab scroll fast at first, then old behaviour): likely the unconfirmed 0x2150 touch flag dropping mid-turn released Ctrl. Tab mode now ignores touch-up; quiet timer/buttons/app switch/flip still release. Wheel shortcuts outside tab mode keep touch-up release (user scoped it). 1415 tests
 <!-- /DC:LOG -->

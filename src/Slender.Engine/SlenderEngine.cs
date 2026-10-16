@@ -742,7 +742,9 @@ public sealed class SlenderEngine : IDisposable
             if (_mouse.ThumbWheelTouchSupported == false) return;
             var r = _touch.OnReport(e.Touch, e.Rotation, _clock());
             if (r.Down) _queue.Post(HandleTouchDown);
-            if (r.Up) ReleaseHoldSoon(); // thumb off the wheel: the burst is over
+            // Thumb off the wheel ends a held burst, except in tab mode: there the touch flag can drop mid-turn, which let Ctrl
+            // go after the first few tabs, so tab mode lets go only once the wheel is quiet (or on a button, app switch, flip).
+            if (r.Up && ActiveSecond() is null) ReleaseHoldSoon();
             if (r.Up) _queue.Post(() => HandleTouchUp(r.Tap));
         }
         catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
