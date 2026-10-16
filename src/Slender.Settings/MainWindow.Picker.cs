@@ -496,7 +496,8 @@ public sealed partial class MainWindow
 
         list.ItemClick += (_, e) =>
         {
-            ActionOption? picked = (e.ClickedItem as ListViewItem)?.Tag as ActionOption ?? e.ClickedItem as ActionOption;
+            ActionOption? picked = ClickedItems.Find<ActionOption>(e.ClickedItem,
+                list.Items.OfType<ListViewItem>().Select(i => ((object)i, (object?)i.Content, (object?)i.Tag)));
             if (picked is not null)
             {
                 commit(picked.Action);

@@ -383,7 +383,7 @@ public sealed partial class MainWindow
 
         grid.ItemClick += (_, e) =>
         {
-            if ((e.ClickedItem as GridViewItem)?.Tag is RingGlyph g)
+            if (ClickedItems.Find<RingGlyph>(e.ClickedItem, grid.Items.OfType<GridViewItem>().Select(i => ((object)i, (object?)i.Content, (object?)i.Tag))) is { } g)
             {
                 _config.Update(c => RingOps.SetIcon(c, RingApp, path, RingGlyphs.GlyphIcon(g.Code)));
             }
