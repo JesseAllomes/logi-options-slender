@@ -18,7 +18,7 @@ public class DualThumbWheelTests
         public Rig(SlenderConfig cfg, string? process = "msedge")
         {
             Fg.ProcessName = process;
-            Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg, new ListLog(), new InlineQueue(), () => Now);
+            Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg, new ListLog(), new InlineQueue(), () => Now) { ExcelColumnScrolling = true };
             Engine.ThumbWheelModeChanged += (_, e) => Modes.Add(e);
             Engine.Start();
         }

@@ -532,10 +532,6 @@ public sealed partial class MainWindow
     {
         ControlInfo info = item.Info;
         (ActionSpec? action, bool inherited) = CurrentProfile.Effective(_kind, info.Id);
-        bool excelThumb = string.Equals(_app, "excel", StringComparison.OrdinalIgnoreCase)
-            && info.Id == DeviceIds.ThumbWheelPseudoId
-            && ProfileOps.Own(_config.Config, _app, _kind, info.Id) is null
-            && _config.Config.Excel.ThumbWheelScrollsColumns;
         HorizontalAlignment align = leftAligned ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         var panel = new StackPanel { Spacing = 1, HorizontalAlignment = align, VerticalAlignment = VerticalAlignment.Center };
         var name = Ui.Text(info.Name, 11.5, Ui.Muted);
@@ -543,12 +539,7 @@ public sealed partial class MainWindow
         panel.Children.Add(name);
 
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7, HorizontalAlignment = align };
-        if (excelThumb)
-        {
-            int n = _config.Config.Excel.ColumnsPerNotch;
-            row.Children.Add(Ui.Text($"Scroll columns · {n} per notch", 13));
-        }
-        else if (action is null)
+        if (action is null)
         {
             row.Children.Add(Ui.Text(_app is null ? info.NativeText : info.NativeText + (ProfileOps.IsPassThrough(_config.Config, _app, _kind, info.Id) ? string.Empty : " · same as All apps"), 13, _app is null ? Ui.Ink : Ui.Muted));
         }

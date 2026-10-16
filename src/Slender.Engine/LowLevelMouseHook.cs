@@ -23,11 +23,24 @@ public sealed class LowLevelMouseHook : IInputHook
     private int _anchorX, _anchorY;
     private bool _disposed;
 
+    private readonly ButtonChord _chord;
+
     public LowLevelMouseHook(ILog? log = null)
     {
         _log = log ?? NullLog.Instance;
         _proc = HookProc;
+        _chord = new ButtonChord((b, down) => KeyInjector.SendMouseButton(b == ChordButton.Left ? "left" : "right", down),
+            WindowIntegrity.CanInjectAt); // never hold a click back over an elevated window: its replay would be blocked
+        _chord.Changed += (_, active) =>
+        {
+            try { ButtonChordChanged?.Invoke(this, active); }
+            catch (Exception ex) { try { _log.Error("button chord handler failed", ex); } catch { } }
+        };
     }
+
+    public event EventHandler<bool>? ButtonChordChanged;
+
+    public void SetButtonChordEnabled(bool on) => _chord.Enabled = on;
 
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
@@ -107,6 +120,11 @@ public sealed class LowLevelMouseHook : IInputHook
                 var msg = (int)wParam;
                 if (msg == NativeMethods.WM_MOUSEMOVE)
                 {
+                    if (_chord.IsPending)
+                    {
+                        var moved = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                        if (!IsInjected(moved)) _chord.OnMove(moved.Pt.X, moved.Pt.Y); // a drag is starting: let the press go
+                    }
                     // Only while a gesture is held. Swallowed moves leave the cursor at the anchor, so each event's
                     // offset from the anchor is that event's own movement.
                     if (_captureMoves)
@@ -126,6 +144,12 @@ public sealed class LowLevelMouseHook : IInputHook
                 {
                     var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
                     if (!IsInjected(data) && RingMouse(msg, data)) return 1; // swallow
+                    if (!IsInjected(data) && msg != NativeMethods.WM_MOUSEWHEEL)
+                    {
+                        var button = msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_LBUTTONUP ? ChordButton.Left : ChordButton.Right;
+                        var down = msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_RBUTTONDOWN;
+                        if (_chord.OnButton(button, down, data.Pt.X, data.Pt.Y)) return 1; // held back, or part of a Left+Right chord
+                    }
                 }
                 else if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
@@ -196,6 +220,8 @@ public sealed class LowLevelMouseHook : IInputHook
         ButtonChanged = null;
         MouseMoved = null;
         RingInput = null;
+        ButtonChordChanged = null;
+        _chord.Enabled = false;
         _captureMoves = false;
         _ringCapture = false;
         if (t is null) return;

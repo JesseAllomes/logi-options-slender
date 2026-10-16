@@ -66,6 +66,8 @@ public sealed class SlenderEngine : IDisposable
     private int _burstSteps;                            // engine queue: steps sent in this burst
     private int _burstReports;                          // wheel reports seen during this burst (any thread)
     private volatile bool _unheldLogged;                // one 'not held' line per mode flip
+    private volatile bool _chordActive;                 // Left + Right held: the thumb wheel switches tabs
+    private long _sideRemainder;                        // engine queue: side scroll speed carry, in delta*percent units
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
         IActionExecutor executor, SlenderConfig config, ILog? log = null)
@@ -118,6 +120,8 @@ public sealed class SlenderEngine : IDisposable
         _hidSource.ThumbWheelRotated += OnRotation;
         _mouse.ThumbWheelMoved += OnThumbTouch;
         _hook.ButtonChanged += OnHookButton;
+        _hook.ButtonChordChanged += OnButtonChord;
+        _hook.SetButtonChordEnabled(_config.Pointer.TabScrollChord);
         _hook.MouseMoved += OnHookMove;
         _mouse.RawXyMoved += OnRawXy;
         _foreground.Changed += OnForegroundChanged;
@@ -133,6 +137,7 @@ public sealed class SlenderEngine : IDisposable
     public void ApplyConfig(SlenderConfig config)
     {
         _config = config;
+        _hook.SetButtonChordEnabled(config.Pointer.TabScrollChord);
         bool started;
         lock (_gate) started = _started;
         if (started) Rediverts(force: false);
@@ -623,10 +628,24 @@ public sealed class SlenderEngine : IDisposable
                 lock (_gate) if (_thumbHid) return;
             }
             var cfg = _config;
+            if (_chordActive)
+            {
+                // Left + Right held: Tab scroll. The app's tab pair (its second role), else next / previous tab.
+                e.Handled = true;
+                var own = ThumbWheelModes.SecondFor(cfg, _foreground.ProcessName);
+                var tabs = own is null ? ThumbWheelModes.Tabs : own with
+                {
+                    Forward = own.Forward is ActionSpec.None ? ThumbWheelModes.Tabs.Forward : own.Forward,
+                    Back = own.Back is ActionSpec.None ? ThumbWheelModes.Tabs.Back : own.Back,
+                };
+                var tabSteps = _secondAccumulator.AddScaled(e.Delta, cfg.Pointer.TabScrollSpeed, _clock());
+                if (tabSteps != 0) _queue.Post(() => RunSecond(tabs, tabSteps));
+                return;
+            }
             if (ActiveSecond() is { } second)
             {
                 e.Handled = true; // the second role owns the wheel: the native horizontal scroll never happens
-                var steps = _secondAccumulator.Add(e.Delta, 1, _clock());
+                var steps = _secondAccumulator.AddScaled(e.Delta, cfg.Pointer.TabScrollSpeed, _clock());
                 if (steps != 0) _queue.Post(() => RunSecond(second, steps));
                 return;
             }
@@ -645,15 +664,18 @@ public sealed class SlenderEngine : IDisposable
                 _queue.Post(() => RunWheelKeys(keys.Chord, notches));
                 return;
             }
-            if (!cfg.Excel.ThumbWheelScrollsColumns || _foreground.ProcessName != "excel")
+            if (!ExcelColumnScrolling || !cfg.Excel.ThumbWheelScrollsColumns || _foreground.ProcessName != "excel")
             {
                 // Nothing wants this turn. From the hook it goes on to Windows by itself. From HID++ the wheel is still diverted
                 // (just after leaving tab mode the switch back waits for the wheel to pause, or the app diverts it only for
                 // touch/tap), so the turn would be lost: send it on as the normal sideways scroll.
-                if (e.FromHid)
+                // A side scroll speed other than 100% swallows the native turn and sends a scaled one.
+                var speed = cfg.Pointer.SideScrollSpeed;
+                if (e.FromHid || speed != 100)
                 {
+                    if (!e.FromHid) e.Handled = true;
                     var delta = e.Delta;
-                    _queue.Post(() => PassThroughSideScroll(delta));
+                    _queue.Post(() => PassThroughSideScroll(delta, speed));
                 }
                 return;
             }
@@ -689,7 +711,8 @@ public sealed class SlenderEngine : IDisposable
     internal bool ThumbWheelDiverted { get { lock (_gate) return _thumbHid; } }
 
     private bool ThumbWheelWanted() =>
-        ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, ActiveSecond() is not null, _ringOpen, _mouse.ThumbWheelTouchSupported);
+        ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, ActiveSecond() is not null, _ringOpen, _mouse.ThumbWheelTouchSupported,
+            ExcelColumnScrolling);
 
     /// <summary>
     /// Recomputes whether the wheel should be diverted and applies it on the serialised divert chain. A change never happens
@@ -750,7 +773,7 @@ public sealed class SlenderEngine : IDisposable
             if (r.Down) _queue.Post(HandleTouchDown);
             // Thumb off the wheel ends a held burst, except in tab mode: there the touch flag can drop mid-turn, which let Ctrl
             // go after the first few tabs, so tab mode lets go only once the wheel is quiet (or on a button, app switch, flip).
-            if (r.Up && ActiveSecond() is null) ReleaseHoldSoon("thumb lifted");
+            if (r.Up && ActiveSecond() is null && !_chordActive) ReleaseHoldSoon("thumb lifted");
             if (r.Up) _queue.Post(() => HandleTouchUp(r.Tap));
         }
         catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
@@ -917,10 +940,33 @@ public sealed class SlenderEngine : IDisposable
         return (chord.Trim(), string.Join('+', parts));
     }
 
-    /// <summary>Engine queue: a diverted turn nothing claimed, sent on as WM_MOUSEHWHEEL (the mouse hook ignores injected input).</summary>
-    private void PassThroughSideScroll(int delta)
+    /// <summary>
+    /// Excel column scrolling (the thumb wheel moving whole columns in Excel). Off for now (user 2026-10-16): Excel gets the normal
+    /// side scroll. The code and its setting stay for later; tests turn it on.
+    /// </summary>
+    internal bool ExcelColumnScrolling { get; set; }
+
+    /// <summary>Left + Right chord from the hook: Tab scroll while held; Ctrl (if any) is let go when it ends.</summary>
+    private void OnButtonChord(object? sender, bool active)
     {
-        try { _executor.SendHorizontalWheel(delta); }
+        try
+        {
+            _chordActive = active;
+            if (active) _secondAccumulator.Reset();
+            else ReleaseHoldSoon("buttons released");
+        }
+        catch (Exception ex) { SafeLog("button chord handler failed", ex); }
+    }
+
+    /// <summary>Engine queue: a diverted turn nothing claimed, sent on as WM_MOUSEHWHEEL (the mouse hook ignores injected input).</summary>
+    private void PassThroughSideScroll(int delta, int speed)
+    {
+        if (_sideRemainder != 0 && Math.Sign(_sideRemainder) != Math.Sign(delta)) _sideRemainder = 0;
+        _sideRemainder += (long)delta * Math.Clamp(speed, PointerSettings.SpeedMin, PointerSettings.SpeedMax);
+        var send = (int)(_sideRemainder / 100);
+        _sideRemainder -= send * 100L;
+        if (send == 0) return;
+        try { _executor.SendHorizontalWheel(send); }
         catch (Exception ex) { _log.Error("side scroll pass-through failed", ex); }
     }
 
@@ -981,6 +1027,7 @@ public sealed class SlenderEngine : IDisposable
         {
             if (!_wheelHold.IsHolding) return;
             var quiet = _clock() - _lastRotation;
+            if (_chordActive) { ScheduleHoldRelease(WheelHoldReleaseMs); return; } // Ctrl stays down until the buttons go up
             if (quiet < WheelHoldReleaseMs) { ScheduleHoldRelease((int)(WheelHoldReleaseMs - quiet)); return; }
             ReleaseHold("wheel quiet");
         }
@@ -1095,6 +1142,7 @@ public sealed class SlenderEngine : IDisposable
         _hookSource.Dispose();
         _hidSource.Dispose();
         _hook.ButtonChanged -= OnHookButton;
+        _hook.ButtonChordChanged -= OnButtonChord;
         _hook.MouseMoved -= OnHookMove;
         AbortGesture();
         _foreground.Changed -= OnForegroundChanged;

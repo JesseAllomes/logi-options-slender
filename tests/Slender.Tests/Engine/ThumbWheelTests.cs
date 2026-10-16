@@ -37,7 +37,7 @@ public class ThumbWheelBindingTests
         public long Now;
         public Rig(SlenderConfig cfg)
         {
-            new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg, new ListLog(), new InlineQueue(), () => Now).Start();
+            new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg, new ListLog(), new InlineQueue(), () => Now) { ExcelColumnScrolling = true }.Start();
         }
     }
 

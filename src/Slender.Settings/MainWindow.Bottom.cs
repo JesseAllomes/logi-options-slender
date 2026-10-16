@@ -19,7 +19,7 @@ public sealed partial class MainWindow
     private InfoBar _infoBattery = null!;
 
     private ToggleSwitch? _smartShiftToggle;
-    private ToggleSwitch? _excelToggle;
+    private ToggleSwitch? _tabScrollToggle;
     private ToggleSwitch? _fnLockToggle;
     private readonly List<Rectangle> _notchBars = [];
 
@@ -98,7 +98,7 @@ public sealed partial class MainWindow
         BottomBarItems.Children.Clear();
         _notchBars.Clear();
         _smartShiftToggle = null;
-        _excelToggle = null;
+        _tabScrollToggle = null;
         _fnLockToggle = null;
 
         if (_kind == DeviceKind.Mouse)
@@ -106,8 +106,8 @@ public sealed partial class MainWindow
             BottomBarItems.Children.Add(LabelWith("Haptic feel", HapticNotches()));
             _smartShiftToggle = Toggle("SmartShift free-spin", on => _config.Update(c => c with { Pointer = c.Pointer with { SmartShiftEnabled = on } }));
             BottomBarItems.Children.Add(LabelWith("SmartShift free-spin", _smartShiftToggle));
-            _excelToggle = Toggle("Excel: thumb wheel scrolls columns", on => _config.Update(c => c with { Excel = c.Excel with { ThumbWheelScrollsColumns = on } }));
-            BottomBarItems.Children.Add(LabelWith("Excel: thumb wheel scrolls columns", _excelToggle));
+            _tabScrollToggle = Toggle("Tab scroll (left + right)", on => _config.Update(c => c with { Pointer = c.Pointer with { TabScrollChord = on } }));
+            BottomBarItems.Children.Add(LabelWith("Tab scroll (left + right)", _tabScrollToggle));
         }
         else
         {
@@ -201,9 +201,9 @@ public sealed partial class MainWindow
                 _smartShiftToggle.IsOn = c.Pointer.SmartShiftEnabled;
             }
 
-            if (_excelToggle is not null)
+            if (_tabScrollToggle is not null)
             {
-                _excelToggle.IsOn = c.Excel.ThumbWheelScrollsColumns;
+                _tabScrollToggle.IsOn = c.Pointer.TabScrollChord;
             }
 
             if (_fnLockToggle is not null)

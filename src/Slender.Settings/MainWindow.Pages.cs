@@ -219,12 +219,17 @@ public sealed partial class MainWindow
         dpiRow.Unloaded += (_, _) => _status.Changed -= OnDpiStatus;
         AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
 
-        AddSection("EXCEL");
-        AddRow("Thumb wheel scrolls columns", "In Excel the thumb wheel moves by whole columns instead of pixels.",
-            PageToggle("Thumb wheel scrolls columns", c.Excel.ThumbWheelScrollsColumns, on => _config.Update(x => x with { Excel = x.Excel with { ThumbWheelScrollsColumns = on } })));
-        Slider columns = PageSlider("Columns per notch", 1, 10, 1, c.Excel.ColumnsPerNotch,
-            v => _config.Update(x => x with { Excel = x.Excel with { ColumnsPerNotch = (int)v } }), v => $"{(int)v}", out TextBlock columnsText);
-        AddRow("Columns per notch", null, WithReadout(columns, columnsText));
+        // Excel column scrolling is off for now (user 2026-10-16): Excel gets the normal side scroll, so its rows are gone.
+        AddSection("THUMB WHEEL");
+        Slider side = PageSlider("Side scroll speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.SideScrollSpeed,
+            v => _config.Update(x => x with { Pointer = x.Pointer with { SideScrollSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock sideText);
+        AddRow("Side scroll speed", "How far a turn of the thumb wheel scrolls sideways. 100% is the mouse's own speed.", WithReadout(side, sideText));
+        AddRow("Tab scroll", "Hold the left and right buttons together and turn the thumb wheel to switch tabs (sheets in Excel).",
+            PageToggle("Tab scroll", c.Pointer.TabScrollChord, on => _config.Update(x => x with { Pointer = x.Pointer with { TabScrollChord = on } })));
+        Slider tabs = PageSlider("Tab scroll speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.TabScrollSpeed,
+            v => _config.Update(x => x with { Pointer = x.Pointer with { TabScrollSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock tabsText);
+        AddRow("Tab scroll speed", "Tabs per turn, for Tab scroll and the thumb wheel's tab mode. Higher switches more tabs per turn.",
+            WithReadout(tabs, tabsText));
 
         BuildDualThumbSection();
     }

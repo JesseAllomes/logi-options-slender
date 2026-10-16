@@ -215,7 +215,7 @@ public class EngineTests
 
         public Rig(SlenderConfig? cfg = null)
         {
-            Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg ?? SlenderConfig.Default, Log, new InlineQueue(), () => Now);
+            Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg ?? SlenderConfig.Default, Log, new InlineQueue(), () => Now) { ExcelColumnScrolling = true };
             Engine.Start();
         }
     }

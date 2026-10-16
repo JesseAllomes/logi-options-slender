@@ -48,6 +48,7 @@ public class ThumbWheelDivertTests
             Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, executor ?? Exec, cfg ?? SlenderConfig.Default, new ListLog(), new InlineQueue(), () => Now)
             {
                 ForegroundDebounceMs = 0,
+                ExcelColumnScrolling = true, // the dormant Excel column mode stays tested
             };
             Engine.Start();
         }
@@ -74,7 +75,8 @@ public class ThumbWheelDivertTests
     public void Policy_follows_app_and_state()
     {
         var cfg = SlenderConfig.Default;
-        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, false, true));   // Excel column mode
+        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, false, true, excelColumns: true)); // Excel column mode (when on)
+        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, false, true)); // off for now: Excel keeps the native side scroll
         Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, false, true)); // nothing needs it
         Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", true, false, true));   // dual wheel flipped
         Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true, true));   // ring open

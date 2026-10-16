@@ -75,6 +75,11 @@ internal sealed class FakeHook : IInputHook
         HorizontalWheel?.Invoke(this, a);
         return a;
     }
+    public event EventHandler<bool>? ButtonChordChanged;
+    public bool ChordEnabled = true;
+    public void SetButtonChordEnabled(bool on) => ChordEnabled = on;
+    /// <summary>Left + Right went down together (true) or both came up (false).</summary>
+    public void Chord(bool active) => ButtonChordChanged?.Invoke(this, active);
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
     public HookButtonEventArgs Button(HookButton button, bool pressed)
     {

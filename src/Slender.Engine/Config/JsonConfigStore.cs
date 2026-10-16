@@ -157,7 +157,10 @@ public sealed class JsonConfigStore : IConfigStore
             p.SmoothScroll,
             p.WheelResistance is { } wr ? Math.Clamp(wr, 0, 100) : null,
             p.SensePanelForce is { } spf ? Math.Clamp(spf, 1, 0xFFFF) : null,
-            p.SensePanelBaseline is { } spb ? Math.Clamp(spb, 1, 0xFFFF) : null);
+            p.SensePanelBaseline is { } spb ? Math.Clamp(spb, 1, 0xFFFF) : null,
+            Math.Clamp(p.SideScrollSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
+            Math.Clamp(p.TabScrollSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
+            p.TabScrollChord);
     }
 
     private static Dictionary<GestureDirection, ActionSpec> ParseSwipes(Dictionary<string, ActionSpec>? raw)
@@ -278,6 +281,9 @@ public sealed class JsonConfigStore : IConfigStore
                 WheelResistance = config.Pointer.WheelResistance,
                 SensePanelForce = config.Pointer.SensePanelForce,
                 SensePanelBaseline = config.Pointer.SensePanelBaseline,
+                SideScrollSpeed = config.Pointer.SideScrollSpeed,
+                TabScrollSpeed = config.Pointer.TabScrollSpeed,
+                TabScrollChord = config.Pointer.TabScrollChord,
             },
             Keyboard = new KeyboardDto
             {
@@ -440,6 +446,9 @@ public sealed class JsonConfigStore : IConfigStore
         public int? WheelResistance { get; set; }
         public int? SensePanelForce { get; set; }
         public int? SensePanelBaseline { get; set; }
+        public int SideScrollSpeed { get; set; } = 100;
+        public int TabScrollSpeed { get; set; } = 100;
+        public bool TabScrollChord { get; set; } = true;
     }
 
     internal sealed class KeyboardDto
