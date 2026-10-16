@@ -68,7 +68,7 @@ public class LogiKeyboardTests
     }
 
     [Fact]
-    public async Task Divert_uses_temporary_flag_only_and_reapplies_with_fn_lock_after_reconnect()
+    public async Task Divert_uses_temporary_flag_only_and_reapplies_after_reconnect_but_fn_lock_is_written_once()
     {
         var dev = K860();
         var t2 = dev.NewTransport();
@@ -86,10 +86,12 @@ public class LogiKeyboardTests
             Assert.DoesNotContain(t1.Writes, w => w[2] == FakeDevice.Reprog && w[3] >> 4 == 3 && (w[6] & 0x04) != 0);
 
             t1.Fault();
-            await Wait.UntilAsync(() => f.OpenCalls >= 2 && Divert(t2, KeyboardId.Mute, 0x03) && FnWrite(t2, 1));
+            await Wait.UntilAsync(() => f.OpenCalls >= 2 && Divert(t2, KeyboardId.Mute, 0x03) && kb.IsConnected);
+            await Task.Delay(50);
             Assert.True(Divert(t2, KeyboardId.TaskView, 0x03));
             Assert.True(Divert(t2, KeyboardId.Lock, 0x02));   // not wanted: back to native
             Assert.False(Divert(t2, KeyboardId.Mute, 0x02));  // wanted: not reset
+            Assert.False(FnWrite(t2, 1));                      // already written: a reconnect leaves the keyboard's Fn lock alone
         }
     }
 

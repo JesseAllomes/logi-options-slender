@@ -152,6 +152,8 @@ static class Program
         // Settings' "Identify" panel: the tray writes which spare key was pressed where Settings can read it.
         keys.SpareKeyIdentified += (_, cid) => SpareKeyReport.Write(SyncPaths.StateDirectory, cid, log);
         keys.ThumbWheelToggleRequested += (_, _) => engine.ToggleThumbWheelMode();
+        // Fn lock belongs to the keyboard (Fn+Esc): what it reports is saved, so an update or restart never flips it back.
+        keys.FnLockChangedOnKeyboard += (_, on) => app.PostToUi(() => app.MirrorKeyboardFnLock(on));
         engine.StatusChanged += (_, status) =>
         {
             if (!status.Connected) app.PostToUi(() => ring.Close(RingCloseReason.DeviceLost));

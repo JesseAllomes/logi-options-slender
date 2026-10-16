@@ -155,6 +155,71 @@ public class KeyboardExtrasTests
         }
     }
 
+    // ---- Fn lock reads (the keyboard owns Fn lock; Fn+Esc changes it) ----
+
+    [Fact]
+    public async Task Connect_reads_the_keyboards_fn_lock_and_raises_it()
+    {
+        var (kb, t) = Rig(K860([true, false, false], current: 0));
+        using (kb)
+        {
+            var reads = new List<bool>();
+            kb.FnLockRead += (_, on) => { lock (reads) reads.Add(on); };
+            await kb.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => kb.FnLockNow is not null);
+
+            Assert.True(kb.FnLockNow);
+            lock (reads) Assert.Contains(true, reads);
+            Assert.DoesNotContain(t.Writes, w => w[2] == FnIndex && w[3] >> 4 == 1); // read only
+        }
+    }
+
+    [Fact]
+    public async Task ReadFnLockAsync_sees_a_change_made_on_the_keyboard()
+    {
+        bool fnOn = false;
+        var (kb, t) = Rig(K860(Off3, 0, setup: d => d.Handlers[(FnIndex, 0)] = p => [p[0], (byte)(fnOn ? 1 : 0), 1, 1]));
+        using (kb)
+        {
+            await kb.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => kb.FnLockNow is not null);
+            Assert.False(kb.FnLockNow);
+
+            fnOn = true; // Fn+Esc
+            Assert.True(await kb.ReadFnLockAsync(CancellationToken.None));
+            Assert.True(kb.FnLockNow);
+            Assert.DoesNotContain(t.Writes, w => w[2] == FnIndex && w[3] >> 4 == 1);
+        }
+    }
+
+    [Fact]
+    public async Task ReadFnLockAsync_is_null_offline_and_without_the_feature()
+    {
+        var (offline, _) = Rig(K860(Off3, 0));
+        using (offline) Assert.Null(await offline.ReadFnLockAsync(CancellationToken.None));
+
+        var (kb, _) = Rig(K860(Off3, 0, setup: d => d.Features.Remove(KeyboardFeatureId.FnInversionMultiHost)));
+        using (kb)
+        {
+            await kb.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => kb.IsConnected);
+            Assert.Null(await kb.ReadFnLockAsync(CancellationToken.None));
+        }
+    }
+
+    [Fact]
+    public async Task Fn_lock_written_online_updates_FnLockNow()
+    {
+        var (kb, _) = Rig(K860(Off3, 0));
+        using (kb)
+        {
+            await kb.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => kb.FnLockNow is not null);
+            await kb.SetFnLockAsync(true, CancellationToken.None);
+            Assert.True(kb.FnLockNow);
+        }
+    }
+
     // ---- spare keys ----
 
     [Fact]

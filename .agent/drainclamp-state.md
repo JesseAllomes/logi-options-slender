@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=81 -->
+<!-- drainclamp-build: state; schema=1; generation=83 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -93,6 +93,7 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 | m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m24;m30 |
 | m32 | shortcut picker: recorder takes Ctrl+Tab etc. (window accelerators off while recording) and Win combos (low-level hook while recording + Settings foreground); Shortcuts tab with per-app, common and Windows presets, hide per entry, show hidden, General toggle to hide the tab | src/Slender.Settings/Logic/ShortcutLibrary.cs;src/Slender.Settings/Logic/WinChordCapture.cs;src/Slender.Settings/MainWindow.Shortcuts.cs;src/Slender.Settings/MainWindow.Picker.cs;src/Slender.Settings/Logic/UiState.cs;tests/Slender.Tests/Settings | active | m31 |
 | m33 | thumb wheel tab mode: hold shared modifiers (Ctrl) across a burst, send only the key per step in one SendInput batch, release after 400 ms quiet or on button/touch-up/app switch/mode flip/ring/disconnect/dispose; Excel sheet steps as Ctrl+PageDown/PageUp keys instead of COM | src/Slender.Engine/WheelKeyHold.cs;src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/KeyInjector.cs;src/Slender.Engine/ActionExecutor.cs;tests/Slender.Tests/Engine/WheelKeyHoldTests.cs | done | m32 |
+| m34 | Fn lock belongs to the keyboard: never pushed at start/reconnect; written once only when the user changes it in Slender; read on connect and every 30 s (Fn+Esc) and mirrored into config by the tray; default stays off | src/Slender.Hidpp/LogiKeyboard.cs;src/Slender.Hidpp/Contracts/KeyboardContracts.cs;src/Slender.Engine/KeyboardRouter.cs;src/Slender.Tray/TrayApplication.cs;src/Slender.Tray/Program.cs | done | m33 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -103,7 +104,6 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T03:40:43+00:00 08d82604 m17-m19 merged to main (e71e1e2, 511 tests): battery alert, Launch/Disabled actions, Options+ importer + UI; user asked for all import gaps -> m20 own ring, m21 gestures, m22 brightness/DPI/per-app divert
 - 2026-10-15T03:55:44+00:00 75bd84c4 m21 gestures + m22 brightness/DPI/per-app divert merged (601d1d7, 554 tests); m20 ring prototypes round 1 shown, waiting for pick
 - 2026-10-15T04:29:13+00:00 72b3ac42 m20 Actions Ring merged (6e486cf, 661 tests): 3 switchable styles, folders, appearance page, import; SlenderSetup 1.1.0 built; next = user installs and runs m13/c2 live pass covering m17-m22 + ring
 - 2026-10-15T04:56:47+00:00 030f8f86 In-app updates merged (73bf370, 687 tests); SlenderSetup 1.1.1 built with baked releases source; user installs once, later updates arrive in-app
@@ -123,4 +123,5 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 - 2026-10-16T00:15:43+00:00 62015572 Bug fixed (user report: K860 Lock key set to Turn off kept Win+L): WinUI ItemClick gives the row's Content, so every picker option-list and ring icon click was dropped; ClickedItems.Find maps it back, 990 tests, ee9713a; v1.1.8 published to GitHub 11:15 Melbourne
 - 2026-10-16T00:43:51+00:00 a153c171 m32 built 7cdd1ff (1387 tests, -warnaserror clean): recorder takes Ctrl+Tab/Ctrl+Shift+Tab (window accelerators off while open) and Win/Alt system combos (RecorderKeyHook + WinChordCapture, only while Settings is foreground; Win+L impossible); Shortcuts tab with app/common/Windows presets, per-row hide, Show hidden, General toggle (settings-ui.json). Not yet seen live; shipping as 1.1.9
 - 2026-10-16T01:34:33+00:00 2ebfc1d9 m33 built (user idea: hold Ctrl while the wheel turns, send only Tab): WheelKeyHold + engine release triggers, 1402 tests. Known gap left open: switching back from tab mode drops side-scroll turns until the wheel pauses 150 ms (undivert waits for quiet); not fixed yet
+- 2026-10-16T01:45:14+00:00 3369d1a2 m34 built (user: every update reset Fn lock): config fnLock was true and was pushed on every start, overriding Fn+Esc. Now the keyboard owns it; 1410 tests. Decision: keyboard state wins, Slender mirrors it
 <!-- /DC:LOG -->

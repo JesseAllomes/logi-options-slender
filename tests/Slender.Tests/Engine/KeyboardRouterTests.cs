@@ -36,6 +36,20 @@ internal sealed class FakeKeyboard : ILogiKeyboard
     public void Key(ushort id, bool pressed) => KeyChanged?.Invoke(this, new ButtonEvent(id, pressed));
     public int DivertCount { get { lock (Diverts) return Diverts.Count; } }
     public int FnCount { get { lock (FnLocks) return FnLocks.Count; } }
+
+    /// <summary>What the keyboard's own Fn lock is (Fn+Esc); ReadFnLockAsync reports it.</summary>
+    public bool? FnNow;
+    public int FnReads;
+    public bool? FnLockNow => FnNow;
+    public event EventHandler<bool>? FnLockRead;
+    public Task<bool?> ReadFnLockAsync(CancellationToken ct)
+    {
+        Interlocked.Increment(ref FnReads);
+        if (FnNow is { } v) FnLockRead?.Invoke(this, v);
+        return Task.FromResult(FnNow);
+    }
+    /// <summary>The keyboard was read (as on connect).</summary>
+    public void ReadOnConnect(bool on) { FnNow = on; FnLockRead?.Invoke(this, on); }
 }
 
 public class KeyboardRouterTests
@@ -66,37 +80,38 @@ public class KeyboardRouterTests
     }
 
     [Fact]
-    public async Task Start_diverts_and_applies_fn_lock()
+    public async Task Start_diverts_but_never_pushes_fn_lock()
     {
         var (r, kb, _, _, _) = Make(Cfg(true, P(null, (KeyboardId.Mute, new ActionSpec.Keys("F1")))));
         using (r)
         {
             r.Start();
-            await Wait.UntilAsync(() => kb.DivertCount == 1 && kb.FnCount == 1);
+            await Wait.UntilAsync(() => kb.DivertCount == 1);
+            await Task.Delay(50);
             Assert.True(kb.Started);
             Assert.Equal(new[] { KeyboardId.Mute }, kb.Diverts[0]);
-            Assert.True(kb.FnLocks[0]);
+            Assert.Equal(0, kb.FnCount); // the keyboard keeps its own Fn lock (an update restart must not flip it)
         }
     }
 
     [Fact]
-    public async Task ApplyConfig_reapplies_fn_lock_only_on_change_and_diverts_only_when_set_changes()
+    public async Task ApplyConfig_writes_fn_lock_only_on_change_and_diverts_only_when_set_changes()
     {
         var a = P(null, (KeyboardId.Mute, new ActionSpec.Keys("F1")));
         var (r, kb, fg, _, _) = Make(Cfg(false, a));
         using (r)
         {
             r.Start();
-            await Wait.UntilAsync(() => kb.DivertCount == 1 && kb.FnCount == 1);
+            await Wait.UntilAsync(() => kb.DivertCount == 1);
 
             r.ApplyConfig(Cfg(false, a)); // identical
             await Task.Delay(50);
             Assert.Equal(1, kb.DivertCount);
-            Assert.Equal(1, kb.FnCount);
+            Assert.Equal(0, kb.FnCount);
 
-            r.ApplyConfig(Cfg(true, a)); // fn lock only
-            await Wait.UntilAsync(() => kb.FnCount == 2);
-            Assert.True(kb.FnLocks[1]);
+            r.ApplyConfig(Cfg(true, a)); // the user flipped Fn lock in Slender
+            await Wait.UntilAsync(() => kb.FnCount == 1);
+            Assert.True(kb.FnLocks[0]);
             Assert.Equal(1, kb.DivertCount);
 
             r.ApplyConfig(Cfg(true, a, P("excel", (KeyboardId.Lock, new ActionSpec.Keys("F2")))));
@@ -105,7 +120,76 @@ public class KeyboardRouterTests
             fg.Switch("excel");
             await Wait.UntilAsync(() => kb.DivertCount == 2);
             Assert.Equal(new[] { KeyboardId.Lock, KeyboardId.Mute }, kb.Diverts[1]);
-            Assert.Equal(2, kb.FnCount);
+            Assert.Equal(1, kb.FnCount);
+        }
+    }
+
+    [Fact]
+    public async Task A_keyboard_read_that_differs_from_the_saved_fn_lock_is_raised_for_saving()
+    {
+        var (r, kb, _, _, _) = Make(Cfg(true));
+        using (r)
+        {
+            var raised = new List<bool>();
+            r.FnLockChangedOnKeyboard += (_, on) => { lock (raised) raised.Add(on); };
+            r.Start();
+
+            kb.ReadOnConnect(true); // matches the saved value: nothing to save
+            kb.ReadOnConnect(false); // Fn+Esc turned it off
+            Assert.Equal([false], raised);
+
+            // The tray saves it; the new config matches what the keyboard has, so nothing is written back.
+            r.ApplyConfig(Cfg(false));
+            await Task.Delay(50);
+            Assert.Equal(0, kb.FnCount);
+        }
+    }
+
+    [Fact]
+    public async Task Flipping_in_slender_after_a_keyboard_read_writes_the_new_value()
+    {
+        var (r, kb, _, _, _) = Make(Cfg(true));
+        using (r)
+        {
+            r.Start();
+            kb.ReadOnConnect(false);
+            r.ApplyConfig(Cfg(false)); // the tray saved the keyboard's value
+            r.ApplyConfig(Cfg(true));  // then the user turned it on in Slender
+            await Wait.UntilAsync(() => kb.FnCount == 1);
+            Assert.True(kb.FnLocks[0]);
+        }
+    }
+
+    [Fact]
+    public async Task Fn_lock_is_polled_to_catch_fn_esc()
+    {
+        var (r, kb, _, _, _) = Make(Cfg(false));
+        using (r)
+        {
+            var raised = new List<bool>();
+            r.FnLockChangedOnKeyboard += (_, on) => { lock (raised) raised.Add(on); };
+            r.FnPollMs = 10;
+            kb.FnNow = false;
+            r.Start();
+            await Wait.UntilAsync(() => Volatile.Read(ref kb.FnReads) >= 1);
+
+            kb.FnNow = true; // Fn+Esc
+            await Wait.UntilAsync(() => { lock (raised) return raised.Contains(true); });
+            Assert.Equal(0, kb.FnCount);
+        }
+    }
+
+    [Fact]
+    public async Task No_poll_while_disconnected()
+    {
+        var (r, kb, _, _, _) = Make(Cfg(false));
+        using (r)
+        {
+            r.FnPollMs = 5;
+            kb.IsConnected = false;
+            r.Start();
+            await Task.Delay(80);
+            Assert.Equal(0, Volatile.Read(ref kb.FnReads));
         }
     }
 

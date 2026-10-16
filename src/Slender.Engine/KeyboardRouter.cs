@@ -5,7 +5,9 @@ namespace Slender.Engine;
 /// <summary>
 /// Routes ERGO K860 key presses to actions. Diverts exactly the keys bound (non-None) in some profile, resolves
 /// the foreground profile with fallback to the default profile on every press, pairs each release with the action chosen
-/// at press time (an app switch while a key is held cannot strand a press), and applies <see cref="KeyboardSettings.FnLock"/>.
+/// at press time (an app switch while a key is held cannot strand a press). Fn lock belongs to the keyboard (Fn+Esc): it is
+/// written only when the user changes <see cref="KeyboardSettings.FnLock"/>, never at start or reconnect, and what the keyboard
+/// reports is raised as <see cref="FnLockChangedOnKeyboard"/> so the tray saves it.
 /// Nothing throws across the HID thread. The router does not dispose the collaborators it is given.
 /// </summary>
 public sealed class KeyboardRouter : IDisposable
@@ -23,7 +25,8 @@ public sealed class KeyboardRouter : IDisposable
     private volatile SlenderConfig _config;
     private IReadOnlyList<ushort> _diverted = [];
     private CancellationTokenSource? _foregroundDebounce;
-    private bool? _fnLock;
+    private bool? _fnLock;            // what the keyboard has, as far as Slender knows (config until the first read)
+    private volatile bool _fnWritePending; // Slender's own Fn write is queued: a read in between is stale
     private byte? _disabledKeys;
     private string? _channelFn;
     private Task _chain = Task.CompletedTask;
@@ -139,10 +142,12 @@ public sealed class KeyboardRouter : IDisposable
             _started = true;
         }
         _keyboard.KeyChanged += OnKey;
+        _keyboard.FnLockRead += OnFnLockRead;
         _foreground.Changed += OnForegroundChanged;
         try { _ = ObserveAsync(_keyboard.StartAsync(_cts.Token), "keyboard start"); }
         catch (Exception ex) { _log.Error("keyboard start failed", ex); }
         Apply(force: true);
+        _ = PollFnLockAsync();
     }
 
     /// <summary>Swaps the config; re-diverts if the bound key set changed and re-applies Fn lock if it changed.</summary>
@@ -171,11 +176,17 @@ public sealed class KeyboardRouter : IDisposable
                 _chain = _chain.ContinueWith(_ => Safe(() => _keyboard.SetDivertedKeysAsync(set, _cts.Token), "set diverted keys"),
                     TaskScheduler.Default).Unwrap();
             }
-            if (force || _fnLock != fn)
+            if (force)
             {
-                _fnLock = fn;
+                _fnLock ??= fn; // start: never pushed; the keyboard keeps its own, and its first read brings it into the config
+            }
+            else if (_fnLock != fn)
+            {
+                _fnLock = fn; // the user changed it in Slender: write it once
+                _fnWritePending = true;
                 _chain = _chain.ContinueWith(_ => Safe(() => _keyboard.SetFnLockAsync(fn, _cts.Token), "set Fn lock"),
-                    TaskScheduler.Default).Unwrap();
+                    TaskScheduler.Default).Unwrap()
+                    .ContinueWith(_ => { _fnWritePending = false; }, TaskScheduler.Default);
             }
             if (force || _channelFn != channelKey)
             {
@@ -287,6 +298,47 @@ public sealed class KeyboardRouter : IDisposable
     /// <summary>A spare key went down while Identify is on (raised on the router's worker thread).</summary>
     public event EventHandler<ushort>? SpareKeyIdentified;
 
+    /// <summary>
+    /// The keyboard's Fn lock differs from the saved one (Fn+Esc, or a saved value from an older version): the tray saves it.
+    /// Raised on a background thread.
+    /// </summary>
+    public event EventHandler<bool>? FnLockChangedOnKeyboard;
+
+    /// <summary>How often the keyboard's Fn lock is read to catch Fn+Esc. One small read; nothing is written.</summary>
+    internal int FnPollMs { get; set; } = 30_000;
+
+    private void OnFnLockRead(object? sender, bool on)
+    {
+        try
+        {
+            if (_fnWritePending) return; // Slender's own write is on its way and wins
+            lock (_gate)
+            {
+                if (_disposed) return;
+                _fnLock = on;
+            }
+            if (_config.Keyboard.FnLock != on) FnLockChangedOnKeyboard?.Invoke(this, on);
+        }
+        catch (Exception ex) { try { _log.Error("Fn lock read handler failed", ex); } catch { } }
+    }
+
+    private async Task PollFnLockAsync()
+    {
+        try
+        {
+            while (!_cts.IsCancellationRequested)
+            {
+                await Task.Delay(FnPollMs, _cts.Token).ConfigureAwait(false);
+                if (!_keyboard.IsConnected || _fnWritePending) continue;
+                try { await _keyboard.ReadFnLockAsync(_cts.Token).ConfigureAwait(false); } // raises FnLockRead
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { _log.Error("Fn lock read failed", ex); }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
+
     /// <summary>A key bound to "Switch thumb wheel mode" went down; the engine owns the mode (raised on the router's worker thread).</summary>
     public event EventHandler? ThumbWheelToggleRequested;
 
@@ -320,6 +372,7 @@ public sealed class KeyboardRouter : IDisposable
             _disposed = true;
         }
         _keyboard.KeyChanged -= OnKey;
+        _keyboard.FnLockRead -= OnFnLockRead;
         _foreground.Changed -= OnForegroundChanged;
         lock (_gate) _foregroundDebounce?.Cancel();
         _cts.Cancel();

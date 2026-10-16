@@ -912,6 +912,17 @@ public sealed class TrayApplication : IDisposable
         _status.Changed();
     }
 
+    /// <summary>
+    /// UI thread. The keyboard reports a Fn lock that differs from the saved one (Fn+Esc on the keyboard): save the keyboard's,
+    /// so Settings shows it and nothing writes the old value back.
+    /// </summary>
+    public void MirrorKeyboardFnLock(bool on)
+    {
+        if (_config.Keyboard.FnLock == on) return;
+        _log.Info($"keyboard Fn lock is {(on ? "on" : "off")}; saved");
+        ApplyChange(_config with { Keyboard = _config.Keyboard with { FnLock = on } });
+    }
+
     /// <summary>Saves through the store, then raises ConfigChanged. Returns false on a failed save.</summary>
     private bool ApplyChange(SlenderConfig next)
     {

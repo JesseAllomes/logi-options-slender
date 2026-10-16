@@ -104,8 +104,20 @@ public interface ILogiKeyboard : IDisposable
     /// <summary>Replaces the set of diverted keys (others are returned to native).</summary>
     Task SetDivertedKeysAsync(IReadOnlyCollection<ushort> keyIds, CancellationToken ct);
 
-    /// <summary>true = the F-row sends F1..F12 (Fn inversion on); false = media/special keys.</summary>
+    /// <summary>
+    /// true = the F-row sends F1..F12 (Fn inversion on); false = media/special keys. Written once (on the next connect when
+    /// offline); reconnects never re-write it, so Fn+Esc on the keyboard stays in charge.
+    /// </summary>
     Task SetFnLockAsync(bool enabled, CancellationToken ct);
+
+    /// <summary>The keyboard's Fn lock as last read or written; null when unknown.</summary>
+    bool? FnLockNow => null;
+
+    /// <summary>Raised with the keyboard's Fn lock whenever it is read (every connect, and <see cref="ReadFnLockAsync"/>).</summary>
+    event EventHandler<bool>? FnLockRead { add { } remove { } }
+
+    /// <summary>Reads the keyboard's Fn lock now (catches Fn+Esc); null when offline or unsupported.</summary>
+    Task<bool?> ReadFnLockAsync(CancellationToken ct) => Task.FromResult<bool?>(null);
 
     /// <summary>
     /// Turns the chosen keys off on the keyboard itself (0x4521) and returns the mask read back, or null when the keyboard lacks

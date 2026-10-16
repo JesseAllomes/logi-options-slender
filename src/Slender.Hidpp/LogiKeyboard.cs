@@ -37,6 +37,13 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
     private DisabledKeys? _disabledDesired;
     private bool?[] _channelFnDesired = new bool?[ChannelCount];
     private volatile int _currentChannel = -1;
+    private volatile int _fnNow = -1; // the current host's Fn inversion as last read or written: -1 unknown, 0 off, 1 on
+
+    /// <summary>The keyboard's own Fn lock (current host) as last read or written; null when unknown or disconnected.</summary>
+    public bool? FnLockNow => _fnNow switch { 0 => false, 1 => true, _ => null };
+
+    /// <summary>The Fn lock state was read from the keyboard (on connect and on <see cref="ReadFnLockAsync"/>). Background thread.</summary>
+    public event EventHandler<bool>? FnLockRead;
 
     public LogiKeyboard(IHidppTransportFactory factory, LogiKeyboardOptions? options = null)
         : base(factory, options ?? new LogiKeyboardOptions()) { }
@@ -57,12 +64,22 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
         DisabledKeys? disabled;
         bool?[] channels;
         lock (State) { fn = _fnDesired; disabled = _disabledDesired; channels = (bool?[])_channelFnDesired.Clone(); }
-        if (fn is { } on) await TrySetFnAsync(s, on, ct).ConfigureAwait(false);
+        // Only a change made while the keyboard was away is written here. Once applied it is forgotten, so a later Fn+Esc on the
+        // keyboard is never overwritten by a reconnect; the keyboard keeps its own Fn lock.
+        if (fn is { } on && await TrySetFnAsync(s, on, ct).ConfigureAwait(false))
+        {
+            lock (State) if (_fnDesired == on) _fnDesired = null;
+            _fnNow = on ? 1 : 0;
+        }
         await ApplyChannelsAsync(s, channels, ct).ConfigureAwait(false);
         if (disabled is { } keys) await TrySetDisabledAsync(s, keys, ct).ConfigureAwait(false);
     }
 
-    protected override void ResetAppliedState() => _currentChannel = -1;
+    protected override void ResetAppliedState()
+    {
+        _currentChannel = -1;
+        _fnNow = -1;
+    }
 
     /// <summary>
     /// 0x40A3 per host. Solaar settings_templates.py K375sFnSwap: request = [host, state] (write fn1), reply state is the byte after
@@ -86,9 +103,36 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
         catch (HidppException) { }
     }
 
-    private static async Task<int?> InferChannelAsync(Session s, CancellationToken ct)
+    /// <summary>0x40A3 fn0 for the current host: the keyboard's Fn lock now. Records it and raises <see cref="FnLockRead"/>.</summary>
+    private async Task<byte> ReadCurrentFnAsync(Session s, CancellationToken ct)
     {
         var now = (await s.Device.CallAsync(KeyboardFeatureId.FnInversionMultiHost, 0, new byte[] { CurrentHost }, ct).ConfigureAwait(false)).Params[1];
+        _fnNow = now != 0 ? 1 : 0;
+        try { FnLockRead?.Invoke(this, now != 0); } catch { } // a handler must not break the connect sequence
+        return now;
+    }
+
+    /// <summary>
+    /// Reads the keyboard's Fn lock now (the user may have pressed Fn+Esc); null when disconnected or the feature is missing.
+    /// Raises <see cref="FnLockRead"/> with the value. Read only (0x40A3 fn0).
+    /// </summary>
+    public async Task<bool?> ReadFnLockAsync(CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return null;
+            if (await s.Device.GetFeatureIndexAsync(KeyboardFeatureId.FnInversionMultiHost, ct).ConfigureAwait(false) == null) return null;
+            return await ReadCurrentFnAsync(s, ct).ConfigureAwait(false) != 0;
+        }
+        catch (HidppException) { return null; }
+        finally { Gate.Release(); }
+    }
+
+    private async Task<int?> InferChannelAsync(Session s, CancellationToken ct)
+    {
+        var now = await ReadCurrentFnAsync(s, ct).ConfigureAwait(false);
         int match = -1;
         for (int i = 0; i < ChannelCount; i++)
         {
@@ -166,8 +210,12 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
         {
             lock (State) _fnDesired = enabled;
             var s = CurrentSession;
-            if (s == null || !IsConnected) return; // applied on (re)connect
-            await TrySetFnAsync(s, enabled, ct).ConfigureAwait(false);
+            if (s == null || !IsConnected) return; // applied on the next connect, then forgotten
+            if (await TrySetFnAsync(s, enabled, ct).ConfigureAwait(false))
+            {
+                lock (State) if (_fnDesired == enabled) _fnDesired = null; // written: the keyboard owns it from here
+                _fnNow = enabled ? 1 : 0;
+            }
         }
         finally { Gate.Release(); }
     }
