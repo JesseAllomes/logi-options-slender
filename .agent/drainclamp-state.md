@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=89 -->
+<!-- drainclamp-build: state; schema=1; generation=91 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -96,7 +96,7 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 | m33 | thumb wheel tab mode: hold shared modifiers (Ctrl) across a burst, send only the key per step in one SendInput batch, release after 400 ms quiet or on button/touch-up/app switch/mode flip/ring/disconnect/dispose; Excel sheet steps as Ctrl+PageDown/PageUp keys instead of COM | src/Slender.Engine/WheelKeyHold.cs;src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/KeyInjector.cs;src/Slender.Engine/ActionExecutor.cs;tests/Slender.Tests/Engine/WheelKeyHoldTests.cs | done | m32 |
 | m34 | Fn lock belongs to the keyboard: never pushed at start/reconnect; written once only when the user changes it in Slender; read on connect and every 30 s (Fn+Esc) and mirrored into config by the tray; default stays off | src/Slender.Hidpp/LogiKeyboard.cs;src/Slender.Hidpp/Contracts/KeyboardContracts.cs;src/Slender.Engine/KeyboardRouter.cs;src/Slender.Tray/TrayApplication.cs;src/Slender.Tray/Program.cs | done | m33 |
 | m35 | no dropped side scroll: a diverted thumb wheel turn nothing claims (just after leaving tab mode, or touch/tap-only divert) is re-sent as WM_MOUSEHWHEEL; claimed turns (columns, keys, second role, ring, off) and hook turns untouched | src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/KeyInjector.cs;src/Slender.Engine/ActionExecutor.cs;tests/Slender.Tests/Engine/ThumbWheelDivertTests.cs | done | m33 |
-| m36 | Tab scroll by chord (user 2026-10-16): hold Left+Right (50 ms chord window, X11 Emulate3Buttons style; single clicks replayed on release/move/timeout) and turn the thumb wheel = tab steps with Ctrl held for the chord's life; Tab scroll speed + side scroll speed sliders (Slender scales the wheel); Excel column scrolling removed for now (engine gate off, UI rows gone); toggle to turn the chord off | src/Slender.Engine/ButtonChord.cs;src/Slender.Engine/LowLevelMouseHook.cs;src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/ColumnScrollAccumulator.cs;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/Config/JsonConfigStore.cs;src/Slender.Settings/MainWindow.Pages.cs;tests/Slender.Tests/Engine | active | m35 |
+| m36 | Tab scroll by chord (user 2026-10-16): hold Left+Right (50 ms chord window, X11 Emulate3Buttons style; single clicks replayed on release/move/timeout) and turn the thumb wheel = tab steps with Ctrl held for the chord's life; Tab scroll speed + side scroll speed sliders (Slender scales the wheel); Excel column scrolling removed for now (engine gate off, UI rows gone); toggle to turn the chord off | src/Slender.Engine/ButtonChord.cs;src/Slender.Engine/LowLevelMouseHook.cs;src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/ColumnScrollAccumulator.cs;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/Config/JsonConfigStore.cs;src/Slender.Settings/MainWindow.Pages.cs;tests/Slender.Tests/Engine | done | m35 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -107,7 +107,6 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T05:27:40+00:00 401e20f1 Live-test fixes merged (0ec5761, 703 tests): ring preview crash, plugin-service ring import, key recorder; SlenderSetup 1.1.2 built as first in-app update
 - 2026-10-15T06:05:08+00:00 7a156dbb Live pass on 1.1.2: in-app update worked end to end, real ring imported, no new errors; 1 h memory check pending
 - 2026-10-15T06:45:16+00:00 9b38a586 Gate 6 R1 (final, base 8aefde1): 20 candidates, 18 fixed (da0bf66, 723 tests), 2 refuted; verdict NOT-RUN because the packet cap left 57/105 files unreviewed
 - 2026-10-15T07:56:53+00:00 d88f8c74 Gate 6 m13 REVIEW-PASS: 5 rounds (R1 final + R2-R5 --only batches around the 1500-line cap), 105 files, 46 fixed, 9 refuted, 0 waived; 763 tests; DrainClamp bin/obj cache fix -> PR #1
@@ -127,4 +126,5 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 - 2026-10-16T01:52:32+00:00 c233d22d m35 built: unclaimed diverted turns pass through as native side scroll, 1413 tests. Assumption to check live: diverted 0x2150 rotation already follows the invert bit (user has invert on); if the side scroll right after leaving tab mode runs the wrong way, negate in PassThroughSideScroll
 - 2026-10-16T02:16:48+00:00 d066df98 m33 follow-up (user: Edge tab scroll fast at first, then old behaviour): likely the unconfirmed 0x2150 touch flag dropping mid-turn released Ctrl. Tab mode now ignores touch-up; quiet timer/buttons/app switch/flip still release. Wheel shortcuts outside tab mode keep touch-up release (user scoped it). 1415 tests
 - 2026-10-16T02:40:53+00:00 8a73ffa9 m36 built: ButtonChord (50 ms window, quick clicks replayed whole, drag >4 px flushes, never over elevated windows via WindowIntegrity UIPI check), engine Tab scroll with Ctrl held for the chord's life, Tab/side scroll speed (25-400%), Excel columns gated off (ExcelColumnScrolling, tests keep it on), quick toggles now Tab scroll. 1441 tests. Not seen live. Known: a drag's press lands where the pointer is after ~5 px
+- 2026-10-16T02:46:10+00:00 0c9feeb6 m36 confirmed live by the user (Tab scroll by Left+Right chord: 'perfect'). Open: m31 live look, m14 sync, m15 onboard keys UI, m16 firmware, m7 switch-over
 <!-- /DC:LOG -->
