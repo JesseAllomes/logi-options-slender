@@ -27,11 +27,17 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly IBrightnessController _brightness;
     private readonly ITextSender _text;
     private readonly Func<IReadOnlyList<KeyStroke>, bool> _sendChord;
+    private readonly Func<IReadOnlyList<KeyEvent>, bool> _sendEvents;
+
+    public bool SupportsKeyEvents => true;
+
+    public bool SendKeyEvents(IReadOnlyList<KeyEvent> events) => events.Count == 0 || _sendEvents(events);
 
     public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null, ITextSender? text = null,
-        Func<IReadOnlyList<KeyStroke>, bool>? sendChord = null)
+        Func<IReadOnlyList<KeyStroke>, bool>? sendChord = null, Func<IReadOnlyList<KeyEvent>, bool>? sendEvents = null)
     {
         _sendChord = sendChord ?? KeyInjector.SendChord;
+        _sendEvents = sendEvents ?? KeyInjector.SendKeyEvents;
         _text = text ?? new SendInputTextSender();
         _shell = shell ?? new ShellLauncher();
         _brightness = brightness ?? new BrightnessController(new WindowsMonitorBrightness(), log);

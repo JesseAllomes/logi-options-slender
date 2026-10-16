@@ -42,7 +42,10 @@ public static class ChordParser
         return d;
     }
 
-    private static bool IsModifier(ushort vk) => vk is 0xA2 or 0xA0 or 0xA4 or 0x5B;
+    private static bool IsModifier(ushort vk) => IsModifierKey(vk);
+
+    /// <summary>True for the modifier keys ChordParser emits: left Ctrl, Shift, Alt and Win.</summary>
+    public static bool IsModifierKey(ushort vk) => vk is 0xA2 or 0xA0 or 0xA4 or 0x5B;
 
     /// <summary>Returns false for empty/unknown input. Modifiers are ordered first, then the main key.</summary>
     public static bool TryParse(string? chord, out IReadOnlyList<KeyStroke> keys)

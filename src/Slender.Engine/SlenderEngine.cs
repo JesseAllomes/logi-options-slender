@@ -58,6 +58,10 @@ public sealed class SlenderEngine : IDisposable
     private volatile bool _ringOpen;
     private long _lastRotation = long.MinValue / 2; // clock ms of the last rotation from either source
     private CancellationTokenSource? _thumbRetry;
+    private readonly IHoldTimer _holdTimer;
+    private readonly WheelKeyHold _wheelHold = new(); // engine queue only
+    private IDisposable? _holdRelease;                 // engine queue only
+    private volatile bool _holding;                     // modifiers are held down by the thumb wheel path
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
         IActionExecutor executor, SlenderConfig config, ILog? log = null)
@@ -75,7 +79,8 @@ public sealed class SlenderEngine : IDisposable
         _log = log ?? NullLog.Instance;
         _queue = queue ?? new BoundedWorker("Slender.Engine", 256, sta: false, _log);
         _clock = clock ?? (() => Environment.TickCount64);
-        _tapHold = new TapHoldTracker(holdTimer ?? new ThreadingHoldTimer(), _queue, _log);
+        _holdTimer = holdTimer ?? new ThreadingHoldTimer();
+        _tapHold = new TapHoldTracker(_holdTimer, _queue, _log);
         _hookSource = new HookThumbWheelSource(hook);
         _hidSource = new HidThumbWheelSource(mouse);
     }
@@ -194,7 +199,11 @@ public sealed class SlenderEngine : IDisposable
     /// <summary>Longest a divert change waits for a held control to be released (a lost release must not pin the old set forever).</summary>
     internal const long HeldDivertWaitMs = 10_000;
 
-    private void OnForegroundChanged(object? sender, string? process) => ScheduleForegroundRedivert(_clock());
+    private void OnForegroundChanged(object? sender, string? process)
+    {
+        ReleaseHoldSoon();
+        ScheduleForegroundRedivert(_clock());
+    }
 
     private void ScheduleForegroundRedivert(long since)
     {
@@ -265,6 +274,7 @@ public sealed class SlenderEngine : IDisposable
 
     private void OnButton(object? sender, ButtonEvent e)
     {
+        ReleaseHoldSoon(); // a button must never act with the wheel's Ctrl still held
         if (!IsHidppControl(e.ControlId)) return; // Middle/Back/Forward come from the hook; ignore stale diverts
         if (e.ControlId == ControlId.Gesture && OnGestureButton(e)) return;
         try { _queue.Post(() => HandleButton(e)); }
@@ -537,6 +547,7 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             var id = (ushort)e.Button;
+            if (e.Pressed) ReleaseHoldSoon();
             if (e.Pressed)
             {
                 var action = ResolveAction(id);
@@ -652,6 +663,7 @@ public sealed class SlenderEngine : IDisposable
     /// <summary>The Actions Ring opened or closed: it needs the wheel diverted while it is open.</summary>
     public void SetRingOpen(bool open)
     {
+        if (open) ReleaseHoldSoon();
         _ringOpen = open;
         bool started;
         lock (_gate) started = _started;
@@ -720,6 +732,7 @@ public sealed class SlenderEngine : IDisposable
             if (_mouse.ThumbWheelTouchSupported == false) return;
             var r = _touch.OnReport(e.Touch, e.Rotation, _clock());
             if (r.Down) _queue.Post(HandleTouchDown);
+            if (r.Up) ReleaseHoldSoon(); // thumb off the wheel: the burst is over
             if (r.Up) _queue.Post(() => HandleTouchUp(r.Tap));
         }
         catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
@@ -783,6 +796,7 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
+            ReleaseHoldSoon();
             var process = _foreground.ProcessName;
             var key = ModeKey(process);
             var second = ThumbWheelModes.SecondFor(_config, process);
@@ -826,7 +840,10 @@ public sealed class SlenderEngine : IDisposable
         {
             var action = notches > 0 ? second.Forward : second.Back;
             if (action is ActionSpec.None or ActionSpec.Disabled or ActionSpec.ToggleThumbWheelMode or ActionSpec.ActionsRing) return;
-            for (var i = Math.Min(Math.Abs(notches), MaxNotchesPerEvent); i > 0; i--)
+            var count = Math.Min(Math.Abs(notches), MaxNotchesPerEvent);
+            if (TryHeldSteps(action, notches > 0 ? second.Back : second.Forward, count)) return;
+            ReleaseHold(); // anything else runs with no wheel modifier held
+            for (var i = count; i > 0; i--)
             {
                 _executor.Execute(action, true);
                 _executor.Execute(action, false);
@@ -852,7 +869,10 @@ public sealed class SlenderEngine : IDisposable
         {
             var (right, left) = SplitWheelChord(chord);
             var action = new ActionSpec.Keys(notches > 0 ? right : left);
-            for (var i = Math.Min(Math.Abs(notches), MaxNotchesPerEvent); i > 0; i--)
+            var count = Math.Min(Math.Abs(notches), MaxNotchesPerEvent);
+            if (TryHeldSteps(action, new ActionSpec.Keys(notches > 0 ? left : right), count)) return;
+            ReleaseHold();
+            for (var i = count; i > 0; i--)
                 _executor.Execute(action, true);
         }
         catch (Exception ex) { _log.Error("thumb wheel action failed", ex); }
@@ -873,6 +893,93 @@ public sealed class SlenderEngine : IDisposable
         return (chord.Trim(), string.Join('+', parts));
     }
 
+    // ---- held modifiers across thumb wheel key steps (engine queue) ----
+
+    /// <summary>Quiet time after the last wheel movement before held modifiers are let go.</summary>
+    internal int WheelHoldReleaseMs { get; set; } = 400;
+
+    /// <summary>The chord a wheel step sends on the held path; Excel's sheet commands become their keys (faster than COM).</summary>
+    private static string? HoldChord(ActionSpec? action) => action switch
+    {
+        ActionSpec.Keys k => k.Chord,
+        ActionSpec.Excel { Command: ExcelCommand.NextSheet } => "Ctrl+PageDown",
+        ActionSpec.Excel { Command: ExcelCommand.PreviousSheet } => "Ctrl+PageUp",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Sends <paramref name="count"/> steps with the modifiers this direction shares with <paramref name="other"/> held down
+    /// (Ctrl for Ctrl+Tab / Ctrl+Shift+Tab), as one batch. False when the pair has nothing to hold or the executor cannot send
+    /// raw keys; the caller then runs whole actions per step.
+    /// </summary>
+    private bool TryHeldSteps(ActionSpec action, ActionSpec? other, int count)
+    {
+        if (count <= 0 || !_executor.SupportsKeyEvents) return false;
+        var chord = HoldChord(action);
+        if (chord is null || !WheelKeyHold.TryPlain(chord, out var keys)) return false;
+        var shared = WheelKeyHold.SharedModifiers(chord, HoldChord(other));
+        if (shared is null) return false;
+        var events = _wheelHold.Step(shared, keys, count);
+        _holding = _wheelHold.IsHolding;
+        if (!_executor.SendKeyEvents(events))
+        {
+            _log.Error($"SendInput failed for held '{chord}'");
+            ReleaseHold();
+            return true;
+        }
+        ScheduleHoldRelease(WheelHoldReleaseMs);
+        return true;
+    }
+
+    private void ScheduleHoldRelease(int delayMs)
+    {
+        _holdRelease?.Dispose();
+        _holdRelease = _holdTimer.Schedule(Math.Max(1, delayMs), () =>
+        {
+            try { _queue.Post(CheckHoldRelease); }
+            catch (Exception ex) { SafeLog("held modifier release could not be queued", ex); }
+        });
+    }
+
+    /// <summary>Lets the modifiers go once the wheel has been still for WheelHoldReleaseMs; otherwise waits the rest.</summary>
+    private void CheckHoldRelease()
+    {
+        try
+        {
+            if (!_wheelHold.IsHolding) return;
+            var quiet = _clock() - _lastRotation;
+            if (quiet < WheelHoldReleaseMs) { ScheduleHoldRelease((int)(WheelHoldReleaseMs - quiet)); return; }
+            ReleaseHold();
+        }
+        catch (Exception ex) { SafeLog("held modifier release failed", ex); }
+    }
+
+    /// <summary>Engine queue: key-up for every held modifier now.</summary>
+    private void ReleaseHold()
+    {
+        _holdRelease?.Dispose();
+        _holdRelease = null;
+        if (!_wheelHold.IsHolding) { _holding = false; return; }
+        var events = _wheelHold.Release();
+        _holding = false;
+        if (!_executor.SendKeyEvents(events)) _log.Error("releasing held wheel modifiers failed");
+    }
+
+    /// <summary>Any thread: queue a release when the wheel holds modifiers (a button, an app switch, the thumb leaving the wheel).</summary>
+    private void ReleaseHoldSoon()
+    {
+        if (!_holding) return;
+        try
+        {
+            _queue.Post(() =>
+            {
+                try { ReleaseHold(); }
+                catch (Exception ex) { SafeLog("held modifier release failed", ex); }
+            });
+        }
+        catch (Exception ex) { SafeLog("held modifier release could not be queued", ex); }
+    }
+
     // ---- status ----
 
     private void OnConnection(object? sender, bool connected)
@@ -883,6 +990,7 @@ public sealed class SlenderEngine : IDisposable
             else
             {
                 lock (_gate) { _thumbHid = false; _thumbWanted = false; } // the hook is the fallback until the device is back
+                ReleaseHoldSoon();
                 if (_touch.Reset()) _queue.Post(() => HandleTouchUp(false));
             }
             if (!connected)
@@ -958,6 +1066,7 @@ public sealed class SlenderEngine : IDisposable
         _foreground.Changed -= OnForegroundChanged;
         lock (_gate) { _foregroundDebounce?.Cancel(); _thumbRetry?.Cancel(); }
         _cts.Cancel();
+        try { if (_holding) { _holding = false; _executor.SendKeyEvents(_wheelHold.Release()); } } catch { } // never leave Ctrl down
         _queue.Dispose();
         _tapHold.Dispose();
         _cts.Dispose();

@@ -145,6 +145,12 @@ public abstract record ActionSpec
 public interface IActionExecutor
 {
     void Execute(ActionSpec action, bool pressed);
+
+    /// <summary>True when <see cref="SendKeyEvents"/> works; the thumb wheel's held-modifier path needs it.</summary>
+    bool SupportsKeyEvents => false;
+
+    /// <summary>Sends raw key downs and ups in one batch (the thumb wheel holding Ctrl across tab steps). False on failure.</summary>
+    bool SendKeyEvents(IReadOnlyList<KeyEvent> events) => false;
 }
 
 /// <summary>Bindings for one app. AppProcess null = default profile.</summary>

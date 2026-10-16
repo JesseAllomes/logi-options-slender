@@ -18,6 +18,15 @@ internal static class KeyInjector
         return Send(inputs);
     }
 
+    /// <summary>Raw downs and ups in the given order, in one SendInput call.</summary>
+    public static bool SendKeyEvents(IReadOnlyList<KeyEvent> events)
+    {
+        if (events.Count == 0) return true;
+        var inputs = new NativeMethods.INPUT[events.Count];
+        for (var i = 0; i < events.Count; i++) inputs[i] = Key(events[i].Key, events[i].Up);
+        return Send(inputs);
+    }
+
     public static bool SendMouseButton(string button, bool down)
     {
         uint flags, data = 0;
