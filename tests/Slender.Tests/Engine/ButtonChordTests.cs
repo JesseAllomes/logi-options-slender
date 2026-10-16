@@ -60,14 +60,31 @@ public class ButtonChordTests
     }
 
     [Fact]
-    public void A_held_press_is_replayed_when_the_window_ends_and_its_release_passes()
+    public void A_held_press_is_replayed_when_the_window_ends_and_its_release_is_injected_after_it()
     {
         var r = new Rig();
         r.Chord.OnButton(R, true, 5, 5);
         r.Timer.Elapse();
         Assert.Equal([(R, true)], r.Sent);
-        Assert.False(r.Chord.OnButton(R, false, 5, 5)); // the real release goes to the app (a right-click menu works)
-        Assert.Single(r.Sent);
+        // The real release is swallowed and re-sent: a real release can overtake the injected press in Windows' queue
+        // (a ~50 ms click), leaving the app with a press and no release. Injected input keeps its order.
+        Assert.True(r.Chord.OnButton(R, false, 5, 5));
+        Assert.Equal([(R, true), (R, false)], r.Sent); // a right-click menu still opens on this release
+    }
+
+    [Fact]
+    public void A_missed_release_is_sent_before_the_next_press()
+    {
+        var r = new Rig();
+        r.Chord.OnButton(L, true, 0, 0);
+        r.Timer.Elapse();                              // replayed press
+        Assert.True(r.Chord.OnButton(L, true, 0, 0));  // pressed again: its release never came through
+        Assert.Equal([(L, true), (L, false), (L, true)], r.Sent);
+        Assert.True(r.Chord.OnButton(L, false, 0, 0));
+        Assert.Equal([(L, true), (L, false), (L, true), (L, false)], r.Sent);
+        // Back to normal afterwards: the next click is held back as usual.
+        Assert.True(r.Chord.OnButton(L, true, 0, 0));
+        Assert.True(r.Chord.IsPending);
     }
 
     [Fact]
@@ -80,7 +97,8 @@ public class ButtonChordTests
         r.Chord.OnMove(110, 100);
         Assert.Equal([(L, true)], r.Sent);
         Assert.False(r.Chord.IsPending);
-        Assert.False(r.Chord.OnButton(L, false, 120, 100));
+        Assert.True(r.Chord.OnButton(L, false, 120, 100));
+        Assert.Equal([(L, true), (L, false)], r.Sent);
     }
 
     [Fact]
@@ -91,9 +109,9 @@ public class ButtonChordTests
         r.Timer.Elapse(); // left is now held normally
         Assert.False(r.Chord.OnButton(R, true, 0, 0));
         Assert.False(r.Chord.OnButton(R, false, 0, 0));
-        Assert.False(r.Chord.OnButton(L, false, 0, 0));
+        Assert.True(r.Chord.OnButton(L, false, 0, 0)); // the replayed press gets an injected release
         Assert.Empty(r.Changes);
-        Assert.Equal([(L, true)], r.Sent);
+        Assert.Equal([(L, true), (L, false)], r.Sent);
     }
 
     [Fact]

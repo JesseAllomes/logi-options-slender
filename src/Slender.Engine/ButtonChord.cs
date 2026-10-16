@@ -27,6 +27,11 @@ public sealed class ButtonChord
     private bool _active;
     private bool _chordLeft, _chordRight;   // while active: which chord buttons are still held
     private bool _passLeft, _passRight;     // pressed normally: their release must reach the app
+    // Pressed by a replay (Slender injected the press). Its release is injected too, never passed: a real release can be
+    // processed by Windows before the injected press it follows (the replay races the release when a click lasts ~50 ms),
+    // which leaves the app with a press and no release (Edge stopped taking clicks until Alt+Tab). Injected input is
+    // delivered in the order it was sent, so press-then-release is guaranteed.
+    private bool _replayedLeft, _replayedRight;
     private volatile bool _enabled = true;
 
     private readonly Func<int, int, bool>? _canHoldBack;
@@ -113,6 +118,23 @@ public sealed class ButtonChord
                 _flush = _timer.Schedule(WindowMs, Flush);
                 swallow = true;
             }
+            else if (Replayed(button))
+            {
+                // This button's press was replayed. Its release goes out as an injected release, after the injected press.
+                // A new press here means its release was missed: send that release, then this press, both injected (so in
+                // order), and keep treating the button as replayed so its release is injected too.
+                replay.Add((button, false));
+                if (down)
+                {
+                    replay.Add((button, true));
+                }
+                else
+                {
+                    SetReplayed(button, false);
+                    if (button == ChordButton.Left) _passLeft = false; else _passRight = false;
+                }
+                swallow = true;
+            }
             else
             {
                 if (button == ChordButton.Left) _passLeft = down; else _passRight = down;
@@ -143,9 +165,17 @@ public sealed class ButtonChord
             CancelFlush();
             _pending = null;
             if (p == ChordButton.Left) _passLeft = true; else _passRight = true;
+            SetReplayed(p, true);
             b = p;
         }
         Send([(b, true)]);
+    }
+
+    private bool Replayed(ChordButton b) => b == ChordButton.Left ? _replayedLeft : _replayedRight;
+
+    private void SetReplayed(ChordButton b, bool on)
+    {
+        if (b == ChordButton.Left) _replayedLeft = on; else _replayedRight = on;
     }
 
     private void CancelFlush()
