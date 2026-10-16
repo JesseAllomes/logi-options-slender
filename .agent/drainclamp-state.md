@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=76 -->
+<!-- drainclamp-build: state; schema=1; generation=77 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -101,7 +101,6 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T01:57:21+00:00 09374121 Merged: Win32 tray (AOT 5.3 MB private), popover mode, setup.exe+sync, onboard (1 modifier max; Options+ uses software divert for multi-mod); 400+ tests
 - 2026-10-15T02:04:29+00:00 6a918951 Session wrap: SlenderSetup.exe 1.0.0 built (AOT tray, 71.8 MB); next = user quits old Slender, installs, 5-min live pass (m13)
 - 2026-10-15T03:17:31+00:00 55959850 m13/c1 verified install; scope added m17 battery alert, m18 launch/turn-off actions, m19 Options+ import; contracts on main fb2adcb; Sonnet agents on wt-battery, wt-actions, wt-import
 - 2026-10-15T03:40:43+00:00 08d82604 m17-m19 merged to main (e71e1e2, 511 tests): battery alert, Launch/Disabled actions, Options+ importer + UI; user asked for all import gaps -> m20 own ring, m21 gestures, m22 brightness/DPI/per-app divert
@@ -121,4 +120,5 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 - 2026-10-15T22:04:11+00:00 981b2667 m31 shipped: SlenderSetup 1.1.6 built 09:04 Melbourne (delta 1.1.5->1.1.6 in artifacts/releases); tray picks it up within 30 s / on Check for updates; awaiting user's live look at the card
 - 2026-10-15T22:28:27+00:00 e1338ec4 m13 c4 done: 1 h memory sample flat at ~11 MB commit (.agent/memory-samples-2026-10-16.txt); m13 all chunks done, close after the user's live look at 1.1.6
 - 2026-10-15T23:51:19+00:00 4b8962d4 Repo public on GitHub (history scrubbed: username, work hostname, AI trailers); OTA moved to GitHub Releases: Build-Setup.ps1 publishes v<version> via vpk upload github, 218118c; v1.1.7 published 10:50 Melbourne, installed 1.1.6 takes it from the local folder then follows GitHub. m31 still awaits the user's live look
+- 2026-10-16T00:15:43+00:00 62015572 Bug fixed (user report: K860 Lock key set to Turn off kept Win+L): WinUI ItemClick gives the row's Content, so every picker option-list and ring icon click was dropped; ClickedItems.Find maps it back, 990 tests, ee9713a; v1.1.8 published to GitHub 11:15 Melbourne
 <!-- /DC:LOG -->
