@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=77 -->
+<!-- drainclamp-build: state; schema=1; generation=79 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -91,6 +91,7 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 | m30 | mouse-tracked gestures: temporary divert with raw XY on the gesture button (0x1B04), gestures from device deltas, hook path kept as fallback; allowlist adds the raw-XY divert flag only | src/Slender.Hidpp;src/Slender.Engine | done | m26 |
 | m31 | thumb wheel card on the device stage: clicking the thumb wheel label/hotspot opens a card (Scroll sideways action -> picker, Second action on/off, Scroll right / Scroll left actions, Switch with = which mouse button holds "Switch thumb wheel mode" in this app, inherited line + Customise), follows the app strip; Point & scroll section kept with the same labels | src/Slender.Settings/MainWindow.ThumbCard.cs;src/Slender.Settings/MainWindow.Stage.cs;src/Slender.Settings/MainWindow.DualThumb.cs;src/Slender.Settings/Logic/ThumbWheelOps.cs;tests/Slender.Tests/Settings/ThumbWheelOpsTests.cs | active | m24 |
 | m7 | switch-over complete: Options+ service Manual or uninstalled, Logi Plugin Service off, Excel add-ins disabled, one-week no-crash check | docs/switch-over.md;scripts/Repair-ExcelAddins.ps1 | pending | m16;m24;m30 |
+| m32 | shortcut picker: recorder takes Ctrl+Tab etc. (window accelerators off while recording) and Win combos (low-level hook while recording + Settings foreground); Shortcuts tab with per-app, common and Windows presets, hide per entry, show hidden, General toggle to hide the tab | src/Slender.Settings/Logic/ShortcutLibrary.cs;src/Slender.Settings/Logic/WinChordCapture.cs;src/Slender.Settings/MainWindow.Shortcuts.cs;src/Slender.Settings/MainWindow.Picker.cs;src/Slender.Settings/Logic/UiState.cs;tests/Slender.Tests/Settings | active | m31 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -101,7 +102,6 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T02:04:29+00:00 6a918951 Session wrap: SlenderSetup.exe 1.0.0 built (AOT tray, 71.8 MB); next = user quits old Slender, installs, 5-min live pass (m13)
 - 2026-10-15T03:17:31+00:00 55959850 m13/c1 verified install; scope added m17 battery alert, m18 launch/turn-off actions, m19 Options+ import; contracts on main fb2adcb; Sonnet agents on wt-battery, wt-actions, wt-import
 - 2026-10-15T03:40:43+00:00 08d82604 m17-m19 merged to main (e71e1e2, 511 tests): battery alert, Launch/Disabled actions, Options+ importer + UI; user asked for all import gaps -> m20 own ring, m21 gestures, m22 brightness/DPI/per-app divert
 - 2026-10-15T03:55:44+00:00 75bd84c4 m21 gestures + m22 brightness/DPI/per-app divert merged (601d1d7, 554 tests); m20 ring prototypes round 1 shown, waiting for pick
@@ -121,4 +121,5 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 - 2026-10-15T22:28:27+00:00 e1338ec4 m13 c4 done: 1 h memory sample flat at ~11 MB commit (.agent/memory-samples-2026-10-16.txt); m13 all chunks done, close after the user's live look at 1.1.6
 - 2026-10-15T23:51:19+00:00 4b8962d4 Repo public on GitHub (history scrubbed: username, work hostname, AI trailers); OTA moved to GitHub Releases: Build-Setup.ps1 publishes v<version> via vpk upload github, 218118c; v1.1.7 published 10:50 Melbourne, installed 1.1.6 takes it from the local folder then follows GitHub. m31 still awaits the user's live look
 - 2026-10-16T00:15:43+00:00 62015572 Bug fixed (user report: K860 Lock key set to Turn off kept Win+L): WinUI ItemClick gives the row's Content, so every picker option-list and ring icon click was dropped; ClickedItems.Find maps it back, 990 tests, ee9713a; v1.1.8 published to GitHub 11:15 Melbourne
+- 2026-10-16T00:43:51+00:00 a153c171 m32 built 7cdd1ff (1387 tests, -warnaserror clean): recorder takes Ctrl+Tab/Ctrl+Shift+Tab (window accelerators off while open) and Win/Alt system combos (RecorderKeyHook + WinChordCapture, only while Settings is foreground; Win+L impossible); Shortcuts tab with app/common/Windows presets, per-row hide, Show hidden, General toggle (settings-ui.json). Not yet seen live; shipping as 1.1.9
 <!-- /DC:LOG -->
