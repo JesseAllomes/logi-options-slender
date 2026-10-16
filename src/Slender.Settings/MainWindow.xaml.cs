@@ -254,7 +254,24 @@ public sealed partial class MainWindow : Window
             action();
         };
         Root.KeyboardAccelerators.Add(accelerator);
+        _windowShortcuts.Add(accelerator);
     }
+
+    private readonly List<KeyboardAccelerator> _windowShortcuts = [];
+
+    /// <summary>
+    /// Off while the key recorder is open: the window's own shortcuts (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+1..9, F6, Ctrl+G)
+    /// would otherwise fire instead of being recorded.
+    /// </summary>
+    private void SetWindowShortcutsEnabled(bool on)
+    {
+        foreach (KeyboardAccelerator a in _windowShortcuts.Concat(CompareButton.KeyboardAccelerators))
+        {
+            a.IsEnabled = on;
+        }
+    }
+
+    private void SaveUiNow() => _ui.Save(UiPath);
 
     private List<string?> AppKeys()
     {

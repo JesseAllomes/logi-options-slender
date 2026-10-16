@@ -433,6 +433,20 @@ public sealed class UiStateTests : IDisposable
     }
 
     [Fact]
+    public void Shortcut_suggestion_choices_round_trip_and_default_to_shown()
+    {
+        string path = Path.Combine(_dir, "ui.json");
+        Assert.False(UiState.Load(path).HideShortcutSuggestions);
+        Assert.Empty(UiState.Load(path).HiddenShortcuts);
+
+        new UiState { HideShortcutSuggestions = true, HiddenShortcuts = ["windows|Win+L", "common|Ctrl+P"] }.Save(path);
+        UiState loaded = UiState.Load(path);
+
+        Assert.True(loaded.HideShortcutSuggestions);
+        Assert.Equal(["windows|Win+L", "common|Ctrl+P"], loaded.HiddenShortcuts);
+    }
+
+    [Fact]
     public void Missing_or_corrupt_file_gives_defaults_and_size_is_clamped_to_the_minimum()
     {
         string path = Path.Combine(_dir, "ui.json");

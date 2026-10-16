@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Shapes;
 using Slender.Engine;
 using Slender.Settings.Logic;
+using Slender.Settings.Services;
 using Slender.Settings.Views;
 using Windows.System;
 using Windows.UI.Core;
@@ -18,17 +19,17 @@ public sealed partial class MainWindow
 
     private static readonly PickerTab[] MouseTabs =
     [
-        new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
+        new("keys", "Keys"), new("shortcuts", "Shortcuts"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
     ];
 
     private static readonly PickerTab[] ThumbTabs =
     [
-        new("twoway", "Two-way"), new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
+        new("twoway", "Two-way"), new("keys", "Keys"), new("shortcuts", "Shortcuts"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
     ];
 
     private static readonly PickerTab[] KeyboardTabs =
     [
-        new("keys", "Keys"), new("app", "App"), new("media", "Media"), new("more", "More"), new("default", "Default"),
+        new("keys", "Keys"), new("shortcuts", "Shortcuts"), new("app", "App"), new("media", "Media"), new("more", "More"), new("default", "Default"),
     ];
 
     /// <summary>What one open picker offers: its tabs, what is chosen now, and where a choice goes.</summary>
@@ -58,6 +59,9 @@ public sealed partial class MainWindow
 
         /// <summary>The Sense Panel: Press / Hold shows the one-click "Hold opens the Actions Ring" preset.</summary>
         public bool SensePanel { get; init; }
+
+        /// <summary>The app whose suggested shortcuts the Shortcuts tab lists; null = All apps.</summary>
+        public string? ShortcutApp { get; init; }
     }
 
     /// <summary>
@@ -77,6 +81,7 @@ public sealed partial class MainWindow
             ActionSpec.Keys when _kind == DeviceKind.Keyboard && ActionCatalog.KeyboardAppOptions.Any(o => o.Action.Equals(own)) => "app",
             ActionSpec.Keys when _kind == DeviceKind.Keyboard && ActionCatalog.KeyboardMediaOptions.Any(o => o.Action.Equals(own)) => "media",
             ActionSpec.Keys k when _kind == DeviceKind.Mouse && ActionCatalog.TryDecodePair(k.Chord, out _, out _) => "twoway",
+            ActionSpec.Keys k when ShortcutShown(target, k.Chord) => "shortcuts",
             ActionSpec.Keys => "keys",
             ActionSpec.MouseButton or ActionSpec.ToggleThumbWheelMode => "mouse",
             ActionSpec.Excel => "excel",
@@ -105,6 +110,7 @@ public sealed partial class MainWindow
             IsPassThrough = target is not null && ProfileOps.IsPassThrough(_config.Config, target, _kind, info.Id),
             AllowTapHold = ActionCatalog.CanTapHold(_kind, info.Id),
             SensePanel = _kind == DeviceKind.Mouse && info.Id == Slender.Hidpp.ControlId.SensePanel,
+            ShortcutApp = target,
         });
     }
 
@@ -122,8 +128,8 @@ public sealed partial class MainWindow
             spec.Apply(action);
         }
 
-        PickerTab[] tabs = spec.Tabs;
-        string initial = spec.Initial;
+        PickerTab[] tabs = _ui.HideShortcutSuggestions ? [.. spec.Tabs.Where(t => t.Key != "shortcuts")] : spec.Tabs;
+        string initial = tabs.Any(t => t.Key == spec.Initial) ? spec.Initial : tabs[0].Key;
 
         var header = Ui.Text(spec.Header, 12, Ui.Muted);
         var host = new Grid { MinHeight = 150 };
@@ -198,6 +204,8 @@ public sealed partial class MainWindow
         {
             case "keys":
                 return KeysRecorder(own as ActionSpec.Keys, commit, flyout);
+            case "shortcuts":
+                return ShortcutsTab(spec.ShortcutApp, own, commit);
             case "twoway":
                 return OptionList(ActionCatalog.ThumbPairOptions, own, commit);
             case "mouse":
@@ -513,7 +521,7 @@ public sealed partial class MainWindow
     {
         string? recorded = current?.Chord;
         var capHost = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var hint = Ui.Text("Press the shortcut you want, then Enter to save.", 12, Ui.Muted);
+        var hint = Ui.Text("Press the shortcut you want, then Enter to save. Win shortcuts work too, except Win+L.", 12, Ui.Muted);
         hint.TextWrapping = TextWrapping.Wrap;
         var save = new Button { Content = "Save", Style = Ui.Res<Style>("PrimaryPillStyle"), IsEnabled = false };
         var cancel = new Button { Content = "Cancel", Style = Ui.Res<Style>("QuietButtonStyle") };
@@ -604,8 +612,12 @@ public sealed partial class MainWindow
                 return; // Esc cancels the flyout; Tab moves on to Save and Cancel
             }
 
-            string? chord = ChordRecorder.Compose(win, ctrl, alt, shift, vk);
             e.Handled = true;
+            Record(ChordRecorder.Compose(win, ctrl, alt, shift, vk));
+        }
+
+        void Record(string? chord)
+        {
             if (chord is null)
             {
                 hint.Text = "Slender cannot send that key. Try another.";
@@ -616,6 +628,27 @@ public sealed partial class MainWindow
             recorded = chord;
             Show();
         }
+
+        // While the recorder is open: the window's own shortcuts are off (Ctrl+Tab would switch apps instead of being
+        // recorded), and a short-lived hook records the Win and Alt shortcuts Windows would otherwise act on (Win+V).
+        RecorderKeyHook? hook = null;
+        recorder.Loaded += (_, _) =>
+        {
+            SetWindowShortcutsEnabled(false);
+            hook ??= new RecorderKeyHook(_hwnd, DispatcherQueue, r =>
+            {
+                if (recorder.IsLoaded)
+                {
+                    Record(r.Unsupported ? null : r.Chord);
+                }
+            });
+        };
+        recorder.Unloaded += (_, _) =>
+        {
+            hook?.Dispose();
+            hook = null;
+            SetWindowShortcutsEnabled(true);
+        };
 
         if (flyout.Content is UIElement pickerRoot)
         {

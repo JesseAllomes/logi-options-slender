@@ -12,6 +12,12 @@ public sealed class UiState
     /// <summary>Process name of the selected app; null = All apps.</summary>
     public string? App { get; set; }
 
+    /// <summary>True hides the picker's Shortcuts tab (suggested shortcuts) everywhere.</summary>
+    public bool HideShortcutSuggestions { get; set; }
+
+    /// <summary>Suggested shortcuts hidden one by one: ShortcutLibrary.HideKey(group id, chord).</summary>
+    public List<string> HiddenShortcuts { get; set; } = [];
+
     public static UiState Load(string path)
     {
         try

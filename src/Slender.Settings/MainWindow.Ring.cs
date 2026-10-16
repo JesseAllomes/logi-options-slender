@@ -20,7 +20,7 @@ public sealed partial class MainWindow
 {
     private static readonly PickerTab[] RingTabs =
     [
-        new("keys", "Keys"), new("mouse", "Mouse"), new("excel", "Excel"), new("more", "More"), new("icon", "Icon"), new("default", "Empty"),
+        new("keys", "Keys"), new("shortcuts", "Shortcuts"), new("mouse", "Mouse"), new("excel", "Excel"), new("more", "More"), new("icon", "Icon"), new("default", "Empty"),
     ];
 
     private RingPreview? _ringPreview;
@@ -328,6 +328,7 @@ public sealed partial class MainWindow
         var spec = new PickerSpec(where, RingTabs, initial, own, "Leave this slot empty", false,
             action => _config.Update(c => RingOps.SetAction(c, RingApp, path, action ?? new ActionSpec.None())))
         {
+            ShortcutApp = RingApp,
             At = at,
             Closed = () => preview.Focus(FocusState.Programmatic),
             Extra = () => RingNameBox(path),

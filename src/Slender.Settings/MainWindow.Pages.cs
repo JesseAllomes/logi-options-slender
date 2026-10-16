@@ -320,6 +320,26 @@ public sealed partial class MainWindow
             PageToggle("F-keys first", c.Keyboard.FnLock, on => _config.Update(x => x with { Keyboard = x.Keyboard with { FnLock = on } })));
         BuildKeyboardExtras(c);
 
+        AddSection("SHORTCUTS");
+        AddRow("Suggested shortcuts", "A Shortcuts tab when you choose an action: the app's own shortcuts, then common and Windows ones.",
+            PageToggle("Suggested shortcuts", !_ui.HideShortcutSuggestions, on =>
+            {
+                _ui.HideShortcutSuggestions = !on;
+                SaveUiNow();
+            }));
+        if (_ui.HiddenShortcuts.Count > 0)
+        {
+            var restore = new Button { Content = "Show all again", Style = Ui.Res<Style>("QuietButtonStyle") };
+            int count = _ui.HiddenShortcuts.Count;
+            restore.Click += (_, _) =>
+            {
+                _ui.HiddenShortcuts.Clear();
+                SaveUiNow();
+                restore.IsEnabled = false;
+            };
+            AddRow("Hidden suggestions", count == 1 ? "1 suggestion is hidden." : $"{count} suggestions are hidden.", restore);
+        }
+
         AddSection("FILES");
         var open = new Button { Content = "Open folder", Style = Ui.Res<Style>("QuietButtonStyle") };
         open.Click += (_, _) => OpenFolder(SlenderPaths.ConfigDirectory);
