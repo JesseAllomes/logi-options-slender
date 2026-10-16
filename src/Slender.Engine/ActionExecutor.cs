@@ -33,6 +33,8 @@ public sealed class ActionExecutor : IActionExecutor
 
     public bool SendKeyEvents(IReadOnlyList<KeyEvent> events) => events.Count == 0 || _sendEvents(events);
 
+    public bool SendHorizontalWheel(int delta) => KeyInjector.SendHorizontalWheel(delta);
+
     public ActionExecutor(IExcelBridge excel, IForegroundApp foreground, ILog? log = null, IShellLauncher? shell = null, IBrightnessController? brightness = null, ITextSender? text = null,
         Func<IReadOnlyList<KeyStroke>, bool>? sendChord = null, Func<IReadOnlyList<KeyEvent>, bool>? sendEvents = null)
     {

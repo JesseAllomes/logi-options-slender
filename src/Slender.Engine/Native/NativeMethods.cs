@@ -41,6 +41,7 @@ internal static class NativeMethods
     public const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020, MOUSEEVENTF_MIDDLEUP = 0x0040;
     public const uint MOUSEEVENTF_XDOWN = 0x0080, MOUSEEVENTF_XUP = 0x0100;
     public const uint XBUTTON1 = 1, XBUTTON2 = 2;
+    public const uint MOUSEEVENTF_HWHEEL = 0x1000;
 
     public delegate nint LowLevelMouseProc(int nCode, nint wParam, nint lParam);
     public delegate void WinEventProc(nint hHook, uint eventType, nint hwnd, int idObject, int idChild, uint threadId, uint time);

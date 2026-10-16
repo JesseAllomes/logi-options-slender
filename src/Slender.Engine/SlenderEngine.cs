@@ -640,8 +640,18 @@ public sealed class SlenderEngine : IDisposable
                 _queue.Post(() => RunWheelKeys(keys.Chord, notches));
                 return;
             }
-            if (!cfg.Excel.ThumbWheelScrollsColumns) return;
-            if (_foreground.ProcessName != "excel") return;
+            if (!cfg.Excel.ThumbWheelScrollsColumns || _foreground.ProcessName != "excel")
+            {
+                // Nothing wants this turn. From the hook it goes on to Windows by itself. From HID++ the wheel is still diverted
+                // (just after leaving tab mode the switch back waits for the wheel to pause, or the app diverts it only for
+                // touch/tap), so the turn would be lost: send it on as the normal sideways scroll.
+                if (e.FromHid)
+                {
+                    var delta = e.Delta;
+                    _queue.Post(() => PassThroughSideScroll(delta));
+                }
+                return;
+            }
             var window = _foreground.WindowHandle;
             e.Handled = true;
             var cols = _accumulator.Add(e.Delta, cfg.Excel.ColumnsPerNotch, _clock());
@@ -891,6 +901,13 @@ public sealed class SlenderEngine : IDisposable
         var i = parts.FindIndex(p => p.Equals("Shift", StringComparison.OrdinalIgnoreCase));
         if (i >= 0) parts.RemoveAt(i); else parts.Insert(Math.Max(0, parts.Count - 1), "Shift");
         return (chord.Trim(), string.Join('+', parts));
+    }
+
+    /// <summary>Engine queue: a diverted turn nothing claimed, sent on as WM_MOUSEHWHEEL (the mouse hook ignores injected input).</summary>
+    private void PassThroughSideScroll(int delta)
+    {
+        try { _executor.SendHorizontalWheel(delta); }
+        catch (Exception ex) { _log.Error("side scroll pass-through failed", ex); }
     }
 
     // ---- held modifiers across thumb wheel key steps (engine queue) ----

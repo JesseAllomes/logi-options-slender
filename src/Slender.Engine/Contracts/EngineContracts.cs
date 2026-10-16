@@ -151,6 +151,9 @@ public interface IActionExecutor
 
     /// <summary>Sends raw key downs and ups in one batch (the thumb wheel holding Ctrl across tab steps). False on failure.</summary>
     bool SendKeyEvents(IReadOnlyList<KeyEvent> events) => false;
+
+    /// <summary>Sends one native sideways scroll (WHEEL_DELTA units, positive = right). False when unsupported or failed.</summary>
+    bool SendHorizontalWheel(int delta) => false;
 }
 
 /// <summary>Bindings for one app. AppProcess null = default profile.</summary>

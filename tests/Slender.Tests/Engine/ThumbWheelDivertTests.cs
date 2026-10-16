@@ -41,11 +41,11 @@ public class ThumbWheelDivertTests
         public FakeExecutor Exec = new();
         public SlenderEngine Engine;
         public long Now = 1000;
-        public Rig(SlenderConfig? cfg = null, string? process = "excel", Action<ThumbMouse>? setup = null)
+        public Rig(SlenderConfig? cfg = null, string? process = "excel", Action<ThumbMouse>? setup = null, IActionExecutor? executor = null)
         {
             setup?.Invoke(Mouse);
             Fg.ProcessName = process;
-            Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, Exec, cfg ?? SlenderConfig.Default, new ListLog(), new InlineQueue(), () => Now)
+            Engine = new SlenderEngine(Mouse, Hook, Fg, Excel, executor ?? Exec, cfg ?? SlenderConfig.Default, new ListLog(), new InlineQueue(), () => Now)
             {
                 ForegroundDebounceMs = 0,
             };
@@ -281,6 +281,58 @@ public class ThumbWheelDivertTests
         [SlenderEngine.ThumbWheelTapBindingId] = new ActionSpec.Keys("Ctrl+Z"),
         [SlenderEngine.ThumbWheelTouchBindingId] = new ActionSpec.Keys("F13"),
     });
+
+    // ---- unclaimed diverted turns become a normal sideways scroll ----
+
+    [Fact]
+    public void Leaving_tab_mode_while_turning_keeps_side_scroll_working()
+    {
+        var cfg = WithDefault(new() { [ControlId.ModeShift] = new ActionSpec.ToggleThumbWheelMode() });
+        var exec = new FakeKeyExecutor();
+        var r = new Rig(cfg, "msedge", executor: exec);
+        r.Engine.ToggleThumbWheelMode();
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        r.Mouse.Rotate(120); // a tab step
+
+        r.Engine.ToggleThumbWheelMode(); // back to side scroll, mid-turn: the switch back waits for a pause
+        r.Mouse.Rotate(120);
+        r.Mouse.Rotate(-40);
+
+        Assert.True(r.Engine.ThumbWheelDiverted);
+        lock (exec.SideScrolls) Assert.Equal([120, -40], exec.SideScrolls);
+        Assert.Equal(1, exec.Events.Count(e => e.Key.Vk == 0x09 && !e.Up)); // only the one tab step
+    }
+
+    [Fact]
+    public void Touch_only_divert_still_side_scrolls()
+    {
+        var exec = new FakeKeyExecutor();
+        var r = new Rig(TapCfg(), "notepad", executor: exec);
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+
+        r.Mouse.Rotate(240);
+
+        lock (exec.SideScrolls) Assert.Equal([240], exec.SideScrolls);
+    }
+
+    [Fact]
+    public void Claimed_or_hook_turns_are_never_passed_through()
+    {
+        var exec = new FakeKeyExecutor();
+        var cols = new Rig(SlenderConfig.Default with { Excel = new ExcelSettings(true, 1) }, executor: exec);
+        Assert.True(Until(() => cols.Engine.ThumbWheelDiverted));
+        cols.Mouse.Rotate(120); // Excel columns own it
+        Assert.Equal(1, cols.Columns());
+
+        var off = new Rig(WithDefault(new() { [SlenderEngine.ThumbWheelBindingId] = new ActionSpec.Disabled() }), "notepad", executor: exec);
+        Assert.True(Until(() => off.Engine.ThumbWheelDiverted));
+        off.Mouse.Rotate(120); // turned off: swallowed
+
+        var native = new Rig(process: "notepad", executor: exec);
+        Assert.False(native.Hook.Wheel(120).Handled); // native path: Windows already has it
+
+        lock (exec.SideScrolls) Assert.Empty(exec.SideScrolls);
+    }
 
     [Fact]
     public void Tap_binding_diverts_and_touch_then_release_runs_it()

@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=83 -->
+<!-- drainclamp-build: state; schema=1; generation=85 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -94,6 +94,7 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 | m32 | shortcut picker: recorder takes Ctrl+Tab etc. (window accelerators off while recording) and Win combos (low-level hook while recording + Settings foreground); Shortcuts tab with per-app, common and Windows presets, hide per entry, show hidden, General toggle to hide the tab | src/Slender.Settings/Logic/ShortcutLibrary.cs;src/Slender.Settings/Logic/WinChordCapture.cs;src/Slender.Settings/MainWindow.Shortcuts.cs;src/Slender.Settings/MainWindow.Picker.cs;src/Slender.Settings/Logic/UiState.cs;tests/Slender.Tests/Settings | active | m31 |
 | m33 | thumb wheel tab mode: hold shared modifiers (Ctrl) across a burst, send only the key per step in one SendInput batch, release after 400 ms quiet or on button/touch-up/app switch/mode flip/ring/disconnect/dispose; Excel sheet steps as Ctrl+PageDown/PageUp keys instead of COM | src/Slender.Engine/WheelKeyHold.cs;src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/KeyInjector.cs;src/Slender.Engine/ActionExecutor.cs;tests/Slender.Tests/Engine/WheelKeyHoldTests.cs | done | m32 |
 | m34 | Fn lock belongs to the keyboard: never pushed at start/reconnect; written once only when the user changes it in Slender; read on connect and every 30 s (Fn+Esc) and mirrored into config by the tray; default stays off | src/Slender.Hidpp/LogiKeyboard.cs;src/Slender.Hidpp/Contracts/KeyboardContracts.cs;src/Slender.Engine/KeyboardRouter.cs;src/Slender.Tray/TrayApplication.cs;src/Slender.Tray/Program.cs | done | m33 |
+| m35 | no dropped side scroll: a diverted thumb wheel turn nothing claims (just after leaving tab mode, or touch/tap-only divert) is re-sent as WM_MOUSEHWHEEL; claimed turns (columns, keys, second role, ring, off) and hook turns untouched | src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/KeyInjector.cs;src/Slender.Engine/ActionExecutor.cs;tests/Slender.Tests/Engine/ThumbWheelDivertTests.cs | done | m33 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -104,7 +105,6 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T03:55:44+00:00 75bd84c4 m21 gestures + m22 brightness/DPI/per-app divert merged (601d1d7, 554 tests); m20 ring prototypes round 1 shown, waiting for pick
 - 2026-10-15T04:29:13+00:00 72b3ac42 m20 Actions Ring merged (6e486cf, 661 tests): 3 switchable styles, folders, appearance page, import; SlenderSetup 1.1.0 built; next = user installs and runs m13/c2 live pass covering m17-m22 + ring
 - 2026-10-15T04:56:47+00:00 030f8f86 In-app updates merged (73bf370, 687 tests); SlenderSetup 1.1.1 built with baked releases source; user installs once, later updates arrive in-app
 - 2026-10-15T05:27:40+00:00 401e20f1 Live-test fixes merged (0ec5761, 703 tests): ring preview crash, plugin-service ring import, key recorder; SlenderSetup 1.1.2 built as first in-app update
@@ -124,4 +124,5 @@ Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trail
 - 2026-10-16T00:43:51+00:00 a153c171 m32 built 7cdd1ff (1387 tests, -warnaserror clean): recorder takes Ctrl+Tab/Ctrl+Shift+Tab (window accelerators off while open) and Win/Alt system combos (RecorderKeyHook + WinChordCapture, only while Settings is foreground; Win+L impossible); Shortcuts tab with app/common/Windows presets, per-row hide, Show hidden, General toggle (settings-ui.json). Not yet seen live; shipping as 1.1.9
 - 2026-10-16T01:34:33+00:00 2ebfc1d9 m33 built (user idea: hold Ctrl while the wheel turns, send only Tab): WheelKeyHold + engine release triggers, 1402 tests. Known gap left open: switching back from tab mode drops side-scroll turns until the wheel pauses 150 ms (undivert waits for quiet); not fixed yet
 - 2026-10-16T01:45:14+00:00 3369d1a2 m34 built (user: every update reset Fn lock): config fnLock was true and was pushed on every start, overriding Fn+Esc. Now the keyboard owns it; 1410 tests. Decision: keyboard state wins, Slender mirrors it
+- 2026-10-16T01:52:32+00:00 c233d22d m35 built: unclaimed diverted turns pass through as native side scroll, 1413 tests. Assumption to check live: diverted 0x2150 rotation already follows the invert bit (user has invert on); if the side scroll right after leaving tab mode runs the wrong way, negate in PassThroughSideScroll
 <!-- /DC:LOG -->

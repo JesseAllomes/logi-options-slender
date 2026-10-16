@@ -16,6 +16,12 @@ internal sealed class FakeKeyExecutor : IActionExecutor
         Events.AddRange(events);
         return !Fail;
     }
+    public List<int> SideScrolls { get; } = [];
+    public bool SendHorizontalWheel(int delta)
+    {
+        lock (SideScrolls) SideScrolls.Add(delta);
+        return true;
+    }
 }
 
 public class WheelKeyHoldTests

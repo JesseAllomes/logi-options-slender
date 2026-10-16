@@ -27,6 +27,15 @@ internal static class KeyInjector
         return Send(inputs);
     }
 
+    /// <summary>One horizontal wheel event (WHEEL_DELTA units, positive = right).</summary>
+    public static bool SendHorizontalWheel(int delta)
+    {
+        if (delta == 0) return true;
+        var input = new NativeMethods.INPUT { Type = NativeMethods.INPUT_MOUSE };
+        input.Mi = new NativeMethods.MOUSEINPUT { DwFlags = NativeMethods.MOUSEEVENTF_HWHEEL, MouseData = unchecked((uint)delta) };
+        return Send([input]);
+    }
+
     public static bool SendMouseButton(string button, bool down)
     {
         uint flags, data = 0;
