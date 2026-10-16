@@ -438,7 +438,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 243,
+  "rev": 244,
   "review": {
     "advice": [],
     "config": {
@@ -13249,6 +13249,14 @@
       "id": "t4",
       "milestone": "",
       "text": "Macros (user 2026-10-16): new feature, scope to be grilled (record/play key + mouse sequences? per-app? bind to any button/key/ring slot)"
+    },
+    {
+      "at": "2026-10-16T03:30:26+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t5",
+      "milestone": "",
+      "text": "Excel (user 2026-10-16): replace the Options+ Excel add-in (own add-in or a workaround), then disable LogiOptionsPlusExcelAddin (Repair-ExcelAddins.ps1 -DisableLogiAddins, with go-ahead). Findings: VSTO add-in 2.1.6799 talks to Options+ agent ws://localhost:19010; actions horizontalScroll, sheet next/prev, zoomIn/zoomOut, insertRow/insertColumn, createTable/tableStyle/tableColor, columnChart; listens to thumbwheel/crown events"
     }
   ],
   "tokens": null
