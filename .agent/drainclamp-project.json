@@ -438,7 +438,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 241,
+  "rev": 243,
   "review": {
     "advice": [],
     "config": {
@@ -13233,6 +13233,22 @@
       "id": "t2",
       "milestone": "m28",
       "text": "KeyboardRouter: release held actions when the keyboard disconnects (no disconnect handling today)"
+    },
+    {
+      "at": "2026-10-16T03:27:19+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t3",
+      "milestone": "",
+      "text": "Monday 2026-10-19 (user): Tab scroll on the top button, dual function: hold top button + turn thumb wheel = Tab scroll (Ctrl held while held), quick tap keeps its current job. Top button is HID++ diverted, so normal clicks are never held back. Left+Right chord stays off in config until then"
+    },
+    {
+      "at": "2026-10-16T03:27:19+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t4",
+      "milestone": "",
+      "text": "Macros (user 2026-10-16): new feature, scope to be grilled (record/play key + mouse sequences? per-app? bind to any button/key/ring slot)"
     }
   ],
   "tokens": null

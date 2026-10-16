@@ -40,7 +40,7 @@ public sealed class LowLevelMouseHook : IInputHook
 
     public event EventHandler<bool>? ButtonChordChanged;
 
-    public void SetButtonChordEnabled(bool on) => _chord.Enabled = on;
+    public void SetButtonChordEnabled(bool on) => _chord.Enabled = on && Volatile.Read(ref _slowReported) == 0; // a slow hook keeps it off
 
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
@@ -115,7 +115,41 @@ public sealed class LowLevelMouseHook : IInputHook
         }
     }
 
+    /// <summary>A hook call slower than this stalls every mouse event on the PC; Tab scroll is then switched off for this run.</summary>
+    internal const long SlowHookMs = 100;
+    private int _slowReported;
+
     private nint HookProc(int nCode, nint wParam, nint lParam)
+    {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        try
+        {
+            return HookCore(nCode, wParam, lParam);
+        }
+        finally
+        {
+            var ms = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+            if (ms > SlowHookMs) OnSlowHook(ms, (int)wParam);
+        }
+    }
+
+    /// <summary>
+    /// The hook took too long: Windows holds every mouse event on the PC while it runs. Switch the Left + Right chord off (it is
+    /// the only part that holds clicks back) and log once, off the hook thread.
+    /// </summary>
+    private void OnSlowHook(double ms, int msg)
+    {
+        _chord.Enabled = false;
+        _chord.Reset();
+        if (Interlocked.Exchange(ref _slowReported, 1) != 0) return;
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try { _log.Error($"mouse hook took {ms:F0} ms on message 0x{msg:X4}; Tab scroll (left + right) switched off until Slender restarts"); }
+            catch { }
+        });
+    }
+
+    private nint HookCore(int nCode, nint wParam, nint lParam)
     {
         try
         {

@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=94 -->
+<!-- drainclamp-build: state; schema=1; generation=95 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -107,7 +107,6 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T09:23:52+00:00 65bc4be7 m23 thumb wheel steers ring + m24 dual thumb wheel merged (795 tests, AOT clean); not yet shipped as an update
 - 2026-10-15T10:33:40+00:00 bf4a3720 m25 device inventory done: gaps = wheel resistance, Sense Panel force, haptic 0-100, DPI 200, hi-res/touch thumb wheel, raw-XY gestures; K860 disable keys, lock-key OSD, multi-platform, per-host Fn lock, 3 unused keys
 - 2026-10-15T11:10:03+00:00 82a52e7a Device feature round m26-m30 merged (977 tests, AOT clean): mouse feel, K860 extras, press/hold, precise thumb wheel + touch/tap, raw-XY gestures with cursor hold
 - 2026-10-15T11:12:32+00:00 72922479 State refresh: ARCH rewritten for 1.1.5 (m17-m30 done); open: m13 c4 live memory/Excel check, m14 sync, m15 onboard K860 UI, m16 firmware, m7 switch-over; to-dos t1 (forward-slash UNC, fixed in R2), t2 keyboard disconnect release
@@ -127,4 +126,5 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 - 2026-10-16T02:54:50+00:00 709fe71f m36 bug (user: Edge stopped taking clicks until Alt+Tab): a replayed press (50 ms window end) raced the real release; Windows can process the real release first, leaving Edge a press with no release. Fix: a replayed press's release is always injected (ordered after the press); a missed release is injected before the next press. 1442 tests
 - 2026-10-16T03:02:20+00:00 a202b2df m36 incident 13:5x: all left/right clicks swallowed system-wide (tray, Edge, Outlook, Excel); agent stopped Slender.Tray (responding, idle) and set tabScrollChord=false in config (backup taken). Cause: chord 'active' only ended when BOTH releases were seen; one missed release kept every later click swallowed. Fix: chord ends on first release, other release swallowed once, any press during a chord ends it, ring capture resets it; chord on/off logged; fuzz test (3000 histories) proves the 2nd click after any history reaches the app and fails on the 1.1.14 logic. 1446 tests
 - 2026-10-16T03:08:49+00:00 797e1f2d User confirmed 1.1.16 fixed the click lockup
+- 2026-10-16T03:27:20+00:00 c3a6d551 Lockup 2 root cause (user: locks after Excel use, not Edge): WindowIntegrity used WindowFromPoint inside the mouse hook; it sends WM_NCHITTEST and waits, so a busy Excel (after sheet switches; Options+ Excel add-in still loaded) stalled every mouse event on the PC. Fix: ChildWindowFromPointEx (geometry only), Tab scroll log posted off the hook, hook calls >100 ms switch the chord off for the run and log once. Chord stays off in user config; user will look at the top-button dual function Monday. To-dos t3 (top button Tab scroll), t4 (macros)
 <!-- /DC:LOG -->

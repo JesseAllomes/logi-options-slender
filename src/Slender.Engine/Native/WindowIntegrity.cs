@@ -22,8 +22,12 @@ internal static class WindowIntegrity
     {
         try
         {
-            var hwnd = WindowFromPoint(new NativeMethods.POINT { X = x, Y = y });
-            if (hwnd == 0) return false;
+            // Never WindowFromPoint here: it sends WM_NCHITTEST to the window and waits, and this runs inside the mouse hook.
+            // A busy app (Excel right after a burst of sheet switches) then stalled every click on the PC (2026-10-16).
+            // ChildWindowFromPointEx on the desktop is geometry only: the top-level window at the point, no messages.
+            var hwnd = ChildWindowFromPointEx(GetDesktopWindow(), new NativeMethods.POINT { X = x, Y = y },
+                CwpSkipInvisible | CwpSkipDisabled | CwpSkipTransparent);
+            if (hwnd == 0 || hwnd == GetDesktopWindow()) return false;
             GetWindowThreadProcessId(hwnd, out var pid);
             if (pid == 0) return false;
             var now = Environment.TickCount64;
@@ -77,8 +81,13 @@ internal static class WindowIntegrity
         finally { CloseHandle(token); }
     }
 
+    private const uint CwpSkipInvisible = 0x0001, CwpSkipDisabled = 0x0002, CwpSkipTransparent = 0x0004;
+
     [DllImport("user32.dll")]
-    private static extern nint WindowFromPoint(NativeMethods.POINT point);
+    private static extern nint ChildWindowFromPointEx(nint parent, NativeMethods.POINT point, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetDesktopWindow();
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);

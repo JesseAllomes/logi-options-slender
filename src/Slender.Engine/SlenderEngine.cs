@@ -952,7 +952,7 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             _chordActive = active;
-            _log.Info(active ? "tab scroll: left + right held" : "tab scroll: buttons released");
+            _queue.Post(() => _log.Info(active ? "tab scroll: left + right held" : "tab scroll: buttons released")); // never write files on the hook thread
             if (active) _secondAccumulator.Reset();
             else ReleaseHoldSoon("buttons released");
         }
