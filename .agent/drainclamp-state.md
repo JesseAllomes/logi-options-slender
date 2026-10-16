@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=98 -->
+<!-- drainclamp-build: state; schema=1; generation=99 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -109,7 +109,6 @@ Excel add-in (user 2026-10-16) -> wanted if it genuinely ends the hangs/crashes:
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T11:10:03+00:00 82a52e7a Device feature round m26-m30 merged (977 tests, AOT clean): mouse feel, K860 extras, press/hold, precise thumb wheel + touch/tap, raw-XY gestures with cursor hold
 - 2026-10-15T11:12:32+00:00 72922479 State refresh: ARCH rewritten for 1.1.5 (m17-m30 done); open: m13 c4 live memory/Excel check, m14 sync, m15 onboard K860 UI, m16 firmware, m7 switch-over; to-dos t1 (forward-slash UNC, fixed in R2), t2 keyboard disconnect release
 - 2026-10-15T21:51:04+00:00 8c83d2cd m13 c4 live check: Excel thumb wheel + sheets pass (user); tray 8.8 MB commit at 8 min, 1 h sampler running (.agent/memory-samples-2026-10-16.txt); Settings 219 MB commit while open (note). m31 added: thumb wheel card on the stage (user chose card on click, labels Scroll right / Scroll left)
 - 2026-10-15T21:56:50+00:00 ee4bd2da m31 built and committed 7050cdc (985 tests, -warnaserror clean): thumb wheel card on the stage. Not yet seen live: needs Build-Setup.ps1 + in-app update, then click the thumb wheel on the mouse stage. m13 c4 memory sample still running
@@ -129,4 +128,5 @@ Excel add-in (user 2026-10-16) -> wanted if it genuinely ends the hangs/crashes:
 - 2026-10-16T03:08:49+00:00 797e1f2d User confirmed 1.1.16 fixed the click lockup
 - 2026-10-16T03:27:20+00:00 c3a6d551 Lockup 2 root cause (user: locks after Excel use, not Edge): WindowIntegrity used WindowFromPoint inside the mouse hook; it sends WM_NCHITTEST and waits, so a busy Excel (after sheet switches; Options+ Excel add-in still loaded) stalled every mouse event on the PC. Fix: ChildWindowFromPointEx (geometry only), Tab scroll log posted off the hook, hook calls >100 ms switch the chord off for the run and log once. Chord stays off in user config; user will look at the top-button dual function Monday. To-dos t3 (top button Tab scroll), t4 (macros)
 - 2026-10-16T03:30:27+00:00 930a996b 1.1.17 published (hook never waits on another app). Options+ Excel add-in analysed (to-do t5)
+- 2026-10-16T05:26:42+00:00 97da1285 Excel review (user wants PERSONAL.XLSB + book re-activated after review): PERSONAL.XLSB intact, no load-time code (macros user-run only), disabled by Excel Resiliency type 1; issues: Tick macro empty but bound to Ctrl+Shift+T, CalcTimer restores Calculation from Iteration flag (bug), stale ~$ lock files. book.xltm intact, not disabled, QAT buttons for its macros; NewSheet can loop forever if rename keeps failing. Excel faults since 2026-07-22: 13 crashes (7 in Windows.FileExplorer.Common.dll = Open/Save dialog), 6 hangs, none in a Logitech module. Awaiting go-ahead to re-enable (Repair-ExcelAddins.ps1 -EnablePersonalXlsb, Excel closed)
 <!-- /DC:LOG -->
