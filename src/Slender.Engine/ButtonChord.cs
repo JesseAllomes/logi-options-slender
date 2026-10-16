@@ -11,6 +11,9 @@ public enum ChordButton { Left, Right }
 /// <item>The window ends, or the pointer moves (a drag starting): the press is replayed and the button behaves normally.</item>
 /// </list>
 /// A press made while the other button is already held normally is never a chord (holding one, then pressing the other later).
+/// The chord ends at the first release (the other button's release is swallowed once when it comes), and any press seen while
+/// a chord is on ends it and starts afresh: a missed release can never leave clicks swallowed (that locked every window on
+/// 2026-10-16). The release of a replayed press is always injected, so it can never overtake the injected press.
 /// Only real (non-injected) input should be fed in; the replays are injected, so the hook ignores them. Thread-safe.
 /// </summary>
 public sealed class ButtonChord
@@ -32,6 +35,7 @@ public sealed class ButtonChord
     // which leaves the app with a press and no release (Edge stopped taking clicks until Alt+Tab). Injected input is
     // delivered in the order it was sent, so press-then-release is guaranteed.
     private bool _replayedLeft, _replayedRight;
+    private bool _swallowUpLeft, _swallowUpRight; // a chord ended while this button was still held: swallow its release once
     private volatile bool _enabled = true;
 
     private readonly Func<int, int, bool>? _canHoldBack;
@@ -75,14 +79,36 @@ public sealed class ButtonChord
         bool swallow;
         lock (_gate)
         {
-            if (_active)
+            if (down && SwallowUp(button)) SetSwallowUp(button, false); // its release was missed: nothing owed any more
+
+            if (!down && SwallowUp(button))
             {
-                if (button == ChordButton.Left) _chordLeft = down; else _chordRight = down;
+                // The release of a button whose press was swallowed as part of a chord that has already ended.
+                SetSwallowUp(button, false);
                 swallow = true;
-                if (!_chordLeft && !_chordRight)
+            }
+            else if (_active)
+            {
+                if (!down)
                 {
+                    // The first release ends the chord. Nothing can stay stuck: the other button's release is swallowed
+                    // once when it comes, and any new press starts afresh.
                     _active = false;
                     changed = false;
+                    var other = button == ChordButton.Left ? ChordButton.Right : ChordButton.Left;
+                    if (other == ChordButton.Left ? _chordLeft : _chordRight) SetSwallowUp(other, true);
+                    _chordLeft = _chordRight = false;
+                    swallow = true;
+                }
+                else
+                {
+                    // A press while the chord is on: a release was missed (the hook can skip input). End the stale chord and
+                    // treat this press as a new one, so clicks never stay swallowed.
+                    _active = false;
+                    changed = false;
+                    _chordLeft = _chordRight = false;
+                    _swallowUpLeft = _swallowUpRight = false;
+                    swallow = Fresh(button, down, x, y, replay);
                 }
             }
             else if (_pending is { } p)
@@ -110,7 +136,42 @@ public sealed class ButtonChord
                     swallow = false;
                 }
             }
-            else if (down && _enabled && !_passLeft && !_passRight && (_canHoldBack?.Invoke(x, y) ?? true))
+            else
+            {
+                swallow = Fresh(button, down, x, y, replay);
+            }
+        }
+
+        Send(replay);
+        if (changed is { } c) Raise(c);
+        return swallow;
+    }
+
+    /// <summary>
+    /// Forget any wait or chord now, without replaying anything (the Actions Ring took the buttons). Raises Changed(false) when a
+    /// chord was on. A press that was being held back never reached the app, so dropping it leaves nothing half-done.
+    /// </summary>
+    public void Reset()
+    {
+        bool wasActive;
+        lock (_gate)
+        {
+            CancelFlush();
+            _pending = null;
+            wasActive = _active;
+            _active = false;
+            _chordLeft = _chordRight = false;
+            _swallowUpLeft = _swallowUpRight = false;
+        }
+        if (wasActive) Raise(false);
+    }
+
+    /// <summary>Under the lock: a press or release with no wait and no chord under way.</summary>
+    private bool Fresh(ChordButton button, bool down, int x, int y, List<(ChordButton, bool)> replay)
+    {
+        bool swallow;
+        {
+            if (down && _enabled && !_passLeft && !_passRight && (_canHoldBack?.Invoke(x, y) ?? true))
             {
                 _pending = button;
                 _px = x;
@@ -141,10 +202,14 @@ public sealed class ButtonChord
                 swallow = false;
             }
         }
-
-        Send(replay);
-        if (changed is { } c) Raise(c);
         return swallow;
+    }
+
+    private bool SwallowUp(ChordButton b) => b == ChordButton.Left ? _swallowUpLeft : _swallowUpRight;
+
+    private void SetSwallowUp(ChordButton b, bool on)
+    {
+        if (b == ChordButton.Left) _swallowUpLeft = on; else _swallowUpRight = on;
     }
 
     /// <summary>The pointer moved. A held-back press is replayed at once (a drag is starting). Never swallows.</summary>

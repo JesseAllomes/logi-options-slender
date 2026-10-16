@@ -55,7 +55,11 @@ public sealed class LowLevelMouseHook : IInputHook
     /// (the Actions Ring consumes them). A swallowed press swallows its release, even after capture ended, unless the release
     /// comes more than 5 s later (then it belongs to another click).
     /// </summary>
-    public void SetRingCapture(bool on) => _ringCapture = on;
+    public void SetRingCapture(bool on)
+    {
+        if (on) _chord.Reset(); // the ring takes the buttons: a half-done chord must not wait for releases it will never see
+        _ringCapture = on;
+    }
 
     public void SetMoveCapture(bool on)
     {

@@ -29,8 +29,8 @@ public class ButtonChordTests
         Assert.True(r.Chord.OnButton(R, true, 10, 10));
         Assert.True(r.Chord.IsActive);
         Assert.True(r.Chord.OnButton(L, false, 10, 10));
-        Assert.True(r.Chord.IsActive); // still one button held
-        Assert.True(r.Chord.OnButton(R, false, 10, 10));
+        Assert.False(r.Chord.IsActive); // the first release ends it
+        Assert.True(r.Chord.OnButton(R, false, 10, 10)); // the other release is swallowed once
 
         Assert.False(r.Chord.IsActive);
         Assert.Equal([true, false], r.Changes);
@@ -141,20 +141,70 @@ public class ButtonChordTests
     }
 
     [Fact]
-    public void Pressing_again_during_a_chord_stays_inside_the_chord()
+    public void Releasing_one_button_ends_the_chord_and_clicks_work_straight_after()
     {
         var r = new Rig();
         r.Chord.OnButton(L, true, 0, 0);
         r.Chord.OnButton(R, true, 0, 0);
         Assert.True(r.Chord.OnButton(L, false, 0, 0));
-        Assert.True(r.Chord.OnButton(L, true, 0, 0));
-        Assert.True(r.Chord.OnButton(L, false, 0, 0));
-        Assert.True(r.Chord.OnButton(R, false, 0, 0));
         Assert.Equal([true, false], r.Changes);
-        Assert.Empty(r.Sent);
-        // After the chord, a plain click works normally again.
+
+        // Right still held from the chord; a new left click is an ordinary click.
         Assert.True(r.Chord.OnButton(L, true, 0, 0));
         Assert.True(r.Chord.OnButton(L, false, 0, 0));
         Assert.Equal([(L, true), (L, false)], r.Sent);
+        Assert.True(r.Chord.OnButton(R, false, 0, 0)); // the chord's right release, swallowed once
+        Assert.False(r.Chord.OnButton(R, false, 0, 0)); // nothing more is owed
+    }
+
+    [Fact]
+    public void A_missed_release_can_never_leave_clicks_swallowed()
+    {
+        // The hook can skip input. Chord on, both releases missed: the next press ends the stale chord and is a new click.
+        var r = new Rig();
+        r.Chord.OnButton(L, true, 0, 0);
+        r.Chord.OnButton(R, true, 0, 0);
+
+        Assert.True(r.Chord.OnButton(L, true, 0, 0));
+        Assert.False(r.Chord.IsActive);
+        Assert.Equal([true, false], r.Changes);
+        Assert.True(r.Chord.OnButton(L, false, 0, 0));
+        Assert.Equal([(L, true), (L, false)], r.Sent); // that click reached the app
+
+        Assert.True(r.Chord.OnButton(R, true, 0, 0)); // and the next one too
+        Assert.True(r.Chord.OnButton(R, false, 0, 0));
+        Assert.Equal([(L, true), (L, false), (R, true), (R, false)], r.Sent);
+    }
+
+    [Fact]
+    public void Ten_clicks_after_any_stale_state_all_reach_the_app()
+    {
+        var r = new Rig();
+        r.Chord.OnButton(R, true, 0, 0);
+        r.Chord.OnButton(L, true, 0, 0); // chord, then every release lost
+        for (var i = 0; i < 10; i++)
+        {
+            r.Chord.OnButton(L, true, 0, 0);
+            r.Chord.OnButton(L, false, 0, 0);
+        }
+        Assert.Equal(20, r.Sent.Count);
+        Assert.Equal(10, r.Sent.Count(e => e == (L, false)));
+    }
+
+    [Fact]
+    public void Reset_ends_a_chord_and_drops_a_held_back_press()
+    {
+        var r = new Rig();
+        r.Chord.OnButton(L, true, 0, 0);
+        r.Chord.OnButton(R, true, 0, 0);
+        r.Chord.Reset();
+        Assert.False(r.Chord.IsActive);
+        Assert.Equal([true, false], r.Changes);
+
+        r.Chord.OnButton(L, true, 0, 0);
+        r.Chord.Reset();
+        Assert.False(r.Chord.IsPending);
+        r.Timer.Elapse();
+        Assert.Empty(r.Sent); // the app never saw that press, so nothing is replayed
     }
 }

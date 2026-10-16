@@ -952,6 +952,7 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             _chordActive = active;
+            _log.Info(active ? "tab scroll: left + right held" : "tab scroll: buttons released");
             if (active) _secondAccumulator.Reset();
             else ReleaseHoldSoon("buttons released");
         }

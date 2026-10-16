@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=92 -->
+<!-- drainclamp-build: state; schema=1; generation=93 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -107,7 +107,6 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T06:45:16+00:00 9b38a586 Gate 6 R1 (final, base 8aefde1): 20 candidates, 18 fixed (da0bf66, 723 tests), 2 refuted; verdict NOT-RUN because the packet cap left 57/105 files unreviewed
 - 2026-10-15T07:56:53+00:00 d88f8c74 Gate 6 m13 REVIEW-PASS: 5 rounds (R1 final + R2-R5 --only batches around the 1500-line cap), 105 files, 46 fixed, 9 refuted, 0 waived; 763 tests; DrainClamp bin/obj cache fix -> PR #1
 - 2026-10-15T09:23:52+00:00 65bc4be7 m23 thumb wheel steers ring + m24 dual thumb wheel merged (795 tests, AOT clean); not yet shipped as an update
 - 2026-10-15T10:33:40+00:00 bf4a3720 m25 device inventory done: gaps = wheel resistance, Sense Panel force, haptic 0-100, DPI 200, hi-res/touch thumb wheel, raw-XY gestures; K860 disable keys, lock-key OSD, multi-platform, per-host Fn lock, 3 unused keys
@@ -127,4 +126,5 @@ Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb 
 - 2026-10-16T02:40:53+00:00 8a73ffa9 m36 built: ButtonChord (50 ms window, quick clicks replayed whole, drag >4 px flushes, never over elevated windows via WindowIntegrity UIPI check), engine Tab scroll with Ctrl held for the chord's life, Tab/side scroll speed (25-400%), Excel columns gated off (ExcelColumnScrolling, tests keep it on), quick toggles now Tab scroll. 1441 tests. Not seen live. Known: a drag's press lands where the pointer is after ~5 px
 - 2026-10-16T02:46:10+00:00 0c9feeb6 m36 confirmed live by the user (Tab scroll by Left+Right chord: 'perfect'). Open: m31 live look, m14 sync, m15 onboard keys UI, m16 firmware, m7 switch-over
 - 2026-10-16T02:54:50+00:00 709fe71f m36 bug (user: Edge stopped taking clicks until Alt+Tab): a replayed press (50 ms window end) raced the real release; Windows can process the real release first, leaving Edge a press with no release. Fix: a replayed press's release is always injected (ordered after the press); a missed release is injected before the next press. 1442 tests
+- 2026-10-16T03:02:20+00:00 a202b2df m36 incident 13:5x: all left/right clicks swallowed system-wide (tray, Edge, Outlook, Excel); agent stopped Slender.Tray (responding, idle) and set tabScrollChord=false in config (backup taken). Cause: chord 'active' only ended when BOTH releases were seen; one missed release kept every later click swallowed. Fix: chord ends on first release, other release swallowed once, any press during a chord ends it, ring capture resets it; chord on/off logged; fuzz test (3000 histories) proves the 2nd click after any history reaches the app and fails on the 1.1.14 logic. 1446 tests
 <!-- /DC:LOG -->
