@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=103 -->
+<!-- drainclamp-build: state; schema=1; generation=104 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -111,7 +111,6 @@ Thumb wheel second action (user 2026-10-19) -> press and hold the top button eng
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T21:51:04+00:00 8c83d2cd m13 c4 live check: Excel thumb wheel + sheets pass (user); tray 8.8 MB commit at 8 min, 1 h sampler running (.agent/memory-samples-2026-10-16.txt); Settings 219 MB commit while open (note). m31 added: thumb wheel card on the stage (user chose card on click, labels Scroll right / Scroll left)
 - 2026-10-15T21:56:50+00:00 ee4bd2da m31 built and committed 7050cdc (985 tests, -warnaserror clean): thumb wheel card on the stage. Not yet seen live: needs Build-Setup.ps1 + in-app update, then click the thumb wheel on the mouse stage. m13 c4 memory sample still running
 - 2026-10-15T22:04:11+00:00 981b2667 m31 shipped: SlenderSetup 1.1.6 built 09:04 Melbourne (delta 1.1.5->1.1.6 in artifacts/releases); tray picks it up within 30 s / on Check for updates; awaiting user's live look at the card
 - 2026-10-15T22:28:27+00:00 e1338ec4 m13 c4 done: 1 h memory sample flat at ~11 MB commit (.agent/memory-samples-2026-10-16.txt); m13 all chunks done, close after the user's live look at 1.1.6
@@ -131,4 +130,5 @@ Thumb wheel second action (user 2026-10-19) -> press and hold the top button eng
 - 2026-10-16T03:30:27+00:00 930a996b 1.1.17 published (hook never waits on another app). Options+ Excel add-in analysed (to-do t5)
 - 2026-10-16T05:26:42+00:00 97da1285 Excel review (user wants PERSONAL.XLSB + book re-activated after review): PERSONAL.XLSB intact, no load-time code (macros user-run only), disabled by Excel Resiliency type 1; issues: Tick macro empty but bound to Ctrl+Shift+T, CalcTimer restores Calculation from Iteration flag (bug), stale ~$ lock files. book.xltm intact, not disabled, QAT buttons for its macros; NewSheet can loop forever if rename keeps failing. Excel faults since 2026-07-22: 13 crashes (7 in Windows.FileExplorer.Common.dll = Open/Save dialog), 6 hangs, none in a Logitech module. Awaiting go-ahead to re-enable (Repair-ExcelAddins.ps1 -EnablePersonalXlsb, Excel closed)
 - 2026-10-18T23:11:10+00:00 26304f52 m31 confirmed live by the user (thumb wheel card works); closed with 1446 tests, -warnaserror clean. User flags Switch with as redundant once t3 (hold top button + thumb wheel = Tab scroll) lands
+- 2026-10-18T23:30:18+00:00 15953794 m38 built ee58ea2 and shipped as v1.1.18 (10:30 Melbourne): hold top button = app's second action, quick press = its own job (native = ratchet flip via 0x2111), no toggle/Switch with/browser preset; 1442 tests. Awaiting the user's live check
 <!-- /DC:LOG -->
