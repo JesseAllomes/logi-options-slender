@@ -23,24 +23,11 @@ public sealed class LowLevelMouseHook : IInputHook
     private int _anchorX, _anchorY;
     private bool _disposed;
 
-    private readonly ButtonChord _chord;
-
     public LowLevelMouseHook(ILog? log = null)
     {
         _log = log ?? NullLog.Instance;
         _proc = HookProc;
-        _chord = new ButtonChord((b, down) => KeyInjector.SendMouseButton(b == ChordButton.Left ? "left" : "right", down),
-            WindowIntegrity.CanInjectAt); // never hold a click back over an elevated window: its replay would be blocked
-        _chord.Changed += (_, active) =>
-        {
-            try { ButtonChordChanged?.Invoke(this, active); }
-            catch (Exception ex) { try { _log.Error("button chord handler failed", ex); } catch { } }
-        };
     }
-
-    public event EventHandler<bool>? ButtonChordChanged;
-
-    public void SetButtonChordEnabled(bool on) => _chord.Enabled = on && Volatile.Read(ref _slowReported) == 0; // a slow hook keeps it off
 
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
@@ -57,7 +44,6 @@ public sealed class LowLevelMouseHook : IInputHook
     /// </summary>
     public void SetRingCapture(bool on)
     {
-        if (on) _chord.Reset(); // the ring takes the buttons: a half-done chord must not wait for releases it will never see
         _ringCapture = on;
     }
 
@@ -115,7 +101,7 @@ public sealed class LowLevelMouseHook : IInputHook
         }
     }
 
-    /// <summary>A hook call slower than this stalls every mouse event on the PC; Tab scroll is then switched off for this run.</summary>
+    /// <summary>A hook call slower than this stalls every mouse event on the PC; the first one is logged.</summary>
     internal const long SlowHookMs = 100;
     private int _slowReported;
 
@@ -133,18 +119,13 @@ public sealed class LowLevelMouseHook : IInputHook
         }
     }
 
-    /// <summary>
-    /// The hook took too long: Windows holds every mouse event on the PC while it runs. Switch the Left + Right chord off (it is
-    /// the only part that holds clicks back) and log once, off the hook thread.
-    /// </summary>
+    /// <summary>The hook took too long: Windows holds every mouse event on the PC while it runs. Logged once, off the hook thread.</summary>
     private void OnSlowHook(double ms, int msg)
     {
-        _chord.Enabled = false;
-        _chord.Reset();
         if (Interlocked.Exchange(ref _slowReported, 1) != 0) return;
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            try { _log.Error($"mouse hook took {ms:F0} ms on message 0x{msg:X4}; Tab scroll (left + right) switched off until Slender restarts"); }
+            try { _log.Error($"mouse hook took {ms:F0} ms on message 0x{msg:X4}"); }
             catch { }
         });
     }
@@ -158,11 +139,6 @@ public sealed class LowLevelMouseHook : IInputHook
                 var msg = (int)wParam;
                 if (msg == NativeMethods.WM_MOUSEMOVE)
                 {
-                    if (_chord.IsPending)
-                    {
-                        var moved = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
-                        if (!IsInjected(moved)) _chord.OnMove(moved.Pt.X, moved.Pt.Y); // a drag is starting: let the press go
-                    }
                     // Only while a gesture is held. Swallowed moves leave the cursor at the anchor, so each event's
                     // offset from the anchor is that event's own movement.
                     if (_captureMoves)
@@ -182,12 +158,6 @@ public sealed class LowLevelMouseHook : IInputHook
                 {
                     var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
                     if (!IsInjected(data) && RingMouse(msg, data)) return 1; // swallow
-                    if (!IsInjected(data) && msg != NativeMethods.WM_MOUSEWHEEL)
-                    {
-                        var button = msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_LBUTTONUP ? ChordButton.Left : ChordButton.Right;
-                        var down = msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_RBUTTONDOWN;
-                        if (_chord.OnButton(button, down, data.Pt.X, data.Pt.Y)) return 1; // held back, or part of a Left+Right chord
-                    }
                 }
                 else if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
@@ -258,8 +228,6 @@ public sealed class LowLevelMouseHook : IInputHook
         ButtonChanged = null;
         MouseMoved = null;
         RingInput = null;
-        ButtonChordChanged = null;
-        _chord.Enabled = false;
         _captureMoves = false;
         _ringCapture = false;
         if (t is null) return;

@@ -60,12 +60,15 @@ public class WheelKeyHoldTests
     }
 
     [Fact]
-    public void Back_step_adds_its_own_modifier_around_the_key_only()
+    public void Turning_back_presses_the_held_modifier_again_then_adds_its_own_around_the_key()
     {
         var h = new WheelKeyHold();
         h.Step([Ctrl], Keys("Ctrl+Tab"), 1);
 
         Assert.Equal(
+            [new KeyEvent(Ctrl, true), new KeyEvent(Ctrl, false), new KeyEvent(Shift, false), new KeyEvent(Tab, false), new KeyEvent(Tab, true), new KeyEvent(Shift, true)],
+            h.Step([Ctrl], Keys("Ctrl+Shift+Tab"), 1));
+        Assert.Equal( // same direction again: Ctrl stays down
             [new KeyEvent(Shift, false), new KeyEvent(Tab, false), new KeyEvent(Tab, true), new KeyEvent(Shift, true)],
             h.Step([Ctrl], Keys("Ctrl+Shift+Tab"), 1));
     }
@@ -135,7 +138,7 @@ public class WheelHeldModifierEngineTests
     };
 
     [Fact]
-    public void Tab_mode_holds_ctrl_and_taps_tab_per_notch()
+    public void Holding_the_top_button_holds_ctrl_and_taps_tab_per_notch()
     {
         var r = new Rig(Cfg());
         r.Hold();
@@ -151,6 +154,7 @@ public class WheelHeldModifierEngineTests
         [
             new KeyEvent(Ctrl, false), new KeyEvent(Tab, false), new KeyEvent(Tab, true),
             new KeyEvent(Tab, false), new KeyEvent(Tab, true), new KeyEvent(Tab, false), new KeyEvent(Tab, true),
+            new KeyEvent(Ctrl, true), new KeyEvent(Ctrl, false),
             new KeyEvent(Shift, false), new KeyEvent(Tab, false), new KeyEvent(Tab, true), new KeyEvent(Shift, true),
         ], r.Exec.Events);
         Assert.DoesNotContain(r.Exec.Calls, c => c.Item1 is ActionSpec.Keys);

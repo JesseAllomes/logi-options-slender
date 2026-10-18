@@ -6,7 +6,7 @@ namespace Slender.Engine;
 /// </summary>
 public static class ThumbWheelModes
 {
-    /// <summary>Next tab per notch forward, previous tab per notch back (the Left + Right chord's fallback).</summary>
+    /// <summary>Next tab per notch forward, previous tab per notch back.</summary>
     public static ThumbWheelSecond Tabs { get; } = new(true, new ActionSpec.Keys("Ctrl+Tab"), new ActionSpec.Keys("Ctrl+Shift+Tab"));
 
     /// <summary>

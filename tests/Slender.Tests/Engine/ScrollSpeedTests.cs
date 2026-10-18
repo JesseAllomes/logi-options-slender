@@ -3,7 +3,8 @@ using Slender.Hidpp;
 
 namespace Slender.Tests.Engine;
 
-public class TabScrollChordTests
+/// <summary>Thumb wheel speeds: the second action (top button held) and the side scroll.</summary>
+public class ScrollSpeedTests
 {
     private static readonly KeyStroke Ctrl = new(0xA2, false);
     private static readonly KeyStroke Shift = new(0xA0, false);
@@ -42,6 +43,8 @@ public class TabScrollChordTests
             return n;
         }
 
+        public void HoldTop(bool down) => Mouse.Press(ControlId.ModeShift, down);
+
         public bool CtrlHeld()
         {
             var down = false;
@@ -53,68 +56,39 @@ public class TabScrollChordTests
     private static SlenderConfig WithPointer(PointerSettings p, params Profile[] profiles) =>
         SlenderConfig.Default with { Pointer = p, Profiles = profiles.Length > 0 ? profiles : SlenderConfig.Default.Profiles };
 
-    [Fact]
-    public void Holding_left_and_right_turns_the_thumb_wheel_into_tab_steps_with_ctrl_held()
-    {
-        var r = new Rig();
-        r.Hook.Chord(true);
+    private static readonly ThumbWheelSecond EdgeTabs = new(true, new ActionSpec.Keys("Ctrl+Tab"), new ActionSpec.Keys("Ctrl+Shift+Tab"));
 
-        Assert.True(r.Hook.Wheel(120).Handled);
+    private static SlenderConfig Held(PointerSettings? p = null, ThumbWheelSecond? second = null) => SlenderConfig.Default with
+    {
+        Pointer = p ?? new PointerSettings(),
+        Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = second ?? EdgeTabs }],
+    };
+
+    [Fact]
+    public void Turning_back_after_forward_presses_ctrl_again_with_shift()
+    {
+        var r = new Rig(Held(), "msedge");
+        r.HoldTop(true);
+        r.Hook.Wheel(120);
+        r.Exec.Events.Clear();
         r.Now = 10;
-        r.Hook.Wheel(120);
-        r.Now = 20;
+
         r.Hook.Wheel(-120);
 
-        Assert.Equal(1, r.Exec.Events.Count(e => e.Key == Ctrl && !e.Up));
-        Assert.Equal(3, r.Tabs());
-        Assert.Equal(1, r.Tabs(shift: true));
+        Assert.Equal(
+        [
+            new KeyEvent(Ctrl, true), new KeyEvent(Ctrl, false),
+            new KeyEvent(Shift, false), new KeyEvent(Tab, false), new KeyEvent(Tab, true), new KeyEvent(Shift, true),
+        ], r.Exec.Events);
         Assert.True(r.CtrlHeld());
     }
 
     [Fact]
-    public void Ctrl_stays_down_while_the_buttons_are_held_and_goes_up_with_them()
-    {
-        var r = new Rig();
-        r.Hook.Chord(true);
-        r.Hook.Wheel(120);
-
-        r.Now = 5_000; // the wheel has been still a long time, but the buttons are still held
-        r.Timer.Elapse();
-        Assert.True(r.CtrlHeld());
-
-        r.Hook.Chord(false);
-        Assert.False(r.CtrlHeld());
-    }
-
-    [Fact]
-    public void Without_the_chord_the_wheel_side_scrolls_natively()
-    {
-        var r = new Rig();
-        Assert.False(r.Hook.Wheel(120).Handled);
-        Assert.Empty(r.Exec.Events);
-        Assert.Empty(r.Exec.SideScrolls);
-    }
-
-    [Fact]
-    public void A_missing_back_direction_falls_back_to_previous_tab()
-    {
-        var forwardOnly = new ThumbWheelSecond(true, new ActionSpec.Keys("Ctrl+Tab"), new ActionSpec.None());
-        var cfg = SlenderConfig.Default with { Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = forwardOnly }] };
-        var r = new Rig(cfg);
-        r.Hook.Chord(true);
-
-        r.Hook.Wheel(-120);
-
-        Assert.Equal(1, r.Tabs(shift: true));
-    }
-
-    [Fact]
-    public void Excel_tab_scroll_uses_its_sheet_pair()
+    public void Excel_sheet_pair_steps_with_ctrl_held()
     {
         var sheets = new ThumbWheelSecond(true, new ActionSpec.Excel(ExcelCommand.NextSheet), new ActionSpec.Excel(ExcelCommand.PreviousSheet));
-        var cfg = SlenderConfig.Default with { Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec>()), new Profile("excel", new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = sheets }] };
-        var r = new Rig(cfg, "excel");
-        r.Hook.Chord(true);
+        var r = new Rig(Held(second: sheets), "excel");
+        r.HoldTop(true);
 
         r.Hook.Wheel(120);
 
@@ -127,14 +101,44 @@ public class TabScrollChordTests
     [InlineData(50, 120, 0)]
     [InlineData(50, 240, 1)]
     [InlineData(100, 120, 1)]
-    public void Tab_scroll_speed_scales_tabs_per_turn(int speed, int delta, int tabs)
+    public void Second_action_speed_scales_steps_per_turn(int speed, int delta, int tabs)
     {
-        var r = new Rig(WithPointer(new PointerSettings(TabScrollSpeed: speed)));
-        r.Hook.Chord(true);
+        var r = new Rig(Held(new PointerSettings(SecondActionSpeed: speed)));
+        r.HoldTop(true);
 
         r.Hook.Wheel(delta);
 
         Assert.Equal(tabs, r.Tabs());
+    }
+
+    [Fact]
+    public void A_still_wheel_lets_ctrl_go_after_a_while_even_if_the_top_button_release_is_lost()
+    {
+        var r = new Rig(Held());
+        r.HoldTop(true);
+        r.Hook.Wheel(120);
+
+        r.Now = 1_000; // still under the cap: Ctrl stays down through a pause
+        r.Timer.Elapse();
+        Assert.True(r.CtrlHeld());
+
+        r.Now = 2_000; // the release never came: Ctrl goes up anyway
+        r.Timer.Elapse();
+        Assert.False(r.CtrlHeld());
+    }
+
+    [Fact]
+    public void An_app_switch_ends_a_hold_whose_release_is_lost()
+    {
+        var r = new Rig(Held(), "msedge");
+        r.HoldTop(true);
+        r.Hook.Wheel(120);
+
+        r.Fg.Switch("notepad");
+
+        Assert.False(r.CtrlHeld());
+        Assert.False(r.Engine.SecondActionHeld);
+        Assert.False(r.Hook.Wheel(120).Handled); // normal side scroll again
     }
 
     [Fact]
@@ -157,15 +161,6 @@ public class TabScrollChordTests
         r.Hook.Wheel(1);
 
         Assert.Equal([1, 2], r.Exec.SideScrolls); // 1.5 then 1.5 + carried 0.5
-    }
-
-    [Fact]
-    public void The_chord_switch_reaches_the_hook()
-    {
-        var r = new Rig(WithPointer(new PointerSettings(TabScrollChord: false)));
-        Assert.False(r.Hook.ChordEnabled);
-        r.Engine.ApplyConfig(WithPointer(new PointerSettings(TabScrollChord: true)));
-        Assert.True(r.Hook.ChordEnabled);
     }
 
     [Fact]

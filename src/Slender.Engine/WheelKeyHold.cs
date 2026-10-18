@@ -7,12 +7,13 @@ public readonly record struct KeyEvent(KeyStroke Key, bool Up);
 /// Thumb wheel key steps with the shared modifiers held. For a pair like Ctrl+Tab / Ctrl+Shift+Tab, Ctrl goes down at the
 /// first step and stays down while the wheel keeps turning; each step then sends only the rest (Tab, or Shift+Tab), so a
 /// burst reads to the app like a person holding Ctrl and tapping Tab. <see cref="Release"/> lets the modifiers go; the
-/// engine calls it once the wheel is quiet, or at once on anything that must not see a held modifier (a button, a mode
-/// flip, an app switch). Builds events only; the caller sends them. Used on the engine queue only.
+/// engine calls it once the wheel is quiet, or at once on anything that must not see a held modifier (a button, the top
+/// button let go, an app switch). Builds events only; the caller sends them. Used on the engine queue only.
 /// </summary>
 public sealed class WheelKeyHold
 {
     private readonly List<KeyStroke> _held = [];
+    private IReadOnlyList<KeyStroke>? _lastChord; // the chord the held modifiers were last stepped with
 
     /// <summary>Modifiers down now, in press order.</summary>
     public IReadOnlyList<KeyStroke> Held => _held;
@@ -47,13 +48,17 @@ public sealed class WheelKeyHold
     /// <summary>
     /// Events for <paramref name="count"/> presses of <paramref name="chord"/> with <paramref name="shared"/> held: modifiers no
     /// longer shared go up, newly shared ones go down, then per press the chord's other modifiers and its keys go down and up.
+    /// A change of direction (another chord) lets every held modifier go first and presses them again with the new chord:
+    /// Edge ignored Ctrl+Shift+Tab steps sent under a Ctrl held since a run of Ctrl+Tab steps (user 2026-10-19).
     /// </summary>
     public IReadOnlyList<KeyEvent> Step(IReadOnlyList<KeyStroke> shared, IReadOnlyList<KeyStroke> chord, int count)
     {
         var events = new List<KeyEvent>();
+        var turned = _lastChord is not null && !_lastChord.SequenceEqual(chord);
+        _lastChord = chord;
         for (var i = _held.Count - 1; i >= 0; i--)
         {
-            if (shared.Contains(_held[i])) continue;
+            if (!turned && shared.Contains(_held[i])) continue;
             events.Add(new KeyEvent(_held[i], true));
             _held.RemoveAt(i);
         }
@@ -79,6 +84,7 @@ public sealed class WheelKeyHold
         var events = new List<KeyEvent>(_held.Count);
         for (var i = _held.Count - 1; i >= 0; i--) events.Add(new KeyEvent(_held[i], true));
         _held.Clear();
+        _lastChord = null;
         return events;
     }
 

@@ -16,7 +16,7 @@ public sealed class TrayApplication : IDisposable
 {
     private const uint WM_TRAY = Win32.WM_APP + 1, WM_POST = Win32.WM_APP + 2;
     private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4, TimerLockKeys = 5;
-    private const uint CmdTabScroll = 2, CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8;
+    private const uint CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8;
     private const string WindowClass = UpdateMessages.TrayWindowClass;
 
     private static readonly uint BatteryIntervalMs = (uint)TimeSpan.FromMinutes(5).TotalMilliseconds;
@@ -541,7 +541,6 @@ public sealed class TrayApplication : IDisposable
 
             Append(menu, Win32.MF_GRAYED, 1, _statusText);
             Append(menu, Win32.MF_GRAYED, 1, _keyboardText);
-            Append(menu, _config.Pointer.TabScrollChord ? Win32.MF_CHECKED : 0, CmdTabScroll, "Tab scroll (left + right)");
             Append(menu, _config.Haptics.Enabled ? Win32.MF_CHECKED : 0, CmdHaptics, "Haptics");
             Append(menu, _config.LaunchAtLogin ? Win32.MF_CHECKED : 0, CmdLaunch, "Launch at login");
             Append(menu, 0, CmdSettings, "Settings…");
@@ -556,9 +555,6 @@ public sealed class TrayApplication : IDisposable
             Win32.PostMessageW(_hwnd, Win32.WM_NULL, 0, 0);
             switch ((uint)cmd)
             {
-                case CmdTabScroll:
-                    ApplyChange(_config with { Pointer = _config.Pointer with { TabScrollChord = !_config.Pointer.TabScrollChord } });
-                    break;
                 case CmdHaptics:
                     ApplyChange(_config with { Haptics = _config.Haptics with { Enabled = !_config.Haptics.Enabled } });
                     break;

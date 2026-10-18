@@ -224,12 +224,10 @@ public sealed partial class MainWindow
         Slider side = PageSlider("Side scroll speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.SideScrollSpeed,
             v => _config.Update(x => x with { Pointer = x.Pointer with { SideScrollSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock sideText);
         AddRow("Side scroll speed", "How far a turn of the thumb wheel scrolls sideways. 100% is the mouse's own speed.", WithReadout(side, sideText));
-        AddRow("Tab scroll", "Hold the left and right buttons together and turn the thumb wheel to switch tabs (sheets in Excel).",
-            PageToggle("Tab scroll", c.Pointer.TabScrollChord, on => _config.Update(x => x with { Pointer = x.Pointer with { TabScrollChord = on } })));
-        Slider tabs = PageSlider("Tab scroll speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.TabScrollSpeed,
-            v => _config.Update(x => x with { Pointer = x.Pointer with { TabScrollSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock tabsText);
-        AddRow("Tab scroll speed", "Tabs per turn, for Tab scroll and the thumb wheel's tab mode. Higher switches more tabs per turn.",
-            WithReadout(tabs, tabsText));
+        Slider steps = PageSlider("Second action speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.SecondActionSpeed,
+            v => _config.Update(x => x with { Pointer = x.Pointer with { SecondActionSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock stepsText);
+        AddRow("Second action speed", "Steps per turn while the top button is held. Higher does more per turn.",
+            WithReadout(steps, stepsText));
 
         BuildDualThumbSection();
     }

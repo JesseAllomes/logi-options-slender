@@ -109,8 +109,7 @@ public sealed class ThumbTouchTracker
 public static class ThumbWheelDivertPolicy
 {
     /// <summary>
-    /// True when the foreground app needs non-native thumb wheel behaviour: the Actions Ring is open, the dual wheel is flipped to
-    /// its second role, the app's effective thumb wheel binding is set (keys or off), Excel column scrolling applies, or a touch / tap
+    /// True when the foreground app needs non-native thumb wheel behaviour: the Actions Ring is open, the app's effective thumb wheel binding is set (keys or off), Excel column scrolling applies, or a touch / tap
     /// binding is set (and the device reports touch support; unknown counts as supported).
     /// </summary>
     public static bool Wanted(SlenderConfig config, string? process, bool ringOpen, bool? touchSupported, bool excelColumns = false)

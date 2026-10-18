@@ -237,8 +237,6 @@ public sealed partial class MainWindow
         toggles.Children.Add(PopRow("Haptic feel", HapticNotches()));
         _smartShiftToggle = Toggle("SmartShift free-spin", on => _config.Update(c => c with { Pointer = c.Pointer with { SmartShiftEnabled = on } }));
         toggles.Children.Add(PopRow("SmartShift free-spin", _smartShiftToggle));
-        _tabScrollToggle = Toggle("Tab scroll (left + right)", on => _config.Update(c => c with { Pointer = c.Pointer with { TabScrollChord = on } }));
-        toggles.Children.Add(PopRow("Tab scroll (left + right)", _tabScrollToggle));
         toggles.Children.Add(PopSection("ERGO K860", 6));
         _fnLockToggle = Toggle("F-keys first (Fn lock)", on => _config.Update(c => c with { Keyboard = c.Keyboard with { FnLock = on } }));
         toggles.Children.Add(PopRow("F-keys first (Fn lock)", _fnLockToggle));

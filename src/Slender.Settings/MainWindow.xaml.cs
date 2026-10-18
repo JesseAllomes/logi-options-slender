@@ -463,7 +463,7 @@ public sealed partial class MainWindow : Window
         HeadingPanel.Visibility = device ? Visibility.Visible : Visibility.Collapsed;
         PageScroll.Visibility = device ? Visibility.Collapsed : Visibility.Visible;
         BottomBar.Visibility = device ? Visibility.Visible : Visibility.Collapsed;
-        bool strip = AppPage; // the ring's slots and the dual thumb wheel depend on the app chosen in the strip
+        bool strip = AppPage; // the ring's slots and the thumb wheel second action depend on the app chosen in the strip
         StripBorder.Opacity = strip ? 1 : 0.35;
         StripPanel.IsHitTestVisible = strip;
     }

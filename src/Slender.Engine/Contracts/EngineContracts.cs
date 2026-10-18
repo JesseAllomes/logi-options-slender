@@ -24,12 +24,6 @@ public interface IInputHook : IDisposable
     /// <summary>While on, the Actions Ring owns the left/right buttons and the vertical wheel. Off by default.</summary>
     void SetRingCapture(bool on) { }
 
-    /// <summary>Left + Right pressed together started (true) or ended (false): Tab scroll (<see cref="ButtonChord"/>).</summary>
-    event EventHandler<bool>? ButtonChordChanged { add { } remove { } }
-
-    /// <summary>Turns the Left + Right chord on or off. On by default in the real hook.</summary>
-    void SetButtonChordEnabled(bool on) { }
-
     void Start();
 }
 
@@ -268,8 +262,7 @@ public sealed record PointerSettings(
     int? SensePanelForce = null, // 0x19C0 force threshold in device units; null leaves the device alone
     int? SensePanelBaseline = null, // the first reading Slender saw from the mouse; the safe band for SensePanelForce is 50%-200% of it
     int SideScrollSpeed = 100,  // thumb wheel side scroll, percent of normal (25-400); 100 leaves the native scroll alone
-    int TabScrollSpeed = 100,   // tabs per amount of thumb wheel travel in Tab scroll (chord or tab mode), percent (25-400)
-    bool TabScrollChord = true) // hold Left + Right and turn the thumb wheel to switch tabs
+    int SecondActionSpeed = 100) // second action steps per amount of thumb wheel travel (top button held), percent (25-400)
 {
     public const int SpeedMin = 25, SpeedMax = 400;
 }

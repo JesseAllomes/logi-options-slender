@@ -13,28 +13,27 @@ public sealed class ScrollSpeedConfigTests : IDisposable
     }
 
     [Fact]
-    public void Speeds_and_the_chord_switch_round_trip()
+    public void Speeds_round_trip_under_the_old_json_name()
     {
         var store = new JsonConfigStore(_dir);
-        var config = SlenderConfig.Default with { Pointer = new PointerSettings(SideScrollSpeed: 60, TabScrollSpeed: 250, TabScrollChord: false) };
+        var config = SlenderConfig.Default with { Pointer = new PointerSettings(SideScrollSpeed: 60, SecondActionSpeed: 250) };
         store.Save(config);
 
+        Assert.Contains("\"tabScrollSpeed\"", File.ReadAllText(Path.Combine(_dir, "config.json")));
         PointerSettings p = new JsonConfigStore(_dir).Load().Pointer;
         Assert.Equal(60, p.SideScrollSpeed);
-        Assert.Equal(250, p.TabScrollSpeed);
-        Assert.False(p.TabScrollChord);
+        Assert.Equal(250, p.SecondActionSpeed);
     }
 
     [Fact]
-    public void An_older_file_gets_normal_speeds_and_the_chord_on()
+    public void An_older_file_gets_normal_speeds_and_its_chord_switch_is_ignored()
     {
         Directory.CreateDirectory(_dir);
-        File.WriteAllText(Path.Combine(_dir, "config.json"), """{"version":2,"profiles":[{"bindings":{}}],"pointer":{"invertThumbWheel":true}}""");
+        File.WriteAllText(Path.Combine(_dir, "config.json"), """{"version":2,"profiles":[{"bindings":{}}],"pointer":{"invertThumbWheel":true,"tabScrollChord":true}}""");
 
         PointerSettings p = new JsonConfigStore(_dir).Load().Pointer;
         Assert.Equal(100, p.SideScrollSpeed);
-        Assert.Equal(100, p.TabScrollSpeed);
-        Assert.True(p.TabScrollChord);
+        Assert.Equal(100, p.SecondActionSpeed);
     }
 
     [Fact]
@@ -46,14 +45,13 @@ public sealed class ScrollSpeedConfigTests : IDisposable
 
         PointerSettings p = new JsonConfigStore(_dir).Load().Pointer;
         Assert.Equal(PointerSettings.SpeedMin, p.SideScrollSpeed);
-        Assert.Equal(PointerSettings.SpeedMax, p.TabScrollSpeed);
+        Assert.Equal(PointerSettings.SpeedMax, p.SecondActionSpeed);
     }
 
     [Fact]
-    public void Defaults_are_normal_speed_with_the_chord_on()
+    public void Defaults_are_normal_speed()
     {
         Assert.Equal(100, new PointerSettings().SideScrollSpeed);
-        Assert.Equal(100, new PointerSettings().TabScrollSpeed);
-        Assert.True(new PointerSettings().TabScrollChord);
+        Assert.Equal(100, new PointerSettings().SecondActionSpeed);
     }
 }
