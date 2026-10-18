@@ -445,6 +445,36 @@
           "src/Slender.Tray/Program.cs",
           "src/Slender.Tray/UI/ActionText.cs"
         ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-18T23:46:49+00:00",
+        "est_min": 15,
+        "goal": "lockup guard: a lost top button release can never pin Ctrl or the hold (app switch / divert loss end it, Ctrl let go after a quiet cap even while held)",
+        "id": "c4",
+        "note": "app switch / divert loss end the hold; Ctrl under a hold released after 1.5 s still wheel; _topPressed tracks the press separately",
+        "targets": [
+          "src/Slender.Engine/SlenderEngine.cs",
+          "tests/Slender.Tests/Engine"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-18T23:46:50+00:00",
+        "est_min": 25,
+        "goal": "remove Left+Right Tab scroll chord (hook, engine, config, Settings, tray menu, tests); Tab scroll speed renamed Second action speed (JSON key kept)",
+        "id": "c5",
+        "note": "chord removed (ButtonChord, WindowIntegrity, hook, IInputHook, config, Settings toggles, tray menu, tests); SecondActionSpeed keeps json tabScrollSpeed; Edge back-step fix: WheelKeyHold re-presses held modifiers on direction change; 1426 tests",
+        "targets": [
+          "src/Slender.Engine/ButtonChord.cs",
+          "src/Slender.Engine/LowLevelMouseHook.cs",
+          "src/Slender.Engine/Contracts/EngineContracts.cs",
+          "src/Slender.Engine/Config/JsonConfigStore.cs",
+          "src/Slender.Settings/MainWindow.Bottom.cs",
+          "src/Slender.Settings/MainWindow.Pages.cs",
+          "src/Slender.Settings/MainWindow.Popover.cs",
+          "src/Slender.Tray/TrayApplication.cs"
+        ]
       }
     ]
   },
@@ -481,9 +511,19 @@
       "milestone": "m13",
       "status": "fixed",
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
+    },
+    {
+      "at": "2026-10-18T23:46:50+00:00",
+      "cause": "",
+      "chunk": "c5",
+      "fix": "",
+      "id": "e4",
+      "milestone": "m38",
+      "status": "open",
+      "summary": "Edge: back steps (Ctrl+Shift+Tab) ignored under Ctrl held since Ctrl+Tab steps; fixed by re-pressing Ctrl on direction change"
     }
   ],
-  "rev": 251,
+  "rev": 256,
   "review": {
     "advice": [],
     "config": {
@@ -13262,7 +13302,7 @@
       "start": "2026-10-15T22:28:27+00:00"
     },
     {
-      "end": "2026-10-18T23:28:05+00:00",
+      "end": "2026-10-18T23:46:50+00:00",
       "id": "s8",
       "note": "",
       "source": "auto",
