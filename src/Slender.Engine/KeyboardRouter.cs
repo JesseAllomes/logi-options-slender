@@ -261,15 +261,7 @@ public sealed class KeyboardRouter : IDisposable
         catch (Exception ex) { _log.Error("key handling failed", ex); }
     }
 
-    private void RunAction(ActionSpec action, bool pressed)
-    {
-        if (action is ActionSpec.ToggleThumbWheelMode)
-        {
-            if (pressed) ThumbWheelToggleRequested?.Invoke(this, EventArgs.Empty);
-            return;
-        }
-        _executor.Execute(action, pressed);
-    }
+    private void RunAction(ActionSpec action, bool pressed) => _executor.Execute(action, pressed);
 
     /// <summary>Hold threshold reached while the key is still down: the hold action starts as a press (the keyboard has no haptics).</summary>
     private void StartHold(ActionSpec.TapHold th)
@@ -338,9 +330,6 @@ public sealed class KeyboardRouter : IDisposable
         catch (OperationCanceledException) { }
         catch (ObjectDisposedException) { }
     }
-
-    /// <summary>A key bound to "Switch thumb wheel mode" went down; the engine owns the mode (raised on the router's worker thread).</summary>
-    public event EventHandler? ThumbWheelToggleRequested;
 
     /// <summary>A key bound to the Actions Ring went down or up (raised on the router's worker thread).</summary>
     public event EventHandler<RingTriggerEventArgs>? RingTrigger;

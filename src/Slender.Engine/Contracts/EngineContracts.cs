@@ -131,11 +131,6 @@ public abstract record ActionSpec
     /// <summary>Types the text as Unicode input into the foreground app (a saved snippet).</summary>
     public sealed record Text(string Value) : ActionSpec;
     /// <summary>
-    /// Flips the thumb wheel between its normal function and the app's second role (ThumbWheelModes.SecondFor). Does
-    /// nothing in an app whose dual thumb wheel is off. The mode is remembered per app until flipped back, while Slender runs.
-    /// </summary>
-    public sealed record ToggleThumbWheelMode : ActionSpec;
-    /// <summary>
     /// One control, two actions: a release before <see cref="HoldMs"/> runs <paramref name="Tap"/> (press then release);
     /// still down at <see cref="HoldMs"/> starts <paramref name="Hold"/> as a press, released with the physical release.
     /// Neither may itself be a TapHold, and a TapHold is not allowed in a ring slot, a gesture swipe or the thumb wheel.
@@ -192,8 +187,8 @@ public sealed record Profile(string? AppProcess, IReadOnlyDictionary<ushort, Act
     public const int RingSlotCount = 8;
 
     /// <summary>
-    /// "Dual thumb wheel": the thumb wheel's second role, used after ToggleThumbWheelMode flips it. Null = follow the
-    /// default profile, then the built-in preset (browsers: tabs). Enabled = false turns dual mode off for this app.
+    /// The thumb wheel's second action, run while the top button is held. Null = follow the default profile (nothing by
+    /// default). Enabled = false turns it off for this app.
     /// </summary>
     public ThumbWheelSecond? ThumbWheelAlt { get; init; }
 }

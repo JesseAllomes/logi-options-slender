@@ -11,7 +11,7 @@ namespace Slender.Settings;
 /// <summary>
 /// The thumb wheel card: clicking the thumb wheel on the device stage opens this instead of the plain picker. One place, for the
 /// app chosen in the strip, for everything the wheel does: what scrolling sideways does (opens the normal picker), the second
-/// action on/off, what a notch right and a notch left do in that second role, and which button flips between the two.
+/// action on/off (it runs while the top button is held), and what a notch right and a notch left do then.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -78,7 +78,7 @@ public sealed partial class MainWindow
         CardRow("Scroll sideways", null, scroll, body);
 
         ThumbWheelView view = ThumbWheelOps.View(_config.Config, app);
-        CardRow("Second action", "Flip the wheel to a second job with a button of your choice.",
+        CardRow("Second action", "Hold the top button and turn the wheel. A quick press keeps the button's own job.",
             PageToggle("Second action in " + name, view.On, on => _config.Update(x => ThumbWheelOps.SetEnabled(x, app, on))), body);
         if (!view.On || view.Second is not { } second)
         {
@@ -91,9 +91,6 @@ public sealed partial class MainWindow
         CardRow("Scroll left", null, NotchButton("Scroll left", second.Back, own, name,
             a => _config.Update(x => ThumbWheelOps.SetBack(x, app, a))), body);
 
-        (ushort? switchId, bool switchInherited) = ThumbWheelOps.SwitchControl(_config.Config, app);
-        CardRow("Switch with", switchInherited ? "Same as All apps" : null, SwitchCombo(switchId, name, app), body);
-
         if (ThumbWheelOps.InheritedText(view) is { } inherited)
         {
             var customise = new Button { Content = "Customise", Style = Ui.Res<Style>("QuietButtonStyle") };
@@ -101,32 +98,6 @@ public sealed partial class MainWindow
             customise.Click += (_, _) => _config.Update(x => ThumbWheelOps.Customise(x, app));
             CardRow(inherited, null, customise, body);
         }
-    }
-
-    /// <summary>"Switch with": None or any mouse control except the wheel itself; picking one moves "Switch thumb wheel mode" there.</summary>
-    private ComboBox SwitchCombo(ushort? current, string appName, string? app)
-    {
-        IReadOnlyList<ControlInfo> candidates = ThumbWheelOps.SwitchCandidates;
-        var combo = new ComboBox { MinWidth = 150 };
-        combo.Items.Add("None");
-        foreach (ControlInfo c in candidates)
-        {
-            combo.Items.Add(c.Name);
-        }
-
-        int index = current is { } id ? candidates.ToList().FindIndex(c => c.Id == id) : -1;
-        combo.SelectedIndex = index + 1;
-        AutomationProperties.SetName(combo, "Switch the thumb wheel in " + appName + " with");
-        combo.SelectionChanged += (_, _) =>
-        {
-            int picked = combo.SelectedIndex - 1;
-            ushort? target = picked >= 0 && picked < candidates.Count ? candidates[picked].Id : null;
-            if (target != current)
-            {
-                _config.Update(x => ThumbWheelOps.SetSwitchControl(x, app, target));
-            }
-        };
-        return combo;
     }
 
     /// <summary>A tight row for the card: title (and muted help) on the left, the control on the right, no rule.</summary>

@@ -125,6 +125,12 @@ public interface ILogiMouse : IDisposable
     /// <summary>Current wheel resistance 0-100 (0x2111 torque); null when disconnected or unsupported.</summary>
     Task<int?> GetWheelResistanceAsync(CancellationToken ct) => Task.FromResult<int?>(null);
 
+    /// <summary>
+    /// Flips the scroll wheel between ratchet and free-spin (0x2111 mode), the top button's own job, for when Slender holds that
+    /// button diverted. False when disconnected or unsupported.
+    /// </summary>
+    Task<bool> ToggleWheelModeAsync(CancellationToken ct) => Task.FromResult(false);
+
     /// <summary>Current Sense Panel force reading (0x19C0); null when disconnected or unsupported.</summary>
     Task<int?> GetSensePanelForceAsync(CancellationToken ct) => Task.FromResult<int?>(null);
 

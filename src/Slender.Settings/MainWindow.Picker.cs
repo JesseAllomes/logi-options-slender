@@ -83,7 +83,7 @@ public sealed partial class MainWindow
             ActionSpec.Keys k when _kind == DeviceKind.Mouse && ActionCatalog.TryDecodePair(k.Chord, out _, out _) => "twoway",
             ActionSpec.Keys k when ShortcutShown(target, k.Chord) => "shortcuts",
             ActionSpec.Keys => "keys",
-            ActionSpec.MouseButton or ActionSpec.ToggleThumbWheelMode => "mouse",
+            ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
             ActionSpec.Brightness when _kind == DeviceKind.Keyboard => "media",
@@ -209,7 +209,7 @@ public sealed partial class MainWindow
             case "twoway":
                 return OptionList(ActionCatalog.ThumbPairOptions, own, commit);
             case "mouse":
-                return OptionList([.. ActionCatalog.MouseOptions, .. ActionCatalog.ThumbModeOptions], own, commit);
+                return OptionList(ActionCatalog.MouseOptions, own, commit);
             case "excel":
                 return OptionList(ActionCatalog.ExcelOptions, own, commit);
             case "ring":

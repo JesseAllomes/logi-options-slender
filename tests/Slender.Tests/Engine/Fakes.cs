@@ -38,6 +38,8 @@ internal sealed class FakeMouse : ILogiMouse
     }
     public bool IsRawXyActive(ushort id) => RawActive && id == ControlId.Gesture;
     public Task<int?> GetDpiAsync(CancellationToken ct) => Task.FromResult(Dpi);
+    public int WheelModeToggles;
+    public Task<bool> ToggleWheelModeAsync(CancellationToken ct) { WheelModeToggles++; return Task.FromResult(true); }
     public void RawMove(int dx, int dy) => RawXyMoved?.Invoke(this, new RawXyEvent(dx, dy));
     public Task SetThumbWheelDivertedAsync(bool d, CancellationToken ct) => Task.CompletedTask;
     public Task PlayHapticAsync(byte w, CancellationToken ct)

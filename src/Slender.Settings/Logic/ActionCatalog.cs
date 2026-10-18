@@ -122,7 +122,6 @@ public static class ActionCatalog
         ActionSpec.Disabled => new ActionLabel("Off", []),
         ActionSpec.Brightness b => new ActionLabel(b.StepPercent < 0 ? "Brightness down" : "Brightness up", []),
         ActionSpec.Text t => new ActionLabel(TextName(t.Value), []),
-        ActionSpec.ToggleThumbWheelMode => new ActionLabel("Switch thumb wheel mode", []),
         ActionSpec.TapHold th => new ActionLabel(TapHoldName(th), []),
         _ => new ActionLabel("Not assigned", []),
     };
@@ -234,7 +233,6 @@ public static class ActionCatalog
         var list = new List<ActionOption> { new("Nothing", new ActionSpec.None()) };
         list.AddRange(RingOptions);
         list.AddRange(MouseOptions);
-        list.AddRange(ThumbModeOptions);
         if (kind == DeviceKind.Keyboard)
         {
             list.AddRange(KeyboardAppOptions);
@@ -263,12 +261,6 @@ public static class ActionCatalog
         new("Middle click", new ActionSpec.MouseButton("Middle")),
         new("Back", new ActionSpec.MouseButton("Back")),
         new("Forward", new ActionSpec.MouseButton("Forward")),
-    ];
-
-    /// <summary>Flips the thumb wheel between its normal job and the app's second role (shown on the Mouse tab).</summary>
-    public static IReadOnlyList<ActionOption> ThumbModeOptions { get; } =
-    [
-        new("Switch thumb wheel mode", new ActionSpec.ToggleThumbWheelMode()),
     ];
 
     public static IReadOnlyList<ActionOption> ExcelOptions { get; } =

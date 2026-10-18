@@ -5,8 +5,8 @@ using Slender.Tray.Native;
 namespace Slender.Tray.Ring;
 
 /// <summary>
-/// A short label near the cursor when the thumb wheel mode flips: a small layered, click-through, non-activating window drawn with
-/// the ring's Direct2D canvas. Created on each flip, destroyed when its timer fires (nothing stays allocated). UI thread only.
+/// A short label near the cursor (lock keys): a small layered, click-through, non-activating window drawn with
+/// the ring's Direct2D canvas. Created on each show, destroyed when its timer fires (nothing stays allocated). UI thread only.
 /// </summary>
 public sealed unsafe class ThumbWheelToast : IDisposable
 {
@@ -31,13 +31,6 @@ public sealed unsafe class ThumbWheelToast : IDisposable
         _ringOpen = ringOpen;
         _log = log ?? NullLog.Instance;
     }
-
-    /// <summary>The text for a flip: the event's label, or "Forward / Back" described from the role when the label is empty.</summary>
-    public static string TextFor(ThumbWheelModeEventArgs e) =>
-        e.Label.Length > 0 ? e.Label
-        : e.Role is { } r ? $"{Short(r.Forward)} / {Short(r.Back)}" : "Second role";
-
-    private static string Short(ActionSpec a) => a is ActionSpec.None ? "nothing" : RingSlotText.Fit(ActionText.Describe(a), 14);
 
     /// <summary>Shows <paramref name="text"/> near the cursor for about 900 ms, replacing any toast still up. Skipped while the ring is open.</summary>
     public void Show(string text)

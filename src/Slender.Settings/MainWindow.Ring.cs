@@ -317,7 +317,7 @@ public sealed partial class MainWindow
         ActionSpec? own = slot.Action is ActionSpec.None ? null : slot.Action;
         string initial = own switch
         {
-            ActionSpec.MouseButton or ActionSpec.ToggleThumbWheelMode => "mouse",
+            ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
             ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text => "more",
             ActionSpec.Keys => "keys",

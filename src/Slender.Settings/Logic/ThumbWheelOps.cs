@@ -2,7 +2,7 @@ using Slender.Engine;
 
 namespace Slender.Settings.Logic;
 
-/// <summary>Where an app's second thumb wheel role comes from.</summary>
+/// <summary>Where an app's thumb wheel second action (held on the top button) comes from.</summary>
 public enum ThumbWheelSource
 {
     /// <summary>Nothing is set: the app has no second role.</summary>
@@ -13,9 +13,6 @@ public enum ThumbWheelSource
 
     /// <summary>The app follows All apps' setting.</summary>
     AllApps,
-
-    /// <summary>The built-in browser preset.</summary>
-    Preset,
 }
 
 /// <summary>The second role an app uses (null when none) and where it comes from. On means set and enabled.</summary>
@@ -23,12 +20,12 @@ public sealed record ThumbWheelView(ThumbWheelSecond? Second, ThumbWheelSource S
 {
     public bool On => Second is { Enabled: true };
 
-    public bool Inherited => Source is ThumbWheelSource.AllApps or ThumbWheelSource.Preset;
+    public bool Inherited => Source is ThumbWheelSource.AllApps;
 }
 
 /// <summary>
-/// Pure edits of Profile.ThumbWheelAlt for the "Dual thumb wheel" section. A null ThumbWheelAlt follows All apps, then the
-/// built-in preset. Every edit returns a new config and creates the app's profile when it has none.
+/// Pure edits of Profile.ThumbWheelAlt, the thumb wheel's second action (run while the top button is held). A null
+/// ThumbWheelAlt follows All apps. Every edit returns a new config and creates the app's profile when it has none.
 /// </summary>
 public static class ThumbWheelOps
 {
@@ -46,13 +43,8 @@ public static class ThumbWheelOps
             return new ThumbWheelView(null, ThumbWheelSource.None);
         }
 
-        if (ProfileOps.Find(config, null)?.ThumbWheelAlt is { } all)
-        {
-            return new ThumbWheelView(all, ThumbWheelSource.AllApps);
-        }
-
-        return ThumbWheelModes.BuiltIn(app) is { } preset
-            ? new ThumbWheelView(preset, ThumbWheelSource.Preset)
+        return ProfileOps.Find(config, null)?.ThumbWheelAlt is { } all
+            ? new ThumbWheelView(all, ThumbWheelSource.AllApps)
             : new ThumbWheelView(null, ThumbWheelSource.None);
     }
 
@@ -60,7 +52,6 @@ public static class ThumbWheelOps
     public static string? InheritedText(ThumbWheelView view) => view.Source switch
     {
         ThumbWheelSource.AllApps => "Same as All apps",
-        ThumbWheelSource.Preset => "Browser preset: next tab / previous tab",
         _ => null,
     };
 
@@ -76,7 +67,7 @@ public static class ThumbWheelOps
         return Store(config, app, (view.Second ?? Blank) with { Enabled = enabled });
     }
 
-    /// <summary>"Turn off for app": stores Enabled = false in the app's own profile, so it ignores All apps and the preset.</summary>
+    /// <summary>"Turn off for app": stores Enabled = false in the app's own profile, so it ignores All apps.</summary>
     public static SlenderConfig TurnOffFor(SlenderConfig config, string? app) => SetEnabled(config, app, false);
 
     public static SlenderConfig SetForward(SlenderConfig config, string? app, ActionSpec action) =>
@@ -92,7 +83,7 @@ public static class ThumbWheelOps
         return view.Source == ThumbWheelSource.Own ? config : Store(config, app, view.Second ?? Blank);
     }
 
-    /// <summary>Drops the app's own setting so it follows All apps (then the preset) again. No-op for All apps.</summary>
+    /// <summary>Drops the app's own setting so it follows All apps again. No-op for All apps.</summary>
     public static SlenderConfig FollowInherited(SlenderConfig config, string? app)
     {
         if (app is null || ProfileOps.Find(config, app) is not { ThumbWheelAlt: not null } profile)
@@ -104,74 +95,6 @@ public static class ThumbWheelOps
     }
 
     public static string Text(ActionSpec action) => action is ActionSpec.None ? "Not assigned" : ActionCatalog.Plain(action);
-
-    /// <summary>Mouse controls that can hold "Switch thumb wheel mode": every button, swipe and touch except the thumb wheel itself.</summary>
-    public static IReadOnlyList<ControlInfo> SwitchCandidates { get; } =
-        ControlCatalog.MouseControls.Where(c => c.Id != DeviceIds.ThumbWheelPseudoId).ToList();
-
-    /// <summary>
-    /// The control that flips the thumb wheel in this app: the first candidate whose effective binding is the switch, on its
-    /// own or as the Tap of a Press / Hold. Null when none. Inherited is true when the app gets it from All apps.
-    /// </summary>
-    public static (ushort? Id, bool Inherited) SwitchControl(SlenderConfig config, string? app)
-    {
-        ushort? inheritedId = null;
-        foreach (ControlInfo c in SwitchCandidates)
-        {
-            (ActionSpec? action, bool inherited) = ProfileOps.Effective(config, app, DeviceKind.Mouse, c.Id);
-            if (!IsSwitch(action))
-            {
-                continue;
-            }
-
-            if (!inherited)
-            {
-                return (c.Id, false); // the app's own choice wins over one it inherits
-            }
-
-            inheritedId ??= c.Id;
-        }
-
-        return (inheritedId, inheritedId is not null);
-    }
-
-    /// <summary>
-    /// Makes <paramref name="id"/> the control that flips the thumb wheel in this app, dropping the switch from any control the
-    /// profile itself binds it to. A button the app would still inherit the switch on gets an explicit pass-through, so the app
-    /// has one switch at most. Null = none.
-    /// </summary>
-    public static SlenderConfig SetSwitchControl(SlenderConfig config, string? app, ushort? id)
-    {
-        foreach (ControlInfo c in SwitchCandidates)
-        {
-            if (c.Id != id && IsSwitch(ProfileOps.Own(config, app, DeviceKind.Mouse, c.Id)))
-            {
-                config = ProfileOps.SetBinding(config, app, DeviceKind.Mouse, c.Id, null);
-            }
-        }
-
-        if (id is { } target && !IsSwitch(ProfileOps.Own(config, app, DeviceKind.Mouse, target)))
-        {
-            config = ProfileOps.SetBinding(config, app, DeviceKind.Mouse, target, new ActionSpec.ToggleThumbWheelMode());
-        }
-
-        // An app keeps only one switch: any button it would still inherit the switch on passes through to its normal job.
-        if (app is not null)
-        {
-            foreach (ControlInfo c in SwitchCandidates)
-            {
-                if (c.Id != id && ProfileOps.Effective(config, app, DeviceKind.Mouse, c.Id) is { Inherited: true, Action: { } action } && IsSwitch(action))
-                {
-                    config = ProfileOps.SetBinding(config, app, DeviceKind.Mouse, c.Id, new ActionSpec.None());
-                }
-            }
-        }
-
-        return config;
-    }
-
-    private static bool IsSwitch(ActionSpec? action) =>
-        action is ActionSpec.ToggleThumbWheelMode or ActionSpec.TapHold { Tap: ActionSpec.ToggleThumbWheelMode };
 
     private static SlenderConfig Store(SlenderConfig config, string? app, ThumbWheelSecond second)
     {

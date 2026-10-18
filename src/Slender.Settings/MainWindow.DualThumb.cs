@@ -8,9 +8,9 @@ using Slender.Settings.Views;
 namespace Slender.Settings;
 
 /// <summary>
-/// "Dual thumb wheel" on the Point &amp; scroll page, for the app chosen in the strip: an on/off toggle and, when on, what one notch
-/// right and one notch left do in the second role. The role is switched with "Switch thumb wheel mode" on any control; the
-/// thumb wheel card on the device stage (MainWindow.ThumbCard.cs) edits the same settings.
+/// The thumb wheel's second action on the Point &amp; scroll page, for the app chosen in the strip: an on/off toggle and, when on,
+/// what one notch right and one notch left do while the top button is held. The thumb wheel card on the device stage
+/// (MainWindow.ThumbCard.cs) edits the same settings.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -18,7 +18,7 @@ public sealed partial class MainWindow
 
     private void BuildDualThumbSection()
     {
-        AddSection("DUAL THUMB WHEEL · " + (_app is null ? "ALL APPS" : AppDisplayName(_app).ToUpperInvariant()));
+        AddSection("THUMB WHEEL SECOND ACTION · " + (_app is null ? "ALL APPS" : AppDisplayName(_app).ToUpperInvariant()));
         _dualHost = new StackPanel();
         PagePanel.Children.Add(_dualHost);
         RefreshDualThumb();
@@ -39,8 +39,8 @@ public sealed partial class MainWindow
         string name = app is null ? "All apps" : AppDisplayName(app);
         ThumbWheelView view = ThumbWheelOps.View(_config.Config, app);
 
-        AddRow("Dual thumb wheel", "Give the thumb wheel a second job. Put \"Switch thumb wheel mode\" on a button, such as the top one behind the scroll wheel, to flip between the two.",
-            PageToggle("Dual thumb wheel in " + name, view.On, on => _config.Update(x => ThumbWheelOps.SetEnabled(x, app, on))), _dualHost);
+        AddRow("Second action", "Hold the top button and turn the wheel. A quick press keeps the button's own job.",
+            PageToggle("Second action in " + name, view.On, on => _config.Update(x => ThumbWheelOps.SetEnabled(x, app, on))), _dualHost);
         if (!view.On || view.Second is not { } second)
         {
             return;
@@ -49,7 +49,7 @@ public sealed partial class MainWindow
         if (ThumbWheelOps.InheritedText(view) is { } inherited)
         {
             var customise = new Button { Content = "Customise", Style = Ui.Res<Style>("QuietButtonStyle") };
-            AutomationProperties.SetName(customise, "Customise the dual thumb wheel in " + name);
+            AutomationProperties.SetName(customise, "Customise the second action in " + name);
             customise.Click += (_, _) => _config.Update(x => ThumbWheelOps.Customise(x, app));
             AddRow(inherited, null, customise, _dualHost);
         }
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A button showing what the notch does; it opens the action picker. Muted and inert while the role is inherited.</summary>
+    /// <summary>A button showing what the notch does; it opens the action picker. Muted and inert while the setting is inherited.</summary>
     private Button NotchButton(string what, ActionSpec action, bool enabled, string appName, Action<ActionSpec> set)
     {
         var button = new Button
@@ -82,7 +82,7 @@ public sealed partial class MainWindow
         ActionSpec? own = action is ActionSpec.None ? null : action;
         string initial = own switch
         {
-            ActionSpec.MouseButton or ActionSpec.ToggleThumbWheelMode => "mouse",
+            ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
             ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text => "more",

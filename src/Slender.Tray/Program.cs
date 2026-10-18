@@ -145,13 +145,11 @@ static class Program
         ring.OpenChanged += engine.SetRingOpen;
         engine.RingThumbWheel += (_, delta) => ring.OnDivertedThumbWheel(delta);
         keys.RingTrigger += onTrigger;
-        // Dual thumb wheel: the top button (engine or keyboard) flips the app's mode; a short label near the cursor says which.
+        // Lock keys: a short label near the cursor.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
-        engine.ThumbWheelModeChanged += (_, e) => app.PostToUi(() => toast.Show(ThumbWheelToast.TextFor(e)));
         app.LockKeyChanged += (_, text) => toast.Show(text);
         // Settings' "Identify" panel: the tray writes which spare key was pressed where Settings can read it.
         keys.SpareKeyIdentified += (_, cid) => SpareKeyReport.Write(SyncPaths.StateDirectory, cid, log);
-        keys.ThumbWheelToggleRequested += (_, _) => engine.ToggleThumbWheelMode();
         // Fn lock belongs to the keyboard (Fn+Esc): what it reports is saved, so an update or restart never flips it back.
         keys.FnLockChangedOnKeyboard += (_, on) => app.PostToUi(() => app.MirrorKeyboardFnLock(on));
         engine.StatusChanged += (_, status) =>

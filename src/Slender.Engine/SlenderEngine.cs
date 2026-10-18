@@ -6,17 +6,6 @@ namespace Slender.Engine;
 /// <summary>Connection and battery state for the tray.</summary>
 public sealed record EngineStatus(bool Connected, int? BatteryPercent, bool Charging);
 
-/// <summary>A thumb wheel mode flip. Label is the text to show; empty = describe <see cref="Role"/> (Forward/Back) in the UI.</summary>
-public sealed class ThumbWheelModeEventArgs(string app, bool second, ThumbWheelSecond? role, string label) : EventArgs
-{
-    public string App { get; } = app;
-    /// <summary>True = now in the second role.</summary>
-    public bool Second { get; } = second;
-    /// <summary>The app's second role; null when it has none.</summary>
-    public ThumbWheelSecond? Role { get; } = role;
-    public string Label { get; } = label;
-}
-
 /// <summary>
 /// Wires mouse buttons, the horizontal-wheel hook, foreground tracking and actions together. Nothing here
 /// throws across a hook/HID thread: handlers catch and log. Heavy work runs on a bounded worker.
@@ -39,7 +28,6 @@ public sealed class SlenderEngine : IDisposable
     private ActionSpec? _touchAction; // action used at touch start, released at touch end (under _gate)
     private readonly ColumnScrollAccumulator _accumulator = new();
     private readonly ColumnScrollAccumulator _secondAccumulator = new();
-    private readonly Dictionary<string, bool> _secondMode = new(StringComparer.OrdinalIgnoreCase); // dual thumb wheel: per app, this run only
     private readonly GestureTracker _gesture = new();
     private readonly object _gate = new();
     private readonly Dictionary<ushort, ActionSpec> _active = new(); // HID++ path: action used at press, replayed on release
@@ -65,8 +53,11 @@ public sealed class SlenderEngine : IDisposable
     private long _burstStart;                           // engine queue: clock at the first held step of this burst
     private int _burstSteps;                            // engine queue: steps sent in this burst
     private int _burstReports;                          // wheel reports seen during this burst (any thread)
-    private volatile bool _unheldLogged;                // one 'not held' line per mode flip
+    private volatile bool _unheldLogged;                // one 'not held' line per top button hold
     private volatile bool _chordActive;                 // Left + Right held: the thumb wheel switches tabs
+    private volatile ThumbWheelSecond? _topSecond;      // top button held in an app with a second action: the wheel runs it
+    private volatile bool _topTurned;                   // the wheel stepped the second action during this hold
+    private long _topPressedAt;                         // engine queue: clock when the top button went down
     private long _sideRemainder;                        // engine queue: side scroll speed carry, in delta*percent units
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
@@ -100,9 +91,6 @@ public sealed class SlenderEngine : IDisposable
 
     /// <summary>Thumb wheel rotation (1/120 notch units, positive = right) for the open Actions Ring while the wheel is diverted. Raised on the HID thread.</summary>
     public event EventHandler<int>? RingThumbWheel;
-
-    /// <summary>The thumb wheel mode of the foreground app was flipped, or a flip was refused (no second role). Raised on the engine queue.</summary>
-    public event EventHandler<ThumbWheelModeEventArgs>? ThumbWheelModeChanged;
 
     public SlenderConfig Config => _config;
 
@@ -180,6 +168,8 @@ public sealed class SlenderEngine : IDisposable
                 : def.GestureSwipes.TryGetValue(dir, out var d) ? d : null;
             if (effective is not null and not ActionSpec.None) { set.Add(ControlId.Gesture); break; }
         }
+        // Holding the top button runs the app's thumb wheel second action, so the hold must be seen even when the button is native.
+        if (ThumbWheelModes.SecondFor(config, process) is not null) set.Add(ControlId.ModeShift);
         return [.. set];
     }
 
@@ -299,6 +289,11 @@ public sealed class SlenderEngine : IDisposable
             {
                 action = ResolveAction(e.ControlId);
                 lock (_gate) _active[e.ControlId] = action;
+                if (e.ControlId == ControlId.ModeShift && ThumbWheelModes.SecondFor(_config, _foreground.ProcessName) is { } second)
+                {
+                    StartTopHold(second);
+                    return;
+                }
                 if (action is ActionSpec.None) return;
                 if (action is ActionSpec.TapHold th) { _tapHold.Press(e.ControlId, th, StartHold); return; }
                 MaybeHaptic(action);
@@ -310,6 +305,7 @@ public sealed class SlenderEngine : IDisposable
                 {
                     if (!_active.Remove(e.ControlId, out action!)) return;
                 }
+                if (e.ControlId == ControlId.ModeShift && _topSecond is not null) { EndTopHold(action); return; }
                 if (action is ActionSpec.TapHold) { EndTapHold(e.ControlId); return; }
                 if (action is ActionSpec.ActionsRing) { RaiseRing(false); return; }
                 if (action is ActionSpec.None) return;
@@ -337,7 +333,7 @@ public sealed class SlenderEngine : IDisposable
     private void MaybeHaptic(ActionSpec action)
     {
         var h = _config.Haptics;
-        if (!h.Enabled || action is ActionSpec.Disabled or ActionSpec.ToggleThumbWheelMode) return; // a flip has its own bump
+        if (!h.Enabled || action is ActionSpec.Disabled) return;
         var want = action is ActionSpec.ActionsRing ? h.OnActionsRing : h.OnButtonPress;
         if (!want) return;
         try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
@@ -642,9 +638,10 @@ public sealed class SlenderEngine : IDisposable
                 if (tabSteps != 0) _queue.Post(() => RunSecond(tabs, tabSteps));
                 return;
             }
-            if (ActiveSecond() is { } second)
+            if (_topSecond is { } second)
             {
-                e.Handled = true; // the second role owns the wheel: the native horizontal scroll never happens
+                e.Handled = true; // top button held: the second action owns the wheel, the native horizontal scroll never happens
+                _topTurned = true;
                 var steps = _secondAccumulator.AddScaled(e.Delta, cfg.Pointer.TabScrollSpeed, _clock());
                 if (steps != 0) _queue.Post(() => RunSecond(second, steps));
                 return;
@@ -711,8 +708,7 @@ public sealed class SlenderEngine : IDisposable
     internal bool ThumbWheelDiverted { get { lock (_gate) return _thumbHid; } }
 
     private bool ThumbWheelWanted() =>
-        ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, ActiveSecond() is not null, _ringOpen, _mouse.ThumbWheelTouchSupported,
-            ExcelColumnScrolling);
+        ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, _ringOpen, _mouse.ThumbWheelTouchSupported, ExcelColumnScrolling);
 
     /// <summary>
     /// Recomputes whether the wheel should be diverted and applies it on the serialised divert chain. A change never happens
@@ -771,9 +767,9 @@ public sealed class SlenderEngine : IDisposable
             if (_mouse.ThumbWheelTouchSupported == false) return;
             var r = _touch.OnReport(e.Touch, e.Rotation, _clock());
             if (r.Down) _queue.Post(HandleTouchDown);
-            // Thumb off the wheel ends a held burst, except in tab mode: there the touch flag can drop mid-turn, which let Ctrl
-            // go after the first few tabs, so tab mode lets go only once the wheel is quiet (or on a button, app switch, flip).
-            if (r.Up && ActiveSecond() is null && !_chordActive) ReleaseHoldSoon("thumb lifted");
+            // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can
+            // drop mid-turn, which let Ctrl go after the first few tabs, so it lets go when the button does.
+            if (r.Up && _topSecond is null && !_chordActive) ReleaseHoldSoon("thumb lifted");
             if (r.Up) _queue.Post(() => HandleTouchUp(r.Tap));
         }
         catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
@@ -808,64 +804,38 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("thumb wheel tap failed", ex); }
     }
 
-    // ---- dual thumb wheel ----
+    // ---- thumb wheel second action: hold the top button (engine queue) ----
 
-    private static string ModeKey(string? process) => string.IsNullOrEmpty(process) ? string.Empty : Path.GetFileNameWithoutExtension(process);
+    /// <summary>True while the top button holds the thumb wheel's second action.</summary>
+    internal bool SecondActionHeld => _topSecond is not null;
 
-    /// <summary>The second role to run now: the foreground app is flipped and still has one. A flipped app whose setting went away falls back to normal.</summary>
-    private ThumbWheelSecond? ActiveSecond()
+    /// <summary>Top button down in an app with a second action: the wheel runs it until release. Its own job waits for the release.</summary>
+    private void StartTopHold(ThumbWheelSecond second)
     {
-        var process = _foreground.ProcessName;
-        var key = ModeKey(process);
-        lock (_gate)
-        {
-            if (_secondMode.Count == 0 || !_secondMode.TryGetValue(key, out var on) || !on) return null;
-            var second = ThumbWheelModes.SecondFor(_config, process);
-            if (second is null) _secondMode.Remove(key);
-            return second;
-        }
+        _topPressedAt = _clock();
+        _topTurned = false;
+        _unheldLogged = false;
+        _secondAccumulator.Reset();
+        _topSecond = second;
     }
 
-    /// <summary>Whether the app (default: the foreground app) is currently in its second thumb wheel mode.</summary>
-    public bool IsThumbWheelSecond(string? process = null)
-    {
-        lock (_gate) return _secondMode.TryGetValue(ModeKey(process ?? _foreground.ProcessName), out var on) && on;
-    }
-
-    /// <summary>Flips the foreground app's thumb wheel mode; with no second role there it only gives feedback.</summary>
-    public void ToggleThumbWheelMode()
+    /// <summary>
+    /// Top button up: the second action ends (and lets go of any held Ctrl). A quick press that never turned the wheel runs the
+    /// button's own job, as a tap; a longer hold or one that turned the wheel does nothing more. A native top button (None) is
+    /// diverted only for the hold, so its own job, ratchet / free-spin, is done here.
+    /// </summary>
+    private void EndTopHold(ActionSpec action)
     {
         try
         {
-            ReleaseHoldSoon("mode flip");
-            _unheldLogged = false;
-            var process = _foreground.ProcessName;
-            var key = ModeKey(process);
-            var second = ThumbWheelModes.SecondFor(_config, process);
-            bool now;
-            lock (_gate)
-            {
-                if (second is null) { _secondMode.Remove(key); now = false; }
-                else { now = !(_secondMode.TryGetValue(key, out var was) && was); _secondMode[key] = now; }
-            }
-            var app = key.Length == 0 ? "this app" : char.ToUpperInvariant(key[0]) + key[1..];
-            if (second is null)
-            {
-                RaiseMode(new ThumbWheelModeEventArgs(app, false, null, $"No second role in {app}"));
-                return;
-            }
-            _secondAccumulator.Reset();
-            EvaluateThumb(force: false, _clock());
-            PlayFlipHaptic();
-            RaiseMode(new ThumbWheelModeEventArgs(app, now, second, !now ? "Side scroll" : second == ThumbWheelModes.Tabs ? "Tabs" : string.Empty));
+            _topSecond = null;
+            ReleaseHold("top button released");
+            if (_topTurned || _clock() - _topPressedAt >= ActionSpec.TapHold.HoldMs) return;
+            var tap = action is ActionSpec.TapHold th ? th.Tap : action;
+            if (tap is not ActionSpec.None) RunGestureAction(tap);
+            else if (action is ActionSpec.None) _ = ObserveAsync(_mouse.ToggleWheelModeAsync(_cts.Token), "ratchet / free-spin");
         }
-        catch (Exception ex) { _log.Error("thumb wheel mode toggle failed", ex); }
-    }
-
-    private void RaiseMode(ThumbWheelModeEventArgs args)
-    {
-        try { ThumbWheelModeChanged?.Invoke(this, args); }
-        catch (Exception ex) { _log.Error("thumb wheel mode handler failed", ex); }
+        catch (Exception ex) { _log.Error("top button release failed", ex); }
     }
 
     /// <summary>A mode flip is feedback the user needs, so it follows only the main haptics switch (not "on every button press").</summary>
@@ -881,7 +851,7 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             var action = notches > 0 ? second.Forward : second.Back;
-            if (action is ActionSpec.None or ActionSpec.Disabled or ActionSpec.ToggleThumbWheelMode or ActionSpec.ActionsRing) return;
+            if (action is ActionSpec.None or ActionSpec.Disabled or ActionSpec.ActionsRing) return;
             var count = Math.Min(Math.Abs(notches), MaxNotchesPerEvent);
             if (TryHeldSteps(action, notches > 0 ? second.Back : second.Forward, count)) return;
             if (!_unheldLogged && action is ActionSpec.Keys or ActionSpec.Excel)
@@ -899,16 +869,7 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("second thumb wheel action failed", ex); }
     }
 
-    /// <summary>Executes an action; ToggleThumbWheelMode (press only) is the engine's own.</summary>
-    private void Run(ActionSpec action, bool pressed)
-    {
-        if (action is ActionSpec.ToggleThumbWheelMode)
-        {
-            if (pressed) ToggleThumbWheelMode();
-            return;
-        }
-        _executor.Execute(action, pressed);
-    }
+    private void Run(ActionSpec action, bool pressed) => _executor.Execute(action, pressed);
 
     private void RunWheelKeys(string chord, int notches)
     {
@@ -1028,7 +989,7 @@ public sealed class SlenderEngine : IDisposable
         {
             if (!_wheelHold.IsHolding) return;
             var quiet = _clock() - _lastRotation;
-            if (_chordActive) { ScheduleHoldRelease(WheelHoldReleaseMs); return; } // Ctrl stays down until the buttons go up
+            if (_chordActive || _topSecond is not null) { ScheduleHoldRelease(WheelHoldReleaseMs); return; } // Ctrl stays down until the button(s) go up
             if (quiet < WheelHoldReleaseMs) { ScheduleHoldRelease((int)(WheelHoldReleaseMs - quiet)); return; }
             ReleaseHold("wheel quiet");
         }
@@ -1072,6 +1033,7 @@ public sealed class SlenderEngine : IDisposable
             else
             {
                 lock (_gate) { _thumbHid = false; _thumbWanted = false; } // the hook is the fallback until the device is back
+                _topSecond = null; // a held top button can never report its release
                 ReleaseHoldSoon("mouse disconnected");
                 if (_touch.Reset()) _queue.Post(() => HandleTouchUp(false));
             }

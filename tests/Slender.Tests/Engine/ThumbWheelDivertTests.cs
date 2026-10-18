@@ -13,7 +13,8 @@ public class ThumbWheelDivertTests
         public bool? Touch { get; set; } = true;
         public List<bool> Calls { get; } = [];
         public event EventHandler<bool>? ConnectionChanged;
-        public event EventHandler<ButtonEvent>? ButtonChanged { add { } remove { } }
+        public event EventHandler<ButtonEvent>? ButtonChanged;
+        public void Press(ushort id, bool pressed) => ButtonChanged?.Invoke(this, new ButtonEvent(id, pressed));
         public event EventHandler<ThumbWheelEvent>? ThumbWheelMoved;
         public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
         public Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct) => Task.CompletedTask;
@@ -75,21 +76,20 @@ public class ThumbWheelDivertTests
     public void Policy_follows_app_and_state()
     {
         var cfg = SlenderConfig.Default;
-        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, false, true, excelColumns: true)); // Excel column mode (when on)
-        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, false, true)); // off for now: Excel keeps the native side scroll
-        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, false, true)); // nothing needs it
-        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", true, false, true));   // dual wheel flipped
-        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true, true));   // ring open
+        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, true, excelColumns: true)); // Excel column mode (when on)
+        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "excel", false, true)); // off for now: Excel keeps the native side scroll
+        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true)); // nothing needs it
+        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", true, true));   // ring open
         var off = cfg with { Excel = cfg.Excel with { ThumbWheelScrollsColumns = false } };
-        Assert.False(ThumbWheelDivertPolicy.Wanted(off, "excel", false, false, true));
+        Assert.False(ThumbWheelDivertPolicy.Wanted(off, "excel", false, true));
     }
 
     [Fact]
     public void Policy_bound_thumb_wheel_only_in_that_app()
     {
         var cfg = WithDefault([], new Profile("spotify", new Dictionary<ushort, ActionSpec> { [SlenderEngine.ThumbWheelBindingId] = new ActionSpec.Keys("VolumeUp|VolumeDown") }));
-        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "spotify", false, false, true));
-        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, false, true));
+        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "spotify", false, true));
+        Assert.False(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true));
     }
 
     [Fact]
@@ -97,10 +97,10 @@ public class ThumbWheelDivertTests
     {
         var tap = WithDefault(new() { [SlenderEngine.ThumbWheelTapBindingId] = new ActionSpec.Keys("Ctrl+Z") });
         var touch = WithDefault(new() { [SlenderEngine.ThumbWheelTouchBindingId] = new ActionSpec.Keys("Ctrl+Y") });
-        Assert.True(ThumbWheelDivertPolicy.Wanted(tap, "notepad", false, false, true));
-        Assert.True(ThumbWheelDivertPolicy.Wanted(tap, "notepad", false, false, null));
-        Assert.False(ThumbWheelDivertPolicy.Wanted(tap, "notepad", false, false, false));
-        Assert.True(ThumbWheelDivertPolicy.Wanted(touch, "notepad", false, false, true));
+        Assert.True(ThumbWheelDivertPolicy.Wanted(tap, "notepad", false, true));
+        Assert.True(ThumbWheelDivertPolicy.Wanted(tap, "notepad", false, null));
+        Assert.False(ThumbWheelDivertPolicy.Wanted(tap, "notepad", false, false));
+        Assert.True(ThumbWheelDivertPolicy.Wanted(touch, "notepad", false, true));
         Assert.False(ThumbWheelDivertPolicy.Wanted(SlenderConfig.Default, "notepad", false, false, true));
     }
 
@@ -200,22 +200,41 @@ public class ThumbWheelDivertTests
         Assert.Equal(["VolumeUp", "VolumeUp", "VolumeDown"], r.Keys());
     }
 
-    [Fact]
-    public void Dual_second_role_runs_from_diverted_rotation()
+    /// <summary>Tabs as the second action, and a tap binding so the wheel is diverted (rotation comes from HID++).</summary>
+    private static SlenderConfig HoldCfg() => SlenderConfig.Default with
     {
-        var cfg = WithDefault(new() { [ControlId.ModeShift] = new ActionSpec.ToggleThumbWheelMode() });
-        var r = new Rig(cfg, "msedge");
-        Assert.Empty(r.Mouse.Snapshot());
-        r.Engine.ToggleThumbWheelMode();
+        Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec> { [SlenderEngine.ThumbWheelTapBindingId] = new ActionSpec.Keys("Ctrl+Z") }) { ThumbWheelAlt = ThumbWheelModes.Tabs }],
+    };
+
+    private static void HoldTop(Rig r, bool down)
+    {
+        r.Mouse.Press(ControlId.ModeShift, down);
+        Assert.True(Until(() => r.Engine.SecondActionHeld == down));
+    }
+
+    [Fact]
+    public void Second_action_runs_from_diverted_rotation_while_the_top_button_is_held()
+    {
+        var r = new Rig(HoldCfg(), "msedge");
         Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        HoldTop(r, true);
         r.Mouse.Rotate(60);
         r.Mouse.Rotate(60);
         r.Now = 1010;
         r.Mouse.Rotate(-120);
+        Assert.True(Until(() => r.Keys().Length == 2));
         Assert.Equal(["Ctrl+Tab", "Ctrl+Shift+Tab"], r.Keys());
-        r.Now = 5000;
-        r.Engine.ToggleThumbWheelMode(); // back to normal: nothing in msedge needs the wheel
-        Assert.True(Until(() => r.Mouse.Snapshot() is [true, false]));
+    }
+
+    [Fact]
+    public void Holding_the_top_button_never_changes_the_wheel_divert()
+    {
+        var cfg = SlenderConfig.Default with { Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = ThumbWheelModes.Tabs }] };
+        var r = new Rig(cfg, "notepad");
+        HoldTop(r, true);
+        Assert.True(r.Hook.Wheel(120).Handled); // the hook path carries the second action
+        HoldTop(r, false);
+        Assert.Empty(r.Mouse.Snapshot());
     }
 
     [Fact]
@@ -287,16 +306,15 @@ public class ThumbWheelDivertTests
     // ---- unclaimed diverted turns become a normal sideways scroll ----
 
     [Fact]
-    public void Leaving_tab_mode_while_turning_keeps_side_scroll_working()
+    public void Releasing_the_top_button_mid_turn_keeps_side_scroll_working()
     {
-        var cfg = WithDefault(new() { [ControlId.ModeShift] = new ActionSpec.ToggleThumbWheelMode() });
         var exec = new FakeKeyExecutor();
-        var r = new Rig(cfg, "msedge", executor: exec);
-        r.Engine.ToggleThumbWheelMode();
+        var r = new Rig(HoldCfg(), "msedge", executor: exec);
         Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        HoldTop(r, true);
         r.Mouse.Rotate(120); // a tab step
 
-        r.Engine.ToggleThumbWheelMode(); // back to side scroll, mid-turn: the switch back waits for a pause
+        HoldTop(r, false); // back to side scroll, mid-turn
         r.Mouse.Rotate(120);
         r.Mouse.Rotate(-40);
 
@@ -306,13 +324,12 @@ public class ThumbWheelDivertTests
     }
 
     [Fact]
-    public void Tab_mode_keeps_ctrl_held_when_the_touch_flag_drops_mid_turn()
+    public void Holding_the_top_button_keeps_ctrl_held_when_the_touch_flag_drops_mid_turn()
     {
-        var cfg = WithDefault(new() { [ControlId.ModeShift] = new ActionSpec.ToggleThumbWheelMode() });
         var exec = new FakeKeyExecutor();
-        var r = new Rig(cfg, "msedge", executor: exec);
-        r.Engine.ToggleThumbWheelMode();
+        var r = new Rig(HoldCfg(), "msedge", executor: exec);
         Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        HoldTop(r, true);
 
         r.Mouse.Rotate(0, touch: true);
         r.Mouse.Rotate(120, touch: true);

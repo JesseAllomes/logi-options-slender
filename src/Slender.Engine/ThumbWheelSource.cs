@@ -113,10 +113,9 @@ public static class ThumbWheelDivertPolicy
     /// its second role, the app's effective thumb wheel binding is set (keys or off), Excel column scrolling applies, or a touch / tap
     /// binding is set (and the device reports touch support; unknown counts as supported).
     /// </summary>
-    public static bool Wanted(SlenderConfig config, string? process, bool secondActive, bool ringOpen, bool? touchSupported,
-        bool excelColumns = false)
+    public static bool Wanted(SlenderConfig config, string? process, bool ringOpen, bool? touchSupported, bool excelColumns = false)
     {
-        if (ringOpen || secondActive) return true;
+        if (ringOpen) return true;
         if (SlenderEngine.EffectiveBinding(config, process, SlenderEngine.ThumbWheelBindingId) is not ActionSpec.None) return true;
         if (excelColumns && config.Excel.ThumbWheelScrollsColumns && process == "excel") return true;
         if (touchSupported != false

@@ -118,7 +118,8 @@ public class WheelHeldModifierEngineTests
             Engine.Start();
         }
 
-        public void Flip() => Mouse.Press(ControlId.ModeShift, true);
+        public void Hold() => Mouse.Press(ControlId.ModeShift, true);
+        public void Release() => Mouse.Press(ControlId.ModeShift, false);
 
         public bool CtrlHeld()
         {
@@ -130,14 +131,14 @@ public class WheelHeldModifierEngineTests
 
     private static SlenderConfig Cfg(params Profile[] extra) => SlenderConfig.Default with
     {
-        Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec> { [ControlId.ModeShift] = new ActionSpec.ToggleThumbWheelMode() }), .. extra],
+        Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = ThumbWheelModes.Tabs }, .. extra],
     };
 
     [Fact]
     public void Tab_mode_holds_ctrl_and_taps_tab_per_notch()
     {
         var r = new Rig(Cfg());
-        r.Flip();
+        r.Hold();
         r.Exec.Events.Clear();
 
         r.Hook.Wheel(120);
@@ -157,18 +158,17 @@ public class WheelHeldModifierEngineTests
     }
 
     [Fact]
-    public void Ctrl_is_released_only_after_the_wheel_is_quiet()
+    public void Ctrl_stays_down_while_the_top_button_is_held()
     {
         var r = new Rig(Cfg());
-        r.Flip();
+        r.Hold();
         r.Hook.Wheel(120);
 
-        r.Now = 100; // still turning recently: wait the rest
+        r.Now = 1_000; // the wheel is quiet, but the button is still down
         r.Timer.Elapse();
         Assert.True(r.CtrlHeld());
 
-        r.Now = 1_000;
-        r.Timer.Elapse();
+        r.Release();
         Assert.False(r.CtrlHeld());
         Assert.Equal(new KeyEvent(Ctrl, true), r.Exec.Events[^1]);
     }
@@ -177,20 +177,19 @@ public class WheelHeldModifierEngineTests
     public void A_button_press_releases_ctrl_before_it_acts()
     {
         var r = new Rig(Cfg());
-        r.Flip();
+        r.Hold();
         r.Hook.Wheel(120);
         Assert.True(r.CtrlHeld());
 
-        r.Flip(); // the mode button: Ctrl must be up before the flip back
+        r.Mouse.Press(ControlId.Gesture, true); // another button: Ctrl must be up before it acts
         Assert.False(r.CtrlHeld());
-        Assert.False(r.Engine.IsThumbWheelSecond());
     }
 
     [Fact]
     public void Switching_apps_releases_ctrl()
     {
         var r = new Rig(Cfg());
-        r.Flip();
+        r.Hold();
         r.Hook.Wheel(120);
 
         r.Fg.Switch("notepad");
@@ -201,7 +200,7 @@ public class WheelHeldModifierEngineTests
     public void Dispose_never_leaves_ctrl_down()
     {
         var r = new Rig(Cfg());
-        r.Flip();
+        r.Hold();
         r.Hook.Wheel(120);
 
         r.Engine.Dispose();
@@ -213,7 +212,7 @@ public class WheelHeldModifierEngineTests
     {
         var sheets = new ThumbWheelSecond(true, new ActionSpec.Excel(ExcelCommand.NextSheet), new ActionSpec.Excel(ExcelCommand.PreviousSheet));
         var r = new Rig(Cfg(new Profile("excel", new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = sheets }), "excel");
-        r.Flip();
+        r.Hold();
         r.Exec.Events.Clear();
 
         r.Hook.Wheel(240);
@@ -230,7 +229,7 @@ public class WheelHeldModifierEngineTests
     {
         var volume = new ThumbWheelSecond(true, new ActionSpec.Keys("VolumeUp"), new ActionSpec.Keys("VolumeDown"));
         var r = new Rig(Cfg(new Profile("msedge", new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = volume }));
-        r.Flip();
+        r.Hold();
         r.Exec.Events.Clear();
 
         r.Hook.Wheel(120);
@@ -244,7 +243,7 @@ public class WheelHeldModifierEngineTests
     {
         var mixed = new ThumbWheelSecond(true, new ActionSpec.Keys("Ctrl+Tab"), new ActionSpec.Launch("calc.exe"));
         var r = new Rig(Cfg(new Profile("msedge", new Dictionary<ushort, ActionSpec>()) { ThumbWheelAlt = mixed }));
-        r.Flip();
+        r.Hold();
         r.Hook.Wheel(120);
         Assert.True(r.CtrlHeld());
 
@@ -275,7 +274,7 @@ public class WheelHeldModifierEngineTests
     public void A_failed_send_lets_go_of_ctrl()
     {
         var r = new Rig(Cfg());
-        r.Flip();
+        r.Hold();
         r.Exec.Fail = true;
 
         r.Hook.Wheel(120);

@@ -32,7 +32,7 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "disabled" => new ActionSpec.Disabled(),
             "brightness" => new ActionSpec.Brightness(ReadInt(root, "step")),
             "text" => new ActionSpec.Text(ReadString(root, "value")),
-            "toggleThumbWheel" => new ActionSpec.ToggleThumbWheelMode(),
+            "toggleThumbWheel" => new ActionSpec.None(), // retired 2026-10-19: the second action is held on the top button now
             "tapHold" when allowTapHold => new ActionSpec.TapHold(ReadNested(root, "tap"), ReadNested(root, "hold")),
             "tapHold" => throw new FormatException("A tapHold action cannot contain another tapHold."),
             _ => throw new FormatException($"Unknown action type '{type}'."),
@@ -79,9 +79,6 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.Text text:
                 writer.WriteString("type", "text");
                 writer.WriteString("value", text.Value);
-                break;
-            case ActionSpec.ToggleThumbWheelMode:
-                writer.WriteString("type", "toggleThumbWheel");
                 break;
             case ActionSpec.TapHold tapHold:
                 if (!allowTapHold) throw new NotSupportedException("A tapHold action cannot contain another tapHold.");

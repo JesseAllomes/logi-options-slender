@@ -130,6 +130,22 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         catch (ObjectDisposedException) { return null; }
     }
 
+    /// <summary>0x2111 read-modify-write: mode 1 (free-spin) and 2 (ratchet) swap; auto-disengage and torque are kept.</summary>
+    public async Task<bool> ToggleWheelModeAsync(CancellationToken ct)
+    {
+        var s = CurrentSession;
+        if (s == null || !IsConnected) return false;
+        try
+        {
+            var p = (await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params;
+            var mode = p[0] == 1 ? (byte)2 : (byte)1;
+            await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 2, new byte[] { mode, p[1], p[2] }, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (HidppException) { return false; }
+        catch (ObjectDisposedException) { return false; }
+    }
+
     /// <summary>Sets wheel resistance now (if connected) and on every reconnect; null leaves the device value alone.</summary>
     public async Task SetWheelResistanceAsync(int? resistance, CancellationToken ct)
     {
