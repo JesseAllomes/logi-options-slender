@@ -401,6 +401,51 @@
           "src/Slender.Settings/MainWindow.DualThumb.cs::RefreshDualThumb"
         ]
       }
+    ],
+    "m38": [
+      {
+        "done": true,
+        "done_at": "2026-10-18T23:28:05+00:00",
+        "est_min": 25,
+        "goal": "engine: top button hold engages second action (like the Left+Right chord), quick press runs its tap, ToggleThumbWheelMode retired (loads as None), browser preset removed; tests",
+        "id": "c1",
+        "note": "engine: top button hold runs the app's second action (hook or HID rotation), quick press (<350 ms, no turn) runs its tap, Ctrl held until release; ToggleThumbWheelMode retired (json loads as None), browser preset gone, blank second = nothing",
+        "targets": [
+          "src/Slender.Engine/SlenderEngine.cs",
+          "src/Slender.Engine/ThumbWheelModes.cs",
+          "src/Slender.Engine/Config/ActionSpecJsonConverter.cs",
+          "tests/Slender.Tests/Engine"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-18T23:28:05+00:00",
+        "est_min": 20,
+        "goal": "native top button: divert when the app has a second action; quick press toggles ratchet/free-spin via 0x2111 fn2",
+        "id": "c2",
+        "note": "ModeShift diverted when the app has a second action; native top button quick press flips ratchet/free-spin via 0x2111 fn2 (LogiMouse.ToggleWheelModeAsync)",
+        "targets": [
+          "src/Slender.Hidpp/LogiMouse.cs",
+          "src/Slender.Engine/Contracts/EngineContracts.cs",
+          "src/Slender.Engine/SlenderEngine.cs::ComputeDivertSet"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-18T23:28:05+00:00",
+        "est_min": 20,
+        "goal": "Settings + tray: drop Switch with row and Switch thumb wheel mode action, card copy says hold the top button; tray toggle wiring removed",
+        "id": "c3",
+        "note": "card + Point & scroll: Switch with row and Switch thumb wheel mode action removed, copy says hold the top button; tray toggle wiring and flip toast text removed; 1442 tests, -warnaserror clean",
+        "targets": [
+          "src/Slender.Settings/MainWindow.ThumbCard.cs",
+          "src/Slender.Settings/MainWindow.DualThumb.cs",
+          "src/Slender.Settings/Logic/ThumbWheelOps.cs",
+          "src/Slender.Settings/Logic/ActionCatalog.cs",
+          "src/Slender.Tray/Program.cs",
+          "src/Slender.Tray/UI/ActionText.cs"
+        ]
+      }
     ]
   },
   "errors": [
@@ -438,7 +483,7 @@
       "summary": "Picker key recorder ignores keypresses: focus left on the tab strip"
     }
   ],
-  "rev": 244,
+  "rev": 251,
   "review": {
     "advice": [],
     "config": {
@@ -13215,6 +13260,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-15T22:28:27+00:00"
+    },
+    {
+      "end": "2026-10-18T23:28:05+00:00",
+      "id": "s8",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-18T23:28:05+00:00"
     }
   ],
   "todos": [
@@ -13236,8 +13288,8 @@
     },
     {
       "at": "2026-10-16T03:27:19+00:00",
-      "done": false,
-      "done_at": null,
+      "done": true,
+      "done_at": "2026-10-18T23:16:49+00:00",
       "id": "t3",
       "milestone": "",
       "text": "Monday 2026-10-19 (user): Tab scroll on the top button, dual function: hold top button + turn thumb wheel = Tab scroll (Ctrl held while held), quick tap keeps its current job. Top button is HID++ diverted, so normal clicks are never held back. Left+Right chord stays off in config until then"

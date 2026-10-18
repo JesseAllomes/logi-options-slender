@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=101 -->
+<!-- drainclamp-build: state; schema=1; generation=103 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -58,6 +58,7 @@ Hosting + OTA (user 2026-10-16) -> public GitHub repo JesseAllomes/logi-options-
 Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trailers in this repo's commits; no Windows username, work hostname or SRS paths in tracked files (use placeholders in fixtures)
 Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb wheel; separate Tab scroll and side scroll speed sliders; Excel per-column scroll removed for now; the mode-button toggle stays
 Excel add-in (user 2026-10-16) -> wanted if it genuinely ends the hangs/crashes: first disable the Logitech add-in and measure Excel stability against the baseline, then build a minimal Slender add-in (no network port, idle unless asked, time-boxed calls). Removing Logitech's add-in is what can stop its faults; ours must never add any
+Thumb wheel second action (user 2026-10-19) -> press and hold the top button engages the app's second action, release disengages; a quick press does the top button's own job; default is nothing; no switch/toggle function and no Switch with setting (supersedes the per-app latching mode and t3)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -99,6 +100,7 @@ Excel add-in (user 2026-10-16) -> wanted if it genuinely ends the hangs/crashes:
 | m35 | no dropped side scroll: a diverted thumb wheel turn nothing claims (just after leaving tab mode, or touch/tap-only divert) is re-sent as WM_MOUSEHWHEEL; claimed turns (columns, keys, second role, ring, off) and hook turns untouched | src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/KeyInjector.cs;src/Slender.Engine/ActionExecutor.cs;tests/Slender.Tests/Engine/ThumbWheelDivertTests.cs | done | m33 |
 | m36 | Tab scroll by chord (user 2026-10-16): hold Left+Right (50 ms chord window, X11 Emulate3Buttons style; single clicks replayed on release/move/timeout) and turn the thumb wheel = tab steps with Ctrl held for the chord's life; Tab scroll speed + side scroll speed sliders (Slender scales the wheel); Excel column scrolling removed for now (engine gate off, UI rows gone); toggle to turn the chord off | src/Slender.Engine/ButtonChord.cs;src/Slender.Engine/LowLevelMouseHook.cs;src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/ColumnScrollAccumulator.cs;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/Config/JsonConfigStore.cs;src/Slender.Settings/MainWindow.Pages.cs;tests/Slender.Tests/Engine | done | m35 |
 | m37 | Excel: (1) disable LogiOptionsPlusExcelAddin with go-ahead (Repair-ExcelAddins.ps1 -DisableLogiAddins, Excel closed, registry backup) and track Excel faults/hangs vs the docs/baseline.md 30-day baseline; (2) Slender Excel add-in, optional and per-user: no network port (current-user named pipe), idle unless Slender asks, every call time-boxed, does nothing without Slender; first actions: visible-sheet next/prev, zoom steps, cycle table style, cycle chart type, context-aware thumb wheel, run named macro (with macros t4) | scripts/Repair-ExcelAddins.ps1;src/Slender.ExcelAddin;src/Slender.Engine/ExcelBridge.cs;docs/switch-over.md | pending | m36 |
+| m38 | thumb wheel second action by hold (user 2026-10-19, replaces t3 and the mode toggle): quick press of the top button = its own job; hold = the app's second action (Scroll right / Scroll left) while held, released = off; nothing set = nothing happens; no latching mode, no Switch with, no browser preset; a native (ratchet) top button is emulated via 0x2111 when the app has a second action; old Switch thumb wheel mode bindings load as None | src/Slender.Engine/SlenderEngine.cs;src/Slender.Engine/ThumbWheelModes.cs;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Engine/Config;src/Slender.Hidpp/LogiMouse.cs;src/Slender.Settings/MainWindow.ThumbCard.cs;src/Slender.Settings/MainWindow.DualThumb.cs;src/Slender.Settings/Logic;src/Slender.Tray;tests/Slender.Tests | active | m31 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
