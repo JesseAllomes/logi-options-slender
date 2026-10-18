@@ -523,7 +523,7 @@
       "summary": "Edge: back steps (Ctrl+Shift+Tab) ignored under Ctrl held since Ctrl+Tab steps; fixed by re-pressing Ctrl on direction change"
     }
   ],
-  "rev": 256,
+  "rev": 258,
   "review": {
     "advice": [],
     "config": {
@@ -13349,6 +13349,22 @@
       "id": "t5",
       "milestone": "",
       "text": "Excel (user 2026-10-16): replace the Options+ Excel add-in (own add-in or a workaround), then disable LogiOptionsPlusExcelAddin (Repair-ExcelAddins.ps1 -DisableLogiAddins, with go-ahead). Findings: VSTO add-in 2.1.6799 talks to Options+ agent ws://localhost:19010; actions horizontalScroll, sheet next/prev, zoomIn/zoomOut, insertRow/insertColumn, createTable/tableStyle/tableColor, columnChart; listens to thumbwheel/crown events"
+    },
+    {
+      "at": "2026-10-18T23:57:52+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t6",
+      "milestone": "",
+      "text": "Per-app speeds in the thumb wheel card (user 2026-10-19): second action speed (e.g. zoom sensitivity), side scroll speed, and vertical scroll speed per app; card redesign via product-ui prototypes"
+    },
+    {
+      "at": "2026-10-18T23:57:52+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t7",
+      "milestone": "",
+      "text": "Explore functions Options+ lacks (user 2026-10-19): thumb wheel touch/tap as buttons already built (m29) but the touch flag is unconfirmed on device; confirm it, then brainstorm more"
     }
   ],
   "tokens": null
