@@ -1,23 +1,23 @@
 {
   "tier:milestone": {
     "digest": "tier",
-    "tree": "sha256:d8a46693a1e53ccf",
+    "tree": "sha256:abc1530e6e4d0b4a",
     "status": "fail",
-    "when": "2026-10-15T21:55:33+00:00",
+    "when": "2026-10-18T23:09:57+00:00",
     "log": "verify.log"
   },
   "dotnet-build": {
     "digest": "sha256:31035b7d3793",
-    "tree": "sha256:d8a46693a1e53ccf",
+    "tree": "sha256:abc1530e6e4d0b4a",
     "status": "pass",
-    "when": "2026-10-15T21:56:20+00:00",
-    "log": ".agent/verify-build.log"
+    "when": "2026-10-18T23:10:59+00:00",
+    "log": "C:/Users/%localuser%/AppData/Local/Temp/claude/C--Users-%localuser%-Projects-srs/2161f0e9-c2bf-410c-b189-4b7d756e3821/scratchpad/build.log"
   },
   "dotnet-test": {
     "digest": "sha256:0c6172b17553",
-    "tree": "sha256:d8a46693a1e53ccf",
+    "tree": "sha256:abc1530e6e4d0b4a",
     "status": "pass",
-    "when": "2026-10-15T21:56:20+00:00",
-    "log": ".agent/verify-test.log"
+    "when": "2026-10-18T23:10:59+00:00",
+    "log": "C:/Users/%localuser%/AppData/Local/Temp/claude/C--Users-%localuser%-Projects-srs/2161f0e9-c2bf-410c-b189-4b7d756e3821/scratchpad/test.log"
   }
 }

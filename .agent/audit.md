@@ -1,11 +1,11 @@
 <!-- drainclamp-build: audit; schema=1 -->
 # Audit
 
-Root: `C:/Users/user/Projects/personal/logi-options-slender`  
-Generated: 2026-10-15T23:01:05+00:00  
-HEAD: 2d541106e3701e8409a6e4141373822783d36345
+Root: `C:/Users/%localuser%/Projects/personal/logi-options-slender`  
+Generated: 2026-10-18T22:41:48+00:00  
+HEAD: 8a11aa63c8938a829d3f99f97ce9c9b97d1d6078
 
-282 source file(s), 41916 line(s). COVERAGE: partial — indexed extensions only.
+298 source file(s), 44851 line(s). COVERAGE: partial — indexed extensions only.
 
 ## Stack
 
@@ -15,13 +15,13 @@ HEAD: 2d541106e3701e8409a6e4141373822783d36345
 
 | path | files | lines |
 |---|---|---|
-| src/Slender.Settings | 68 | 12694 |
-| tests/Slender.Tests | 67 | 11907 |
-| src/Slender.Engine | 50 | 6992 |
-| src/Slender.Tray | 35 | 4310 |
-| src/Slender.Hidpp | 32 | 3819 |
+| src/Slender.Settings | 73 | 13315 |
+| tests/Slender.Tests | 75 | 13249 |
+| src/Slender.Engine | 53 | 7850 |
+| src/Slender.Tray | 35 | 4324 |
+| src/Slender.Hidpp | 32 | 3879 |
 | src/Slender.Sync | 13 | 932 |
-| scripts | 5 | 625 |
+| scripts | 5 | 665 |
 | tools/Slender.Probe | 8 | 498 |
 | tools/Slender.InputLog | 4 | 139 |
 

@@ -26,3 +26,4 @@ resume uses `.agent/drainclamp-state.md` alone. This file is for forensics.
 - 2026-10-15T09:23:52+00:00 65bc4be7 m23 thumb wheel steers ring + m24 dual thumb wheel merged (795 tests, AOT clean); not yet shipped as an update
 - 2026-10-15T10:33:40+00:00 bf4a3720 m25 device inventory done: gaps = wheel resistance, Sense Panel force, haptic 0-100, DPI 200, hi-res/touch thumb wheel, raw-XY gestures; K860 disable keys, lock-key OSD, multi-platform, per-host Fn lock, 3 unused keys
 - 2026-10-15T11:10:03+00:00 82a52e7a Device feature round m26-m30 merged (977 tests, AOT clean): mouse feel, K860 extras, press/hold, precise thumb wheel + touch/tap, raw-XY gestures with cursor hold
+- 2026-10-15T11:12:32+00:00 72922479 State refresh: ARCH rewritten for 1.1.5 (m17-m30 done); open: m13 c4 live memory/Excel check, m14 sync, m15 onboard K860 UI, m16 firmware, m7 switch-over; to-dos t1 (forward-slash UNC, fixed in R2), t2 keyboard disconnect release
