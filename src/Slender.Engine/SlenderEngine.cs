@@ -58,6 +58,7 @@ public sealed class SlenderEngine : IDisposable
     private volatile bool _topTurned;                   // the wheel stepped the second action during this hold
     private long _topPressedAt;                         // engine queue: clock when the top button went down
     private bool _topPressed;                           // engine queue: this top button press started a hold (its release ends it)
+    private volatile IThumbPreviewSink? _preview;       // Settings' thumb wheel card is open: wheel and top button go there, nothing runs
     private long _sideRemainder;                        // engine queue: side scroll speed carry, in delta*percent units
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
@@ -243,6 +244,7 @@ public sealed class SlenderEngine : IDisposable
     {
         EvaluateThumb(force: false, _clock());
         var set = ComputeDivertSet(_config, _foreground.ProcessName);
+        if (_preview is not null && !set.Contains(ControlId.ModeShift)) set = [.. set.Append(ControlId.ModeShift).Order()]; // the card previews the hold
         var raw = ComputeRawXySet(_config, _foreground.ProcessName);
         if (!set.Contains(ControlId.ModeShift)) _topSecond = null; // its release can no longer be seen
         lock (_gate)
@@ -283,6 +285,13 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
+            if (e.ControlId == ControlId.ModeShift && _preview is { } preview)
+            {
+                lock (_gate) _active.Remove(e.ControlId);
+                if (_topPressed) { _topPressed = false; _topSecond = null; ReleaseHold("preview"); }
+                preview.TopButton(e.Pressed);
+                return;
+            }
             ActionSpec action;
             if (e.Pressed)
             {
@@ -622,6 +631,12 @@ public sealed class SlenderEngine : IDisposable
             {
                 lock (_gate) if (_thumbHid) return;
             }
+            if (_preview is { } preview)
+            {
+                e.Handled = true; // the card shows the turn; nothing runs
+                preview.Rotated(e.Delta);
+                return;
+            }
             var cfg = _config;
             if (_topSecond is { } second)
             {
@@ -790,6 +805,20 @@ public sealed class SlenderEngine : IDisposable
     }
 
     // ---- thumb wheel second action: hold the top button (engine queue) ----
+
+    /// <summary>
+    /// Preview mode for Settings' thumb wheel card: while a sink is set every thumb wheel turn and top button press goes to it and
+    /// nothing runs (the top button is diverted for it). Null ends preview mode. Any thread.
+    /// </summary>
+    public void SetPreview(IThumbPreviewSink? sink)
+    {
+        _preview = sink;
+        _topSecond = null;
+        ReleaseHoldSoon(sink is null ? "preview ended" : "preview started");
+        bool started;
+        lock (_gate) started = _started;
+        if (started) Rediverts(force: false);
+    }
 
     /// <summary>True while the top button holds the thumb wheel's second action.</summary>
     internal bool SecondActionHeld => _topSecond is not null;

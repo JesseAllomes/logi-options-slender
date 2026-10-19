@@ -144,6 +144,9 @@ static class Program
         // The ring needs the thumb wheel diverted while open; diverted rotation reaches it through the engine, not the mouse hook.
         ring.OpenChanged += engine.SetRingOpen;
         engine.RingThumbWheel += (_, delta) => ring.OnDivertedThumbWheel(delta);
+        // Settings' thumb wheel card previews the real wheel and top button over a pipe; nothing runs while it is open.
+        using var preview = new ThumbPreviewServer(engine, log);
+        preview.Start();
         keys.RingTrigger += onTrigger;
         // Lock keys: a short label near the cursor.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
