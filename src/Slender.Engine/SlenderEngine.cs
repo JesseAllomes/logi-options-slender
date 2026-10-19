@@ -49,6 +49,7 @@ public sealed class SlenderEngine : IDisposable
     private volatile int _deviceDpi;          // last DPI read from the mouse; 0 = unknown
     private bool _started, _disposed;
     private bool _thumbWanted, _thumbHid; // under _gate: the divert we asked for / the device confirmed it (HID++ path live)
+    private long _thumbHidSince, _lastDivertRepair = long.MinValue / 2; // under _gate: when the divert was confirmed / last re-taken
     private volatile bool _ringOpen;
     private long _lastRotation = long.MinValue / 2; // clock ms of the last rotation from either source
     private CancellationTokenSource? _thumbRetry;
@@ -64,7 +65,8 @@ public sealed class SlenderEngine : IDisposable
     private volatile bool _topTurned;                   // the wheel stepped the second action during this hold
     private long _topPressedAt;                         // engine queue: clock when the top button went down
     private bool _topPressed;                           // engine queue: this top button press started a hold (its release ends it)
-    private volatile IThumbPreviewSink? _preview;       // Settings' thumb wheel card is open: wheel and top button go there, nothing runs
+    private volatile IThumbPreviewSink? _preview;
+    private volatile bool _thumbDivertForced;           // a touch calibration recording keeps the wheel diverted       // Settings' thumb wheel card is open: wheel and top button go there, nothing runs
     private long _sideRemainder;                        // engine queue: side scroll speed carry, in delta*percent units
 
     public SlenderEngine(ILogiMouse mouse, IInputHook hook, IForegroundApp foreground, IExcelBridge excel,
@@ -635,9 +637,9 @@ public sealed class SlenderEngine : IDisposable
             {
                 if (_ringOpen) { RingThumbWheel?.Invoke(this, e.Delta); return; }
             }
-            else
+            else if (NativeTurnWhileDiverted())
             {
-                lock (_gate) if (_thumbHid) return;
+                return; // the device still reports this turn to Slender; Windows' copy is left alone
             }
             if (_preview is { } preview)
             {
@@ -697,6 +699,34 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { SafeLog("wheel handler failed", ex); }
     }
 
+    /// <summary>
+    /// A native turn while the device is confirmed diverted. A diverted wheel sends Windows nothing, so after the first moments
+    /// this means the mouse dropped the divert by itself (after sleep, or a brief link drop the heartbeat missed): touch, tap and
+    /// the held second action then went quiet until an app switch re-sent it (user 2026-10-20). The hook path takes this turn and
+    /// the divert is taken again (at most every 2 s). True only while the divert is still believed to be fresh.
+    /// </summary>
+    private bool NativeTurnWhileDiverted()
+    {
+        lock (_gate)
+        {
+            if (!_thumbHid) return false;
+            var now = _clock();
+            if (now - _thumbHidSince < DivertSettleMs) return true;
+            _thumbHid = false; // this and later native turns go through the hook until the divert is back
+            if (now - _lastDivertRepair < 2000) return false;
+            _lastDivertRepair = now;
+        }
+        _queue.Post(() =>
+        {
+            _log.Info("thumb wheel divert lost (Windows got a turn); taking the wheel again");
+            EvaluateThumb(force: true, _clock());
+        });
+        return false;
+    }
+
+    /// <summary>Native turns this soon after a confirmed divert are ones already in flight, not a lost divert.</summary>
+    internal const int DivertSettleMs = 500;
+
     // ---- thumb wheel divert on demand ----
 
     /// <summary>Quiet time after the last rotation before the wheel's reporting mode may change.</summary>
@@ -716,7 +746,7 @@ public sealed class SlenderEngine : IDisposable
     internal bool ThumbWheelDiverted { get { lock (_gate) return _thumbHid; } }
 
     private bool ThumbWheelWanted() =>
-        _preview is not null // the card shows touch and taps, which only a diverted wheel reports
+        _preview is not null || _thumbDivertForced // the card shows touch and taps (and recordings log them), which only a diverted wheel reports
         || ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, _ringOpen, _mouse.ThumbWheelTouchSupported, ExcelColumnScrolling);
 
     /// <summary>
@@ -761,6 +791,7 @@ public sealed class SlenderEngine : IDisposable
         lock (_gate)
         {
             _thumbHid = wanted && ok;
+            if (_thumbHid) _thumbHidSince = _clock();
             if (wanted && !ok) _thumbWanted = false; // not diverted: the hook keeps the wheel, and the next change retries
         }
         if (wanted && !ok) _log.Info("thumb wheel divert not applied; using the mouse hook");
@@ -922,6 +953,15 @@ public sealed class SlenderEngine : IDisposable
         bool started;
         lock (_gate) started = _started;
         if (started) Rediverts(force: false);
+    }
+
+    /// <summary>Keeps the thumb wheel diverted (touch reported) while on, with every action still running. Any thread.</summary>
+    public void SetThumbDivertForced(bool on)
+    {
+        _thumbDivertForced = on;
+        bool started;
+        lock (_gate) started = _started;
+        if (started) EvaluateThumb(force: false, _clock());
     }
 
     /// <summary>True while the top button holds the thumb wheel's second action.</summary>

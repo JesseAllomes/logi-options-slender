@@ -286,6 +286,25 @@ public class ThumbWheelDivertTests
     }
 
     [Fact]
+    public void A_native_turn_long_after_diverting_means_the_mouse_dropped_it_and_it_is_taken_again()
+    {
+        var r = new Rig();
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        int sends = r.Mouse.Snapshot().Length;
+
+        r.Now = 5000; // well after the divert settled: the mouse must have dropped it
+        var e = r.Hook.Wheel(120);
+        Assert.True(e.Handled);          // the hook path handles this turn
+        Assert.Equal(1, r.Columns());
+        r.Now = 5400; // the wheel paused: the divert may change now
+        Assert.True(Until(() => r.Mouse.Snapshot().Length > sends && r.Mouse.Snapshot()[^1])); // divert sent again
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+
+        r.Now = 5500; // in flight right after the repair: left to Windows, never handled twice
+        Assert.False(r.Hook.Wheel(120).Handled);
+    }
+
+    [Fact]
     public void Disconnect_falls_back_to_the_hook_and_reconnect_reapplies()
     {
         var r = new Rig();

@@ -150,6 +150,9 @@ static class Program
         // Settings' thumb wheel card previews the real wheel and top button over a pipe; nothing runs while it is open.
         using var preview = new ThumbPreviewServer(engine, log);
         preview.Start();
+        // Touch calibration recordings start only when a trigger file appears (see TouchRecorder); idle otherwise.
+        using var touchRecorder = new TouchRecorder(engine, mouse, SyncPaths.StateDirectory, log);
+        touchRecorder.Start();
         keys.RingTrigger += onTrigger;
         // Lock keys: a short label near the cursor.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
