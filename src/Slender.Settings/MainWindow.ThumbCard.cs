@@ -160,6 +160,13 @@ public sealed partial class MainWindow
             touch.Children.Add(TouchRow(control, name));
         }
 
+        // Timing is for every app: how long a rest takes, and the longest gap between the two taps of a double tap.
+        PointerSettings pointer = config.Pointer;
+        touch.Children.Add(TimingRow("Rest time", "Rest time before the action runs", pointer.TouchRestMs, PointerSettings.RestMinMs, PointerSettings.RestMaxMs, 50,
+            v => _config.Update(x => x with { Pointer = x.Pointer with { TouchRestMs = v } })));
+        touch.Children.Add(TimingRow("Double tap gap", "Longest gap between the two taps", pointer.DoubleTapMs, PointerSettings.DoubleTapMinMs, PointerSettings.DoubleTapMaxMs, 25,
+            v => _config.Update(x => x with { Pointer = x.Pointer with { DoubleTapMs = v } })));
+
         body.Children.Add(touch);
 
         // Footer: the top button's own job, inheritance, and whether the preview is live.
@@ -384,6 +391,32 @@ public sealed partial class MainWindow
         Grid.SetColumn(readout, 2);
         line.Children.Add(readout);
         return line;
+    }
+
+    /// <summary>A timing row in the Touch section: label, slider in milliseconds, readout. Saves when the slider is let go.</summary>
+    private FrameworkElement TimingRow(string title, string automationName, int value, int min, int max, int step, Action<int> set)
+    {
+        var grid = new Grid { ColumnSpacing = 8, Padding = new Thickness(0, 2, 0, 0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(96) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) });
+        var label = Ui.Text(title, 12, Ui.Muted);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        grid.Children.Add(label);
+        var readout = Ui.Text(value + " ms", 11.5, Ui.Muted);
+        readout.VerticalAlignment = VerticalAlignment.Center;
+        readout.HorizontalAlignment = HorizontalAlignment.Right;
+        var slider = new Slider { Minimum = min, Maximum = max, StepFrequency = step, SmallChange = step, Value = value, IsThumbToolTipEnabled = false, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(slider, automationName);
+        slider.ValueChanged += (_, e) => readout.Text = (int)e.NewValue + " ms";
+        // Saving on every tick would rebuild the card under the pointer; save once the drag or key press is done.
+        slider.PointerCaptureLost += (_, _) => { if ((int)slider.Value != value) set((int)slider.Value); };
+        slider.KeyUp += (_, _) => { if ((int)slider.Value != value) set((int)slider.Value); };
+        Grid.SetColumn(slider, 1);
+        Grid.SetColumn(readout, 2);
+        grid.Children.Add(slider);
+        grid.Children.Add(readout);
+        return grid;
     }
 
     /// <summary>A Touch row: what the control does in this app, opening the normal picker.</summary>

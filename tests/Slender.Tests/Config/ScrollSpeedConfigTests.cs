@@ -49,6 +49,20 @@ public sealed class ScrollSpeedConfigTests : IDisposable
     }
 
     [Fact]
+    public void Touch_timings_round_trip_default_and_clamp()
+    {
+        Assert.Equal((250, 300), (new PointerSettings().TouchRestMs, new PointerSettings().DoubleTapMs));
+        var store = new JsonConfigStore(_dir);
+        store.Save(SlenderConfig.Default with { Pointer = new PointerSettings(TouchRestMs: 400, DoubleTapMs: 200) });
+        PointerSettings p = new JsonConfigStore(_dir).Load().Pointer;
+        Assert.Equal((400, 200), (p.TouchRestMs, p.DoubleTapMs));
+
+        File.WriteAllText(Path.Combine(_dir, "config.json"), """{"version":2,"profiles":[{"bindings":{}}],"pointer":{"touchRestMs":5,"doubleTapMs":5000}}""");
+        p = new JsonConfigStore(_dir).Load().Pointer;
+        Assert.Equal((PointerSettings.RestMinMs, PointerSettings.DoubleTapMaxMs), (p.TouchRestMs, p.DoubleTapMs));
+    }
+
+    [Fact]
     public void Defaults_are_normal_speed()
     {
         Assert.Equal(100, new PointerSettings().SideScrollSpeed);

@@ -280,9 +280,12 @@ public sealed record PointerSettings(
     int? SensePanelForce = null, // 0x19C0 force threshold in device units; null leaves the device alone
     int? SensePanelBaseline = null, // the first reading Slender saw from the mouse; the safe band for SensePanelForce is 50%-200% of it
     int SideScrollSpeed = 100,  // thumb wheel side scroll, percent of normal (25-400); 100 leaves the native scroll alone
-    int SecondActionSpeed = 100) // second action steps per amount of thumb wheel travel (top button held), percent (25-400)
+    int SecondActionSpeed = 100, // second action steps per amount of thumb wheel travel (top button held), percent (25-400)
+    int TouchRestMs = 250,       // thumb resting still on the wheel this long fires the rest action (100-1000)
+    int DoubleTapMs = 300)       // longest gap between the two taps of a double tap (150-600)
 {
     public const int SpeedMin = 25, SpeedMax = 400;
+    public const int RestMinMs = 100, RestMaxMs = 1000, DoubleTapMinMs = 150, DoubleTapMaxMs = 600;
 }
 
 /// <summary>

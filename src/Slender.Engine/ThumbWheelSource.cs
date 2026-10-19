@@ -73,7 +73,11 @@ public readonly record struct ThumbTouchResult(bool Down, bool Up, bool Tap);
 public sealed class ThumbTouchTracker
 {
     public const long TapMaxMs = 250;
-    public const int TapMaxRotation = ThumbWheelUnits.PerNotch / 2; // half a wheel step of counts
+    /// <summary>Movement under one wheel step (what would show on screen) still counts as a tap or a rest (user 2026-10-19).</summary>
+    public const int TapMaxRotation = ThumbWheelUnits.PerNotch;
+
+    /// <summary>Counts of rotation (summed absolute) since the thumb touched the wheel.</summary>
+    public int RotationSinceTouch { get { lock (_gate) return _touching ? _rotation : 0; } }
     private readonly object _gate = new();
     private bool _touching;
     private long _downAt;

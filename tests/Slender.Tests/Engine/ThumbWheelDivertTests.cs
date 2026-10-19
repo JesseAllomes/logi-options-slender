@@ -417,7 +417,7 @@ public class ThumbWheelDivertTests
         r.Now = 9000;
         r.Mouse.Rotate(0, touch: true);
         r.Mouse.Rotate(120, touch: true); // scrolling, not resting
-        Thread.Sleep(SlenderEngine.RestMs + 300);
+        Thread.Sleep(new PointerSettings().TouchRestMs + 300);
         Assert.DoesNotContain("F13", r.Keys());
     }
 
@@ -443,7 +443,7 @@ public class ThumbWheelDivertTests
         Tap(r, 1000);
         Tap(r, 1200);
         Assert.True(Until(() => r.Keys().Contains("Ctrl+Y")));
-        Thread.Sleep(SlenderEngine.DoubleTapMs + 200);
+        Thread.Sleep(new PointerSettings().DoubleTapMs + 200);
         Assert.Equal(["Ctrl+Y"], r.Keys());
     }
 
@@ -463,6 +463,17 @@ public class ThumbWheelDivertTests
     {
         var cfg = WithDefault(new() { [SlenderEngine.ThumbWheelDoubleTapBindingId] = new ActionSpec.Keys("Ctrl+Y") });
         Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true));
+    }
+
+    [Fact]
+    public void A_wobble_under_one_wheel_step_still_rests()
+    {
+        var r = new Rig(TapCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        r.Mouse.Rotate(0, touch: true);
+        r.Mouse.Rotate(60, touch: true); // 3 counts: nothing would move on screen
+        r.Now = 5000;
+        Assert.True(Until(() => r.Keys().Contains("F13")));
     }
 
     [Fact]
@@ -488,7 +499,7 @@ public class ThumbWheelDivertTests
         Assert.DoesNotContain("Ctrl+Z", r.Keys());
         r.Now = 2000;
         r.Mouse.Rotate(0, touch: true);
-        r.Mouse.Rotate(60, touch: true); // half a wheel step is already a turn
+        r.Mouse.Rotate(120, touch: true); // a whole wheel step is a turn
         r.Now = 2100;
         r.Mouse.Rotate(0, touch: false);
         Assert.DoesNotContain("Ctrl+Z", r.Keys());
@@ -513,11 +524,11 @@ public class ThumbWheelDivertTests
         Assert.Equal(new ThumbTouchResult(false, true, true), t.OnReport(false, 0, 250));
         t.OnReport(true, 0, 1000);
         Assert.Equal(new ThumbTouchResult(false, true, false), t.OnReport(false, 0, 1251));
-        t.OnReport(true, 2, 2000);
-        Assert.True(t.OnReport(false, 0, 2100).Tap);   // 2 < 3 counts (half a wheel step)
-        t.OnReport(true, 1, 3000);
-        t.OnReport(true, -2, 3010);
-        Assert.False(t.OnReport(false, 0, 3050).Tap);  // 1 + 2 = 3
+        t.OnReport(true, 5, 2000);
+        Assert.True(t.OnReport(false, 0, 2100).Tap);   // 5 < 6 counts (under one wheel step)
+        t.OnReport(true, 3, 3000);
+        t.OnReport(true, -3, 3010);
+        Assert.False(t.OnReport(false, 0, 3050).Tap);  // 3 + 3 = 6
         Assert.False(t.OnReport(false, 0, 3060).Up);   // not touching: no edge
     }
 }

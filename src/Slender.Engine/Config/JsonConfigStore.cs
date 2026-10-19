@@ -168,7 +168,9 @@ public sealed class JsonConfigStore : IConfigStore
             p.SensePanelForce is { } spf ? Math.Clamp(spf, 1, 0xFFFF) : null,
             p.SensePanelBaseline is { } spb ? Math.Clamp(spb, 1, 0xFFFF) : null,
             Math.Clamp(p.SideScrollSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
-            Math.Clamp(p.SecondActionSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax));
+            Math.Clamp(p.SecondActionSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
+            Math.Clamp(p.TouchRestMs, PointerSettings.RestMinMs, PointerSettings.RestMaxMs),
+            Math.Clamp(p.DoubleTapMs, PointerSettings.DoubleTapMinMs, PointerSettings.DoubleTapMaxMs));
     }
 
     private static Dictionary<GestureDirection, ActionSpec> ParseSwipes(Dictionary<string, ActionSpec>? raw)
@@ -295,6 +297,8 @@ public sealed class JsonConfigStore : IConfigStore
                 SensePanelBaseline = config.Pointer.SensePanelBaseline,
                 SideScrollSpeed = config.Pointer.SideScrollSpeed,
                 SecondActionSpeed = config.Pointer.SecondActionSpeed,
+                TouchRestMs = config.Pointer.TouchRestMs,
+                DoubleTapMs = config.Pointer.DoubleTapMs,
             },
             Keyboard = new KeyboardDto
             {
@@ -477,6 +481,8 @@ public sealed class JsonConfigStore : IConfigStore
         public int SideScrollSpeed { get; set; } = 100;
         [System.Text.Json.Serialization.JsonPropertyName("tabScrollSpeed")] // its name before the top button took over (kept so the value survives)
         public int SecondActionSpeed { get; set; } = 100;
+        public int TouchRestMs { get; set; } = 250;
+        public int DoubleTapMs { get; set; } = 300;
     }
 
     internal sealed class KeyboardDto

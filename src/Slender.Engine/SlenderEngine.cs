@@ -614,7 +614,7 @@ public sealed class SlenderEngine : IDisposable
     public const ushort ThumbWheelTouchBindingId = 0xF151;
     /// <summary>Pseudo control id for "thumb wheel tap" (touch then release within 250 ms and under a quarter notch of rotation).</summary>
     public const ushort ThumbWheelTapBindingId = 0xF152;
-    /// <summary>Pseudo control id for "thumb wheel double tap" (a second tap within DoubleTapMs of the first).</summary>
+    /// <summary>Pseudo control id for "thumb wheel double tap" (a second tap within PointerSettings.DoubleTapMs of the first).</summary>
     public const ushort ThumbWheelDoubleTapBindingId = 0xF153;
     private const int MaxNotchesPerEvent = 10;
 
@@ -774,7 +774,8 @@ public sealed class SlenderEngine : IDisposable
             // A turn's last report (status 3) always says "no touch"; only a report without rotation can say the thumb lifted.
             var touching = e.Touch || (e.Status == 3 && _touch.Touching);
             var r = _touch.OnReport(touching, e.Rotation, _clock());
-            if (e.Rotation != 0 && !r.Down) _queue.Post(CancelRest); // turning is scrolling, not resting
+            // Turning is scrolling, not resting; a wobble under one wheel step (nothing moves on screen) is still a rest.
+            if (e.Rotation != 0 && !r.Down && _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation) _queue.Post(CancelRest);
             if (r.Down) _queue.Post(HandleTouchDown);
             // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can
             // drop mid-turn, which let Ctrl go after the first few tabs, so it lets go when the button does.
@@ -784,13 +785,11 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
     }
 
-    /// <summary>How long the thumb must rest on the wheel without turning before the "rest" action fires.</summary>
-    internal const int RestMs = 500;
 
     /// <summary>
     /// Thumb on the wheel. The rest action does not fire yet: the thumb touches the wheel every time it scrolls, and a chord
     /// held from first contact (Ctrl+F5 in Edge) broke every scroll (user 2026-10-19). It fires once the thumb has rested
-    /// RestMs without turning; a turn first cancels it until the next touch.
+    /// PointerSettings.TouchRestMs without turning a wheel step; a turn first cancels it until the next touch.
     /// </summary>
     private void HandleTouchDown()
     {
@@ -799,7 +798,7 @@ public sealed class SlenderEngine : IDisposable
             CancelRest();
             if (ResolveAction(ThumbWheelTouchBindingId) is ActionSpec.None or ActionSpec.TapHold) return;
             var seq = _touchSeq;
-            _restTimer = _holdTimer.Schedule(RestMs, () =>
+            _restTimer = _holdTimer.Schedule(_config.Pointer.TouchRestMs, () =>
             {
                 try { _queue.Post(() => FireRest(seq)); }
                 catch (Exception ex) { SafeLog("thumb wheel rest could not be queued", ex); }
@@ -820,7 +819,7 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
-            if (seq != _touchSeq || Volatile.Read(ref _lastRotation) > _clock() - RestMs) return;
+            if (seq != _touchSeq || _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation) return;
             _restTimer = null;
             var action = ResolveAction(ThumbWheelTouchBindingId);
             if (action is ActionSpec.None or ActionSpec.TapHold) return;
@@ -858,7 +857,7 @@ public sealed class SlenderEngine : IDisposable
             }
 
             var seq = ++_tapSeq;
-            _tapTimer = _holdTimer.Schedule(DoubleTapMs, () =>
+            _tapTimer = _holdTimer.Schedule(_config.Pointer.DoubleTapMs, () =>
             {
                 try { _queue.Post(() => { if (seq != _tapSeq) return; _tapTimer = null; RunTap(ThumbWheelTapBindingId); }); }
                 catch (Exception ex) { SafeLog("thumb wheel tap could not be queued", ex); }
@@ -866,9 +865,6 @@ public sealed class SlenderEngine : IDisposable
         }
         catch (Exception ex) { _log.Error("thumb wheel tap failed", ex); }
     }
-
-    /// <summary>Longest gap between two taps that still makes a double tap. With a double tap set, a single tap waits this long.</summary>
-    internal const int DoubleTapMs = 300;
 
     private void RunTap(ushort id)
     {
