@@ -1,0 +1,416 @@
+<title>Slender Thumb Wheel Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600&family=JetBrains+Mono:wght@500&family=Archivo:wdth,wght@125,800&display=swap">
+<style>
+/* Layout: band A = three variants of card 3 (the drawn wheel) side by side, each a live preview driven by the mouse wheel;
+   band B = one ring stage with the Settings controls that pick the motion and its speed. Dark only, by choice (Slender's
+   locked graphite and copper theme). */
+:root {
+  --paper: #1B1F23;
+  --paper-2: #22282D;
+  --paper-3: #2A3137;
+  --paper-4: #303840;
+  --rule: #343C43;
+  --ink: #ECEFF1;
+  --muted: #8F989F;
+  --mark: #D9925F;
+  --mark-hi: #E3A272;
+  --mark-soft: rgba(217,146,95,.16);
+  --focus: #F2B38A;
+  --shadow: rgba(0,0,0,.45);
+  --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --head: "Sora", "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+  --display: "Archivo", "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: var(--ui); font-size: 14px; line-height: 1.5; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--head); font-weight: 600; font-size: 12.5px; color: var(--mark); letter-spacing: .08em; text-transform: uppercase; }
+h1 { font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: clamp(24px, 4vw, 34px); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-family: var(--head); font-weight: 600; font-size: 21px; margin: 0; }
+.lede { color: var(--muted); max-width: 74ch; margin: 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 24px; }
+.proto { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.num { font-family: var(--head); font-weight: 600; font-size: 13px; color: var(--mark); letter-spacing: .06em; }
+dl { display: grid; grid-template-columns: 84px 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+dt { color: var(--muted); }
+dd { margin: 0; min-width: 0; }
+.risk dd { color: var(--mark); }
+kbd { font-family: var(--mono); font-size: 11.5px; background: var(--paper-3); border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+.foot { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+.foot b { color: var(--ink); font-weight: 600; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* top-button stand-in */
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px; border: 1px dashed var(--rule); border-radius: 10px; color: var(--muted); font-size: 13px; }
+.topbtn { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--paper-3); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 14px; cursor: pointer; user-select: none; touch-action: none; }
+.topbtn.down, body.held .topbtn { background: var(--mark); color: var(--paper); border-color: var(--mark); }
+
+/* card */
+.stage { position: relative; border: 1px solid var(--rule); border-radius: 12px; background: radial-gradient(120% 90% at 30% 0%, #242A30 0%, var(--paper) 70%); padding: 16px; display: grid; justify-items: start; gap: 8px; overflow: hidden; }
+.anchor { display: inline-grid; padding: 5px 10px; border-radius: 6px; background: var(--mark-soft); box-shadow: inset 0 0 0 1px var(--mark); font-size: 13px; }
+.anchor small { color: var(--muted); font-size: 11.5px; }
+.flyout { width: 100%; max-width: 344px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 14px 34px var(--shadow); padding: 12px 14px 12px; display: grid; gap: 2px; overscroll-behavior: contain; }
+.fhead { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
+.fhead b { color: var(--ink); font-weight: 600; }
+.mode { display: grid; gap: 4px; padding: 8px 0 6px; border-radius: 8px; transition: background-color 120ms ease-out; }
+.mode + .mode { border-top: 1px solid var(--rule); }
+.mode.live { background: rgba(217,146,95,.06); }
+.modehdr { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); }
+.modehdr .lbl { display: inline-flex; align-items: center; gap: 8px; }
+.toggle { width: 34px; height: 18px; border-radius: 9px; background: var(--mark); position: relative; border: 0; cursor: pointer; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 19px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); transition: left 90ms ease-out; }
+.toggle[aria-pressed="false"] { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
+.toggle[aria-pressed="false"]::after { left: 3px; background: var(--muted); }
+.notches { display: flex; gap: 4px; align-items: end; }
+.notches button { width: 11px; border-radius: 3px; border: 0; background: var(--paper-4); cursor: pointer; padding: 0; }
+.notches button.on { background: var(--mark); }
+.notches output { font-size: 11.5px; color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; width: 34px; text-align: right; }
+.wheelrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.side { display: grid; gap: 2px; min-width: 0; position: relative; }
+.side.r { justify-items: end; text-align: right; }
+.side small { color: var(--muted); font-size: 11px; }
+.chip { font: inherit; font-size: 12px; background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 3px 8px; color: var(--ink); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background-color 90ms, box-shadow 90ms; }
+.chip.mono { font-family: var(--mono); font-size: 11px; }
+.chip.flash { background: var(--mark); color: var(--paper); }
+.badge { position: absolute; top: -9px; font-family: var(--mono); font-size: 10.5px; color: var(--paper); background: var(--mark); border-radius: 8px; padding: 0 5px; opacity: 0; transition: opacity 200ms; pointer-events: none; }
+.side .badge { right: -4px; } .side.r .badge { left: -4px; right: auto; }
+.badge.on { opacity: 1; transition: none; }
+.wheel { width: 64px; height: 34px; border-radius: 9px; position: relative; overflow: hidden; background-image: repeating-linear-gradient(90deg, #3A434B 0 3px, #262D33 3px 6px);
+  box-shadow: inset 0 0 0 1px #47515A, inset 0 8px 10px rgba(255,255,255,.06), inset 0 -8px 10px rgba(0,0,0,.4); }
+.mode.live .wheel { box-shadow: inset 0 0 0 1px var(--mark), inset 0 8px 10px rgba(255,255,255,.06), inset 0 -8px 10px rgba(0,0,0,.4); }
+.hint { font-size: 11.5px; color: var(--muted); text-align: center; padding-top: 6px; border-top: 1px solid var(--rule); margin-top: 4px; }
+
+/* variant 2: mini preview of the result */
+.mini { display: flex; gap: 3px; overflow: hidden; height: 22px; margin-top: 2px; }
+.mini span { flex: 1; min-width: 0; font-size: 10.5px; color: var(--muted); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px 5px 0 0; padding: 2px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color 90ms, color 90ms; }
+.mini span.on { background: var(--paper-3); color: var(--ink); box-shadow: inset 0 2px 0 var(--mark); }
+.sheet { position: relative; height: 22px; overflow: hidden; border: 1px solid var(--rule); border-radius: 5px; margin-top: 2px; background: var(--paper); }
+.sheet i { position: absolute; inset: 0; background: linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0 / 28px 100%; }
+.sheet b { position: absolute; top: 3px; font: 10px var(--mono); color: var(--muted); font-weight: 500; }
+
+/* variant 3: ruler */
+.ruler { position: relative; height: 16px; overflow: hidden; margin-top: 2px; border-radius: 4px; background: var(--paper); border: 1px solid var(--rule); }
+.ruler canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* band B */
+.ringwrap { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .ringwrap { grid-template-columns: 1fr; } }
+.rstage { position: relative; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; aspect-ratio: 5 / 4; max-width: 100%;
+  background: linear-gradient(#C9CFD3 1px, transparent 1px) 0 0 / 100% 22px, linear-gradient(90deg, #C9CFD3 1px, transparent 1px) 0 0 / 72px 100%, #E9ECEE; }
+.rstage::before { content: ""; position: absolute; inset: 0; background: rgba(20,24,27,.22); }
+.rstage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.panel { background: var(--paper-2); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; display: grid; gap: 12px; }
+.panel h3 { font-family: var(--head); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.prow { display: grid; gap: 6px; }
+.prow > span { font-size: 13px; }
+.prow small { color: var(--muted); font-size: 11.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font: inherit; font-size: 12.5px; color: var(--ink); background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--mark-soft); box-shadow: inset 0 0 0 1px var(--mark); }
+.speed { display: grid; gap: 4px; }
+.speed input { width: 100%; accent-color: var(--mark); }
+.speed .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.speed output { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.btn:hover { background: var(--paper-4); }
+.btn.primary { background: var(--mark); color: var(--paper); border-color: var(--mark); font-weight: 600; }
+.t-label { font-family: var(--head); font-weight: 600; }
+.t-mono { font-family: var(--mono); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Thumb wheel card and Actions Ring motion · round 3</div>
+    <h1>Turn the wheel, watch the card</h1>
+    <p class="lede">Card 3 again, now as a <b>live preview</b>. In Slender, while the card is open, turning the thumb wheel moves the drawn wheel and shows what would happen at the speed you picked, <b>without running the actions</b>. Holding the top button switches the preview to the lower row. Three ways to show it, below.</p>
+  </header>
+
+  <section aria-labelledby="cards">
+    <h2 id="cards">A. Card 3 with a live preview</h2>
+    <div class="topbar">
+      <button class="topbtn" type="button" id="topbtn">Top button</button>
+      <span>Try it here: scroll your mouse wheel over a card. Hold <b>Top button</b> (press and keep holding) or hold <kbd>Shift</kbd> to use the lower row. Change the speed notches and scroll again.</span>
+    </div>
+    <div class="grid" id="cardgrid"></div>
+  </section>
+
+  <section aria-labelledby="motion">
+    <h2 id="motion">B. Ring motion, your pick and your speed</h2>
+    <p class="lede">Pop, Clockwise bloom and Fly in, all slower by default. Settings &gt; Actions Ring gets an <b>Opening</b> choice and an <b>Animation speed</b> slider. The ring still answers from the first frame.</p>
+    <div class="ringwrap">
+      <div class="rstage"><svg id="ringsvg" viewBox="0 0 500 400" role="img" aria-label="Actions Ring preview"></svg></div>
+      <div class="panel">
+        <h3>Actions Ring · appearance</h3>
+        <div class="prow"><span>Opening</span>
+          <div class="chips" id="stylechips">
+            <button type="button" data-style="off" aria-pressed="false">Off</button>
+            <button type="button" data-style="pop" aria-pressed="false">Pop</button>
+            <button type="button" data-style="bloom" aria-pressed="true">Clockwise bloom</button>
+            <button type="button" data-style="fly" aria-pressed="false">Fly in</button>
+          </div>
+        </div>
+        <div class="prow speed"><span>Animation speed</span>
+          <input id="speed" type="range" min="0" max="4" step="1" value="2" aria-label="Animation speed">
+          <div class="ticks"><span>Slowest</span><span>Slow</span><span>Normal</span><span>Quick</span><span>Quickest</span></div>
+          <output id="speedout"></output>
+        </div>
+        <div class="controls">
+          <button class="btn primary" type="button" id="bopen">Open</button>
+          <button class="btn" type="button" id="bclose">Close</button>
+          <button class="btn" type="button" id="bboth">Open and close</button>
+        </div>
+        <div class="prow"><small>Off, or Windows "Animation effects" turned off: a 90 ms fade.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <div><b>Live preview in Slender:</b> while the card is open the tray sends the card each turn of the thumb wheel and each top button press, and runs nothing. Close the card and the wheel works normally again.</div>
+    <div><b>Reply with</b> a card variant (1, 2 or 3, or a mix), a default opening and speed, or "build" when both are right.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const css = getComputedStyle(document.documentElement);
+  const C = k => css.getPropertyValue(k).trim();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const STEPS = [25, 50, 75, 100, 150, 200, 400];
+
+  // ---- top button stand-in ----
+  let held = false;
+  const topbtn = document.getElementById('topbtn');
+  const setHeld = h => { held = h; document.body.classList.toggle('held', h); cards.forEach(c => c.setLive()); };
+  topbtn.addEventListener('pointerdown', e => { topbtn.setPointerCapture(e.pointerId); setHeld(true); });
+  topbtn.addEventListener('pointerup', () => setHeld(false));
+  topbtn.addEventListener('pointercancel', () => setHeld(false));
+  addEventListener('keydown', e => { if (e.key === 'Shift' && !held) setHeld(true); });
+  addEventListener('keyup', e => { if (e.key === 'Shift') setHeld(false); });
+  addEventListener('blur', () => setHeld(false));
+
+  const variants = [
+    { name: 'Ticks', feel: 'Each step flashes the chip it would press and counts up (×1, ×2 …). The count fades a second after you stop.',
+      speed: 'Faster notches = more flashes per turn.', risk: 'Abstract: shows how many, not what.' },
+    { name: 'Result', feel: 'Under each wheel, a small picture of the result: a sheet sliding sideways for side scroll, a strip of tabs whose highlight moves for Ctrl+Tab.',
+      speed: 'You see exactly how far one turn takes you.', risk: 'Literal. Needs a picture per action type (tabs, sheets, zoom, volume, else ticks).' },
+    { name: 'Ruler', feel: 'A ruler under each wheel scrolls as you turn; copper marks show where a step fires. Step spacing is visible even without turning.',
+      speed: 'At 200 % the marks sit twice as close.', risk: 'Precise, a little technical.' },
+  ];
+
+  const cards = [];
+  const grid = document.getElementById('cardgrid');
+  variants.forEach((v, idx) => {
+    const art = document.createElement('article'); art.className = 'proto';
+    const extraTop = idx === 1 ? '<div class="sheet"><i></i></div>' : idx === 2 ? '<div class="ruler"><canvas></canvas></div>' : '';
+    const extraHold = idx === 1 ? '<div class="mini"></div>' : idx === 2 ? '<div class="ruler"><canvas></canvas></div>' : '';
+    art.innerHTML = `
+      <div class="stage">
+        <div class="anchor"><small>Thumb wheel</small>Side scroll</div>
+        <div class="flyout" tabindex="0" aria-label="Thumb wheel card, variant ${idx + 1}. Scroll over it to preview.">
+          <div class="fhead"><span>Thumb wheel · <b>Microsoft Edge</b></span></div>
+          <div class="mode" data-mode="turn">
+            <div class="modehdr"><span class="lbl">Turn</span><div class="notches" data-sel="3" aria-label="Side scroll speed"></div></div>
+            <div class="wheelrow">
+              <div class="side"><button class="chip" type="button">Scroll left</button><span class="badge"></span></div>
+              <div class="wheel"></div>
+              <div class="side r"><button class="chip" type="button">Scroll right</button><span class="badge"></span></div>
+            </div>
+            ${extraTop}
+          </div>
+          <div class="mode" data-mode="hold">
+            <div class="modehdr"><span class="lbl">Holding top button <button class="toggle" type="button" aria-pressed="true" aria-label="Second action in Microsoft Edge"></button></span><div class="notches" data-sel="3" aria-label="Second action speed"></div></div>
+            <div class="wheelrow">
+              <div class="side"><button class="chip mono" type="button">Ctrl+Shift+Tab</button><small>Previous tab</small><span class="badge"></span></div>
+              <div class="wheel"></div>
+              <div class="side r"><button class="chip mono" type="button">Ctrl+Tab</button><small>Next tab</small><span class="badge"></span></div>
+            </div>
+            ${extraHold}
+          </div>
+          <div class="hint">Turn the thumb wheel to preview · nothing runs while this is open</div>
+        </div>
+      </div>
+      <div class="num">${idx + 1} · ${v.name}</div>
+      <dl><dt>Shows</dt><dd>${v.feel}</dd><dt>Speed</dt><dd>${v.speed}</dd><dt class="risk">Risk</dt><dd class="risk">${v.risk}</dd></dl>`;
+    grid.appendChild(art);
+
+    const fly = art.querySelector('.flyout');
+    const modes = {};
+    art.querySelectorAll('.mode').forEach(m => {
+      const n = m.querySelector('.notches');
+      const st = { el: m, sel: +n.dataset.sel, pos: 0, acc: 0, count: 0, dir: 0, fade: 0, tab: 2, sheetX: 0,
+        wheel: m.querySelector('.wheel'), sides: m.querySelectorAll('.side'), toggle: m.querySelector('.toggle') };
+      const out = document.createElement('output');
+      const draw = () => { n.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i <= st.sel)); out.textContent = STEPS[st.sel] + '%'; if (st.ruler) st.ruler(); };
+      STEPS.forEach((s, i) => {
+        const b = document.createElement('button'); b.type = 'button'; b.style.height = (6 + i * 2) + 'px'; b.setAttribute('aria-label', s + '%');
+        b.addEventListener('click', () => { st.sel = i; draw(); }); n.appendChild(b);
+      });
+      n.appendChild(out);
+      if (st.toggle) st.toggle.addEventListener('click', () => st.toggle.setAttribute('aria-pressed', st.toggle.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'));
+      // variant 2 pictures
+      const mini = m.querySelector('.mini');
+      if (mini) { ['Inbox', 'Payroll', 'GitHub', 'Teams', 'Weather', 'News'].forEach(t => { const s = document.createElement('span'); s.textContent = t; mini.appendChild(s); }); }
+      const sheet = m.querySelector('.sheet');
+      if (sheet) { for (let c = 0; c < 26; c++) { const b = document.createElement('b'); b.textContent = String.fromCharCode(65 + c); b.style.left = (c * 28 + 10) + 'px'; sheet.appendChild(b); } }
+      // variant 3 ruler
+      const cv = m.querySelector('canvas');
+      if (cv) {
+        st.ruler = () => {
+          const w = cv.clientWidth, h = cv.clientHeight, dpr = devicePixelRatio || 1;
+          cv.width = w * dpr; cv.height = h * dpr; const g = cv.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+          const px = 0.12; // pixels per wheel unit
+          const stepUnits = 120 * 100 / STEPS[st.sel];
+          const moved = st.pos * px, mod = (a, b) => ((a % b) + b) % b;
+          g.fillStyle = C('--rule');
+          for (let x = -mod(moved, 6); x < w; x += 6) g.fillRect(Math.round(x), h - 5, 1, 4);
+          g.fillStyle = C('--mark');
+          const sp = stepUnits * px;
+          for (let x = mod(w / 2 - moved, sp); x < w; x += sp) g.fillRect(Math.round(x), 2, 2, h - 4);
+          g.fillStyle = C('--ink'); g.fillRect(Math.round(w / 2) - 1, 0, 2, 3);
+        };
+        new ResizeObserver(() => st.ruler()).observe(cv);
+      }
+      draw();
+      modes[m.dataset.mode] = st;
+    });
+
+    const card = {
+      setLive() { modes.turn.el.classList.toggle('live', !held); modes.hold.el.classList.toggle('live', held); },
+    };
+    cards.push(card); card.setLive();
+
+    fly.addEventListener('wheel', e => {
+      e.preventDefault();
+      const st = held ? modes.hold : modes.turn;
+      if (held && st.toggle.getAttribute('aria-pressed') !== 'true') return;
+      let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (e.deltaMode === 1) d *= 40;
+      d = Math.max(-240, Math.min(240, d)) * 1.2; // ~120 per notch
+      st.pos += d;
+      st.wheel.style.backgroundPosition = `${-st.pos * 0.06}px 0`;
+      const unit = 120 * 100 / STEPS[st.sel];
+      if (Math.sign(st.acc) !== Math.sign(d)) st.acc = 0;
+      st.acc += d;
+      let steps = Math.trunc(st.acc / unit); st.acc -= steps * unit;
+      if (st.ruler) st.ruler();
+      if (!steps) return;
+      const dir = steps > 0 ? 1 : 0; // 1 = right
+      if (st.dir !== dir) st.count = 0; st.dir = dir;
+      st.count += Math.abs(steps);
+      const side = st.sides[dir], chip = side.querySelector('.chip'), badge = side.querySelector('.badge');
+      if (idx === 0 || idx === 2) {
+        badge.textContent = '×' + st.count; badge.classList.add('on');
+        chip.classList.add('flash'); setTimeout(() => chip.classList.remove('flash'), 90);
+        clearTimeout(st.fade); st.fade = setTimeout(() => { badge.classList.remove('on'); st.count = 0; }, 1000);
+      }
+      if (idx === 1) {
+        const mini = st.el.querySelector('.mini');
+        if (mini) { const n = mini.children.length; st.tab = ((st.tab + steps) % n + n) % n; [...mini.children].forEach((s, i) => s.classList.toggle('on', i === st.tab)); }
+        const sheet = st.el.querySelector('.sheet');
+        if (sheet) { st.sheetX = Math.max(-560, Math.min(0, st.sheetX - steps * 28)); sheet.querySelectorAll('b').forEach((b, c) => { b.style.transform = `translateX(${st.sheetX}px)`; }); sheet.querySelector('i').style.backgroundPosition = `${st.sheetX}px 0`; }
+        chip.classList.add('flash'); setTimeout(() => chip.classList.remove('flash'), 90);
+      }
+    }, { passive: false });
+    if (idx === 1) { const mini = modes.hold.el.querySelector('.mini'); mini.children[2].classList.add('on'); }
+  });
+
+  // ---- band B: ring ----
+  const NS = 'http://www.w3.org/2000/svg';
+  const slots = [['Copy', 'Ctrl+C'], ['Paste', 'Ctrl+V'], ['Snip', 'Win+Shift+S'], ['Volume', 'wheel'], ['Zoom', 'wheel'], ['Calculator', 'app'], ['Mute Teams', 'Ctrl+Shift+M'], ['Emoji', 'Win+.']];
+  const CX = 250, CY = 200, R0 = 52, R1 = 132, RIM = 140;
+  const el = (n, a, p) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+  const pol = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+  const wedgePath = (a0, a1, r0, r1) => { const [x0, y0] = pol(r1, a0), [x1, y1] = pol(r1, a1), [x2, y2] = pol(r0, a1), [x3, y3] = pol(r0, a0); return `M${x0} ${y0} A${r1} ${r1} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${r0} ${r0} 0 0 0 ${x3} ${y3}Z`; };
+  const svg = document.getElementById('ringsvg');
+  const root = el('g', {}, svg);
+  const rim = el('circle', { cx: CX, cy: CY, r: RIM, fill: 'none', stroke: C('--rule'), 'stroke-width': 6, 'stroke-dasharray': '1.5 3.2' }, root);
+  const disc = el('circle', { cx: CX, cy: CY, r: R1 + 2, fill: C('--paper'), opacity: .94 }, root);
+  const wedges = slots.map(([name, sc], i) => {
+    const a0 = i * 45 - 22.5 + 1.2, a1 = i * 45 + 22.5 - 1.2, g = el('g', {}, root), chosen = i === 0;
+    el('path', { d: wedgePath(a0, a1, R0 + 6, R1), fill: chosen ? C('--paper-3') : C('--paper-2'), stroke: chosen ? C('--mark') : C('--rule'), 'stroke-width': chosen ? 1.5 : 1 }, g);
+    if (chosen) el('path', { d: wedgePath(a0 + 2, a1 - 2, R1 + 4, R1 + 9), fill: C('--mark') }, g);
+    const [lx, ly] = pol((R0 + R1) / 2 + 4, i * 45);
+    el('text', { x: lx, y: ly - 3, 'text-anchor': 'middle', class: 't-label', 'font-size': 12.5, fill: C('--ink') }, g).textContent = name;
+    el('text', { x: lx, y: ly + 12, 'text-anchor': 'middle', class: 't-mono', 'font-size': 9.5, fill: C('--muted') }, g).textContent = sc;
+    return { g, mid: i * 45 };
+  });
+  const hub = el('g', {}, root);
+  el('circle', { cx: CX, cy: CY, r: R0, fill: C('--paper-2'), stroke: C('--rule') }, hub);
+  el('text', { x: CX, y: CY - 2, 'text-anchor': 'middle', class: 't-label', 'font-size': 14, fill: C('--ink') }, hub).textContent = 'Copy';
+  el('text', { x: CX, y: CY + 15, 'text-anchor': 'middle', class: 't-mono', 'font-size': 10, fill: C('--mark') }, hub).textContent = 'Ctrl+C';
+  el('path', { d: `M${CX - 4} ${CY - 6} l0 15 l4 -4 l3 6 l2 -1 l-3 -6 l5 0 z`, fill: '#fff', stroke: '#111', 'stroke-width': 1 }, svg);
+
+  const origin = `${CX}px ${CY}px`;
+  [root, rim, disc, hub, ...wedges.map(w => w.g)].forEach(n => { n.style.transformOrigin = origin; });
+  const play = (node, frames, ms, delay, easing) => node.animate(frames, { duration: ms, delay, easing, fill: 'both' });
+  const FACT = [1.8, 1.35, 1, .75, .55];
+  const LABEL = ['Slowest', 'Slow', 'Normal', 'Quick', 'Quickest'];
+  let style = 'bloom';
+  const speedIn = document.getElementById('speed'), speedOut = document.getElementById('speedout');
+  const base = { pop: [240, 150], bloom: [440, 220], fly: [400, 210], off: [90, 90] };
+  const showSpeed = () => { const f = FACT[+speedIn.value], b = base[style]; speedOut.textContent = style === 'off' ? 'Fade 90 ms' : `${LABEL[+speedIn.value]} · opens in ${Math.round(b[0] * f)} ms, closes in ${Math.round(b[1] * f)} ms`; };
+  speedIn.addEventListener('input', showSpeed);
+  document.querySelectorAll('#stylechips button').forEach(b => b.addEventListener('click', () => {
+    style = b.dataset.style;
+    document.querySelectorAll('#stylechips button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    showSpeed(); runBoth();
+  }));
+  showSpeed();
+
+  const all = () => [root, rim, disc, hub, ...wedges.map(w => w.g)];
+  const reset = () => all().forEach(n => n.getAnimations().forEach(a => a.cancel()));
+  const anims = {
+    pop: { open: k => [play(root, [{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'scale(1.035)', offset: .72 }, { opacity: 1, transform: 'scale(1)' }], 240 * k, 0, 'cubic-bezier(.2,.8,.3,1)')],
+           close: k => [play(root, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.86)' }], 150 * k, 0, 'cubic-bezier(.4,0,1,1)')] },
+    bloom: { open: k => {
+        const a = [play(root, [{ opacity: 1 }, { opacity: 1 }], 1, 0, 'linear')];
+        a.push(play(hub, [{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)' }], 160 * k, 0, 'cubic-bezier(.2,.8,.3,1)'));
+        a.push(play(disc, [{ opacity: 0, transform: 'scale(.5)' }, { opacity: .94, transform: 'scale(1)' }], 260 * k, 0, 'ease-out'));
+        a.push(play(rim, [{ opacity: 0, transform: 'rotate(-60deg)' }, { opacity: 1, transform: 'rotate(0)' }], 440 * k, 0, 'cubic-bezier(.2,.8,.3,1)'));
+        wedges.forEach((w, i) => a.push(play(w.g, [{ opacity: 0, transform: 'scale(.35)' }, { opacity: 1, transform: 'scale(1.05)', offset: .75 }, { opacity: 1, transform: 'scale(1)' }], 190 * k, (60 + i * 32) * k, 'cubic-bezier(.2,.8,.3,1)')));
+        return a; },
+      close: k => {
+        const a = [];
+        wedges.slice().reverse().forEach((w, i) => a.push(play(w.g, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.5)' }], 110 * k, i * 14 * k, 'ease-in')));
+        a.push(play(hub, [{ opacity: 1 }, { opacity: 0 }], 110 * k, 110 * k, 'ease-in'));
+        a.push(play(root, [{ opacity: 1 }, { opacity: 0 }], 80 * k, 140 * k, 'linear'));
+        return a; } },
+    fly: { open: k => {
+        const a = [play(root, [{ opacity: 1 }, { opacity: 1 }], 1, 0, 'linear')];
+        a.push(play(rim, [{ opacity: 0, transform: 'rotate(90deg) scale(1.15)' }, { opacity: 1, transform: 'rotate(0) scale(1)' }], 400 * k, 0, 'cubic-bezier(.2,.9,.3,1)'));
+        a.push(play(disc, [{ opacity: 0 }, { opacity: .94 }], 200 * k, 0, 'ease-out'));
+        a.push(play(hub, [{ opacity: 0 }, { opacity: 1 }], 180 * k, 120 * k, 'ease-out'));
+        wedges.forEach((w, i) => { const r = (w.mid - 90) * Math.PI / 180, dx = Math.cos(r) * 46, dy = Math.sin(r) * 46;
+          a.push(play(w.g, [{ opacity: 0, transform: `translate(${dx}px, ${dy}px) rotate(-10deg)` }, { opacity: 1, transform: `translate(${-dx * .06}px, ${-dy * .06}px) rotate(1.5deg)`, offset: .75 }, { opacity: 1, transform: 'translate(0,0) rotate(0)' }], 250 * k, i * 26 * k, 'cubic-bezier(.2,.8,.3,1)')); });
+        return a; },
+      close: k => {
+        const a = [];
+        wedges.forEach((w, i) => { const r = (w.mid - 90) * Math.PI / 180, dx = Math.cos(r) * 40, dy = Math.sin(r) * 40;
+          a.push(play(w.g, [{ opacity: 1, transform: 'translate(0,0)' }, { opacity: 0, transform: `translate(${dx}px, ${dy}px)` }], 150 * k, i * 8 * k, 'ease-in')); });
+        a.push(play(root, [{ opacity: 1 }, { opacity: 0 }], 90 * k, 130 * k, 'linear'));
+        return a; } },
+    off: { open: () => [play(root, [{ opacity: 0 }, { opacity: 1 }], 90, 0, 'linear')], close: () => [play(root, [{ opacity: 1 }, { opacity: 0 }], 90, 0, 'linear')] },
+  };
+  let open = true, busy = null;
+  async function run(opening) {
+    if (busy) await busy;
+    if (opening === open) return;
+    reset();
+    const s = reduce ? 'off' : style, k = FACT[+speedIn.value];
+    busy = Promise.all((opening ? anims[s].open : anims[s].close)(k).map(a => a.finished));
+    open = opening; await busy; busy = null;
+  }
+  async function runBoth() { await run(false); await new Promise(r => setTimeout(r, 250)); await run(true); }
+  document.getElementById('bopen').addEventListener('click', () => run(true));
+  document.getElementById('bclose').addEventListener('click', () => run(false));
+  document.getElementById('bboth').addEventListener('click', async () => { await run(false); await run(true); await new Promise(r => setTimeout(r, 800)); await run(false); });
+})();
+</script>

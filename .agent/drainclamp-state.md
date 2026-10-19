@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=106 -->
+<!-- drainclamp-build: state; schema=1; generation=107 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -111,7 +111,6 @@ Thumb wheel second action (user 2026-10-19) -> press and hold the top button eng
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-15T22:28:27+00:00 e1338ec4 m13 c4 done: 1 h memory sample flat at ~11 MB commit (.agent/memory-samples-2026-10-16.txt); m13 all chunks done, close after the user's live look at 1.1.6
 - 2026-10-15T23:51:19+00:00 4b8962d4 Repo public on GitHub (history scrubbed: username, work hostname, AI trailers); OTA moved to GitHub Releases: Build-Setup.ps1 publishes v<version> via vpk upload github, 218118c; v1.1.7 published 10:50 Melbourne, installed 1.1.6 takes it from the local folder then follows GitHub. m31 still awaits the user's live look
 - 2026-10-16T00:15:43+00:00 62015572 Bug fixed (user report: K860 Lock key set to Turn off kept Win+L): WinUI ItemClick gives the row's Content, so every picker option-list and ring icon click was dropped; ClickedItems.Find maps it back, 990 tests, ee9713a; v1.1.8 published to GitHub 11:15 Melbourne
 - 2026-10-16T00:43:51+00:00 a153c171 m32 built 7cdd1ff (1387 tests, -warnaserror clean): recorder takes Ctrl+Tab/Ctrl+Shift+Tab (window accelerators off while open) and Win/Alt system combos (RecorderKeyHook + WinChordCapture, only while Settings is foreground; Win+L impossible); Shortcuts tab with app/common/Windows presets, per-row hide, Show hidden, General toggle (settings-ui.json). Not yet seen live; shipping as 1.1.9
@@ -131,4 +130,5 @@ Thumb wheel second action (user 2026-10-19) -> press and hold the top button eng
 - 2026-10-18T23:30:18+00:00 15953794 m38 built ee58ea2 and shipped as v1.1.18 (10:30 Melbourne): hold top button = app's second action, quick press = its own job (native = ratchet flip via 0x2111), no toggle/Switch with/browser preset; 1442 tests. Awaiting the user's live check
 - 2026-10-18T23:48:41+00:00 73168ddb v1.1.19 published 10:48 Melbourne: Left+Right chord removed (hook holds back no clicks), lost-release guard on the top hold, Edge back-step fix (re-press Ctrl on direction change), Tab scroll speed -> Second action speed; 1426 tests. Awaiting user check in Edge
 - 2026-10-19T00:18:17+00:00 1c9ebd98 User 2026-10-19: per-app side scroll + second action speeds go inside the thumb wheel card (vertical per-app speed dropped); thumb wheel touch dropping when the finger lifts is correct behaviour (touch works); ring open/close animation wanted. Round-2 prototypes docs/thumbcard-ring-motion-round2.html published https://claude.ai/artifact/TvtG1ztQ7x8fxgdCqq28SQ; awaiting picks
+- 2026-10-19T00:23:15+00:00 60db84af Round 2 picks: card A3 (drawn wheel) as a live preview (hold top + turn shows speed, nothing runs); ring motion B2 bloom + B4 fly in (and B1 pop) slower with a user speed setting, B3 sweep dropped. Round 3 published https://claude.ai/artifact/WQvTa4BopPVfxfTZ2haqHx (docs/thumbcard-ring-motion-round3.html)
 <!-- /DC:LOG -->
