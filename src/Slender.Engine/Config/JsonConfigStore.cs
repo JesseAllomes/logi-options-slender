@@ -126,8 +126,16 @@ public sealed class JsonConfigStore : IConfigStore
                 : new KeyboardSettings(),
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
             Ring = ToRingAppearance(dto.Ring),
+            MyShortcuts = ToMyShortcuts(dto.MyShortcuts),
         };
     }
+
+    /// <summary>Keeps entries with a name and a chord ChordParser accepts; a bad entry is dropped, never the whole file.</summary>
+    private static List<CustomShortcut> ToMyShortcuts(List<CustomShortcutDto>? list) =>
+        list is null ? [] : list
+            .Where(s => !string.IsNullOrWhiteSpace(s.Name) && ChordParser.TryParse(s.Chord, out _))
+            .Select(s => new CustomShortcut(s.Name!.Trim(), s.Chord!.Trim(), string.IsNullOrWhiteSpace(s.App) ? null : s.App.Trim()))
+            .ToList();
 
     private static BatteryAlertSettings ToBatteryAlerts(BatteryAlertsDto? b)
     {
@@ -304,6 +312,9 @@ public sealed class JsonConfigStore : IConfigStore
                 MouseThresholdPercent = config.BatteryAlerts.MouseThresholdPercent,
                 KeyboardThresholdPercent = config.BatteryAlerts.KeyboardThresholdPercent,
             },
+            MyShortcuts = config.MyShortcuts.Count == 0
+                ? null
+                : config.MyShortcuts.Select(s => new CustomShortcutDto { Name = s.Name, Chord = s.Chord, App = s.App }).ToList(),
             Ring = new RingDto
             {
                 Style = config.Ring.Style.ToString(),
@@ -407,6 +418,14 @@ public sealed class JsonConfigStore : IConfigStore
         public KeyboardDto? Keyboard { get; set; }
         public BatteryAlertsDto? BatteryAlerts { get; set; }
         public RingDto? Ring { get; set; }
+        public List<CustomShortcutDto>? MyShortcuts { get; set; }
+    }
+
+    internal sealed class CustomShortcutDto
+    {
+        public string? Name { get; set; }
+        public string? Chord { get; set; }
+        public string? App { get; set; }
     }
 
     internal sealed class ThumbWheelSecondDto

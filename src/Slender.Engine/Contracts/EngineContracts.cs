@@ -317,6 +317,12 @@ public sealed record KeyboardSettings(
 public sealed record BatteryAlertSettings(bool Enabled = true, int MouseThresholdPercent = 15, int KeyboardThresholdPercent = 10);
 
 /// <summary>Persisted at %APPDATA%\Slender\config.json. Schema changes bump Version (2 adds Pointer, Keyboard, KeyBindings, DisplayName, ExePath).</summary>
+/// <summary>
+/// One of the user's own shortcuts: a name, the chord (ChordParser form, e.g. "Ctrl+Shift+V") and the app it belongs to
+/// (process name without ".exe"); null App = shown for every app.
+/// </summary>
+public sealed record CustomShortcut(string Name, string Chord, string? App = null);
+
 public sealed record SlenderConfig(
     int Version,
     IReadOnlyList<Profile> Profiles,
@@ -330,6 +336,9 @@ public sealed record SlenderConfig(
     public KeyboardSettings Keyboard { get; init; } = new();
     public BatteryAlertSettings BatteryAlerts { get; init; } = new();
     public RingAppearance Ring { get; init; } = new();
+
+    /// <summary>The user's own named shortcuts for the picker's Shortcuts tab ("My shortcuts"), in the order added.</summary>
+    public IReadOnlyList<CustomShortcut> MyShortcuts { get; init; } = [];
 
     public static SlenderConfig Default { get; } = new(
         CurrentVersion,

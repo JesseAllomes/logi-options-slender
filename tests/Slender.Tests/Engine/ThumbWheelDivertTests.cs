@@ -396,9 +396,27 @@ public class ThumbWheelDivertTests
         r.Mouse.Rotate(0, touch: true);
         r.Now = 1200;
         r.Mouse.Rotate(0, touch: false);
-        // Touch pressed on contact, released on lift, then the tap action.
-        Assert.Equal(["F13", "Ctrl+Z"], r.Keys());
-        Assert.Contains((new ActionSpec.Keys("F13"), false), r.Exec.Calls.Select(c => (c.Item1, c.Item2)));
+        // A quick touch is a tap: the rest action never fires (the thumb did not rest).
+        Assert.Equal(["Ctrl+Z"], r.Keys());
+    }
+
+    [Fact]
+    public void Resting_still_fires_the_rest_action_once_and_turning_cancels_it()
+    {
+        var r = new Rig(TapCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        r.Mouse.Rotate(0, touch: true);
+        r.Now = 5000;
+        Assert.True(Until(() => r.Keys().Contains("F13"))); // after RestMs still
+        Assert.Contains((new ActionSpec.Keys("F13"), false), r.Exec.Calls.Select(c => (c.Item1, c.Item2))); // a tap, not held
+        r.Mouse.Rotate(0, touch: false);
+        r.Exec.Calls.Clear();
+
+        r.Now = 9000;
+        r.Mouse.Rotate(0, touch: true);
+        r.Mouse.Rotate(120, touch: true); // scrolling, not resting
+        Thread.Sleep(SlenderEngine.RestMs + 300);
+        Assert.DoesNotContain("F13", r.Keys());
     }
 
     [Fact]

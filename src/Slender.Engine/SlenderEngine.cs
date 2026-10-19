@@ -25,7 +25,9 @@ public sealed class SlenderEngine : IDisposable
     private readonly IThumbWheelSource _hookSource;
     private readonly IThumbWheelSource _hidSource;
     private readonly ThumbTouchTracker _touch = new();
-    private ActionSpec? _touchAction; // action used at touch start, released at touch end (under _gate)
+    private ActionSpec? _touchAction; // rest action that is held (a mouse button or the ring), released when the thumb lifts (engine queue)
+    private IDisposable? _restTimer;  // engine queue: fires the rest action once the thumb has rested still
+    private int _touchSeq;            // engine queue: bumped on every touch down, lift and turn so a stale rest timer does nothing
     private readonly ColumnScrollAccumulator _accumulator = new();
     private readonly ColumnScrollAccumulator _secondAccumulator = new();
     private readonly GestureTracker _gesture = new();
@@ -766,6 +768,7 @@ public sealed class SlenderEngine : IDisposable
         {
             if (_mouse.ThumbWheelTouchSupported == false) return;
             var r = _touch.OnReport(e.Touch, e.Rotation, _clock());
+            if (e.Rotation != 0 && !r.Down) _queue.Post(CancelRest); // turning is scrolling, not resting
             if (r.Down) _queue.Post(HandleTouchDown);
             // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can
             // drop mid-turn, which let Ctrl go after the first few tabs, so it lets go when the button does.
@@ -775,26 +778,61 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { SafeLog("thumb wheel touch dispatch failed", ex); }
     }
 
+    /// <summary>How long the thumb must rest on the wheel without turning before the "rest" action fires.</summary>
+    internal const int RestMs = 500;
+
+    /// <summary>
+    /// Thumb on the wheel. The rest action does not fire yet: the thumb touches the wheel every time it scrolls, and a chord
+    /// held from first contact (Ctrl+F5 in Edge) broke every scroll (user 2026-10-19). It fires once the thumb has rested
+    /// RestMs without turning; a turn first cancels it until the next touch.
+    /// </summary>
     private void HandleTouchDown()
     {
         try
         {
-            var action = ResolveAction(ThumbWheelTouchBindingId);
-            lock (_gate) _touchAction = action is ActionSpec.None or ActionSpec.TapHold ? null : action;
-            if (_touchAction is not { } a) return;
-            MaybeHaptic(a);
-            if (a is ActionSpec.ActionsRing) { RaiseRing(true); return; }
-            Run(a, true);
+            CancelRest();
+            if (ResolveAction(ThumbWheelTouchBindingId) is ActionSpec.None or ActionSpec.TapHold) return;
+            var seq = _touchSeq;
+            _restTimer = _holdTimer.Schedule(RestMs, () =>
+            {
+                try { _queue.Post(() => FireRest(seq)); }
+                catch (Exception ex) { SafeLog("thumb wheel rest could not be queued", ex); }
+            });
         }
         catch (Exception ex) { _log.Error("thumb wheel touch failed", ex); }
+    }
+
+    private void CancelRest()
+    {
+        _touchSeq++;
+        _restTimer?.Dispose();
+        _restTimer = null;
+    }
+
+    /// <summary>The thumb rested still: a mouse button or the ring is held until the thumb lifts; anything else runs once.</summary>
+    private void FireRest(int seq)
+    {
+        try
+        {
+            if (seq != _touchSeq || Volatile.Read(ref _lastRotation) > _clock() - RestMs) return;
+            _restTimer = null;
+            var action = ResolveAction(ThumbWheelTouchBindingId);
+            if (action is ActionSpec.None or ActionSpec.TapHold) return;
+            MaybeHaptic(action);
+            if (action is ActionSpec.ActionsRing) { _touchAction = action; RaiseRing(true); return; }
+            if (action is ActionSpec.MouseButton) { _touchAction = action; Run(action, true); return; }
+            RunGestureAction(action);
+        }
+        catch (Exception ex) { _log.Error("thumb wheel rest failed", ex); }
     }
 
     private void HandleTouchUp(bool tap)
     {
         try
         {
-            ActionSpec? held;
-            lock (_gate) { held = _touchAction; _touchAction = null; }
+            CancelRest();
+            ActionSpec? held = _touchAction;
+            _touchAction = null;
             if (held is ActionSpec.ActionsRing) RaiseRing(false);
             else if (held is { } h) Run(h, false);
             if (!tap) return;
