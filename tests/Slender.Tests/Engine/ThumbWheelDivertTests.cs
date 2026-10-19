@@ -28,7 +28,9 @@ public class ThumbWheelDivertTests
         public Task PlayHapticAsync(byte waveform, CancellationToken ct) => Task.CompletedTask;
         public Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct) => Task.FromResult<BatteryStatus?>(null);
         public void Dispose() { }
-        public void Rotate(int units, bool touch = false) => ThumbWheelMoved?.Invoke(this, new ThumbWheelEvent(units, touch, touch, false));
+        public void Report(ThumbWheelEvent e) => ThumbWheelMoved?.Invoke(this, e);
+        /// <summary>A diverted report for <paramref name="units"/> of 1/120 notch (sent as device counts, ThumbWheelUnits.PerNotch per notch).</summary>
+        public void Rotate(int units, bool touch = false) => ThumbWheelMoved?.Invoke(this, new ThumbWheelEvent(units * ThumbWheelUnits.PerNotch / 120, touch, touch, false));
         public void Connect(bool c) { IsConnected = c; ConnectionChanged?.Invoke(this, c); }
         public bool[] Snapshot() { lock (Calls) return [.. Calls]; }
     }
@@ -420,6 +422,18 @@ public class ThumbWheelDivertTests
     }
 
     [Fact]
+    public void A_turn_end_report_does_not_lift_the_thumb()
+    {
+        var r = new Rig(TapCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        r.Mouse.Rotate(0, touch: true);
+        r.Mouse.Report(new ThumbWheelEvent(0, false, false, false, Status: 3)); // the device's "turn ended" says no touch
+        r.Now = 5000;
+        Assert.True(Until(() => r.Keys().Contains("F13"))); // still resting: the rest action fires
+        Assert.DoesNotContain("Ctrl+Z", r.Keys());           // and no tap was seen
+    }
+
+    [Fact]
     public void Slow_or_turning_touch_is_not_a_tap()
     {
         var r = new Rig(TapCfg(), "notepad");
@@ -430,7 +444,7 @@ public class ThumbWheelDivertTests
         Assert.DoesNotContain("Ctrl+Z", r.Keys());
         r.Now = 2000;
         r.Mouse.Rotate(0, touch: true);
-        r.Mouse.Rotate(30, touch: true); // a quarter notch is already a turn
+        r.Mouse.Rotate(60, touch: true); // half a wheel step is already a turn
         r.Now = 2100;
         r.Mouse.Rotate(0, touch: false);
         Assert.DoesNotContain("Ctrl+Z", r.Keys());
@@ -455,11 +469,11 @@ public class ThumbWheelDivertTests
         Assert.Equal(new ThumbTouchResult(false, true, true), t.OnReport(false, 0, 250));
         t.OnReport(true, 0, 1000);
         Assert.Equal(new ThumbTouchResult(false, true, false), t.OnReport(false, 0, 1251));
-        t.OnReport(true, 29, 2000);
-        Assert.True(t.OnReport(false, 0, 2100).Tap);   // 29 < 30
-        t.OnReport(true, 10, 3000);
-        t.OnReport(true, -20, 3010);
-        Assert.False(t.OnReport(false, 0, 3050).Tap);  // 10 + 20 = 30
+        t.OnReport(true, 2, 2000);
+        Assert.True(t.OnReport(false, 0, 2100).Tap);   // 2 < 3 counts (half a wheel step)
+        t.OnReport(true, 1, 3000);
+        t.OnReport(true, -2, 3010);
+        Assert.False(t.OnReport(false, 0, 3050).Tap);  // 1 + 2 = 3
         Assert.False(t.OnReport(false, 0, 3060).Up);   // not touching: no edge
     }
 }

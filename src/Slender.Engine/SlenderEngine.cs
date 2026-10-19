@@ -767,7 +767,9 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             if (_mouse.ThumbWheelTouchSupported == false) return;
-            var r = _touch.OnReport(e.Touch, e.Rotation, _clock());
+            // A turn's last report (status 3) always says "no touch"; only a report without rotation can say the thumb lifted.
+            var touching = e.Touch || (e.Status == 3 && _touch.Touching);
+            var r = _touch.OnReport(touching, e.Rotation, _clock());
             if (e.Rotation != 0 && !r.Down) _queue.Post(CancelRest); // turning is scrolling, not resting
             if (r.Down) _queue.Post(HandleTouchDown);
             // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can

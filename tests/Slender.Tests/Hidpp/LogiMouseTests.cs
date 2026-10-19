@@ -177,12 +177,13 @@ public class LogiMouseTests
     [Fact]
     public void ParseThumbWheel_decodes_signed_rotation_and_flags()
     {
-        var right = FakeDevice.Frame(0xFF, 7, 0, 0, 0x00, 0x05, 0, 0, 0, 0x01);
-        var left = FakeDevice.Frame(0xFF, 7, 0, 0, 0xFF, 0xFB, 0, 0, 0, 0x06);
+        // Bytes as captured on the MX Master 4 (2026-10-19): rotation, timestamp, status, flags (0x02 = touch).
+        var right = FakeDevice.Frame(0xFF, 7, 0, 0, 0x00, 0x05, 0x00, 0x07, 0x02, 0x02);
+        var left = FakeDevice.Frame(0xFF, 7, 0, 0, 0xFF, 0xFB, 0, 0, 0x03, 0x0C);
         Assert.True(HidppMessage.TryParse(right, out var r));
         Assert.True(HidppMessage.TryParse(left, out var l));
-        Assert.Equal(new ThumbWheelEvent(5, true, false, false), LogiMouse.ParseThumbWheel(r));
-        Assert.Equal(new ThumbWheelEvent(-5, false, true, true), LogiMouse.ParseThumbWheel(l));
+        Assert.Equal(new ThumbWheelEvent(5, true, false, false, 2), LogiMouse.ParseThumbWheel(r));
+        Assert.Equal(new ThumbWheelEvent(-5, false, true, true, 3), LogiMouse.ParseThumbWheel(l));
     }
 
     [Fact]

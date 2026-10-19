@@ -504,8 +504,9 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
     }
 
     /// <summary>
-    /// 0x2150 fn0 event. PROBE: layout is the Logitech-spec expectation (docs/protocol.md), not confirmed on device:
-    /// p[0-1] int16 BE rotation, p[2-3] timestamp, p[4] rotation status, p[5] flags (bit0 touch, bit1 proximity, bit2 single tap).
+    /// 0x2150 fn0 event, confirmed by a raw capture on 2026-10-19 (MX Master 4): p[0-1] int16 BE rotation, p[2-3] timestamp,
+    /// p[4] rotation status (0 none, 1 start, 2 turning, 3 end), p[5] flags with the same bit positions as getInfo's caps:
+    /// bit1 touch, bit2 proximity, bit3 single tap. The first guess (bit0 touch) never saw a touch.
     /// Keep all layout knowledge in this one method.
     /// </summary>
     public static ThumbWheelEvent? ParseThumbWheel(HidppMessage msg)
@@ -513,7 +514,7 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         var p = msg.Params;
         int rotation = (short)((p[0] << 8) | p[1]);
         byte flags = p[5];
-        return new ThumbWheelEvent(rotation, (flags & 0x01) != 0, (flags & 0x02) != 0, (flags & 0x04) != 0);
+        return new ThumbWheelEvent(rotation, (flags & 0x02) != 0, (flags & 0x04) != 0, (flags & 0x08) != 0, p[4]);
     }
 
     protected override async Task UndoOnDisposeAsync(Session s, CancellationToken ct)

@@ -41,7 +41,7 @@ internal sealed class HookThumbWheelSource : IThumbWheelSource
     public void Dispose() => _hook.HorizontalWheel -= OnWheel;
 }
 
-/// <summary>Diverted path: 0x2150 rotation events. divertedResolution is 120 counts per notch, so counts are already notch units.</summary>
+/// <summary>Diverted path: 0x2150 rotation events, ThumbWheelUnits.PerNotch counts per native wheel step, scaled to 120 per step.</summary>
 internal sealed class HidThumbWheelSource : IThumbWheelSource
 {
     private readonly ILogiMouse _mouse;
@@ -73,7 +73,7 @@ public readonly record struct ThumbTouchResult(bool Down, bool Up, bool Tap);
 public sealed class ThumbTouchTracker
 {
     public const long TapMaxMs = 250;
-    public const int TapMaxRotation = ThumbWheelUnits.PerNotch / 4;
+    public const int TapMaxRotation = ThumbWheelUnits.PerNotch / 2; // half a wheel step of counts
     private readonly object _gate = new();
     private bool _touching;
     private long _downAt;

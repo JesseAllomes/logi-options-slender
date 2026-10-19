@@ -52,16 +52,23 @@ public interface IHidppTransportFactory
 
 public readonly record struct ButtonEvent(ushort ControlId, bool Pressed);
 
-/// <summary>Diverted thumb wheel report. Rotation is signed, positive = right.</summary>
-public readonly record struct ThumbWheelEvent(int Rotation, bool Touch, bool Proximity, bool SingleTap);
+/// <summary>
+/// Diverted thumb wheel report. Rotation is signed, positive = right. Status is the device's rotation status: 0 no rotation,
+/// 1 a turn starts, 2 turning, 3 the turn ended (that report always says "no touch", even with the thumb still on the wheel).
+/// </summary>
+public readonly record struct ThumbWheelEvent(int Rotation, bool Touch, bool Proximity, bool SingleTap, int Status = 0);
 
 /// <summary>0x1B04 divertedRawMouseXY: movement since the last report while a raw-XY-diverted control is held (device counts; +dy = down).</summary>
 public readonly record struct RawXyEvent(int Dx, int Dy);
 
-/// <summary>0x2150 divertedResolution: rotation counts per notch in diverted reports (inventory: 120, same as WHEEL_DELTA).</summary>
+/// <summary>
+/// Diverted thumb wheel counts per native wheel step (one WHEEL_DELTA of 120): 0x2150 getInfo divertedResolution 120 over
+/// nativeResolution 20 = 6. A raw capture on 2026-10-19 confirmed it (a short turn = about 78 counts in 1-2 count reports);
+/// the old value 120 made every diverted turn 20x too small, so the wheel seemed dead in apps that divert it (Edge).
+/// </summary>
 public static class ThumbWheelUnits
 {
-    public const int PerNotch = 120;
+    public const int PerNotch = 6;
 }
 
 public readonly record struct BatteryStatus(int Percent, bool Charging);
