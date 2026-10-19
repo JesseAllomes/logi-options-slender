@@ -31,5 +31,5 @@ Type
 - Rail/popover headings: Sora 600. Bundled OFL font.
 
 Space and shape: 4 px grid. Radius 6 (labels, rows), 8–10 (flyouts, rail items), 12 (popover). No card grid.
-Motion: one signature only, the tray popover unfolding into the window (250 ms, ease-out, disabled with reduced motion). Hotspot select: copper halo, no animation.
+Motion: the tray popover unfolding into the window (250 ms, ease-out); the Actions Ring opening (user-chosen style and speed, see design.md); the thumb wheel card preview (moves only with the real wheel). All disabled with reduced motion. Hotspot select: copper halo, no animation.
 Voice: plain verbs. "Same as All apps", "Add app", "Compare apps", "Quit Options+". Errors say what to do next.

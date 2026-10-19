@@ -104,8 +104,9 @@ public sealed class JsonConfigStore : IConfigStore
                 GestureSwipes = ParseSwipes(p.GestureSwipes),
                 RingSlots = p.RingSlots is null ? null : ToRing(p.RingSlots, allowFolders: true),
                 ThumbWheelAlt = p.ThumbWheelAlt is { } tw
-                    ? new ThumbWheelSecond(tw.Enabled, tw.Forward ?? new ActionSpec.None(), tw.Back ?? new ActionSpec.None())
+                    ? new ThumbWheelSecond(tw.Enabled, tw.Forward ?? new ActionSpec.None(), tw.Back ?? new ActionSpec.None()) { Speed = ClampSpeed(tw.Speed) }
                     : null,
+                SideScrollSpeed = ClampSpeed(p.SideScrollSpeed),
             });
         }
 
@@ -214,6 +215,8 @@ public sealed class JsonConfigStore : IConfigStore
             Folder = r.Folder is null ? null : FromRing(r.Folder),
         }).ToList();
 
+    private static int? ClampSpeed(int? speed) => speed is { } s ? Math.Clamp(s, PointerSettings.SpeedMin, PointerSettings.SpeedMax) : null;
+
     private static RingAppearance ToRingAppearance(RingDto? r)
     {
         var d = new RingAppearance();
@@ -228,7 +231,9 @@ public sealed class JsonConfigStore : IConfigStore
             IsHexColour(r.Accent) ? r.Accent! : d.Accent,
             Math.Clamp(r.OpacityPercent, 40, 100),
             Enum.TryParse(r.Labels, ignoreCase: true, out RingLabels labels) ? labels : d.Labels,
-            Enum.TryParse(r.Position, ignoreCase: true, out RingPosition position) ? position : d.Position);
+            Enum.TryParse(r.Position, ignoreCase: true, out RingPosition position) ? position : d.Position,
+            Enum.TryParse(r.Opening, ignoreCase: true, out RingOpening opening) ? opening : d.Opening,
+            Enum.TryParse(r.AnimationSpeed, ignoreCase: true, out RingAnimationSpeed speed) ? speed : d.AnimationSpeed);
     }
 
     private static bool IsHexColour(string? s) =>
@@ -307,6 +312,8 @@ public sealed class JsonConfigStore : IConfigStore
                 OpacityPercent = config.Ring.OpacityPercent,
                 Labels = config.Ring.Labels.ToString(),
                 Position = config.Ring.Position.ToString(),
+                Opening = config.Ring.Opening.ToString(),
+                AnimationSpeed = config.Ring.AnimationSpeed.ToString(),
             },
             Profiles = new List<ProfileDto>(config.Profiles.Count),
         };
@@ -337,8 +344,9 @@ public sealed class JsonConfigStore : IConfigStore
                     : profile.GestureSwipes.ToDictionary(kv => kv.Key.ToString().ToLowerInvariant(), kv => kv.Value),
                 RingSlots = profile.RingSlots is null ? null : FromRing(profile.RingSlots),
                 ThumbWheelAlt = profile.ThumbWheelAlt is { } tw
-                    ? new ThumbWheelSecondDto { Enabled = tw.Enabled, Forward = tw.Forward, Back = tw.Back }
+                    ? new ThumbWheelSecondDto { Enabled = tw.Enabled, Forward = tw.Forward, Back = tw.Back, Speed = tw.Speed }
                     : null,
+                SideScrollSpeed = profile.SideScrollSpeed,
             });
         }
 
@@ -406,6 +414,7 @@ public sealed class JsonConfigStore : IConfigStore
         public bool Enabled { get; set; }
         public ActionSpec? Forward { get; set; }
         public ActionSpec? Back { get; set; }
+        public int? Speed { get; set; }
     }
 
     internal sealed class RingSlotDto
@@ -424,6 +433,8 @@ public sealed class JsonConfigStore : IConfigStore
         public int OpacityPercent { get; set; } = 92;
         public string? Labels { get; set; }
         public string? Position { get; set; }
+        public string? Opening { get; set; }
+        public string? AnimationSpeed { get; set; }
     }
 
     internal sealed class BatteryAlertsDto
@@ -470,6 +481,7 @@ public sealed class JsonConfigStore : IConfigStore
         public Dictionary<string, ActionSpec>? GestureSwipes { get; set; }
         public List<RingSlotDto>? RingSlots { get; set; }
         public ThumbWheelSecondDto? ThumbWheelAlt { get; set; }
+        public int? SideScrollSpeed { get; set; }
     }
 
     internal sealed class ExcelDto

@@ -476,6 +476,49 @@
           "src/Slender.Tray/TrayApplication.cs"
         ]
       }
+    ],
+    "m39": [
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "config + engine: per-app speeds (done in scaffold), preview mode in engine (sink gets wheel deltas + top button; nothing runs; ModeShift diverted), tray named-pipe server Slender.ThumbPreview",
+        "id": "c1",
+        "note": "",
+        "targets": [
+          "src/Slender.Engine/SlenderEngine.cs",
+          "src/Slender.Engine/ThumbPreview.cs",
+          "src/Slender.Tray/Program.cs"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Settings card rebuild: drawn wheel rows, chips, notches, result preview, pipe client; ThumbWheelOps speed edits; remove Point & scroll speed rows and second action section",
+        "id": "c2",
+        "note": "",
+        "targets": [
+          "src/Slender.Settings/MainWindow.ThumbCard.cs",
+          "src/Slender.Settings/Logic/ThumbWheelOps.cs",
+          "src/Slender.Settings/MainWindow.Pages.cs",
+          "src/Slender.Settings/MainWindow.DualThumb.cs"
+        ]
+      }
+    ],
+    "m40": [
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "ring motion in the tray + Settings controls (builder in .worktrees/ring-motion)",
+        "id": "c1",
+        "note": "",
+        "targets": [
+          "src/Slender.Tray/Ring",
+          "src/Slender.Settings/MainWindow.Ring.cs"
+        ]
+      }
     ]
   },
   "errors": [
@@ -523,7 +566,7 @@
       "summary": "Edge: back steps (Ctrl+Shift+Tab) ignored under Ctrl held since Ctrl+Tab steps; fixed by re-pressing Ctrl on direction change"
     }
   ],
-  "rev": 258,
+  "rev": 261,
   "review": {
     "advice": [],
     "config": {

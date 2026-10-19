@@ -185,6 +185,9 @@ public sealed record Profile(string? AppProcess, IReadOnlyDictionary<ushort, Act
     /// default). Enabled = false turns it off for this app.
     /// </summary>
     public ThumbWheelSecond? ThumbWheelAlt { get; init; }
+
+    /// <summary>Thumb wheel side scroll speed in this app, percent (25-400); null = All apps' (then PointerSettings.SideScrollSpeed).</summary>
+    public int? SideScrollSpeed { get; init; }
 }
 
 /// <summary>
@@ -208,7 +211,11 @@ public sealed record RingSlot(ActionSpec Action)
 /// The thumb wheel's second role: <paramref name="Forward"/> runs once per notch forward (right),
 /// <paramref name="Back"/> once per notch back (left). Any action; ActionSpec.None does nothing for that direction.
 /// </summary>
-public sealed record ThumbWheelSecond(bool Enabled, ActionSpec Forward, ActionSpec Back);
+public sealed record ThumbWheelSecond(bool Enabled, ActionSpec Forward, ActionSpec Back)
+{
+    /// <summary>Steps per amount of travel, percent (25-400); null = PointerSettings.SecondActionSpeed.</summary>
+    public int? Speed { get; init; }
+}
 
 public enum RingStyle { Bezel, Compass, Keypad }
 
@@ -218,6 +225,15 @@ public enum RingLabels { Always, SelectedOnly }
 
 public enum RingPosition { AtCursor, MonitorCentre }
 
+/// <summary>How the ring opens and closes. Off (or Windows animations off) is a 90 ms fade.</summary>
+public enum RingOpening { Off, Pop, Bloom, FlyIn }
+
+/// <summary>
+/// Ring animation speed. Quickest = the base timings (Pop 240/180 ms, Bloom 440/330 ms, Fly in 400/300 ms open/close);
+/// each step slower adds 0.4x: Quick 1.4x, Normal 1.8x, Slow 2.2x, Slowest 2.6x (user 2026-10-19).
+/// </summary>
+public enum RingAnimationSpeed { Slowest, Slow, Normal, Quick, Quickest }
+
 /// <summary>How the Actions Ring looks. Global, not per profile. Accent is "#RRGGBB" (copper by default).</summary>
 public sealed record RingAppearance(
     RingStyle Style = RingStyle.Bezel,
@@ -225,7 +241,9 @@ public sealed record RingAppearance(
     string Accent = "#D9925F",
     int OpacityPercent = 92,
     RingLabels Labels = RingLabels.Always,
-    RingPosition Position = RingPosition.AtCursor);
+    RingPosition Position = RingPosition.AtCursor,
+    RingOpening Opening = RingOpening.Bloom,
+    RingAnimationSpeed AnimationSpeed = RingAnimationSpeed.Normal);
 
 public enum GestureDirection
 {

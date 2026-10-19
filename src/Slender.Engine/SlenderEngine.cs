@@ -627,7 +627,7 @@ public sealed class SlenderEngine : IDisposable
             {
                 e.Handled = true; // top button held: the second action owns the wheel, the native horizontal scroll never happens
                 _topTurned = true;
-                var steps = _secondAccumulator.AddScaled(e.Delta, cfg.Pointer.SecondActionSpeed, _clock());
+                var steps = _secondAccumulator.AddScaled(e.Delta, ThumbWheelModes.SpeedOf(cfg, second), _clock());
                 if (steps != 0) _queue.Post(() => RunSecond(second, steps));
                 return;
             }
@@ -652,7 +652,7 @@ public sealed class SlenderEngine : IDisposable
                 // (just after the top button lets go the switch back waits for the wheel to pause, or the app diverts it only for
                 // touch/tap), so the turn would be lost: send it on as the normal sideways scroll.
                 // A side scroll speed other than 100% swallows the native turn and sends a scaled one.
-                var speed = cfg.Pointer.SideScrollSpeed;
+                var speed = ThumbWheelModes.SideScrollSpeedFor(cfg, _foreground.ProcessName);
                 if (e.FromHid || speed != 100)
                 {
                     if (!e.FromHid) e.Handled = true;
