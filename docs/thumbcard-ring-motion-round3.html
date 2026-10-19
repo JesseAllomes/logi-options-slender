@@ -144,7 +144,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
 
   <section aria-labelledby="motion">
     <h2 id="motion">B. Ring motion, your pick and your speed</h2>
-    <p class="lede">Pop, Clockwise bloom and Fly in, all slower by default. Settings &gt; Actions Ring gets an <b>Opening</b> choice and an <b>Animation speed</b> slider. The ring still answers from the first frame.</p>
+    <p class="lede">Pop, Clockwise bloom and Fly in. Updated speeds: Quickest is the old Normal, Normal is the old Slowest, and Slowest is as much slower again. Settings &gt; Actions Ring gets an <b>Opening</b> choice and an <b>Animation speed</b> slider. The ring still answers from the first frame.</p>
     <div class="ringwrap">
       <div class="rstage"><svg id="ringsvg" viewBox="0 0 500 400" role="img" aria-label="Actions Ring preview"></svg></div>
       <div class="panel">
@@ -351,7 +351,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   const origin = `${CX}px ${CY}px`;
   [root, rim, disc, hub, ...wedges.map(w => w.g)].forEach(n => { n.style.transformOrigin = origin; });
   const play = (node, frames, ms, delay, easing) => node.animate(frames, { duration: ms, delay, easing, fill: 'both' });
-  const FACT = [1.8, 1.35, 1, .75, .55];
+  const FACT = [2.6, 2.2, 1.8, 1.4, 1];
   const LABEL = ['Slowest', 'Slow', 'Normal', 'Quick', 'Quickest'];
   let style = 'bloom';
   const speedIn = document.getElementById('speed'), speedOut = document.getElementById('speedout');
