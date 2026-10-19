@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=118 -->
+<!-- drainclamp-build: state; schema=1; generation=119 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-16T02:54:50+00:00 709fe71f m36 bug (user: Edge stopped taking clicks until Alt+Tab): a replayed press (50 ms window end) raced the real release; Windows can process the real release first, leaving Edge a press with no release. Fix: a replayed press's release is always injected (ordered after the press); a missed release is injected before the next press. 1442 tests
 - 2026-10-16T03:02:20+00:00 a202b2df m36 incident 13:5x: all left/right clicks swallowed system-wide (tray, Edge, Outlook, Excel); agent stopped Slender.Tray (responding, idle) and set tabScrollChord=false in config (backup taken). Cause: chord 'active' only ended when BOTH releases were seen; one missed release kept every later click swallowed. Fix: chord ends on first release, other release swallowed once, any press during a chord ends it, ring capture resets it; chord on/off logged; fuzz test (3000 histories) proves the 2nd click after any history reaches the app and fails on the 1.1.14 logic. 1446 tests
 - 2026-10-16T03:08:49+00:00 797e1f2d User confirmed 1.1.16 fixed the click lockup
 - 2026-10-16T03:27:20+00:00 c3a6d551 Lockup 2 root cause (user: locks after Excel use, not Edge): WindowIntegrity used WindowFromPoint inside the mouse hook; it sends WM_NCHITTEST and waits, so a busy Excel (after sheet switches; Options+ Excel add-in still loaded) stalled every mouse event on the PC. Fix: ChildWindowFromPointEx (geometry only), Tab scroll log posted off the hook, hook calls >100 ms switch the chord off for the run and log once. Chord stays off in user config; user will look at the top-button dual function Monday. To-dos t3 (top button Tab scroll), t4 (macros)
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-19T06:04:22+00:00 6dd2e7ce My shortcuts built (Shortcuts tab: add/edit/delete, name + recorder + All apps / this app, in config). Double tap added as a third touch action (0xF153, 300 ms, single tap waits only when double is set). 1495 tests
 - 2026-10-19T06:11:09+00:00 ee50348a Touch tuning (user): wobble under one wheel step (6 counts) no longer cancels rest/tap; rest default 250 ms; PointerSettings.TouchRestMs/DoubleTapMs with sliders in the card. 1497 tests
 - 2026-10-19T22:29:10+00:00 5618c095 Touch tester in the card (dots: touching, rest, tap, double tap; preview diverts the wheel and reports gestures with the user's timings; nothing runs); touch actions logged in slender.log. User: touch works but intermittently, to diagnose with the tester. 1502 tests
+- 2026-10-19T22:46:11+00:00 09307094 False touches on grabbing the mouse (user): touch gestures now ignored when the pointer moves > 24 px during the touch (GrabMovePx). 1504 tests
 <!-- /DC:LOG -->
