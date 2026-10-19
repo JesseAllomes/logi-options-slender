@@ -586,7 +586,7 @@
       "summary": "Diverted thumb wheel decoded wrong since m29: touch flag is bit 0x02 (read 0x01) and 6 counts per wheel step (assumed 120), so touch never fired and diverted turns were 20x too small (Edge with touch/tap bound looked dead). Fixed from a raw capture 2026-10-19"
     }
   ],
-  "rev": 267,
+  "rev": 268,
   "review": {
     "advice": [],
     "config": {
@@ -13438,8 +13438,8 @@
     },
     {
       "at": "2026-10-19T05:52:32+00:00",
-      "done": false,
-      "done_at": null,
+      "done": true,
+      "done_at": "2026-10-19T06:02:38+00:00",
       "id": "t8",
       "milestone": "",
       "text": "My shortcuts (user 2026-10-19, chose list): config MyShortcuts done (b06b4cb parent); still to build: Shortcuts tab 'My shortcuts' group with Add (name, recorder, All apps / this app), edit, delete"
