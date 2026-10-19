@@ -355,7 +355,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   const LABEL = ['Slowest', 'Slow', 'Normal', 'Quick', 'Quickest'];
   let style = 'bloom';
   const speedIn = document.getElementById('speed'), speedOut = document.getElementById('speedout');
-  const base = { pop: [240, 150], bloom: [440, 220], fly: [400, 210], off: [90, 90] };
+  const base = { pop: [240, 180], bloom: [440, 330], fly: [400, 300], off: [90, 90] }; // close = 3/4 of open
+  const closeScale = { pop: 180 / 150, bloom: 330 / 220, fly: 300 / 210, off: 1 }; // the close timelines below were drawn at half
   const showSpeed = () => { const f = FACT[+speedIn.value], b = base[style]; speedOut.textContent = style === 'off' ? 'Fade 90 ms' : `${LABEL[+speedIn.value]} · opens in ${Math.round(b[0] * f)} ms, closes in ${Math.round(b[1] * f)} ms`; };
   speedIn.addEventListener('input', showSpeed);
   document.querySelectorAll('#stylechips button').forEach(b => b.addEventListener('click', () => {
@@ -405,7 +406,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
     if (opening === open) return;
     reset();
     const s = reduce ? 'off' : style, k = FACT[+speedIn.value];
-    busy = Promise.all((opening ? anims[s].open : anims[s].close)(k).map(a => a.finished));
+    busy = Promise.all((opening ? anims[s].open(k) : anims[s].close(k * closeScale[s])).map(a => a.finished));
     open = opening; await busy; busy = null;
   }
   async function runBoth() { await run(false); await new Promise(r => setTimeout(r, 250)); await run(true); }
