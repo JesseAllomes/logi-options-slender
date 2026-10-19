@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=112 -->
+<!-- drainclamp-build: state; schema=1; generation=113 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-16T01:34:33+00:00 2ebfc1d9 m33 built (user idea: hold Ctrl while the wheel turns, send only Tab): WheelKeyHold + engine release triggers, 1402 tests. Known gap left open: switching back from tab mode drops side-scroll turns until the wheel pauses 150 ms (undivert waits for quiet); not fixed yet
 - 2026-10-16T01:45:14+00:00 3369d1a2 m34 built (user: every update reset Fn lock): config fnLock was true and was pushed on every start, overriding Fn+Esc. Now the keyboard owns it; 1410 tests. Decision: keyboard state wins, Slender mirrors it
 - 2026-10-16T01:52:32+00:00 c233d22d m35 built: unclaimed diverted turns pass through as native side scroll, 1413 tests. Assumption to check live: diverted 0x2150 rotation already follows the invert bit (user has invert on); if the side scroll right after leaving tab mode runs the wrong way, negate in PassThroughSideScroll
 - 2026-10-16T02:16:48+00:00 d066df98 m33 follow-up (user: Edge tab scroll fast at first, then old behaviour): likely the unconfirmed 0x2150 touch flag dropping mid-turn released Ctrl. Tab mode now ignores touch-up; quiet timer/buttons/app switch/flip still release. Wheel shortcuts outside tab mode keep touch-up release (user scoped it). 1415 tests
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-19T00:33:21+00:00 9af09c44 Round 3 picks: card variant 2 (Result preview: tab strip / sliding sheet under each wheel); ring speeds rescaled so Quickest = old Normal (x1.0), Normal = old Slowest (x1.8), Slowest x2.6 (steps 1.0/1.4/1.8/2.2/2.6). Awaiting build go-ahead
 - 2026-10-19T03:17:37+00:00 e582c679 m39 card + preview and m40 ring motion built and merged on main (1475 tests, -warnaserror clean); shipping as next release, awaiting the user's live look
 - 2026-10-19T03:23:41+00:00 fb9f34c8 v1.1.20 published 14:23 Melbourne: thumb wheel card with live preview + per-app speeds (m39), ring opening motion (m40), plus 1.1.19 fixes. Open checks: Edge back steps, card preview, ring motion
+- 2026-10-19T05:01:56+00:00 062fdc26 Update loop: OneNote (started 10:58 by the 1.1.18 tray from a ring slot) held SlenderApp\current as cwd; Velopack backup/rename failed (os error 32) and restarted 1.1.18 each time. v1.1.21 (16:01 Melbourne) sets tray/Settings cwd to the profile and launch cwd to the target's folder. User must close that OneNote once, then Restart to update
 <!-- /DC:LOG -->
