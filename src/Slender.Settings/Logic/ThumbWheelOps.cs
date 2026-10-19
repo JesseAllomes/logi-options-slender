@@ -96,7 +96,8 @@ public static class ThumbWheelOps
 
     public static string Text(ActionSpec action) => action is ActionSpec.None ? "Not assigned" : ActionCatalog.Plain(action);
 
-    private static SlenderConfig Store(SlenderConfig config, string? app, ThumbWheelSecond second)
+    /// <summary>Writes <paramref name="second"/> as the app's own second action, creating its profile when it has none.</summary>
+    public static SlenderConfig Store(SlenderConfig config, string? app, ThumbWheelSecond second)
     {
         Profile? profile = ProfileOps.Find(config, app);
         if (profile is null)

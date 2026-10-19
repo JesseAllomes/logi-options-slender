@@ -218,18 +218,7 @@ public sealed partial class MainWindow
         _status.Changed += OnDpiStatus;
         dpiRow.Unloaded += (_, _) => _status.Changed -= OnDpiStatus;
         AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
-
-        // Excel column scrolling is off for now (user 2026-10-16): Excel gets the normal side scroll, so its rows are gone.
-        AddSection("THUMB WHEEL");
-        Slider side = PageSlider("Side scroll speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.SideScrollSpeed,
-            v => _config.Update(x => x with { Pointer = x.Pointer with { SideScrollSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock sideText);
-        AddRow("Side scroll speed", "How far a turn of the thumb wheel scrolls sideways. 100% is the mouse's own speed.", WithReadout(side, sideText));
-        Slider steps = PageSlider("Second action speed", PointerSettings.SpeedMin, PointerSettings.SpeedMax, 5, c.Pointer.SecondActionSpeed,
-            v => _config.Update(x => x with { Pointer = x.Pointer with { SecondActionSpeed = (int)v } }), v => $"{(int)v}%", out TextBlock stepsText);
-        AddRow("Second action speed", "Steps per turn while the top button is held. Higher does more per turn.",
-            WithReadout(steps, stepsText));
-
-        BuildDualThumbSection();
+        // The thumb wheel's speeds and second action live in its card on the device stage (user 2026-10-19).
     }
 
     /// <summary>
