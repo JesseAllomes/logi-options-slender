@@ -13,16 +13,15 @@ using Slender.Settings.Views;
 namespace Slender.Settings;
 
 /// <summary>
-/// The thumb wheel card (locked 2026-10-19, round 3 card 3 variant 2): clicking the thumb wheel on the device stage opens it, for
-/// the app chosen in the strip. Two modes, Turn and Holding top button, each a drawn wheel between its left and right chips, a
-/// 7-notch speed for that app, and a result preview (tab strip, sliding sheet, or a step count). While the card is open the tray
-/// sends the real thumb wheel and top button here (ThumbPreviewClient) and runs nothing, so turning the wheel previews the result
-/// at the chosen speed.
+/// The thumb wheel card (locked 2026-10-19, round 3 card 3 variant 2, drawn wheel dropped after the first look): clicking the
+/// thumb wheel on the device stage opens it, for the app chosen in the strip. Two modes, Turn and Holding top button, each with
+/// its left and right actions, a result preview (tab strip, sliding sheet, or a step count) and a 7-notch speed for that app;
+/// then Touch (thumb resting on the wheel) and Tap. While the card is open the tray sends the real thumb wheel and top button here
+/// (ThumbPreviewClient) and runs nothing, so turning the wheel previews the result at the chosen speed.
 /// </summary>
 public sealed partial class MainWindow
 {
     private const double ThumbCardWidth = 344;
-    private const double KnurlPitch = 6;
     private const double SheetColumn = 28;
 
     private Flyout? _thumbCard;
@@ -153,6 +152,16 @@ public sealed partial class MainWindow
             chip => ShowSecondPicker(chip, "Scroll left", current.Back, name, a => _config.Update(x => ThumbWheelOps.SetBack(x, app, a))),
             chip => ShowSecondPicker(chip, "Scroll right", current.Forward, name, a => _config.Update(x => ThumbWheelOps.SetForward(x, app, a)))));
 
+        // Touch: the thumb resting on the wheel, and a quick tap (they need the wheel's touch sensor).
+        var touch = new StackPanel { Spacing = 2, Padding = new Thickness(6, 8, 6, 8) };
+        touch.Children.Add(Ui.Text("Touch", 11.5, Ui.Muted));
+        foreach (ControlInfo control in ControlCatalog.ThumbTouchControls)
+        {
+            touch.Children.Add(TouchRow(control, name));
+        }
+
+        body.Children.Add(touch);
+
         // Footer: the top button's own job, inheritance, and whether the preview is live.
         (ActionSpec? top, bool _) = CurrentProfile.Effective(_kind, ControlId.ModeShift);
         string topJob = top is null or ActionSpec.None ? "ratchet / free-spin" : ActionCatalog.Plain(top);
@@ -197,9 +206,6 @@ public sealed partial class MainWindow
         }
 
         head.Children.Add(label);
-        FrameworkElement notches = SpeedNotches(speed, speedName, setSpeed);
-        Grid.SetColumn(notches, 1);
-        head.Children.Add(notches);
         block.Children.Add(head);
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -208,15 +214,17 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         FrameworkElement left = ChipSide(mode, 0, chips.Left, chips.LeftCaption, chips.Mono, title, HorizontalAlignment.Left, pickLeft);
         FrameworkElement right = ChipSide(mode, 1, chips.Right, chips.RightCaption, chips.Mono, title, HorizontalAlignment.Right, pickRight);
-        FrameworkElement wheel = Wheel(mode);
-        Grid.SetColumn(wheel, 1);
+        var turn = Ui.Text("◀ turn ▶", 11, Ui.Muted);
+        turn.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(turn, 1);
         Grid.SetColumn(right, 2);
         row.Children.Add(left);
-        row.Children.Add(wheel);
+        row.Children.Add(turn);
         row.Children.Add(right);
         block.Children.Add(row);
 
         block.Children.Add(PreviewStrip(mode));
+        block.Children.Add(SpeedRow(speed, speedName, setSpeed));
         if (!mode.Enabled)
         {
             row.Opacity = 0.5;
@@ -271,36 +279,7 @@ public sealed partial class MainWindow
         return stack;
     }
 
-    /// <summary>The drawn thumb wheel: knurl ridges on a clipped canvas that slides with the real wheel.</summary>
-    private static FrameworkElement Wheel(ThumbModeView mode)
-    {
-        const double w = 64, h = 34;
-        var canvas = new Canvas { Width = w + KnurlPitch * 2, Height = h };
-        for (double x = 0; x < w + KnurlPitch * 2; x += KnurlPitch)
-        {
-            var ridge = new Rectangle { Width = KnurlPitch / 2, Height = h, Fill = Ui.Brush("Paper3ActiveBrush") };
-            Canvas.SetLeft(ridge, x);
-            canvas.Children.Add(ridge);
-        }
-
-        var shift = new TranslateTransform { X = -KnurlPitch };
-        canvas.RenderTransform = shift;
-        mode.Knurl = shift;
-        return new Border
-        {
-            Width = w,
-            Height = h,
-            CornerRadius = new CornerRadius(9),
-            Background = Ui.Brush("PaperBrush"),
-            BorderBrush = Ui.Rule,
-            BorderThickness = new Thickness(1),
-            Child = canvas,
-            Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, w, h) },
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-    }
-
-    /// <summary>The result preview under a wheel: tab strip, sliding sheet, or nothing (the chips count instead).</summary>
+    /// <summary>The result preview under a mode's actions: tab strip, sliding sheet, or nothing (the chips count instead).</summary>
     private static FrameworkElement PreviewStrip(ThumbModeView mode)
     {
         switch (mode.Kind)
@@ -358,9 +337,16 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Seven notches like Haptic feel; the readout says "· All apps" while the value is inherited.</summary>
-    private static FrameworkElement SpeedNotches(ThumbSpeedView speed, string name, Action<int> set)
+    /// <summary>"Speed", seven notches like Haptic feel, and a readout that says "· All apps" while the value is inherited.</summary>
+    private static FrameworkElement SpeedRow(ThumbSpeedView speed, string name, Action<int> set)
     {
+        var line = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 2, 0, 0) };
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var label = Ui.Text("Speed", 11.5, Ui.Muted);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        line.Children.Add(label);
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
         int selected = ThumbCardModel.NotchIndex(speed.Value);
         for (int i = 0; i < ThumbCardModel.Notches.Count; i++)
@@ -391,11 +377,33 @@ public sealed partial class MainWindow
             row.Children.Add(button);
         }
 
+        Grid.SetColumn(row, 1);
+        line.Children.Add(row);
         var readout = Ui.Text(speed.Value + "%" + (speed.Inherited ? " · All apps" : string.Empty), 11.5, Ui.Muted);
         readout.VerticalAlignment = VerticalAlignment.Center;
-        readout.Margin = new Thickness(4, 0, 0, 0);
-        row.Children.Add(readout);
-        return row;
+        Grid.SetColumn(readout, 2);
+        line.Children.Add(readout);
+        return line;
+    }
+
+    /// <summary>A Touch row: what the control does in this app, opening the normal picker.</summary>
+    private FrameworkElement TouchRow(ControlInfo control, string appName)
+    {
+        var grid = new Grid { ColumnSpacing = 8, Padding = new Thickness(0, 3, 0, 3) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        string what = control.Id == DeviceIds.ThumbWheelTouchPseudoId ? "Rest thumb on the wheel" : "Tap the wheel";
+        var label = Ui.Text(what, 12.5);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        grid.Children.Add(label);
+        var chipText = Ui.Text(PlainActionText(control), 12);
+        chipText.TextTrimming = TextTrimming.CharacterEllipsis;
+        var chip = new Button { Style = Ui.Res<Style>("QuietButtonStyle"), Content = chipText, MaxWidth = 170, Padding = new Thickness(8, 3, 8, 3) };
+        AutomationProperties.SetName(chip, $"{what} in {appName}: {PlainActionText(control)}");
+        chip.Click += (_, _) => ShowPicker(chip, control);
+        Grid.SetColumn(chip, 1);
+        grid.Children.Add(chip);
+        return grid;
     }
 
     private static FrameworkElement FootAction(string text, string action, string automationName, Action run)
@@ -447,7 +455,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A real thumb wheel turn while the card is open: move the drawn wheel and step the preview at the mode's speed.</summary>
+    /// <summary>A real thumb wheel turn while the card is open: step the preview at the mode's speed.</summary>
     private void OnPreviewRotated(int delta)
     {
         ThumbModeView? mode = _previewHeld ? _holdView : _turnView;
@@ -456,7 +464,6 @@ public sealed partial class MainWindow
             return;
         }
 
-        mode.Turn(delta);
         if (!mode.Enabled)
         {
             return;
@@ -477,27 +484,15 @@ public sealed partial class MainWindow
         public bool Enabled { get; } = enabled;
         public ColumnScrollAccumulator Accumulator { get; } = new();
         public StackPanel? Block { get; set; }
-        public TranslateTransform? Knurl { get; set; }
         public TranslateTransform? Sheet { get; set; }
         public List<Border> Tabs { get; } = [];
         public int TabIndex { get; set; }
         public Button?[] Chips { get; } = new Button?[2];
         public (Border Badge, TextBlock Text)?[] Badges { get; } = new (Border, TextBlock)?[2];
 
-        private double _turned;
         private int _count;
         private int _countSide = -1;
         private DispatcherQueueTimer? _fade;
-
-        /// <summary>Slides the knurl with the wheel (a notch moves it about one ridge).</summary>
-        public void Turn(int delta)
-        {
-            _turned += delta / 20.0;
-            if (Knurl is not null)
-            {
-                Knurl.X = -KnurlPitch - (((_turned % KnurlPitch) + KnurlPitch) % KnurlPitch);
-            }
-        }
 
         public void Step(int steps, DispatcherQueue queue)
         {

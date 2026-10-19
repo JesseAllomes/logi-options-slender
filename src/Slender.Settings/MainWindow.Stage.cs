@@ -174,22 +174,7 @@ public sealed partial class MainWindow
         double stripWidth = Math.Min(w - 36, 4 * 190 + 3 * 8);
         double cell = (stripWidth - 3 * 8) / 4;
         double stripLeft = (w - stripWidth) / 2;
-        // Thumb wheel touch and tap: two labels in a strip just above the swipes (the thumb wheel row's neighbours; no hotspots).
-        IReadOnlyList<ControlInfo> touches = ControlCatalog.ThumbTouchControls;
-        double touchWidth = Math.Min(w - 36, 2 * 190 + 8);
-        double touchCell = (touchWidth - 8) / 2;
-        double touchLeft = (w - touchWidth) / 2;
-        for (int i = 0; i < touches.Count; i++)
-        {
-            var touchItem = new StageItem { Info = touches[i], LabelWidth = touchCell };
-            touchItem.Position = new Point(touchLeft + i * (touchCell + 8) + touchCell / 2, h - LabelHeight * 1.5 - 14);
-            touchItem.Label = MakeLabelButton(touchItem, touchCell);
-            Canvas.SetLeft(touchItem.Label, touchLeft + i * (touchCell + 8));
-            Canvas.SetTop(touchItem.Label, h - LabelHeight * 2 - 14);
-            StageCanvas.Children.Add(touchItem.Label);
-            _items[touches[i].Id] = touchItem;
-        }
-
+        // Thumb wheel touch and tap live in the thumb wheel card (user 2026-10-19).
         IReadOnlyList<ControlInfo> swipes = ControlCatalog.SwipeControls;
         for (int i = 0; i < swipes.Count; i++)
         {

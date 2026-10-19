@@ -24,7 +24,7 @@ from: round 4 (round-3 variant 3 + variant 4 bottom bar and button picker)
 ## Thumb wheel card (locked 2026-10-19, round 3: card 3 variant 2)
 
 - Opens from the thumb wheel label on the stage, for the app in the strip. Header "Thumb wheel · <app>".
-- Two modes, each a row: header (name, speed notches right) above a drawn knurled thumb wheel between a left chip and a right chip.
+- Two modes: header (name; the hold mode adds its on/off toggle), then the left chip and right chip either side of a muted "turn" marker, the result preview, and a full-width Speed row (label, notches, readout). The drawn wheel was dropped after the first live look (user 2026-10-19: it added nothing). Then a Touch section: "Rest thumb on the wheel" and "Tap the wheel", each opening the normal picker (moved off the stage).
   - Turn: chips show the two directions of the thumb wheel binding (Scroll left / Scroll right by default); either opens the thumb wheel picker.
   - Holding top button: on/off toggle in the header; chips are Scroll left (Back) and Scroll right (Forward) of the second action, each with a muted caption; each opens the action picker.
 - Speed: 7 notches like Haptic feel (25, 50, 75, 100, 150, 200, 400 %), per mode, per app; "same as All apps" until changed.
