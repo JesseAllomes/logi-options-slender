@@ -63,6 +63,8 @@ public static class Program
     public static void Main(string[] args)
     {
         StartTimestamp = Stopwatch.GetTimestamp();
+        // Apps started from Settings (Options+, Explorer) must not inherit the install folder: an open one blocks updates.
+        try { Directory.SetCurrentDirectory(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)); } catch (IOException) { }
         PopoverMode = args.Any(a => string.Equals(a, "--popover", StringComparison.OrdinalIgnoreCase));
         _mutex = new Mutex(initiallyOwned: true, MutexName, out bool first);
         _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);

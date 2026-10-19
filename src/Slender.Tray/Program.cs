@@ -47,6 +47,9 @@ static class Program
                 }
             })
             .Run();
+        // Never keep the install folder as the working directory: every app the tray starts inherits it, and one still open
+        // (OneNote from a ring slot) blocked updates, which replace that folder (user 2026-10-19).
+        try { Directory.SetCurrentDirectory(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)); } catch (IOException) { }
 
         using var singleInstance = new SingleInstance();
         if (!singleInstance.IsFirstInstance)

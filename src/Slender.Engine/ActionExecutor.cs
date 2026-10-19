@@ -11,9 +11,23 @@ public sealed class ShellLauncher : IShellLauncher
 {
     public void Open(string target, string? arguments)
     {
-        var info = new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true };
+        var info = new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true, WorkingDirectory = WorkingDirectoryFor(target) };
         if (!string.IsNullOrWhiteSpace(arguments)) info.Arguments = arguments;
         using var _ = System.Diagnostics.Process.Start(info);
+    }
+
+    /// <summary>
+    /// The launched app's own folder, else the user's profile; never Slender's install folder. A child that kept that folder as
+    /// its working directory (OneNote opened from a ring slot) blocked every update until it closed (user 2026-10-19).
+    /// </summary>
+    public static string WorkingDirectoryFor(string target)
+    {
+        try
+        {
+            if (Path.IsPathFullyQualified(target) && Path.GetDirectoryName(target) is { Length: > 0 } dir && Directory.Exists(dir)) return dir;
+        }
+        catch (ArgumentException) { }
+        return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     }
 }
 
