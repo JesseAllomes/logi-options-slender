@@ -479,12 +479,12 @@
     ],
     "m39": [
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-19T03:09:51+00:00",
         "est_min": 25,
         "goal": "config + engine: per-app speeds (done in scaffold), preview mode in engine (sink gets wheel deltas + top button; nothing runs; ModeShift diverted), tray named-pipe server Slender.ThumbPreview",
         "id": "c1",
-        "note": "",
+        "note": "engine SetPreview(sink): turns + top button to sink, nothing runs, ModeShift diverted; tray ThumbPreviewServer (current-user pipe Slender.ThumbPreview, client close ends preview); per-app speeds resolved in engine; 1442 tests",
         "targets": [
           "src/Slender.Engine/SlenderEngine.cs",
           "src/Slender.Engine/ThumbPreview.cs",
@@ -492,12 +492,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-19T03:16:10+00:00",
         "est_min": 25,
         "goal": "Settings card rebuild: drawn wheel rows, chips, notches, result preview, pipe client; ThumbWheelOps speed edits; remove Point & scroll speed rows and second action section",
         "id": "c2",
-        "note": "",
+        "note": "card rebuilt (ThumbCardModel + ThumbPreviewClient + MainWindow.ThumbCard), DualThumb section and Point & scroll speed rows removed; 1455 tests, -warnaserror clean",
         "targets": [
           "src/Slender.Settings/MainWindow.ThumbCard.cs",
           "src/Slender.Settings/Logic/ThumbWheelOps.cs",
@@ -508,12 +508,12 @@
     ],
     "m40": [
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-19T03:17:37+00:00",
         "est_min": 25,
         "goal": "ring motion in the tray + Settings controls (builder in .worktrees/ring-motion)",
         "id": "c1",
-        "note": "",
+        "note": "ring motion built by Sonnet builder (3009142), reviewed and merged; RingMotion pure timings + 17 tests; per-part opacity multiplied into colours (no D2D layers); 1475 tests",
         "targets": [
           "src/Slender.Tray/Ring",
           "src/Slender.Settings/MainWindow.Ring.cs"
@@ -566,7 +566,7 @@
       "summary": "Edge: back steps (Ctrl+Shift+Tab) ignored under Ctrl held since Ctrl+Tab steps; fixed by re-pressing Ctrl on direction change"
     }
   ],
-  "rev": 261,
+  "rev": 264,
   "review": {
     "advice": [],
     "config": {
@@ -13350,6 +13350,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-18T23:28:05+00:00"
+    },
+    {
+      "end": "2026-10-19T03:17:37+00:00",
+      "id": "s9",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-19T03:09:51+00:00"
     }
   ],
   "todos": [

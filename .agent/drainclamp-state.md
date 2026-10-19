@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=110 -->
+<!-- drainclamp-build: state; schema=1; generation=111 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-16T00:15:43+00:00 62015572 Bug fixed (user report: K860 Lock key set to Turn off kept Win+L): WinUI ItemClick gives the row's Content, so every picker option-list and ring icon click was dropped; ClickedItems.Find maps it back, 990 tests, ee9713a; v1.1.8 published to GitHub 11:15 Melbourne
 - 2026-10-16T00:43:51+00:00 a153c171 m32 built 7cdd1ff (1387 tests, -warnaserror clean): recorder takes Ctrl+Tab/Ctrl+Shift+Tab (window accelerators off while open) and Win/Alt system combos (RecorderKeyHook + WinChordCapture, only while Settings is foreground; Win+L impossible); Shortcuts tab with app/common/Windows presets, per-row hide, Show hidden, General toggle (settings-ui.json). Not yet seen live; shipping as 1.1.9
 - 2026-10-16T01:34:33+00:00 2ebfc1d9 m33 built (user idea: hold Ctrl while the wheel turns, send only Tab): WheelKeyHold + engine release triggers, 1402 tests. Known gap left open: switching back from tab mode drops side-scroll turns until the wheel pauses 150 ms (undivert waits for quiet); not fixed yet
 - 2026-10-16T01:45:14+00:00 3369d1a2 m34 built (user: every update reset Fn lock): config fnLock was true and was pushed on every start, overriding Fn+Esc. Now the keyboard owns it; 1410 tests. Decision: keyboard state wins, Slender mirrors it
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-19T00:18:17+00:00 1c9ebd98 User 2026-10-19: per-app side scroll + second action speeds go inside the thumb wheel card (vertical per-app speed dropped); thumb wheel touch dropping when the finger lifts is correct behaviour (touch works); ring open/close animation wanted. Round-2 prototypes docs/thumbcard-ring-motion-round2.html published https://claude.ai/artifact/TvtG1ztQ7x8fxgdCqq28SQ; awaiting picks
 - 2026-10-19T00:23:15+00:00 60db84af Round 2 picks: card A3 (drawn wheel) as a live preview (hold top + turn shows speed, nothing runs); ring motion B2 bloom + B4 fly in (and B1 pop) slower with a user speed setting, B3 sweep dropped. Round 3 published https://claude.ai/artifact/WQvTa4BopPVfxfTZ2haqHx (docs/thumbcard-ring-motion-round3.html)
 - 2026-10-19T00:33:21+00:00 9af09c44 Round 3 picks: card variant 2 (Result preview: tab strip / sliding sheet under each wheel); ring speeds rescaled so Quickest = old Normal (x1.0), Normal = old Slowest (x1.8), Slowest x2.6 (steps 1.0/1.4/1.8/2.2/2.6). Awaiting build go-ahead
+- 2026-10-19T03:17:37+00:00 e582c679 m39 card + preview and m40 ring motion built and merged on main (1475 tests, -warnaserror clean); shipping as next release, awaiting the user's live look
 <!-- /DC:LOG -->
