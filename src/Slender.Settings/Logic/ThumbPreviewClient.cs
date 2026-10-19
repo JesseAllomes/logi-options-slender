@@ -25,6 +25,12 @@ public sealed class ThumbPreviewClient : IDisposable
     /// <summary>The top button went down (true) or up.</summary>
     public event Action<bool>? TopButton;
 
+    /// <summary>The thumb touched the wheel (true) or lifted.</summary>
+    public event Action<bool>? Touch;
+
+    /// <summary>The tray recognised a touch gesture with the user's timings.</summary>
+    public event Action<TouchGesture>? Gesture;
+
     public void Start() => _ = Task.Run(() => RunAsync(_cts.Token));
 
     private async Task RunAsync(CancellationToken ct)
@@ -45,13 +51,20 @@ public sealed class ThumbPreviewClient : IDisposable
                     continue;
                 }
 
-                if (kind == 'r')
+                switch (kind)
                 {
-                    _post(() => Rotated?.Invoke(value));
-                }
-                else
-                {
-                    _post(() => TopButton?.Invoke(value == 1));
+                    case 'r':
+                        _post(() => Rotated?.Invoke(value));
+                        break;
+                    case 't':
+                        _post(() => TopButton?.Invoke(value == 1));
+                        break;
+                    case 'h':
+                        _post(() => Touch?.Invoke(value == 1));
+                        break;
+                    default:
+                        _post(() => Gesture?.Invoke((TouchGesture)value));
+                        break;
                 }
             }
         }

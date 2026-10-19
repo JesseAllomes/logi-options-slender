@@ -83,6 +83,8 @@ public sealed class ThumbPreviewServer : IDisposable
     {
         public void Rotated(int delta) => writer.TryWrite(ThumbPreview.Rotation(delta));
         public void TopButton(bool down) => writer.TryWrite(ThumbPreview.Top(down));
+        public void Touch(bool down) => writer.TryWrite(ThumbPreview.Touch(down));
+        public void Gesture(TouchGesture gesture) => writer.TryWrite(ThumbPreview.Gesture(gesture));
     }
 
     public void Dispose()

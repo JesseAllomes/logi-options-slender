@@ -714,7 +714,8 @@ public sealed class SlenderEngine : IDisposable
     internal bool ThumbWheelDiverted { get { lock (_gate) return _thumbHid; } }
 
     private bool ThumbWheelWanted() =>
-        ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, _ringOpen, _mouse.ThumbWheelTouchSupported, ExcelColumnScrolling);
+        _preview is not null // the card shows touch and taps, which only a diverted wheel reports
+        || ThumbWheelDivertPolicy.Wanted(_config, _foreground.ProcessName, _ringOpen, _mouse.ThumbWheelTouchSupported, ExcelColumnScrolling);
 
     /// <summary>
     /// Recomputes whether the wheel should be diverted and applies it on the serialised divert chain. A change never happens
@@ -777,6 +778,7 @@ public sealed class SlenderEngine : IDisposable
             // Turning is scrolling, not resting; a wobble under one wheel step (nothing moves on screen) is still a rest.
             if (e.Rotation != 0 && !r.Down && _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation) _queue.Post(CancelRest);
             if (r.Down) _queue.Post(HandleTouchDown);
+            if ((r.Down || r.Up) && _preview is { } preview) preview.Touch(r.Down);
             // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can
             // drop mid-turn, which let Ctrl go after the first few tabs, so it lets go when the button does.
             if (r.Up && _topSecond is null) ReleaseHoldSoon("thumb lifted");
@@ -796,7 +798,7 @@ public sealed class SlenderEngine : IDisposable
         try
         {
             CancelRest();
-            if (ResolveAction(ThumbWheelTouchBindingId) is ActionSpec.None or ActionSpec.TapHold) return;
+            if (_preview is null && ResolveAction(ThumbWheelTouchBindingId) is ActionSpec.None or ActionSpec.TapHold) return;
             var seq = _touchSeq;
             _restTimer = _holdTimer.Schedule(_config.Pointer.TouchRestMs, () =>
             {
@@ -821,8 +823,10 @@ public sealed class SlenderEngine : IDisposable
         {
             if (seq != _touchSeq || _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation) return;
             _restTimer = null;
+            if (_preview is { } preview) { preview.Gesture(TouchGesture.Rest); return; } // the card lights its indicator; nothing runs
             var action = ResolveAction(ThumbWheelTouchBindingId);
             if (action is ActionSpec.None or ActionSpec.TapHold) return;
+            _log.Info($"thumb wheel rest: {action}");
             MaybeHaptic(action);
             if (action is ActionSpec.ActionsRing) { _touchAction = action; RaiseRing(true); return; }
             if (action is ActionSpec.MouseButton) { _touchAction = action; Run(action, true); return; }
@@ -841,7 +845,7 @@ public sealed class SlenderEngine : IDisposable
             if (held is ActionSpec.ActionsRing) RaiseRing(false);
             else if (held is { } h) Run(h, false);
             if (!tap) return;
-            if (ResolveAction(ThumbWheelDoubleTapBindingId) is ActionSpec.None)
+            if (_preview is null && ResolveAction(ThumbWheelDoubleTapBindingId) is ActionSpec.None)
             {
                 RunTap(ThumbWheelTapBindingId); // no double tap here: a single tap runs at once
                 return;
@@ -868,15 +872,24 @@ public sealed class SlenderEngine : IDisposable
 
     private void RunTap(ushort id)
     {
+        if (_preview is { } preview)
+        {
+            preview.Gesture(id == ThumbWheelDoubleTapBindingId ? TouchGesture.DoubleTap : TouchGesture.Tap);
+            return;
+        }
+
         var action = ResolveAction(id);
-        if (action is not ActionSpec.None) RunGestureAction(action);
+        if (action is ActionSpec.None) return;
+        _log.Info($"thumb wheel {(id == ThumbWheelDoubleTapBindingId ? "double tap" : "tap")}: {action}");
+        RunGestureAction(action);
     }
 
     // ---- thumb wheel second action: hold the top button (engine queue) ----
 
     /// <summary>
-    /// Preview mode for Settings' thumb wheel card: while a sink is set every thumb wheel turn and top button press goes to it and
-    /// nothing runs (the top button is diverted for it). Null ends preview mode. Any thread.
+    /// Preview mode for Settings' thumb wheel card: while a sink is set every thumb wheel turn, top button press, touch and
+    /// recognised touch gesture (with the user's timings) goes to it and nothing runs (the top button and the wheel are diverted
+    /// for it). Null ends preview mode. Any thread.
     /// </summary>
     public void SetPreview(IThumbPreviewSink? sink)
     {

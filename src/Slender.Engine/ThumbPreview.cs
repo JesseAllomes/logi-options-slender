@@ -13,11 +13,21 @@ public interface IThumbPreviewSink
 
     /// <summary>The top button went down (true) or up.</summary>
     void TopButton(bool down);
+
+    /// <summary>The thumb touched the wheel (true) or lifted.</summary>
+    void Touch(bool down) { }
+
+    /// <summary>A touch gesture was recognised with the user's timings (it would have run its action).</summary>
+    void Gesture(TouchGesture gesture) { }
 }
+
+/// <summary>Thumb wheel touch gestures, as numbered on the preview pipe.</summary>
+public enum TouchGesture { Rest = 1, Tap = 2, DoubleTap = 3 }
 
 /// <summary>
 /// Line protocol between the tray (pipe server) and Settings (client) for the thumb wheel card's live preview:
-/// "r &lt;delta&gt;" for a turn, "t 1" / "t 0" for the top button. The client never writes; closing it ends preview mode.
+/// "r &lt;delta&gt;" for a turn, "t 1" / "t 0" for the top button, "h 1" / "h 0" for the thumb touching the wheel, and
+/// "g &lt;n&gt;" for a recognised touch gesture (TouchGesture). The client never writes; closing it ends preview mode.
 /// </summary>
 public static class ThumbPreview
 {
@@ -28,14 +38,23 @@ public static class ThumbPreview
 
     public static string Top(bool down) => down ? "t 1" : "t 0";
 
-    /// <summary>Parses one line. Kind is 'r' (Value = delta) or 't' (Value = 1 down, 0 up); false for anything else.</summary>
+    public static string Touch(bool down) => down ? "h 1" : "h 0";
+
+    public static string Gesture(TouchGesture gesture) => "g " + ((int)gesture).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Parses one line. Kind is 'r' (Value = delta), 't' or 'h' (Value = 1 down, 0 up) or 'g' (Value = TouchGesture); false for anything else.</summary>
     public static bool TryParse(string? line, out char kind, out int value)
     {
         kind = '\0';
         value = 0;
-        if (line is null || line.Length < 3 || line[1] != ' ' || line[0] is not ('r' or 't')) return false;
+        if (line is null || line.Length < 3 || line[1] != ' ' || line[0] is not ('r' or 't' or 'h' or 'g')) return false;
         if (!int.TryParse(line.AsSpan(2), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value)) return false;
         kind = line[0];
-        return kind == 'r' || value is 0 or 1;
+        return kind switch
+        {
+            'r' => true,
+            'g' => value is >= 1 and <= 3,
+            _ => value is 0 or 1,
+        };
     }
 }

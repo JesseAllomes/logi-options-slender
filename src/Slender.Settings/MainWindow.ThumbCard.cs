@@ -32,6 +32,9 @@ public sealed partial class MainWindow
     private bool _previewHeld;
     private ThumbModeView? _turnView;
     private ThumbModeView? _holdView;
+    private Border? _touchingDot;
+    private readonly Dictionary<TouchGesture, Border> _gestureDots = [];
+    private bool _previewTouching;
 
     private void ShowThumbCard(FrameworkElement anchor, ControlInfo info)
     {
@@ -103,6 +106,21 @@ public sealed partial class MainWindow
                 UpdateLiveWash();
             }
         };
+        client.Touch += down =>
+        {
+            if (ReferenceEquals(_preview, client))
+            {
+                _previewTouching = down;
+                PaintTouching();
+            }
+        };
+        client.Gesture += gesture =>
+        {
+            if (ReferenceEquals(_preview, client))
+            {
+                FlashGesture(gesture);
+            }
+        };
         _preview = client;
         client.Start();
     }
@@ -152,9 +170,17 @@ public sealed partial class MainWindow
             chip => ShowSecondPicker(chip, "Scroll left", current.Back, name, a => _config.Update(x => ThumbWheelOps.SetBack(x, app, a))),
             chip => ShowSecondPicker(chip, "Scroll right", current.Forward, name, a => _config.Update(x => ThumbWheelOps.SetForward(x, app, a)))));
 
-        // Touch: the thumb resting on the wheel, and a quick tap (they need the wheel's touch sensor).
+        // Touch: the thumb resting on the wheel, a tap and a double tap (they need the wheel's touch sensor). While the card is
+        // open the dots are a tester: "touching" follows the thumb, and each row's dot lights when the tray recognises it with
+        // the timings below (nothing runs).
         var touch = new StackPanel { Spacing = 2, Padding = new Thickness(6, 8, 6, 8) };
-        touch.Children.Add(Ui.Text("Touch", 11.5, Ui.Muted));
+        _gestureDots.Clear();
+        var touchHead = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        touchHead.Children.Add(Ui.Text("Touch", 11.5, Ui.Muted));
+        _touchingDot = Dot();
+        touchHead.Children.Add(_touchingDot);
+        touchHead.Children.Add(Ui.Text(_previewLive ? "touching" : string.Empty, 11, Ui.Muted));
+        touch.Children.Add(touchHead);
         foreach (ControlInfo control in ControlCatalog.ThumbTouchControls)
         {
             touch.Children.Add(TouchRow(control, name));
@@ -393,6 +419,43 @@ public sealed partial class MainWindow
         return line;
     }
 
+    private static Border Dot() => new()
+    {
+        Width = 9,
+        Height = 9,
+        CornerRadius = new CornerRadius(4.5),
+        Background = Ui.Brush("Paper3ActiveBrush"),
+        VerticalAlignment = VerticalAlignment.Center,
+    };
+
+    private void PaintTouching()
+    {
+        if (_touchingDot is not null)
+        {
+            _touchingDot.Background = _previewTouching ? Ui.Mark : Ui.Brush("Paper3ActiveBrush");
+        }
+    }
+
+    /// <summary>Lights the gesture's dot for 0.8 s.</summary>
+    private void FlashGesture(TouchGesture gesture)
+    {
+        if (!_gestureDots.TryGetValue(gesture, out Border? dot))
+        {
+            return;
+        }
+
+        dot.Background = Ui.Mark;
+        DispatcherQueueTimer t = DispatcherQueue.CreateTimer();
+        t.Interval = TimeSpan.FromMilliseconds(800);
+        t.IsRepeating = false;
+        t.Tick += (s, _) =>
+        {
+            dot.Background = Ui.Brush("Paper3ActiveBrush");
+            s.Stop();
+        };
+        t.Start();
+    }
+
     /// <summary>A timing row in the Touch section: label, slider in milliseconds, readout. Saves when the slider is let go.</summary>
     private FrameworkElement TimingRow(string title, string automationName, int value, int min, int max, int step, Action<int> set)
     {
@@ -433,7 +496,17 @@ public sealed partial class MainWindow
         };
         var label = Ui.Text(what, 12.5);
         label.VerticalAlignment = VerticalAlignment.Center;
-        grid.Children.Add(label);
+        Border dot = Dot();
+        _gestureDots[control.Id switch
+        {
+            DeviceIds.ThumbWheelTouchPseudoId => TouchGesture.Rest,
+            DeviceIds.ThumbWheelDoubleTapPseudoId => TouchGesture.DoubleTap,
+            _ => TouchGesture.Tap,
+        }] = dot;
+        var labelRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        labelRow.Children.Add(dot);
+        labelRow.Children.Add(label);
+        grid.Children.Add(labelRow);
         var chipText = Ui.Text(PlainActionText(control), 12);
         chipText.TextTrimming = TextTrimming.CharacterEllipsis;
         var chip = new Button { Style = Ui.Res<Style>("QuietButtonStyle"), Content = chipText, MaxWidth = 170, Padding = new Thickness(8, 3, 8, 3) };

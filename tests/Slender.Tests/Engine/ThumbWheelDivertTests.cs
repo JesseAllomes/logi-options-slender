@@ -465,6 +465,35 @@ public class ThumbWheelDivertTests
         Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true));
     }
 
+    private sealed class GestureSink : IThumbPreviewSink
+    {
+        public readonly List<string> Seen = [];
+        public void Rotated(int delta) { }
+        public void TopButton(bool down) { }
+        public void Touch(bool down) { lock (Seen) Seen.Add(down ? "touch" : "lift"); }
+        public void Gesture(TouchGesture gesture) { lock (Seen) Seen.Add(gesture.ToString()); }
+        public string[] Snapshot() { lock (Seen) return [.. Seen]; }
+    }
+
+    [Fact]
+    public void Card_preview_diverts_the_wheel_and_reports_touch_rest_and_double_tap_without_running_them()
+    {
+        var r = new Rig(SlenderConfig.Default, "notepad"); // nothing bound: the tester still reports every gesture
+        var sink = new GestureSink();
+        r.Engine.SetPreview(sink);
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+
+        r.Mouse.Rotate(0, touch: true);
+        Assert.True(Until(() => sink.Snapshot().Contains("Rest")));
+        r.Now = 5000; // a long rest: lifting is not a tap
+        r.Mouse.Rotate(0, touch: false);
+        Tap(r, 10_000);
+        Tap(r, 10_200);
+        Assert.True(Until(() => sink.Snapshot().Contains("DoubleTap")));
+        Assert.Equal(["touch", "Rest", "lift", "touch", "lift", "touch", "lift", "DoubleTap"], sink.Snapshot());
+        Assert.Empty(r.Exec.Calls);
+    }
+
     [Fact]
     public void A_wobble_under_one_wheel_step_still_rests()
     {

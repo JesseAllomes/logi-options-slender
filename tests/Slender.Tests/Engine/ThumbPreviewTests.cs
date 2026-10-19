@@ -80,6 +80,8 @@ public class ThumbPreviewTests
     [InlineData("r -7", 'r', -7)]
     [InlineData("t 1", 't', 1)]
     [InlineData("t 0", 't', 0)]
+    [InlineData("h 1", 'h', 1)]
+    [InlineData("g 3", 'g', 3)]
     public void Lines_parse(string line, char kind, int value)
     {
         Assert.True(ThumbPreview.TryParse(line, out var k, out var v));
@@ -93,6 +95,8 @@ public class ThumbPreviewTests
     [InlineData("x 1")]
     [InlineData("r")]
     [InlineData("r abc")]
+    [InlineData("g 4")]
+    [InlineData("h 2")]
     public void Bad_lines_are_refused(string? line) => Assert.False(ThumbPreview.TryParse(line, out _, out _));
 
     [Fact]
