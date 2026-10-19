@@ -56,6 +56,9 @@ internal sealed class FakeMouse : ILogiMouse
 
 internal sealed class FakeHook : IInputHook
 {
+    /// <summary>What PointerTravel reports (pointer movement just before a touch).</summary>
+    public int Travel;
+    public int PointerTravel(int windowMs) => Travel;
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
     public bool Started;
     public void Start() => Started = true;

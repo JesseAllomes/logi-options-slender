@@ -540,6 +540,26 @@ public class ThumbWheelDivertTests
     }
 
     [Fact]
+    public void A_touch_while_the_pointer_was_just_moving_is_a_grab()
+    {
+        var r = new Rig(TapCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        r.Hook.Travel = 600; // the mouse was swept 600 px in the last 400 ms
+        r.Mouse.Rotate(0, touch: true);
+        r.Now = 1080;
+        r.Mouse.Rotate(0, touch: false);
+        Thread.Sleep(new PointerSettings().TouchRestMs + 200);
+        Assert.Empty(r.Keys());
+
+        r.Hook.Travel = 20; // a still mouse: the same touch is a tap
+        r.Now = 3000;
+        r.Mouse.Rotate(0, touch: true);
+        r.Now = 3080;
+        r.Mouse.Rotate(0, touch: false);
+        Assert.True(Until(() => r.Keys().Contains("Ctrl+Z")));
+    }
+
+    [Fact]
     public void A_small_pointer_drift_still_taps()
     {
         var r = new Rig(TapCfg(), "notepad");

@@ -24,6 +24,12 @@ public interface IInputHook : IDisposable
     /// <summary>While on, the Actions Ring owns the left/right buttons and the vertical wheel. Off by default.</summary>
     void SetRingCapture(bool on) { }
 
+    /// <summary>
+    /// How far (pixels, the larger axis) the pointer has been from where it is now at any point in the last
+    /// <paramref name="windowMs"/> ms, from the user's own mouse moves. 0 when unknown.
+    /// </summary>
+    int PointerTravel(int windowMs) => 0;
+
     void Start();
 }
 

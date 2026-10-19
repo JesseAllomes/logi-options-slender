@@ -101,6 +101,43 @@ public sealed class LowLevelMouseHook : IInputHook
         }
     }
 
+    // Recent pointer positions (the user's own moves only) for PointerTravel: a fixed ring, written on the hook thread in O(1).
+    private const int MoveRing = 1024; // over a second of moves even at a 1000 Hz report rate
+    private readonly long[] _moveAt = new long[MoveRing];
+    private readonly int[] _moveX = new int[MoveRing], _moveY = new int[MoveRing];
+    private int _moveNext;
+    private readonly object _moveGate = new();
+
+    private void RecordMove(nint lParam)
+    {
+        var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+        if (IsInjected(data)) return;
+        lock (_moveGate)
+        {
+            int i = _moveNext;
+            _moveAt[i] = Environment.TickCount64;
+            _moveX[i] = data.Pt.X;
+            _moveY[i] = data.Pt.Y;
+            _moveNext = (i + 1) % MoveRing;
+        }
+    }
+
+    public int PointerTravel(int windowMs)
+    {
+        if (!NativeMethods.GetCursorPos(out var now)) return 0;
+        long since = Environment.TickCount64 - windowMs;
+        int travel = 0;
+        lock (_moveGate)
+        {
+            for (int k = 0; k < MoveRing; k++)
+            {
+                if (_moveAt[k] < since || _moveAt[k] == 0) continue;
+                travel = Math.Max(travel, Math.Max(Math.Abs(_moveX[k] - now.X), Math.Abs(_moveY[k] - now.Y)));
+            }
+        }
+        return travel;
+    }
+
     /// <summary>A hook call slower than this stalls every mouse event on the PC; the first one is logged.</summary>
     internal const long SlowHookMs = 100;
     private int _slowReported;
@@ -139,6 +176,7 @@ public sealed class LowLevelMouseHook : IInputHook
                 var msg = (int)wParam;
                 if (msg == NativeMethods.WM_MOUSEMOVE)
                 {
+                    RecordMove(lParam);
                     // Only while a gesture is held. Swallowed moves leave the cursor at the anchor, so each event's
                     // offset from the anchor is that event's own movement.
                     if (_captureMoves)

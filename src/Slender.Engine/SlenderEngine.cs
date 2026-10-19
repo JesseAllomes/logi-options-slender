@@ -30,6 +30,7 @@ public sealed class SlenderEngine : IDisposable
     private IDisposable? _restTimer;  // engine queue: fires the rest action once the thumb has rested still
     private int _touchSeq;            // engine queue: bumped on every touch down, lift and turn so a stale rest timer does nothing
     private (int X, int Y) _touchAt;  // engine queue: pointer position when the thumb touched the wheel
+    private bool _touchIsGrab;        // engine queue: this touch came with the pointer already moving: a grab, no gestures
     private IDisposable? _tapTimer;   // engine queue: a single tap waiting to see whether a second one follows
     private int _tapSeq;              // engine queue: bumped when a waiting single tap is taken by a double tap
     private readonly ColumnScrollAccumulator _accumulator = new();
@@ -813,7 +814,8 @@ public sealed class SlenderEngine : IDisposable
             if (r.Down)
             {
                 var at = CursorPosition();
-                _queue.Post(() => HandleTouchDown(at));
+                var grab = _hook.PointerTravel(GrabLookbackMs) > GrabBeforePx;
+                _queue.Post(() => HandleTouchDown(at, grab));
             }
             if ((r.Down || r.Up) && _preview is { } preview) preview.Touch(r.Down);
             // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can
@@ -840,17 +842,26 @@ public sealed class SlenderEngine : IDisposable
     /// </summary>
     internal const int GrabMovePx = 24;
 
+    /// <summary>
+    /// A touch that lands while the pointer has moved more than GrabBeforePx in the last GrabLookbackMs is the hand taking hold
+    /// of a moving mouse. Calibrated on 2026-10-20 from the user's recordings: 75 deliberate touches had at most 127 px of
+    /// travel in the 400 ms before (nearly all under 20); grabs mostly 150-1500 px. This caught 6 of the 7 grabs the travel
+    /// rule missed, and no deliberate touch.
+    /// </summary>
+    internal const int GrabBeforePx = 150, GrabLookbackMs = 400;
+
     private bool PointerMovedSinceTouch()
     {
         var now = CursorPosition();
         return Math.Abs(now.X - _touchAt.X) > GrabMovePx || Math.Abs(now.Y - _touchAt.Y) > GrabMovePx;
     }
 
-    private void HandleTouchDown((int X, int Y) at)
+    private void HandleTouchDown((int X, int Y) at, bool grab)
     {
         try
         {
             _touchAt = at;
+            _touchIsGrab = grab;
             CancelRest();
             if (_preview is null && ResolveAction(ThumbWheelTouchBindingId) is ActionSpec.None or ActionSpec.TapHold) return;
             var seq = _touchSeq;
@@ -875,7 +886,7 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
-            if (seq != _touchSeq || _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation || PointerMovedSinceTouch()) return;
+            if (seq != _touchSeq || _touchIsGrab || _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation || PointerMovedSinceTouch()) return;
             _restTimer = null;
             if (_preview is { } preview) { preview.Gesture(TouchGesture.Rest); return; } // the card lights its indicator; nothing runs
             var action = ResolveAction(ThumbWheelTouchBindingId);
@@ -898,7 +909,7 @@ public sealed class SlenderEngine : IDisposable
             _touchAction = null;
             if (held is ActionSpec.ActionsRing) RaiseRing(false);
             else if (held is { } h) Run(h, false);
-            if (!tap || PointerMovedSinceTouch()) return; // the pointer moved: the hand took hold of the mouse
+            if (!tap || _touchIsGrab || PointerMovedSinceTouch()) return; // the hand took hold of the mouse
             if (_preview is null && ResolveAction(ThumbWheelDoubleTapBindingId) is ActionSpec.None)
             {
                 RunTap(ThumbWheelTapBindingId); // no double tap here: a single tap runs at once
