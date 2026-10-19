@@ -564,9 +564,19 @@
       "milestone": "m38",
       "status": "open",
       "summary": "Edge: back steps (Ctrl+Shift+Tab) ignored under Ctrl held since Ctrl+Tab steps; fixed by re-pressing Ctrl on direction change"
+    },
+    {
+      "at": "2026-10-19T04:59:55+00:00",
+      "cause": "",
+      "chunk": "",
+      "fix": "",
+      "id": "e5",
+      "milestone": "m40",
+      "status": "open",
+      "summary": "Updates looped (1.1.20 ready, never installed): OneNote launched from a ring slot inherited SlenderApp\\current as its working directory and locked it; Velopack apply failed with error 32. Fixed: tray/Settings cwd = user profile, launches start in their own folder"
     }
   ],
-  "rev": 264,
+  "rev": 265,
   "review": {
     "advice": [],
     "config": {
