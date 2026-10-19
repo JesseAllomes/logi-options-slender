@@ -33,36 +33,55 @@ internal static class RingRenderer
         return cells;
     }
 
-    public static void Draw(RingCanvas c, RingFrame f)
+    /// <summary>Draws one frame; <paramref name="pose"/> carries the opening/closing animation (null = the settled ring).</summary>
+    public static void Draw(RingCanvas c, RingFrame f, RingPose? pose = null)
     {
         c.Begin();
         c.Clear();
         switch (f.Style)
         {
-            case RingStyle.Compass: Compass(c, f); break;
-            case RingStyle.Keypad: Keypad(c, f); break;
-            default: Bezel(c, f); break;
+            case RingStyle.Compass: Compass(c, f, pose); break;
+            case RingStyle.Keypad: Keypad(c, f, pose); break;
+            default: Bezel(c, f, pose); break;
         }
+        c.ResetPart();
         c.End();
+    }
+
+    /// <summary>
+    /// Starts one animated part: its transform and opacity apply to everything drawn until the next call. Returns false
+    /// when the part is invisible, so the caller can skip drawing it. A null pose draws the part untouched.
+    /// </summary>
+    private static bool Part(RingCanvas c, in RingPart part, bool animated, RingMetrics m)
+    {
+        if (!animated) return true;
+        if (part.Opacity <= 0.003) return false;
+        c.SetPart(part, m.Extent, m.Extent);
+        return true;
     }
 
     // ---- 1 Bezel: segmented donut, knurled rim, hub names the slot ----
 
-    private static void Bezel(RingCanvas c, RingFrame f)
+    private static void Bezel(RingCanvas c, RingFrame f, RingPose? pose)
     {
+        var anim = pose is not null;
         var m = f.Metrics;
         double k = m.Scale, cx = m.Extent, cy = m.Extent;
         var soft = f.Accent.WithAlpha(.16f);
-        c.FillCircle(cx, cy, 142 * k, Paper.WithAlpha(.55f));
-        for (var t = 0; t < 96; t++)
+        if (Part(c, pose is null ? default : pose.Disc, anim, m)) c.FillCircle(cx, cy, 142 * k, Paper.WithAlpha(.55f));
+        if (Part(c, pose is null ? default : pose.Rim, anim, m))
         {
-            var a = t * 3.75;
-            var (x1, y1) = RingCanvas.Polar(cx, cy, 133 * k, a);
-            var (x2, y2) = RingCanvas.Polar(cx, cy, 139 * k, a);
-            c.Line(x1, y1, x2, y2, Rule, 1.2 * k);
+            for (var t = 0; t < 96; t++)
+            {
+                var a = t * 3.75;
+                var (x1, y1) = RingCanvas.Polar(cx, cy, 133 * k, a);
+                var (x2, y2) = RingCanvas.Polar(cx, cy, 139 * k, a);
+                c.Line(x1, y1, x2, y2, Rule, 1.2 * k);
+            }
         }
         for (var i = 0; i < f.Cells.Count; i++)
         {
+            if (!Part(c, pose is null ? default : pose.Slots[i], anim, m)) continue;
             var cell = f.Cells[i];
             var a = RingLayout.AngleOf(i);
             var on = f.Selected == i;
@@ -88,6 +107,7 @@ internal static class RingRenderer
             Icon(c, cell, x, labelled ? y - 7 * k : y, 21 * k, glyphColor);
             if (labelled) c.Text(RingSlotText.Fit(cell.Name, 10), RingFont.Label, 9.5 * k, x, y + 14 * k, on ? Ink : Muted, maxWidth: 66 * k);
         }
+        if (!Part(c, pose is null ? default : pose.Hub, anim, m)) return;
         c.FillCircle(cx, cy, m.LabelRadius, Paper);
         c.StrokeCircle(cx, cy, m.LabelRadius, Rule, 1);
         if (f.Selected is { } s)
@@ -114,21 +134,26 @@ internal static class RingRenderer
 
     // ---- 2 Compass: floating icon buttons and a needle from the cursor ----
 
-    private static void Compass(RingCanvas c, RingFrame f)
+    private static void Compass(RingCanvas c, RingFrame f, RingPose? pose)
     {
+        var anim = pose is not null;
         var m = f.Metrics;
         double k = m.Scale, cx = m.Extent, cy = m.Extent;
-        c.StrokeCircle(cx, cy, 100 * k, Paper.WithAlpha(.35f), 1);
-        if (f.Selected is { } sel)
+        if (Part(c, pose is null ? default : pose.Disc, anim, m)) c.StrokeCircle(cx, cy, 100 * k, Paper.WithAlpha(.35f), 1);
+        if (Part(c, pose is null ? default : pose.Hub, anim, m))
         {
-            var (nx, ny) = RingCanvas.Polar(cx, cy, 74 * k, RingLayout.AngleOf(sel));
-            c.Line(cx, cy, nx, ny, f.Accent, 2.5 * k);
+            if (f.Selected is { } sel)
+            {
+                var (nx, ny) = RingCanvas.Polar(cx, cy, 74 * k, RingLayout.AngleOf(sel));
+                c.Line(cx, cy, nx, ny, f.Accent, 2.5 * k);
+            }
+            c.FillCircle(cx, cy, 9 * k, Paper);
+            c.StrokeCircle(cx, cy, 9 * k, f.Accent, 2 * k);
+            c.FillCircle(cx, cy, 3 * k, f.Accent);
         }
-        c.FillCircle(cx, cy, 9 * k, Paper);
-        c.StrokeCircle(cx, cy, 9 * k, f.Accent, 2 * k);
-        c.FillCircle(cx, cy, 3 * k, f.Accent);
         for (var i = 0; i < f.Cells.Count; i++)
         {
+            if (!Part(c, pose is null ? default : pose.Slots[i], anim, m)) continue;
             var cell = f.Cells[i];
             var on = f.Selected == i;
             var (x, y) = RingCanvas.Polar(cx, cy, m.SlotRadius, RingLayout.AngleOf(i));
@@ -136,7 +161,7 @@ internal static class RingRenderer
             c.StrokeCircle(x, y, m.BubbleRadius, cell.IsEmpty ? Muted : on ? f.Accent : Rule, 1.2 * k, dashed: cell.IsEmpty);
             if (!cell.IsEmpty) Icon(c, cell, x, y, 19 * k, on ? Paper : Ink);
         }
-        if (f.Selected is { } s)
+        if (f.Selected is { } s && Part(c, pose is null ? default : pose.Slots[s], anim, m))
         {
             var cell = f.Cells[s];
             var a = RingLayout.AngleOf(s) * Math.PI / 180;
@@ -150,23 +175,28 @@ internal static class RingRenderer
             c.HaloText(RingSlotText.Fit(name, 18), RingFont.Label, 15 * k, x + dx, ty - 4 * k, cell.IsEmpty ? Muted : Ink, Paper, align, Math.Min(150 * k, room));
             if (!cell.IsEmpty) c.HaloText(RingSlotText.Fit(cell.Shortcut, 22), RingFont.Mono, 10.5 * k, x + dx, ty + 13 * k, Muted, Paper, align, Math.Min(150 * k, room));
         }
-        else if (f.FolderName is { } folder)
+        else if (f.Selected is null && f.FolderName is { } folder && Part(c, pose is null ? default : pose.Hub, anim, m))
             c.HaloText(RingSlotText.Fit(folder, 16), RingFont.Label, 13 * k, cx, cy + 26 * k, Ink, Paper, maxWidth: 120 * k);
     }
 
     // ---- 3 Keypad: a 3x3 numpad of keycaps, directions are grid cells ----
 
-    private static void Keypad(RingCanvas c, RingFrame f)
+    private static void Keypad(RingCanvas c, RingFrame f, RingPose? pose)
     {
+        var anim = pose is not null;
         var m = f.Metrics;
         double k = m.Scale, cx = m.Extent, cy = m.Extent;
         double kw = m.KeyWidth, kh = m.KeyHeight, gap = m.KeyGap;
         double ox = cx - (kw * 1.5 + gap), oy = cy - (kh * 1.5 + gap);
         var soft = f.Accent.WithAlpha(.16f);
-        c.FillRoundRect(ox - 10 * k, oy - 10 * k, kw * 3 + gap * 2 + 20 * k, kh * 3 + gap * 2 + 20 * k, 14 * k, Paper.WithAlpha(.82f));
-        c.StrokeRoundRect(ox - 10 * k, oy - 10 * k, kw * 3 + gap * 2 + 20 * k, kh * 3 + gap * 2 + 20 * k, 14 * k, Rule, 1);
+        if (Part(c, pose is null ? default : pose.Disc, anim, m))
+        {
+            c.FillRoundRect(ox - 10 * k, oy - 10 * k, kw * 3 + gap * 2 + 20 * k, kh * 3 + gap * 2 + 20 * k, 14 * k, Paper.WithAlpha(.82f));
+            c.StrokeRoundRect(ox - 10 * k, oy - 10 * k, kw * 3 + gap * 2 + 20 * k, kh * 3 + gap * 2 + 20 * k, 14 * k, Rule, 1);
+        }
         for (var i = 0; i < f.Cells.Count; i++)
         {
+            if (!Part(c, pose is null ? default : pose.Slots[i], anim, m)) continue;
             var cell = f.Cells[i];
             var (col, row) = RingLayout.KeypadCell(i);
             var on = f.Selected == i;
@@ -180,6 +210,7 @@ internal static class RingRenderer
             c.Text(RingSlotText.Fit(name, 12), RingFont.Label, 13.5 * k, x + 12 * k, y + 43.3 * k, cell.IsEmpty ? Muted : Ink, -1, kw - 20 * k);
             c.Text(RingSlotText.Fit(cell.IsEmpty ? "set in Slender" : cell.Shortcut, 15), RingFont.Mono, 10 * k, x + 12 * k, y + 59.5 * k, Muted, -1, kw - 20 * k);
         }
+        if (!Part(c, pose is null ? default : pose.Hub, anim, m)) return;
         double mx = ox + kw + gap, my = oy + kh + gap;
         c.StrokeRoundRect(mx, my, kw, kh, 8 * k, Rule, 1, dashed: true);
         c.Line(cx - 8 * k, cy, cx + 8 * k, cy, f.Accent, 2 * k);

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Slender.Engine.Ring;
 
 namespace Slender.Tray.Ring;
 
@@ -53,6 +54,7 @@ internal sealed unsafe class RingCanvas : IDisposable
     private nint _d2d, _dwrite, _rt, _brush, _dashStyle, _roundStyle, _fontCollection, _memDc, _dib, _oldBitmap;
     private void* _bits;
     private readonly Dictionary<(RingFont, int, int), nint> _formats = new();
+    private float _opacity = 1;
     private bool _disposed;
 
     /// <summary>Surface of widthPx x heightPx device pixels drawn in DIPs at <paramref name="dpiScale"/> (1.0 = 96 DPI).</summary>
@@ -192,7 +194,11 @@ internal sealed unsafe class RingCanvas : IDisposable
 
     // ---- frame ----
 
-    public void Begin() => ((delegate* unmanaged<nint, void>)Slot(_rt, 48))(_rt);
+    public void Begin()
+    {
+        ((delegate* unmanaged<nint, void>)Slot(_rt, 48))(_rt);
+        ResetPart();
+    }
 
     public void End()
     {
@@ -206,6 +212,32 @@ internal sealed unsafe class RingCanvas : IDisposable
     {
         var col = ToColor(c);
         ((delegate* unmanaged<nint, Color*, void>)Slot(_rt, 47))(_rt, &col);
+    }
+
+    // ---- animated parts ----
+
+    /// <summary>
+    /// Draws everything after this call transformed about (cx, cy) by the part's scale, rotation and offset, with its opacity
+    /// multiplied into every colour and bitmap. Call <see cref="ResetPart"/> to go back to plain drawing.
+    /// </summary>
+    public void SetPart(in RingPart part, double cx, double cy)
+    {
+        double rad = part.Rotation * Math.PI / 180, cos = Math.Cos(rad) * part.Scale, sin = Math.Sin(rad) * part.Scale;
+        var m = new Matrix
+        {
+            M11 = (float)cos, M12 = (float)sin, M21 = (float)-sin, M22 = (float)cos,
+            Dx = (float)(cx + part.Dx - (cos * cx - sin * cy)),
+            Dy = (float)(cy + part.Dy - (sin * cx + cos * cy)),
+        };
+        ((delegate* unmanaged<nint, Matrix*, void>)Slot(_rt, 30))(_rt, &m);
+        _opacity = (float)Math.Clamp(part.Opacity, 0, 1);
+    }
+
+    public void ResetPart()
+    {
+        var m = new Matrix { M11 = 1, M22 = 1 };
+        ((delegate* unmanaged<nint, Matrix*, void>)Slot(_rt, 30))(_rt, &m);
+        _opacity = 1;
     }
 
     // ---- shapes ----
@@ -304,7 +336,7 @@ internal sealed unsafe class RingCanvas : IDisposable
     {
         if (bitmap == 0) return;
         var dest = new RectF { L = (float)x, T = (float)y, R = (float)(x + w), B = (float)(y + h) };
-        ((delegate* unmanaged<nint, nint, RectF*, float, int, RectF*, void>)Slot(_rt, 26))(_rt, bitmap, &dest, (float)opacity, 1, null);
+        ((delegate* unmanaged<nint, nint, RectF*, float, int, RectF*, void>)Slot(_rt, 26))(_rt, bitmap, &dest, (float)(opacity * _opacity), 1, null);
     }
 
     // ---- text ----
@@ -391,7 +423,7 @@ internal sealed unsafe class RingCanvas : IDisposable
         ((delegate* unmanaged<nint, Color*, void>)Slot(_brush, 8))(_brush, &col);
     }
 
-    private static Color ToColor(RingColor c) => new() { R = c.R, G = c.G, B = c.B, A = c.A };
+    private Color ToColor(RingColor c) => new() { R = c.R, G = c.G, B = c.B, A = c.A * _opacity };
     private static Pt P(double x, double y) => new() { X = (float)x, Y = (float)y };
     private static Pt P((double X, double Y) p) => P(p.X, p.Y);
 
