@@ -1,0 +1,522 @@
+<title>Slender Thumb Wheel Card</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600&family=JetBrains+Mono:wght@500&family=Archivo:wdth,wght@125,800&display=swap">
+<style>
+/* Layout: two bands. Band A = four thumb wheel card directions in a 2x2 sheet, each a real-size flyout over a slice of the
+   device stage, plan card under it. Band B = four ring open/close motions on live stages with Open / Close / slow-motion.
+   Dark only, by choice: Slender's locked theme is graphite and copper, dark only. */
+:root {
+  --paper: #1B1F23;
+  --paper-2: #22282D;
+  --paper-3: #2A3137;
+  --paper-4: #303840;
+  --rule: #343C43;
+  --ink: #ECEFF1;
+  --ink-off: #6B747B;
+  --muted: #8F989F;
+  --mark: #D9925F;
+  --mark-hi: #E3A272;
+  --mark-soft: rgba(217,146,95,.16);
+  --focus: #F2B38A;
+  --shadow: rgba(0,0,0,.45);
+  --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --head: "Sora", "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+  --display: "Archivo", "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: var(--ui); font-size: 14px; line-height: 1.5; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1140px; margin: 0 auto; display: grid; gap: 40px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--head); font-weight: 600; font-size: 12.5px; color: var(--mark); letter-spacing: .08em; text-transform: uppercase; }
+h1 { font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: clamp(24px, 4vw, 34px); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-family: var(--head); font-weight: 600; font-size: 21px; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--head); font-weight: 600; font-size: 17px; margin: 0; }
+.lede { color: var(--muted); max-width: 72ch; margin: 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 28px; }
+.proto { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.num { font-family: var(--head); font-weight: 600; font-size: 13px; color: var(--mark); letter-spacing: .06em; }
+dl { display: grid; grid-template-columns: 96px 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+dt { color: var(--muted); }
+dd { margin: 0; min-width: 0; }
+.risk dd { color: var(--mark); }
+kbd, .key { font-family: var(--mono); font-size: 11.5px; background: var(--paper-3); border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; white-space: nowrap; color: var(--ink); }
+.foot { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 16px; display: grid; gap: 6px; }
+.foot b { color: var(--ink); font-weight: 600; }
+
+/* ---- the stage slice each card hangs from ---- */
+.stage { position: relative; border: 1px solid var(--rule); border-radius: 12px; background:
+  radial-gradient(120% 90% at 30% 0%, #242A30 0%, var(--paper) 70%); padding: 18px 18px 22px; display: grid; justify-items: start; gap: 8px; overflow: hidden; }
+.anchor { display: inline-grid; gap: 0; padding: 5px 10px; border-radius: 6px; background: var(--mark-soft); box-shadow: inset 0 0 0 1px var(--mark); font-size: 13px; }
+.anchor small { color: var(--muted); font-size: 11.5px; }
+.flyout { width: min(100%, 340px); background: var(--paper-2); border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 14px 34px var(--shadow); padding: 12px 14px 14px; display: grid; gap: 4px; }
+.flyout.wide { width: min(100%, 470px); }
+.fhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); font-size: 12px; }
+.fhead b { color: var(--ink); font-weight: 600; }
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 6px 0; min-height: 34px; }
+.row .t { display: grid; gap: 1px; min-width: 0; }
+.row .t span { font-size: 13px; }
+.row .t small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.quiet { font: inherit; font-size: 12.5px; color: var(--ink); background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 9px; cursor: pointer; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+.quiet:hover { background: var(--paper-4); }
+.quiet:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.quiet.mono { font-family: var(--mono); font-size: 11.5px; }
+.toggle { width: 38px; height: 20px; border-radius: 10px; background: var(--mark); position: relative; border: 0; cursor: pointer; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 4px; left: 22px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); transition: left 90ms ease-out; }
+.toggle[aria-pressed="false"] { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
+.toggle[aria-pressed="false"]::after { left: 4px; background: var(--muted); }
+.slider { display: flex; align-items: center; gap: 8px; }
+.slider input { width: 120px; accent-color: var(--mark); }
+.slider output { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); width: 38px; text-align: right; }
+.inherit { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 4px; }
+.inherit a { color: var(--mark); text-decoration: none; cursor: pointer; }
+
+/* Direction 1: two titled groups */
+.group { display: grid; gap: 0; padding: 8px 0 4px; }
+.group + .group { border-top: 1px solid var(--rule); }
+.glabel { display: flex; justify-content: space-between; align-items: center; font-family: var(--head); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-bottom: 2px; }
+.glabel .key { text-transform: none; letter-spacing: 0; }
+
+/* Direction 2: segmented tabs */
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 3px; gap: 3px; margin: 4px 0 6px; }
+.seg button { font: inherit; font-size: 12.5px; color: var(--muted); background: transparent; border: 0; border-radius: 6px; padding: 5px 6px; cursor: pointer; }
+.seg button[aria-selected="true"] { background: var(--paper-3); color: var(--ink); box-shadow: inset 0 -2px 0 var(--mark); }
+.seg button .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mark); margin-left: 6px; vertical-align: 1px; }
+
+/* Direction 3: the wheel itself */
+.wheelrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 6px 0; }
+.wheelrow .side { display: grid; gap: 2px; min-width: 0; }
+.wheelrow .side.r { justify-items: end; text-align: right; }
+.wheelrow .side small { color: var(--muted); font-size: 11px; }
+.wheelrow .chip { font: inherit; font-size: 12px; background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 3px 8px; color: var(--ink); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wheelrow .chip.mono { font-family: var(--mono); font-size: 11px; }
+.wheelrow.held .chip { box-shadow: inset 0 0 0 1px var(--mark); }
+.wheel { width: 64px; height: 34px; border-radius: 9px; position: relative; overflow: hidden;
+  background: repeating-linear-gradient(90deg, #3A434B 0 3px, #262D33 3px 6px); box-shadow: inset 0 0 0 1px #47515A, inset 0 8px 10px rgba(255,255,255,.06), inset 0 -8px 10px rgba(0,0,0,.4); }
+.wheel.spin { animation: knurl 1.2s linear infinite; }
+@keyframes knurl { to { background-position: 24px 0; } }
+.modehdr { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--muted); padding-top: 6px; }
+.notches { display: flex; gap: 4px; align-items: end; }
+.notches button { width: 12px; border-radius: 3px; border: 0; background: var(--paper-4); cursor: pointer; padding: 0; }
+.notches button.on { background: var(--mark); }
+.notches output { font-size: 11.5px; color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; width: 34px; }
+
+/* Direction 4: two columns */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.col { display: grid; gap: 2px; align-content: start; padding: 4px 12px 4px 0; min-width: 0; }
+.col + .col { border-left: 1px solid var(--rule); padding: 4px 0 4px 12px; }
+.col .ctitle { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-family: var(--head); font-weight: 600; font-size: 12.5px; padding-bottom: 4px; }
+.col .lab { color: var(--muted); font-size: 11.5px; padding-top: 4px; }
+.col .quiet { max-width: 100%; justify-self: start; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; justify-self: start; }
+.stepper button { font: inherit; width: 26px; height: 26px; background: var(--paper-3); border: 0; color: var(--ink); cursor: pointer; }
+.stepper button:hover { background: var(--paper-4); }
+.stepper output { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+@media (max-width: 460px) { .cols { grid-template-columns: 1fr; } .col + .col { border-left: 0; border-top: 1px solid var(--rule); padding: 8px 0 0; } }
+
+/* ---- Band B: ring motion ---- */
+.rstage { position: relative; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; aspect-ratio: 5 / 4; max-width: 100%;
+  background: linear-gradient(#C9CFD3 1px, transparent 1px) 0 0 / 100% 22px, linear-gradient(90deg, #C9CFD3 1px, transparent 1px) 0 0 / 72px 100%, #E9ECEE; }
+.rstage::before { content: ""; position: absolute; inset: 0; background: rgba(20,24,27,.22); }
+.rstage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.btn:hover { background: var(--paper-4); }
+.btn.primary { background: var(--mark); color: var(--paper); border-color: var(--mark); font-weight: 600; }
+.btn.primary:hover { background: var(--mark-hi); }
+.slowmo { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 12.5px; margin-left: auto; }
+.slowmo input { accent-color: var(--mark); }
+.t-label { font-family: var(--head); font-weight: 600; }
+.t-mono { font-family: var(--mono); }
+.timing { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Thumb wheel card and Actions Ring motion · round 2</div>
+    <h1>One card for the whole thumb wheel</h1>
+    <p class="lede">Clicking the thumb wheel on the mouse picture opens this card. It now holds <b>everything the thumb wheel does in the app you picked</b>: the normal turn and its speed, and holding the top button while turning, with its own speed. Shown for <b>Microsoft Edge</b> with your real settings (Ctrl+Tab / Ctrl+Shift+Tab). The sliders, toggles and tabs respond to clicks; the action buttons only look like they open the picker.</p>
+  </header>
+
+  <section aria-labelledby="cards">
+    <h2 id="cards">A. Four card layouts</h2>
+    <div class="grid">
+
+      <article class="proto">
+        <div class="stage">
+          <div class="anchor"><small>Thumb wheel</small>Side scroll</div>
+          <div class="flyout" aria-label="Direction 1 card">
+            <div class="fhead"><span>Thumb wheel · <b>Microsoft Edge</b></span></div>
+            <div class="group">
+              <div class="glabel">Turn</div>
+              <div class="row"><div class="t"><span>Action</span></div><button class="quiet" type="button">Side scroll</button></div>
+              <div class="row"><div class="t"><span>Speed</span></div><div class="slider"><input id="d1s1" type="range" min="25" max="400" step="5" value="100" aria-label="Side scroll speed in Microsoft Edge"><output>100%</output></div></div>
+            </div>
+            <div class="group">
+              <div class="glabel">Hold top button and turn <button class="toggle" type="button" aria-pressed="true" aria-label="Second action in Microsoft Edge"></button></div>
+              <div class="row"><div class="t"><span>Turn right</span></div><button class="quiet mono" type="button">Ctrl+Tab</button></div>
+              <div class="row"><div class="t"><span>Turn left</span></div><button class="quiet mono" type="button">Ctrl+Shift+Tab</button></div>
+              <div class="row"><div class="t"><span>Speed</span></div><div class="slider"><input id="d1s2" type="range" min="25" max="400" step="5" value="100" aria-label="Second action speed in Microsoft Edge"><output>100%</output></div></div>
+            </div>
+            <div class="inherit"><span>Quick press of the top button: ratchet / free-spin</span></div>
+          </div>
+        </div>
+        <div class="num">1 · Two groups</div>
+        <dl>
+          <dt>Spatial</dt><dd>One column, two titled groups split by a rule: Turn, then Hold top button and turn. Each group ends with its own speed.</dd>
+          <dt>Path</dt><dd>Open card, read top to bottom, change one row.</dd>
+          <dt>Off state</dt><dd>Toggle off collapses the hold group to its title line.</dd>
+          <dt class="risk">Risk</dt><dd class="risk">Plain. The safest, but the tallest card (about 330 px).</dd>
+        </dl>
+      </article>
+
+      <article class="proto">
+        <div class="stage">
+          <div class="anchor"><small>Thumb wheel</small>Side scroll</div>
+          <div class="flyout" aria-label="Direction 2 card">
+            <div class="fhead"><span>Thumb wheel · <b>Microsoft Edge</b></span></div>
+            <div class="seg" role="tablist" aria-label="Thumb wheel modes">
+              <button type="button" role="tab" aria-selected="false" data-tab="turn">Turn</button>
+              <button type="button" role="tab" aria-selected="true" data-tab="hold">Hold top button<span class="dot" aria-label="on"></span></button>
+            </div>
+            <div data-panel="turn" hidden>
+              <div class="row"><div class="t"><span>Action</span><small>What a normal turn does</small></div><button class="quiet" type="button">Side scroll</button></div>
+              <div class="row"><div class="t"><span>Speed</span></div><div class="slider"><input id="d2s1" type="range" min="25" max="400" step="5" value="100" aria-label="Side scroll speed"><output>100%</output></div></div>
+            </div>
+            <div data-panel="hold">
+              <div class="row"><div class="t"><span>Second action</span><small>Hold the top button and turn</small></div><button class="toggle" type="button" aria-pressed="true" aria-label="Second action in Microsoft Edge"></button></div>
+              <div class="row"><div class="t"><span>Turn right</span></div><button class="quiet mono" type="button">Ctrl+Tab</button></div>
+              <div class="row"><div class="t"><span>Turn left</span></div><button class="quiet mono" type="button">Ctrl+Shift+Tab</button></div>
+              <div class="row"><div class="t"><span>Speed</span></div><div class="slider"><input id="d2s2" type="range" min="25" max="400" step="5" value="100" aria-label="Second action speed"><output>100%</output></div></div>
+            </div>
+            <div class="inherit"><span>Own settings for Edge</span><a role="button" tabindex="0">Use All apps</a></div>
+          </div>
+        </div>
+        <div class="num">2 · Two tabs</div>
+        <dl>
+          <dt>Spatial</dt><dd>A two-way switch at the top: Turn, Hold top button. Only one set of rows shows at a time; a copper dot marks the hold tab as on.</dd>
+          <dt>Path</dt><dd>Open card (lands on Hold when it's on), change a row, flip to Turn for side scroll.</dd>
+          <dt>Off state</dt><dd>Hold tab shows only the toggle and a one-line explanation.</dd>
+          <dt class="risk">Risk</dt><dd class="risk">Hides half the settings behind a tab. Compact (about 230 px).</dd>
+        </dl>
+      </article>
+
+      <article class="proto">
+        <div class="stage">
+          <div class="anchor"><small>Thumb wheel</small>Side scroll</div>
+          <div class="flyout" aria-label="Direction 3 card">
+            <div class="fhead"><span>Thumb wheel · <b>Microsoft Edge</b></span></div>
+            <div class="modehdr"><span>Turn</span><div class="notches" data-notches="3" aria-label="Side scroll speed"></div></div>
+            <div class="wheelrow">
+              <div class="side"><button class="chip" type="button">Scroll left</button></div>
+              <div class="wheel" aria-hidden="true"></div>
+              <div class="side r"><button class="chip" type="button">Scroll right</button></div>
+            </div>
+            <div class="modehdr"><span>Holding top button <button class="toggle" type="button" aria-pressed="true" aria-label="Second action in Microsoft Edge" style="vertical-align: middle; margin-left: 6px;"></button></span><div class="notches" data-notches="3" aria-label="Second action speed"></div></div>
+            <div class="wheelrow held">
+              <div class="side"><button class="chip mono" type="button">Ctrl+Shift+Tab</button><small>Previous tab</small></div>
+              <div class="wheel spin" aria-hidden="true"></div>
+              <div class="side r"><button class="chip mono" type="button">Ctrl+Tab</button><small>Next tab</small></div>
+            </div>
+            <div class="inherit"><span>Quick press of the top button: ratchet / free-spin</span></div>
+          </div>
+        </div>
+        <div class="num">3 · The wheel itself</div>
+        <dl>
+          <dt>Spatial</dt><dd>A drawn thumb wheel sits between its two directions, once for a normal turn and once for the held turn. Left action on the left, right on the right, so the card reads like the motion.</dd>
+          <dt>Speed</dt><dd>Seven notches like Haptic feel (25, 50, 75, 100, 150, 200, 400 %) instead of a slider.</dd>
+          <dt>Off state</dt><dd>The held wheel greys out and its chips read "Nothing".</dd>
+          <dt class="risk">Risk</dt><dd class="risk">The drawn wheel. Most direct, the knurl gently turns on the held row.</dd>
+        </dl>
+      </article>
+
+      <article class="proto">
+        <div class="stage">
+          <div class="anchor"><small>Thumb wheel</small>Side scroll</div>
+          <div class="flyout wide" aria-label="Direction 4 card">
+            <div class="fhead"><span>Thumb wheel · <b>Microsoft Edge</b></span><span>Own settings</span></div>
+            <div class="cols">
+              <div class="col">
+                <div class="ctitle">Turn</div>
+                <div class="lab">Action</div><button class="quiet" type="button">Side scroll</button>
+                <div class="lab">Speed</div><div class="stepper" data-step><button type="button" aria-label="Slower">−</button><output>100%</output><button type="button" aria-label="Faster">+</button></div>
+              </div>
+              <div class="col">
+                <div class="ctitle">Hold top button <button class="toggle" type="button" aria-pressed="true" aria-label="Second action in Microsoft Edge"></button></div>
+                <div class="lab">Right · left</div>
+                <button class="quiet mono" type="button">Ctrl+Tab</button>
+                <button class="quiet mono" type="button">Ctrl+Shift+Tab</button>
+                <div class="lab">Speed</div><div class="stepper" data-step><button type="button" aria-label="Slower">−</button><output>100%</output><button type="button" aria-label="Faster">+</button></div>
+              </div>
+            </div>
+            <div class="inherit"><span>Quick press of the top button: ratchet / free-spin</span><a role="button" tabindex="0">Use All apps</a></div>
+          </div>
+        </div>
+        <div class="num">4 · Side by side</div>
+        <dl>
+          <dt>Spatial</dt><dd>A wider, shorter card: Turn on the left, Hold top button on the right, matching columns. Speeds are − / + steppers in 25 % steps.</dd>
+          <dt>Path</dt><dd>Everything visible at once, compare the two modes at a glance.</dd>
+          <dt>Off state</dt><dd>Right column dims to the toggle line.</dd>
+          <dt class="risk">Risk</dt><dd class="risk">Width. About 470 px wide, so it may need to open to the side of the label.</dd>
+        </dl>
+      </article>
+
+    </div>
+  </section>
+
+  <section aria-labelledby="motion">
+    <h2 id="motion">B. Four ways the ring opens and closes</h2>
+    <p class="lede">Your Bezel ring with example slots. Press <b>Open</b> and <b>Close</b>, or tick <b>Slow motion</b> to watch each one at a quarter speed. In Slender the ring takes your choice from the first frame: you never wait for the animation to finish.</p>
+    <div class="grid" id="motions"></div>
+  </section>
+
+  <div class="foot">
+    <div><b>Both parts:</b> Slender's graphite and copper. Card sizes are real flyout sizes. The ring is drawn by the tray (Direct2D), so motion is a short burst of redraws, about 15 frames, then nothing.</div>
+    <div><b>Reduced motion:</b> when Windows "Animation effects" is off, every ring style just fades in over 90 ms.</div>
+    <div><b>Reply with</b> a card number and a motion number, a mix ("card 3 with 4's steppers, motion 2"), or changes.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---- band A interactions ----
+  document.querySelectorAll('.slider input').forEach(r => {
+    const out = r.nextElementSibling;
+    const upd = () => { out.textContent = r.value + '%'; };
+    r.addEventListener('input', upd); upd();
+  });
+  document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', () => {
+    t.setAttribute('aria-pressed', t.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  }));
+  document.querySelectorAll('.seg').forEach(seg => {
+    const card = seg.closest('.flyout');
+    seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+      card.querySelectorAll('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== b.dataset.tab; });
+    }));
+  });
+  const steps = [25, 50, 75, 100, 150, 200, 400];
+  document.querySelectorAll('.notches').forEach(n => {
+    let sel = +n.dataset.notches;
+    const out = document.createElement('output');
+    const draw = () => {
+      n.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i <= sel));
+      out.textContent = steps[sel] + '%';
+    };
+    steps.forEach((s, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.style.height = (6 + i * 2) + 'px';
+      b.setAttribute('aria-label', s + '%');
+      b.addEventListener('click', () => { sel = i; draw(); });
+      n.appendChild(b);
+    });
+    n.appendChild(out); draw();
+  });
+  document.querySelectorAll('[data-step]').forEach(s => {
+    const [minus, out, plus] = s.children; let v = 100;
+    const set = d => { v = Math.max(25, Math.min(400, v + d)); out.textContent = v + '%'; };
+    minus.addEventListener('click', () => set(-25)); plus.addEventListener('click', () => set(25));
+  });
+
+  // ---- band B: the Bezel ring and four motions ----
+  const NS = 'http://www.w3.org/2000/svg';
+  const css = getComputedStyle(document.documentElement);
+  const C = k => css.getPropertyValue(k).trim();
+  const slots = [
+    ['Copy', 'Ctrl+C'], ['Paste', 'Ctrl+V'], ['Snip', 'Win+Shift+S'], ['Volume', 'wheel'],
+    ['Zoom', 'wheel'], ['Calculator', 'app'], ['Mute Teams', 'Ctrl+Shift+M'], ['Emoji', 'Win+.'],
+  ];
+  const CX = 250, CY = 200, R0 = 52, R1 = 132, RIM = 140;
+  const el = (n, a, p) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+  const pol = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+  const wedgePath = (a0, a1, r0, r1) => {
+    const [x0, y0] = pol(r1, a0), [x1, y1] = pol(r1, a1), [x2, y2] = pol(r0, a1), [x3, y3] = pol(r0, a0);
+    return `M${x0} ${y0} A${r1} ${r1} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${r0} ${r0} 0 0 0 ${x3} ${y3}Z`;
+  };
+
+  function buildRing(svg) {
+    const root = el('g', { opacity: 0 }, svg);
+    const rim = el('circle', { cx: CX, cy: CY, r: RIM, fill: 'none', stroke: C('--rule'), 'stroke-width': 6, 'stroke-dasharray': '1.5 3.2' }, root);
+    const disc = el('circle', { cx: CX, cy: CY, r: R1 + 2, fill: C('--paper'), opacity: .94 }, root);
+    const wedges = slots.map(([name, sc], i) => {
+      const a0 = i * 45 - 22.5 + 1.2, a1 = i * 45 + 22.5 - 1.2;
+      const g = el('g', {}, root);
+      const chosen = i === 0;
+      el('path', { d: wedgePath(a0, a1, R0 + 6, R1), fill: chosen ? C('--paper-3') : C('--paper-2'), stroke: chosen ? C('--mark') : C('--rule'), 'stroke-width': chosen ? 1.5 : 1 }, g);
+      if (chosen) el('path', { d: wedgePath(a0 + 2, a1 - 2, R1 + 4, R1 + 9), fill: C('--mark') }, g);
+      const [lx, ly] = pol((R0 + R1) / 2 + 4, i * 45);
+      const t = el('text', { x: lx, y: ly - 3, 'text-anchor': 'middle', class: 't-label', 'font-size': 12.5, fill: C('--ink') }, g); t.textContent = name;
+      const s = el('text', { x: lx, y: ly + 12, 'text-anchor': 'middle', class: 't-mono', 'font-size': 9.5, fill: C('--muted') }, g); s.textContent = sc;
+      return { g, mid: i * 45 };
+    });
+    const hub = el('g', {}, root);
+    el('circle', { cx: CX, cy: CY, r: R0, fill: C('--paper-2'), stroke: C('--rule') }, hub);
+    const h1 = el('text', { x: CX, y: CY - 2, 'text-anchor': 'middle', class: 't-label', 'font-size': 14, fill: C('--ink') }, hub); h1.textContent = 'Copy';
+    const h2 = el('text', { x: CX, y: CY + 15, 'text-anchor': 'middle', class: 't-mono', 'font-size': 10, fill: C('--mark') }, hub); h2.textContent = 'Ctrl+C';
+    // cursor
+    const cur = el('path', { d: `M${CX - 4} ${CY - 6} l0 15 l4 -4 l3 6 l2 -1 l-3 -6 l5 0 z`, fill: '#fff', stroke: '#111', 'stroke-width': 1 }, svg);
+    return { root, rim, disc, wedges, hub, cur };
+  }
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const origin = `${CX}px ${CY}px`;
+  const play = (node, frames, ms, delay, easing) => node.animate(frames, { duration: ms, delay, easing, fill: 'both' });
+
+  const motions = [
+    {
+      name: 'Pop', timing: 'open 170 ms · close 110 ms',
+      plan: ['The whole ring grows out of the cursor with a small overshoot and fades in together.', 'Fastest to read; feels like the Windows Start menu.', 'Nothing staggered, so it never feels slow.'],
+      risk: 'Safe. Least character.',
+      open(r, k) {
+        r.root.style.transformOrigin = origin;
+        return [play(r.root, [{ opacity: 0, transform: 'scale(.72)' }, { opacity: 1, transform: 'scale(1.04)', offset: .7 }, { opacity: 1, transform: 'scale(1)' }], 170 * k, 0, 'cubic-bezier(.2,.8,.3,1)')];
+      },
+      close(r, k) {
+        return [play(r.root, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.86)' }], 110 * k, 0, 'cubic-bezier(.4,0,1,1)')];
+      },
+    },
+    {
+      name: 'Clockwise bloom', timing: 'open 300 ms · close 160 ms',
+      plan: ['Hub appears first, then each wedge grows out from the hub one after another, clockwise from 12 o\'clock.', 'Close runs the other way, anticlockwise, twice as fast.', 'Your chosen slot (12 o\'clock) is always first.'],
+      risk: 'The stagger. Lively; could feel slow if you open the ring many times an hour.',
+      open(r, k) {
+        const a = [play(r.root, [{ opacity: 1 }, { opacity: 1 }], 1, 0, 'linear')];
+        r.hub.style.transformOrigin = origin; r.rim.style.transformOrigin = origin; r.disc.style.transformOrigin = origin;
+        a.push(play(r.hub, [{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)' }], 110 * k, 0, 'cubic-bezier(.2,.8,.3,1)'));
+        a.push(play(r.disc, [{ opacity: 0, transform: 'scale(.5)' }, { opacity: .94, transform: 'scale(1)' }], 180 * k, 0, 'ease-out'));
+        a.push(play(r.rim, [{ opacity: 0, transform: 'rotate(-60deg)' }, { opacity: 1, transform: 'rotate(0)' }], 300 * k, 0, 'cubic-bezier(.2,.8,.3,1)'));
+        r.wedges.forEach((w, i) => {
+          w.g.style.transformOrigin = origin;
+          a.push(play(w.g, [{ opacity: 0, transform: 'scale(.35)' }, { opacity: 1, transform: 'scale(1.05)', offset: .75 }, { opacity: 1, transform: 'scale(1)' }], 130 * k, (40 + i * 22) * k, 'cubic-bezier(.2,.8,.3,1)'));
+        });
+        return a;
+      },
+      close(r, k) {
+        const a = [];
+        r.wedges.slice().reverse().forEach((w, i) => a.push(play(w.g, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.5)' }], 80 * k, i * 10 * k, 'ease-in')));
+        a.push(play(r.hub, [{ opacity: 1 }, { opacity: 0 }], 80 * k, 80 * k, 'ease-in'));
+        a.push(play(r.root, [{ opacity: 1 }, { opacity: 0 }], 60 * k, 100 * k, 'linear'));
+        return a;
+      },
+    },
+    {
+      name: 'Sweep', timing: 'open 220 ms · close 140 ms',
+      plan: ['A clock hand sweeps clockwise from 12 and reveals the ring behind it, like a radar.', 'Labels fade in just behind the hand.', 'Close sweeps it away anticlockwise.'],
+      risk: 'The reveal line. Distinctive and very "dial"; one continuous motion, no bounce.',
+      open(r, k, svg) { return sweep(r, svg, k, true); },
+      close(r, k, svg) { return sweep(r, svg, k, false); },
+    },
+    {
+      name: 'Fly in', timing: 'open 260 ms · close 150 ms',
+      plan: ['Each wedge slides in from outside along its own direction and lands with a slight twist, clockwise one after another.', 'The knurled rim spins a quarter turn as it settles, like turning a dial.', 'Close throws the wedges back out.'],
+      risk: 'Most motion. The most playful; also the busiest.',
+      open(r, k) {
+        const a = [play(r.root, [{ opacity: 1 }, { opacity: 1 }], 1, 0, 'linear')];
+        r.rim.style.transformOrigin = origin;
+        a.push(play(r.rim, [{ opacity: 0, transform: 'rotate(90deg) scale(1.15)' }, { opacity: 1, transform: 'rotate(0) scale(1)' }], 260 * k, 0, 'cubic-bezier(.2,.9,.3,1)'));
+        a.push(play(r.disc, [{ opacity: 0 }, { opacity: .94 }], 140 * k, 0, 'ease-out'));
+        a.push(play(r.hub, [{ opacity: 0 }, { opacity: 1 }], 120 * k, 80 * k, 'ease-out'));
+        r.wedges.forEach((w, i) => {
+          const rad = (w.mid - 90) * Math.PI / 180, dx = Math.cos(rad) * 46, dy = Math.sin(rad) * 46;
+          w.g.style.transformOrigin = origin;
+          a.push(play(w.g, [
+            { opacity: 0, transform: `translate(${dx}px, ${dy}px) rotate(-10deg)` },
+            { opacity: 1, transform: `translate(${-dx * .06}px, ${-dy * .06}px) rotate(1.5deg)`, offset: .75 },
+            { opacity: 1, transform: 'translate(0,0) rotate(0)' }], 170 * k, i * 18 * k, 'cubic-bezier(.2,.8,.3,1)'));
+        });
+        return a;
+      },
+      close(r, k) {
+        const a = [];
+        r.wedges.forEach((w, i) => {
+          const rad = (w.mid - 90) * Math.PI / 180, dx = Math.cos(rad) * 40, dy = Math.sin(rad) * 40;
+          a.push(play(w.g, [{ opacity: 1, transform: 'translate(0,0)' }, { opacity: 0, transform: `translate(${dx}px, ${dy}px)` }], 110 * k, i * 6 * k, 'ease-in'));
+        });
+        a.push(play(r.root, [{ opacity: 1 }, { opacity: 0 }], 70 * k, 90 * k, 'linear'));
+        return a;
+      },
+    },
+  ];
+
+  // Sweep: a conic mask grown with requestAnimationFrame (SVG has no conic gradient).
+  function sweep(r, svg, k, opening) {
+    const id = svg.dataset.mask;
+    const path = svg.querySelector('#' + id + ' path');
+    const hand = svg.querySelector('.hand');
+    r.root.setAttribute('mask', `url(#${id})`);
+    r.root.getAnimations().forEach(x => x.cancel());
+    r.root.style.opacity = 1; r.root.setAttribute('opacity', 1);
+    const dur = (opening ? 220 : 140) * k, t0 = performance.now();
+    return [{ finished: new Promise(done => {
+      const step = now => {
+        let p = Math.min(1, (now - t0) / dur);
+        p = opening ? 1 - Math.pow(1 - p, 2.2) : p * p;
+        const deg = opening ? 360 * p : 360 * (1 - p);
+        if (deg >= 359.9) path.setAttribute('d', `M${CX} ${CY - 300} A300 300 0 1 1 ${CX - .01} ${CY - 300}Z`);
+        else if (deg <= .1) path.setAttribute('d', '');
+        else { const [x, y] = pol(300, deg); path.setAttribute('d', `M${CX} ${CY} L${CX} ${CY - 300} A300 300 0 ${deg > 180 ? 1 : 0} 1 ${x} ${y}Z`); }
+        const [hx, hy] = pol(RIM + 6, deg);
+        hand.setAttribute('x2', hx); hand.setAttribute('y2', hy);
+        hand.setAttribute('opacity', p < 1 ? 1 : 0);
+        if (p < 1) requestAnimationFrame(step);
+        else { if (!opening) r.root.style.opacity = 0; hand.setAttribute('opacity', 0); done(); }
+      };
+      requestAnimationFrame(step);
+    }) }];
+  }
+
+  const host = document.getElementById('motions');
+  motions.forEach((m, idx) => {
+    const art = document.createElement('article'); art.className = 'proto';
+    art.innerHTML = `
+      <div class="rstage"><svg viewBox="0 0 500 400" role="img" aria-label="${m.name} ring motion"></svg></div>
+      <div class="controls">
+        <button class="btn primary" type="button" data-act="open">Open</button>
+        <button class="btn" type="button" data-act="close">Close</button>
+        <button class="btn" type="button" data-act="both">Open and close</button>
+        <label class="slowmo"><input id="slow${idx}" type="checkbox"> Slow motion</label>
+      </div>
+      <div class="num">${idx + 1} · ${m.name} <span class="timing">${m.timing}</span></div>
+      <dl>
+        <dt>Open</dt><dd>${m.plan[0]}</dd>
+        <dt>Close</dt><dd>${m.plan[1]}</dd>
+        <dt>Feel</dt><dd>${m.plan[2]}</dd>
+        <dt class="risk">Risk</dt><dd class="risk">${m.risk}</dd>
+      </dl>`;
+    host.appendChild(art);
+    const svg = art.querySelector('svg');
+    const maskId = 'sweepmask' + idx; svg.dataset.mask = maskId;
+    const defs = el('defs', {}, svg);
+    const mask = el('mask', { id: maskId, maskUnits: 'userSpaceOnUse', x: 0, y: 0, width: 500, height: 400 }, defs);
+    el('path', { d: '', fill: '#fff' }, mask);
+    const ring = buildRing(svg);
+    el('line', { class: 'hand', x1: CX, y1: CY, x2: CX, y2: CY - RIM, stroke: C('--mark'), 'stroke-width': 2.5, 'stroke-linecap': 'round', opacity: 0 }, svg);
+    let open = false, busy = null;
+    const all = () => [ring.root, ring.rim, ring.disc, ring.hub, ...ring.wedges.map(w => w.g)];
+    const reset = () => { all().forEach(n => n.getAnimations().forEach(a => a.cancel())); ring.root.removeAttribute('mask'); };
+    const k = () => (art.querySelector('input[type=checkbox]').checked ? 4 : 1);
+    async function run(opening) {
+      if (busy) await busy;
+      if (opening === open) return;
+      if (reduce) {
+        reset();
+        busy = Promise.all([play(ring.root, opening ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }], 90, 0, 'linear').finished]);
+      } else {
+        if (opening || m.name !== 'Sweep') reset();
+        const anims = (opening ? m.open : m.close)(ring, k(), svg);
+        busy = Promise.all(anims.map(a => a.finished));
+      }
+      open = opening; await busy; busy = null;
+    }
+    art.querySelector('[data-act=open]').addEventListener('click', () => run(true));
+    art.querySelector('[data-act=close]').addEventListener('click', () => run(false));
+    art.querySelector('[data-act=both]').addEventListener('click', async () => { await run(false); await run(true); await new Promise(r => setTimeout(r, 700 * k())); await run(false); });
+    // Resting state: the ring is shown open so the page reads complete before anything is pressed.
+    ring.root.setAttribute('opacity', 1); open = true;
+  });
+})();
+</script>
