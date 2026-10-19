@@ -119,7 +119,8 @@ public static class ThumbWheelDivertPolicy
         if (excelColumns && config.Excel.ThumbWheelScrollsColumns && process == "excel") return true;
         if (touchSupported != false
             && (SlenderEngine.EffectiveBinding(config, process, SlenderEngine.ThumbWheelTouchBindingId) is not ActionSpec.None
-                || SlenderEngine.EffectiveBinding(config, process, SlenderEngine.ThumbWheelTapBindingId) is not ActionSpec.None)) return true;
+                || SlenderEngine.EffectiveBinding(config, process, SlenderEngine.ThumbWheelTapBindingId) is not ActionSpec.None
+                || SlenderEngine.EffectiveBinding(config, process, SlenderEngine.ThumbWheelDoubleTapBindingId) is not ActionSpec.None)) return true;
         return false;
     }
 }

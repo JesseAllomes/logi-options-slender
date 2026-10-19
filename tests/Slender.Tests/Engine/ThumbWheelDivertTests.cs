@@ -421,6 +421,50 @@ public class ThumbWheelDivertTests
         Assert.DoesNotContain("F13", r.Keys());
     }
 
+    private static SlenderConfig DoubleCfg() => WithDefault(new()
+    {
+        [SlenderEngine.ThumbWheelTapBindingId] = new ActionSpec.Keys("Ctrl+Z"),
+        [SlenderEngine.ThumbWheelDoubleTapBindingId] = new ActionSpec.Keys("Ctrl+Y"),
+    });
+
+    private static void Tap(Rig r, long at)
+    {
+        r.Now = at;
+        r.Mouse.Rotate(0, touch: true);
+        r.Now = at + 80;
+        r.Mouse.Rotate(0, touch: false);
+    }
+
+    [Fact]
+    public void Two_quick_taps_are_a_double_tap_and_the_single_tap_never_runs()
+    {
+        var r = new Rig(DoubleCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        Tap(r, 1000);
+        Tap(r, 1200);
+        Assert.True(Until(() => r.Keys().Contains("Ctrl+Y")));
+        Thread.Sleep(SlenderEngine.DoubleTapMs + 200);
+        Assert.Equal(["Ctrl+Y"], r.Keys());
+    }
+
+    [Fact]
+    public void One_tap_waits_for_a_possible_second_then_runs()
+    {
+        var r = new Rig(DoubleCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        Tap(r, 1000);
+        Assert.Empty(r.Keys()); // still waiting
+        Assert.True(Until(() => r.Keys().Contains("Ctrl+Z")));
+        Assert.Equal(["Ctrl+Z"], r.Keys());
+    }
+
+    [Fact]
+    public void Double_tap_alone_diverts_the_wheel()
+    {
+        var cfg = WithDefault(new() { [SlenderEngine.ThumbWheelDoubleTapBindingId] = new ActionSpec.Keys("Ctrl+Y") });
+        Assert.True(ThumbWheelDivertPolicy.Wanted(cfg, "notepad", false, true));
+    }
+
     [Fact]
     public void A_turn_end_report_does_not_lift_the_thumb()
     {

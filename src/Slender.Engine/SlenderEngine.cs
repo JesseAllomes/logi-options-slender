@@ -28,6 +28,8 @@ public sealed class SlenderEngine : IDisposable
     private ActionSpec? _touchAction; // rest action that is held (a mouse button or the ring), released when the thumb lifts (engine queue)
     private IDisposable? _restTimer;  // engine queue: fires the rest action once the thumb has rested still
     private int _touchSeq;            // engine queue: bumped on every touch down, lift and turn so a stale rest timer does nothing
+    private IDisposable? _tapTimer;   // engine queue: a single tap waiting to see whether a second one follows
+    private int _tapSeq;              // engine queue: bumped when a waiting single tap is taken by a double tap
     private readonly ColumnScrollAccumulator _accumulator = new();
     private readonly ColumnScrollAccumulator _secondAccumulator = new();
     private readonly GestureTracker _gesture = new();
@@ -612,6 +614,8 @@ public sealed class SlenderEngine : IDisposable
     public const ushort ThumbWheelTouchBindingId = 0xF151;
     /// <summary>Pseudo control id for "thumb wheel tap" (touch then release within 250 ms and under a quarter notch of rotation).</summary>
     public const ushort ThumbWheelTapBindingId = 0xF152;
+    /// <summary>Pseudo control id for "thumb wheel double tap" (a second tap within DoubleTapMs of the first).</summary>
+    public const ushort ThumbWheelDoubleTapBindingId = 0xF153;
     private const int MaxNotchesPerEvent = 10;
 
     /// <summary>
@@ -838,10 +842,38 @@ public sealed class SlenderEngine : IDisposable
             if (held is ActionSpec.ActionsRing) RaiseRing(false);
             else if (held is { } h) Run(h, false);
             if (!tap) return;
-            var action = ResolveAction(ThumbWheelTapBindingId);
-            if (action is not ActionSpec.None) RunGestureAction(action);
+            if (ResolveAction(ThumbWheelDoubleTapBindingId) is ActionSpec.None)
+            {
+                RunTap(ThumbWheelTapBindingId); // no double tap here: a single tap runs at once
+                return;
+            }
+
+            if (_tapTimer is not null)
+            {
+                _tapTimer.Dispose(); // the second tap: the waiting single tap never runs
+                _tapTimer = null;
+                _tapSeq++;
+                RunTap(ThumbWheelDoubleTapBindingId);
+                return;
+            }
+
+            var seq = ++_tapSeq;
+            _tapTimer = _holdTimer.Schedule(DoubleTapMs, () =>
+            {
+                try { _queue.Post(() => { if (seq != _tapSeq) return; _tapTimer = null; RunTap(ThumbWheelTapBindingId); }); }
+                catch (Exception ex) { SafeLog("thumb wheel tap could not be queued", ex); }
+            });
         }
         catch (Exception ex) { _log.Error("thumb wheel tap failed", ex); }
+    }
+
+    /// <summary>Longest gap between two taps that still makes a double tap. With a double tap set, a single tap waits this long.</summary>
+    internal const int DoubleTapMs = 300;
+
+    private void RunTap(ushort id)
+    {
+        var action = ResolveAction(id);
+        if (action is not ActionSpec.None) RunGestureAction(action);
     }
 
     // ---- thumb wheel second action: hold the top button (engine queue) ----

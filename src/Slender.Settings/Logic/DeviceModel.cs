@@ -26,6 +26,9 @@ public static class DeviceIds
     /// <summary>Thumb wheel tap (touch then lift within 250 ms and under a quarter notch of rotation). Needs the wheel diverted in that app.</summary>
     public const ushort ThumbWheelTapPseudoId = 0xF152;
 
+    /// <summary>Thumb wheel double tap (a second tap within 300 ms). With it set, a single tap waits 300 ms first.</summary>
+    public const ushort ThumbWheelDoubleTapPseudoId = 0xF153;
+
     /// <summary>Gesture swipes are not controls either: pseudo ids 0xF1C0 + (int)GestureDirection, stored in Profile.GestureSwipes.</summary>
     public const ushort SwipePseudoIdBase = 0xF1C0;
 
@@ -57,6 +60,7 @@ public static class ControlCatalog
         new(DeviceIds.ThumbWheelPseudoId, "Thumb wheel", "Scroll sideways"),
         new(DeviceIds.ThumbWheelTouchPseudoId, "Thumb wheel touch", "Not assigned"),
         new(DeviceIds.ThumbWheelTapPseudoId, "Thumb wheel tap", "Not assigned"),
+        new(DeviceIds.ThumbWheelDoubleTapPseudoId, "Thumb wheel double tap", "Not assigned"),
         new(ControlId.Forward, "Forward", "Forward"),
         new(ControlId.Back, "Back", "Back"),
         new(ControlId.Gesture, "Gesture click", "Not assigned"),
@@ -70,7 +74,7 @@ public static class ControlCatalog
     /// <summary>The four swipe rows, in Up, Down, Left, Right order.</summary>
     /// <summary>The thumb wheel touch and tap rows, shown next to the thumb wheel.</summary>
     public static IReadOnlyList<ControlInfo> ThumbTouchControls =>
-        MouseControls.Where(c => c.Id is DeviceIds.ThumbWheelTouchPseudoId or DeviceIds.ThumbWheelTapPseudoId).ToList();
+        MouseControls.Where(c => c.Id is DeviceIds.ThumbWheelTouchPseudoId or DeviceIds.ThumbWheelTapPseudoId or DeviceIds.ThumbWheelDoubleTapPseudoId).ToList();
 
     public static IReadOnlyList<ControlInfo> SwipeControls => MouseControls.Where(c => DeviceIds.TryGetSwipe(c.Id, out _)).ToList();
 

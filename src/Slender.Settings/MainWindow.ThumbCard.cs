@@ -392,7 +392,12 @@ public sealed partial class MainWindow
         var grid = new Grid { ColumnSpacing = 8, Padding = new Thickness(0, 3, 0, 3) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        string what = control.Id == DeviceIds.ThumbWheelTouchPseudoId ? "Rest thumb on the wheel" : "Tap the wheel";
+        string what = control.Id switch
+        {
+            DeviceIds.ThumbWheelTouchPseudoId => "Rest thumb on the wheel",
+            DeviceIds.ThumbWheelDoubleTapPseudoId => "Double tap the wheel",
+            _ => "Tap the wheel",
+        };
         var label = Ui.Text(what, 12.5);
         label.VerticalAlignment = VerticalAlignment.Center;
         grid.Children.Add(label);
