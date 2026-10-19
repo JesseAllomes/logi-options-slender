@@ -85,7 +85,48 @@ public sealed partial class MainWindow
 
         panel.Children.Add(Field("Labels", RingChoice("Labels", ["Always", "Only the selected slot"], (int)a.Labels, i => Edit(x => x with { Labels = (RingLabels)i }))));
         panel.Children.Add(Field("Position", RingChoice("Position", ["At the cursor", "Centre of the screen"], (int)a.Position, i => Edit(x => x with { Position = (RingPosition)i }))));
+
+        RingOpening opening = a.Opening;
+        TextBlock speedText = null!;
+        void ShowSpeed(RingAnimationSpeed speed) => speedText.Text = RingSpeedText(opening, speed);
+
+        panel.Children.Add(Field("Opening", RingChoice("Opening", ["Off", "Pop", "Clockwise bloom", "Fly in"], (int)a.Opening, i =>
+        {
+            opening = (RingOpening)i;
+            ShowSpeed(_config.Config.Ring.AnimationSpeed);
+            Edit(x => x with { Opening = opening });
+        })));
+
+        Slider speed = PageSlider("Animation speed", 0, 4, 1, (int)a.AnimationSpeed,
+            v => Edit(x => x with { AnimationSpeed = (RingAnimationSpeed)(int)v }), v => string.Empty, out TextBlock readout);
+        speedText = readout;
+        ShowSpeed(a.AnimationSpeed);
+        speed.Width = 220;
+        speed.TickFrequency = 1;
+        speed.TickPlacement = TickPlacement.Outside;
+        readout.Width = double.NaN;
+        readout.TextAlignment = TextAlignment.Left;
+        readout.TextWrapping = TextWrapping.Wrap;
+        speed.ValueChanged += (_, e) => ShowSpeed((RingAnimationSpeed)(int)e.NewValue);
+        var speedField = new StackPanel { Spacing = 6 };
+        speedField.Children.Add(speed);
+        speedField.Children.Add(readout);
+        panel.Children.Add(Field("Animation speed", speedField));
         return panel;
+    }
+
+    /// <summary>"Normal · opens in 790 ms, closes in 590 ms", from the same timing the tray animates with.</summary>
+    private static string RingSpeedText(RingOpening opening, RingAnimationSpeed speed)
+    {
+        string name = speed.ToString();
+        if (opening == RingOpening.Off)
+        {
+            return $"{name} · fades in and out in {RingMotion.FadeMs:0} ms";
+        }
+
+        int open = (int)Math.Round(RingMotion.OpenMs(opening, speed) / 10) * 10;
+        int close = (int)Math.Round(RingMotion.CloseMs(opening, speed) / 10) * 10;
+        return $"{name} · opens in {open} ms, closes in {close} ms";
     }
 
     private static StackPanel Field(string label, FrameworkElement control)
