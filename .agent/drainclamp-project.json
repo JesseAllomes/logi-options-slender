@@ -584,9 +584,19 @@
       "milestone": "m39",
       "status": "open",
       "summary": "Diverted thumb wheel decoded wrong since m29: touch flag is bit 0x02 (read 0x01) and 6 counts per wheel step (assumed 120), so touch never fired and diverted turns were 20x too small (Edge with touch/tap bound looked dead). Fixed from a raw capture 2026-10-19"
+    },
+    {
+      "at": "2026-10-19T23:23:53+00:00",
+      "cause": "",
+      "chunk": "",
+      "fix": "",
+      "id": "e7",
+      "milestone": "m39",
+      "status": "open",
+      "summary": "Thumb wheel divert silently lost by the mouse (touch/hold dead until an app switch re-sent it); engine now treats a native turn > 500 ms after a confirmed divert as a lost divert, handles it on the hook path and re-diverts (max every 2 s)"
     }
   ],
-  "rev": 268,
+  "rev": 269,
   "review": {
     "advice": [],
     "config": {
