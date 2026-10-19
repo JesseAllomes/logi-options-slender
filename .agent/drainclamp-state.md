@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=117 -->
+<!-- drainclamp-build: state; schema=1; generation=118 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-16T02:46:10+00:00 0c9feeb6 m36 confirmed live by the user (Tab scroll by Left+Right chord: 'perfect'). Open: m31 live look, m14 sync, m15 onboard keys UI, m16 firmware, m7 switch-over
 - 2026-10-16T02:54:50+00:00 709fe71f m36 bug (user: Edge stopped taking clicks until Alt+Tab): a replayed press (50 ms window end) raced the real release; Windows can process the real release first, leaving Edge a press with no release. Fix: a replayed press's release is always injected (ordered after the press); a missed release is injected before the next press. 1442 tests
 - 2026-10-16T03:02:20+00:00 a202b2df m36 incident 13:5x: all left/right clicks swallowed system-wide (tray, Edge, Outlook, Excel); agent stopped Slender.Tray (responding, idle) and set tabScrollChord=false in config (backup taken). Cause: chord 'active' only ended when BOTH releases were seen; one missed release kept every later click swallowed. Fix: chord ends on first release, other release swallowed once, any press during a chord ends it, ring capture resets it; chord on/off logged; fuzz test (3000 histories) proves the 2nd click after any history reaches the app and fails on the 1.1.14 logic. 1446 tests
 - 2026-10-16T03:08:49+00:00 797e1f2d User confirmed 1.1.16 fixed the click lockup
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-19T05:52:33+00:00 096a407b v1.1.23 published 16:52 Melbourne: rest touch fires after 500 ms still (not on every scroll), touch bit 0x02 and 6 counts/step from raw capture (Edge diverted path fixed). My shortcuts: config in, UI next (t8). JsonConfigStore atomic-save test flaked once (file move access denied), passed on rerun
 - 2026-10-19T06:04:22+00:00 6dd2e7ce My shortcuts built (Shortcuts tab: add/edit/delete, name + recorder + All apps / this app, in config). Double tap added as a third touch action (0xF153, 300 ms, single tap waits only when double is set). 1495 tests
 - 2026-10-19T06:11:09+00:00 ee50348a Touch tuning (user): wobble under one wheel step (6 counts) no longer cancels rest/tap; rest default 250 ms; PointerSettings.TouchRestMs/DoubleTapMs with sliders in the card. 1497 tests
+- 2026-10-19T22:29:10+00:00 5618c095 Touch tester in the card (dots: touching, rest, tap, double tap; preview diverts the wheel and reports gestures with the user's timings; nothing runs); touch actions logged in slender.log. User: touch works but intermittently, to diagnose with the tester. 1502 tests
 <!-- /DC:LOG -->
