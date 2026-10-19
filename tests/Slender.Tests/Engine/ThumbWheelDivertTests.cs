@@ -44,6 +44,7 @@ public class ThumbWheelDivertTests
         public FakeExecutor Exec = new();
         public SlenderEngine Engine;
         public long Now = 1000;
+        public (int X, int Y) Cursor = (500, 500); // the real pointer never decides a test
         public Rig(SlenderConfig? cfg = null, string? process = "excel", Action<ThumbMouse>? setup = null, IActionExecutor? executor = null)
         {
             setup?.Invoke(Mouse);
@@ -53,6 +54,7 @@ public class ThumbWheelDivertTests
                 ForegroundDebounceMs = 0,
                 ExcelColumnScrolling = true, // the dormant Excel column mode stays tested
             };
+            Engine.CursorPosition = () => Cursor;
             Engine.Start();
         }
         public string[] Keys() => Exec.Calls.Where(c => c.Item1 is ActionSpec.Keys && c.Item2).Select(c => ((ActionSpec.Keys)c.Item1).Chord).ToArray();
@@ -492,6 +494,42 @@ public class ThumbWheelDivertTests
         Assert.True(Until(() => sink.Snapshot().Contains("DoubleTap")));
         Assert.Equal(["touch", "Rest", "lift", "touch", "lift", "touch", "lift", "DoubleTap"], sink.Snapshot());
         Assert.Empty(r.Exec.Calls);
+    }
+
+    [Fact]
+    public void Grabbing_the_mouse_is_not_a_tap_or_a_rest()
+    {
+        var r = new Rig(DoubleCfg() with { Profiles = [new Profile(null, new Dictionary<ushort, ActionSpec>
+        {
+            [SlenderEngine.ThumbWheelTapBindingId] = new ActionSpec.Keys("Ctrl+Z"),
+            [SlenderEngine.ThumbWheelTouchBindingId] = new ActionSpec.Keys("F13"),
+        })] }, "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+
+        r.Mouse.Rotate(0, touch: true); // the hand lands on the mouse and moves it
+        r.Cursor = (560, 520);
+        r.Now = 1100;
+        r.Mouse.Rotate(0, touch: false);
+        Thread.Sleep(new PointerSettings().TouchRestMs + 200);
+        Assert.Empty(r.Keys());
+
+        r.Cursor = (560, 520);
+        r.Mouse.Rotate(0, touch: true); // resting while the hand also moves the mouse
+        r.Cursor = (600, 600);
+        Thread.Sleep(new PointerSettings().TouchRestMs + 200);
+        Assert.DoesNotContain("F13", r.Keys());
+    }
+
+    [Fact]
+    public void A_small_pointer_drift_still_taps()
+    {
+        var r = new Rig(TapCfg(), "notepad");
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        r.Mouse.Rotate(0, touch: true);
+        r.Cursor = (510, 505);
+        r.Now = 1100;
+        r.Mouse.Rotate(0, touch: false);
+        Assert.True(Until(() => r.Keys().Contains("Ctrl+Z")));
     }
 
     [Fact]

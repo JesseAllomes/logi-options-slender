@@ -1,3 +1,4 @@
+using Slender.Engine.Native;
 using Slender.Engine.Ring;
 using Slender.Hidpp;
 
@@ -28,6 +29,7 @@ public sealed class SlenderEngine : IDisposable
     private ActionSpec? _touchAction; // rest action that is held (a mouse button or the ring), released when the thumb lifts (engine queue)
     private IDisposable? _restTimer;  // engine queue: fires the rest action once the thumb has rested still
     private int _touchSeq;            // engine queue: bumped on every touch down, lift and turn so a stale rest timer does nothing
+    private (int X, int Y) _touchAt;  // engine queue: pointer position when the thumb touched the wheel
     private IDisposable? _tapTimer;   // engine queue: a single tap waiting to see whether a second one follows
     private int _tapSeq;              // engine queue: bumped when a waiting single tap is taken by a double tap
     private readonly ColumnScrollAccumulator _accumulator = new();
@@ -777,7 +779,11 @@ public sealed class SlenderEngine : IDisposable
             var r = _touch.OnReport(touching, e.Rotation, _clock());
             // Turning is scrolling, not resting; a wobble under one wheel step (nothing moves on screen) is still a rest.
             if (e.Rotation != 0 && !r.Down && _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation) _queue.Post(CancelRest);
-            if (r.Down) _queue.Post(HandleTouchDown);
+            if (r.Down)
+            {
+                var at = CursorPosition();
+                _queue.Post(() => HandleTouchDown(at));
+            }
             if ((r.Down || r.Up) && _preview is { } preview) preview.Touch(r.Down);
             // Thumb off the wheel ends a held burst, except while a button holds the second action: there the touch flag can
             // drop mid-turn, which let Ctrl go after the first few tabs, so it lets go when the button does.
@@ -793,10 +799,27 @@ public sealed class SlenderEngine : IDisposable
     /// held from first contact (Ctrl+F5 in Edge) broke every scroll (user 2026-10-19). It fires once the thumb has rested
     /// PointerSettings.TouchRestMs without turning a wheel step; a turn first cancels it until the next touch.
     /// </summary>
-    private void HandleTouchDown()
+    /// <summary>Pointer position source; tests replace it.</summary>
+    internal Func<(int X, int Y)> CursorPosition { get; set; } = static () =>
+        NativeMethods.GetCursorPos(out var pt) ? (pt.X, pt.Y) : (0, 0);
+
+    /// <summary>
+    /// Pointer travel (pixels, either axis) during a touch above which it was the hand taking hold of the mouse, not a rest or
+    /// tap: grabbing the mouse brushes the thumb wheel and fired touch actions (user 2026-10-20).
+    /// </summary>
+    internal const int GrabMovePx = 24;
+
+    private bool PointerMovedSinceTouch()
+    {
+        var now = CursorPosition();
+        return Math.Abs(now.X - _touchAt.X) > GrabMovePx || Math.Abs(now.Y - _touchAt.Y) > GrabMovePx;
+    }
+
+    private void HandleTouchDown((int X, int Y) at)
     {
         try
         {
+            _touchAt = at;
             CancelRest();
             if (_preview is null && ResolveAction(ThumbWheelTouchBindingId) is ActionSpec.None or ActionSpec.TapHold) return;
             var seq = _touchSeq;
@@ -821,7 +844,7 @@ public sealed class SlenderEngine : IDisposable
     {
         try
         {
-            if (seq != _touchSeq || _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation) return;
+            if (seq != _touchSeq || _touch.RotationSinceTouch >= ThumbTouchTracker.TapMaxRotation || PointerMovedSinceTouch()) return;
             _restTimer = null;
             if (_preview is { } preview) { preview.Gesture(TouchGesture.Rest); return; } // the card lights its indicator; nothing runs
             var action = ResolveAction(ThumbWheelTouchBindingId);
@@ -844,7 +867,7 @@ public sealed class SlenderEngine : IDisposable
             _touchAction = null;
             if (held is ActionSpec.ActionsRing) RaiseRing(false);
             else if (held is { } h) Run(h, false);
-            if (!tap) return;
+            if (!tap || PointerMovedSinceTouch()) return; // the pointer moved: the hand took hold of the mouse
             if (_preview is null && ResolveAction(ThumbWheelDoubleTapBindingId) is ActionSpec.None)
             {
                 RunTap(ThumbWheelTapBindingId); // no double tap here: a single tap runs at once
