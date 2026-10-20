@@ -9,7 +9,7 @@ public sealed record BuzzRequest(string? Name, HapticCue? TestCue);
 
 /// <summary>
 /// The local buzz pipe (<c>\\.\pipe\Slender.Buzz</c>, current user only, never a network port). A client writes one line: an
-/// alert name, or nothing. Settings' Test button writes "!test pattern pulses spacingMs strength|-" to hear a cue as shown.
+/// alert name, or nothing. Settings' Test button writes "!test pattern pulses spacingMs strength|- [repeats repeatGapMs]" to hear a cue as shown.
 /// </summary>
 public static class BuzzProtocol
 {
@@ -31,13 +31,14 @@ public static class BuzzProtocol
     {
         cue = cue.Clamped();
         string strength = cue.Strength is { } s ? s.ToString(CultureInfo.InvariantCulture) : "-";
-        return $"{TestPrefix}{cue.Pattern} {cue.Pulses} {cue.SpacingMs} {strength}";
+        string line = $"{TestPrefix}{cue.Pattern} {cue.Pulses} {cue.SpacingMs} {strength}";
+        return cue.Repeats > 1 ? $"{line} {cue.Repeats} {cue.RepeatGapMs}" : line;
     }
 
     private static BuzzRequest? ParseTest(string rest)
     {
         var parts = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 4) return null;
+        if (parts.Length is not (4 or 6)) return null;
         var inv = CultureInfo.InvariantCulture;
         if (!int.TryParse(parts[0], NumberStyles.None, inv, out int pattern)
             || !int.TryParse(parts[1], NumberStyles.None, inv, out int pulses)
@@ -48,7 +49,10 @@ public static class BuzzProtocol
             if (!int.TryParse(parts[3], NumberStyles.None, inv, out int s)) return null;
             strength = s;
         }
-        return new BuzzRequest(null, new HapticCue(true, pattern, pulses, spacing, strength).Clamped());
+        int repeats = 1, repeatGap = 1000;
+        if (parts.Length == 6
+            && (!int.TryParse(parts[4], NumberStyles.None, inv, out repeats) || !int.TryParse(parts[5], NumberStyles.None, inv, out repeatGap))) return null;
+        return new BuzzRequest(null, new HapticCue(true, pattern, pulses, spacing, strength, repeats, repeatGap).Clamped());
     }
 
     /// <summary>Sends one line to the running tray. False when Slender is not running (or the pipe did not answer in time).</summary>

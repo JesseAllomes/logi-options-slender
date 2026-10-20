@@ -569,6 +569,8 @@ public sealed class JsonConfigStore : IConfigStore
         public int Pulses { get; set; } = 1;
         public int SpacingMs { get; set; } = 150;
         public int? Strength { get; set; }
+        public int Repeats { get; set; } = 1;
+        public int RepeatGapMs { get; set; } = 1000;
     }
 
     internal sealed class ThumbFlickDto
@@ -578,9 +580,9 @@ public sealed class JsonConfigStore : IConfigStore
         public ActionSpec? Left { get; set; }
     }
 
-    private static HapticCue ToCue(HapticCueDto d) => new HapticCue(d.Enabled, d.Pattern, d.Pulses, d.SpacingMs, d.Strength).Clamped();
+    private static HapticCue ToCue(HapticCueDto d) => new HapticCue(d.Enabled, d.Pattern, d.Pulses, d.SpacingMs, d.Strength, d.Repeats, d.RepeatGapMs).Clamped();
 
-    private static HapticCueDto FromCue(HapticCue c) => new() { Enabled = c.Enabled, Pattern = c.Pattern, Pulses = c.Pulses, SpacingMs = c.SpacingMs, Strength = c.Strength };
+    private static HapticCueDto FromCue(HapticCue c) => new() { Enabled = c.Enabled, Pattern = c.Pattern, Pulses = c.Pulses, SpacingMs = c.SpacingMs, Strength = c.Strength, Repeats = c.Repeats, RepeatGapMs = c.RepeatGapMs };
 
     /// <summary>Unknown event names are dropped (a newer file read by an older Slender).</summary>
     private static Dictionary<HapticEvent, HapticCue> ToCues(Dictionary<string, HapticCueDto>? raw)

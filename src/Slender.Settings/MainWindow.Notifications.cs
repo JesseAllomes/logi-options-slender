@@ -85,7 +85,7 @@ public sealed partial class MainWindow
         return grid;
     }
 
-    /// <summary>Pulses, gap and exact strength for one app; collapsed by default like the Advanced section above.</summary>
+    /// <summary>Pulses, gap, repeat (a phone ringer: 6 taps, 1 s pause, again) and exact strength for one app; collapsed by default like the Advanced section above.</summary>
     private Expander NotifyAdvanced(string app, Func<HapticCue> get, Action<HapticCue> set)
     {
         var pulses = new ComboBox { Width = 70 };
@@ -122,6 +122,7 @@ public sealed partial class MainWindow
 
         var inner = new StackPanel { Spacing = 8, Padding = new Thickness(4) };
         inner.Children.Add(line1);
+        inner.Children.Add(CueRepeatLine(app, get, set, out _));
         inner.Children.Add(line2);
         return new Expander { Header = "Advanced", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Content = inner };
     }

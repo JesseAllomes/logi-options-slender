@@ -15,6 +15,17 @@ public class BuzzProtocolTests
     }
 
     [Fact]
+    public void A_test_line_carries_repeats_only_when_the_cue_repeats()
+    {
+        var once = new HapticCue(true, 5, 6, 80);
+        var ringer = once with { Repeats = 3, RepeatGapMs = 1000 };
+        Assert.Equal("!test 5 6 80 -", BuzzProtocol.TestLine(once));
+        Assert.Equal("!test 5 6 80 - 3 1000", BuzzProtocol.TestLine(ringer));
+        Assert.Equal(ringer, BuzzProtocol.Parse(BuzzProtocol.TestLine(ringer))!.TestCue);
+        Assert.Null(BuzzProtocol.Parse("!test 5 6 80 - 3")); // repeats without its pause
+    }
+
+    [Fact]
     public void A_name_is_trimmed()
     {
         Assert.Equal(new BuzzRequest("claude", null), BuzzProtocol.Parse(" claude \r"));

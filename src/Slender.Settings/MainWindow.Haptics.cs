@@ -138,6 +138,49 @@ public sealed partial class MainWindow
         finally { _hapticRefreshing = false; }
     }
 
+    /// <summary>
+    /// Repeat the pulse group (e.g. a phone ringer: 6 taps, 1 s quiet, 6 taps): how many groups and the quiet between them.
+    /// <paramref name="refresh"/> puts the controls back to the cue's values without writing.
+    /// </summary>
+    private StackPanel CueRepeatLine(string label, Func<HapticCue> get, Action<HapticCue> set, out Action refresh)
+    {
+        bool loading = false;
+        var repeats = new ComboBox { Width = 70 };
+        for (int i = 1; i <= HapticCue.RepeatsMax; i++) repeats.Items.Add(i == 1 ? "Once" : $"{i}x");
+        repeats.SelectedIndex = get().Repeats - 1;
+        AutomationProperties.SetName(repeats, $"{label}: repeat");
+        Slider pause = PageSlider($"{label}: pause between repeats", HapticCue.RepeatGapMin, HapticCue.RepeatGapMax, 100, get().RepeatGapMs,
+            v => { if (!loading && (int)v != get().RepeatGapMs) set(get() with { RepeatGapMs = (int)v }); }, v => $"{v / 1000:0.0} s", out TextBlock pauseText);
+        pauseText.Width = 70;
+        pause.IsEnabled = get().Repeats > 1;
+        repeats.SelectionChanged += (_, _) =>
+        {
+            if (loading || repeats.SelectedIndex < 0 || repeats.SelectedIndex + 1 == get().Repeats) return;
+            pause.IsEnabled = repeats.SelectedIndex > 0;
+            set(get() with { Repeats = repeats.SelectedIndex + 1 });
+        };
+        refresh = () =>
+        {
+            loading = true;
+            try
+            {
+                HapticCue q = get();
+                repeats.SelectedIndex = q.Repeats - 1;
+                pause.Value = q.RepeatGapMs;
+                pause.IsEnabled = q.Repeats > 1;
+            }
+            finally { loading = false; }
+        };
+
+        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        line.Children.Add(Ui.Text("Repeat", 12, Ui.Muted));
+        line.Children.Add(repeats);
+        line.Children.Add(Ui.Text("Pause", 12, Ui.Muted));
+        line.Children.Add(WithReadout(pause, pauseText));
+        foreach (UIElement child in line.Children) if (child is FrameworkElement f) f.VerticalAlignment = VerticalAlignment.Center;
+        return line;
+    }
+
     private void BuildHapticAdvanced()
     {
         var inner = new StackPanel { Spacing = 14, Padding = new Thickness(4, 6, 4, 6) };
@@ -174,6 +217,7 @@ public sealed partial class MainWindow
             line1.Children.Add(WithReadout(spacing, spacingText));
             foreach (UIElement child in line1.Children) if (child is FrameworkElement f) f.VerticalAlignment = VerticalAlignment.Center;
             block.Children.Add(line1);
+            block.Children.Add(CueRepeatLine(label, Get, q => Edit(_ => q), out Action refreshRepeat));
 
             var note = Ui.Text("Writes the mouse's stored strength for this buzz and puts it back.", 12, Ui.Muted);
             note.TextWrapping = TextWrapping.Wrap;
@@ -201,6 +245,7 @@ public sealed partial class MainWindow
                 HapticCue q = Get();
                 pulses.SelectedIndex = q.Pulses - 1;
                 spacing.Value = q.SpacingMs;
+                refreshRepeat();
                 exactToggle.IsOn = q.Strength is not null;
                 exact.IsEnabled = q.Strength is not null;
                 note.Visibility = q.Strength is not null ? Visibility.Visible : Visibility.Collapsed;

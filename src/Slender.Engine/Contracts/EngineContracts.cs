@@ -344,20 +344,34 @@ public enum HapticEvent
 /// <summary>
 /// One buzz: a built-in waveform (0-14, Solaar's names in HapticCues.PatternNames), played Pulses times SpacingMs apart (a
 /// longer buzz is several pulses close together). Strength null = the global strength; a number briefly sets the mouse's own
-/// stored strength for this buzz and puts it back (two writes to the mouse per buzz, opt-in, advanced).
+/// stored strength for this buzz and puts it back (two writes to the mouse per buzz, opt-in, advanced). The whole group of
+/// pulses plays Repeats times with RepeatGapMs of quiet between groups (user 2026-10-20: "6 taps, 1 sec gap, 6 taps"), never
+/// longer than MaxTotalMs in all.
 /// </summary>
-public sealed record HapticCue(bool Enabled = true, int Pattern = 1, int Pulses = 1, int SpacingMs = 150, int? Strength = null)
+public sealed record HapticCue(bool Enabled = true, int Pattern = 1, int Pulses = 1, int SpacingMs = 150, int? Strength = null,
+    int Repeats = 1, int RepeatGapMs = 1000)
 {
     public const int PatternMax = 14, PulsesMax = 6, SpacingMin = 40, SpacingMax = 1000;
+    public const int RepeatsMax = 10, RepeatGapMin = 200, RepeatGapMax = 5000, MaxTotalMs = 15_000;
 
-    /// <summary>The same cue with every field inside its limits.</summary>
-    public HapticCue Clamped() => this with
+    /// <summary>First pulse to last, in ms.</summary>
+    public int TotalMs => Repeats * (Pulses - 1) * SpacingMs + (Repeats - 1) * RepeatGapMs;
+
+    /// <summary>The same cue with every field inside its limits; repeats are cut so the whole cue lasts at most MaxTotalMs.</summary>
+    public HapticCue Clamped()
     {
-        Pattern = Math.Clamp(Pattern, 0, PatternMax),
-        Pulses = Math.Clamp(Pulses, 1, PulsesMax),
-        SpacingMs = Math.Clamp(SpacingMs, SpacingMin, SpacingMax),
-        Strength = Strength is { } s ? Math.Clamp(s, 0, 100) : null,
-    };
+        var c = this with
+        {
+            Pattern = Math.Clamp(Pattern, 0, PatternMax),
+            Pulses = Math.Clamp(Pulses, 1, PulsesMax),
+            SpacingMs = Math.Clamp(SpacingMs, SpacingMin, SpacingMax),
+            Strength = Strength is { } s ? Math.Clamp(s, 0, 100) : null,
+            Repeats = Math.Clamp(Repeats, 1, RepeatsMax),
+            RepeatGapMs = Math.Clamp(RepeatGapMs, RepeatGapMin, RepeatGapMax),
+        };
+        while (c.Repeats > 1 && c.TotalMs > MaxTotalMs) c = c with { Repeats = c.Repeats - 1 };
+        return c;
+    }
 }
 
 /// <summary>

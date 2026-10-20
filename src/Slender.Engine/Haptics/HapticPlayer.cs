@@ -3,7 +3,7 @@ using Slender.Hidpp;
 namespace Slender.Engine;
 
 /// <summary>
-/// Plays a <see cref="HapticCue"/> on the mouse: Pulses times, SpacingMs apart. A new cue cancels whatever is left of the
+/// Plays a <see cref="HapticCue"/> on the mouse: Pulses times, SpacingMs apart, the group Repeats times RepeatGapMs apart. A new cue cancels whatever is left of the
 /// previous one (cues never overlap). Everything runs on the engine's work queue and timers, never on a hook or HID thread
 /// (<see cref="Play"/> only queues). A cue with an exact Strength writes the mouse's stored strength before its first pulse and
 /// puts the global strength back after its last; a burst of cues with the same strength therefore writes only twice, because
@@ -60,16 +60,17 @@ internal sealed class HapticPlayer : IDisposable
                 }
             }
             else if (_applied is not null) RestoreNow();
-            Pulse(seq, cue, cue.Pulses);
+            Pulse(seq, cue, cue.Pulses, cue.Repeats);
         }
         catch (Exception ex) { _log.Error("haptic failed", ex); }
     }
 
-    private void Pulse(int seq, HapticCue cue, int left)
+    private void Pulse(int seq, HapticCue cue, int left, int groups)
     {
         if (_disposed || seq != _seq) return;
         Io(() => _mouse.PlayHapticAsync((byte)cue.Pattern, _ct), "haptic");
-        if (left > 1) _next = _timer.Schedule(cue.SpacingMs, () => PostIfCurrent(seq, () => Pulse(seq, cue, left - 1)));
+        if (left > 1) _next = _timer.Schedule(cue.SpacingMs, () => PostIfCurrent(seq, () => Pulse(seq, cue, left - 1, groups)));
+        else if (groups > 1) _next = _timer.Schedule(cue.RepeatGapMs, () => PostIfCurrent(seq, () => Pulse(seq, cue, cue.Pulses, groups - 1)));
         else if (_applied is not null) _next = _timer.Schedule(RestoreDelayMs, () => PostIfCurrent(seq, RestoreNow));
     }
 

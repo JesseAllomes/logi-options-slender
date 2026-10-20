@@ -58,6 +58,26 @@ public class HapticPlayerTests
     }
 
     [Fact]
+    public void A_repeated_group_pauses_between_groups_like_a_ringer()
+    {
+        var r = new Rig();
+        r.Player.Play(new HapticCue(true, 5, 3, 100, Repeats: 2, RepeatGapMs: 1000));
+        for (int i = 0; i < 10; i++) r.Timer.Elapse();
+        Assert.Equal(6, r.Mouse.Haptics.Count); // 3 taps, pause, 3 taps, then nothing
+        Assert.Equal([100, 100, 1000, 100, 100], r.Timer.Delays);
+    }
+
+    [Fact]
+    public void Repeats_are_cut_so_a_cue_never_lasts_over_fifteen_seconds()
+    {
+        var ringer = new HapticCue(true, 5, 6, 200, Repeats: 10, RepeatGapMs: 1000).Clamped();
+        Assert.Equal(8, ringer.Repeats); // 8 x 1 s of taps + 7 x 1 s pauses = 15 s; a 9th group would go over
+        Assert.True(ringer.TotalMs <= HapticCue.MaxTotalMs);
+        Assert.Equal(1, new HapticCue(Repeats: 0).Clamped().Repeats);
+        Assert.Equal(HapticCue.RepeatGapMin, new HapticCue(Repeats: 2, RepeatGapMs: 1).Clamped().RepeatGapMs);
+    }
+
+    [Fact]
     public void A_new_cue_cancels_the_rest_of_the_old_one()
     {
         var r = new Rig();

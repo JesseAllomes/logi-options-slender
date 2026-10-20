@@ -137,6 +137,7 @@ public sealed class JsonConfigStoreTests : IDisposable
             Alerts = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase)
             {
                 ["claude"] = new HapticCue(true, 7, 2, 200),
+                ["ringer"] = new HapticCue(true, 5, 6, 80, Repeats: 4, RepeatGapMs: 1000),
                 ["bad name!"] = new HapticCue(),
             },
         };
@@ -146,7 +147,8 @@ public sealed class JsonConfigStoreTests : IDisposable
         Assert.Equal(new HapticCue(true, 8, 3, 90, 40), loaded.Cues[HapticEvent.TouchTap]);
         Assert.False(loaded.Cues[HapticEvent.ButtonPress].Enabled);
         Assert.Equal(new HapticCue(true, 7, 2, 200), loaded.Alerts["CLAUDE"]);
-        Assert.Single(loaded.Alerts); // a name the pipe could never carry is dropped on load
+        Assert.Equal(new HapticCue(true, 5, 6, 80, Repeats: 4, RepeatGapMs: 1000), loaded.Alerts["ringer"]);
+        Assert.Equal(2, loaded.Alerts.Count); // a name the pipe could never carry is dropped on load
     }
 
     private static void AssertSameConfig(SlenderConfig expected, SlenderConfig actual)
