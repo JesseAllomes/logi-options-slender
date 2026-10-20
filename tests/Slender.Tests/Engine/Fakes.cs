@@ -80,6 +80,13 @@ internal sealed class FakeHook : IInputHook
         HorizontalWheel?.Invoke(this, a);
         return a;
     }
+    public event EventHandler<HookWheelEventArgs>? VerticalWheel;
+    public HookWheelEventArgs MainWheel(int delta)
+    {
+        var a = new HookWheelEventArgs(delta);
+        VerticalWheel?.Invoke(this, a);
+        return a;
+    }
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
     public HookButtonEventArgs Button(HookButton button, bool pressed)
     {

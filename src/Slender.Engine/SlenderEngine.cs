@@ -12,7 +12,7 @@ public sealed record EngineStatus(bool Connected, int? BatteryPercent, bool Char
 /// throws across a hook/HID thread: handlers catch and log. Heavy work runs on a bounded worker.
 /// The engine does not dispose the collaborators it is given.
 /// </summary>
-public sealed class SlenderEngine : IDisposable
+public sealed partial class SlenderEngine : IDisposable
 {
     private readonly ILogiMouse _mouse;
     private readonly IInputHook _hook;
@@ -118,6 +118,7 @@ public sealed class SlenderEngine : IDisposable
         _hidSource.ThumbWheelRotated += OnRotation;
         _mouse.ThumbWheelMoved += OnThumbTouch;
         _hook.ButtonChanged += OnHookButton;
+        _hook.VerticalWheel += OnVerticalWheel;
         _hook.MouseMoved += OnHookMove;
         _mouse.RawXyMoved += OnRawXy;
         _foreground.Changed += OnForegroundChanged;
@@ -655,6 +656,11 @@ public sealed class SlenderEngine : IDisposable
                 _topTurned = true;
                 var steps = _secondAccumulator.AddScaled(e.Delta, ThumbWheelModes.SpeedOf(cfg, second), _clock());
                 if (steps != 0) _queue.Post(() => RunSecond(second, steps));
+                return;
+            }
+            if (TakeFlick(cfg, e.Delta))
+            {
+                e.Handled = true; // a fast spin ran its flick action; the rest of the spin does not scroll
                 return;
             }
             var bound = ResolveAction(ThumbWheelBindingId);
@@ -1264,6 +1270,7 @@ public sealed class SlenderEngine : IDisposable
         _hookSource.Dispose();
         _hidSource.Dispose();
         _hook.ButtonChanged -= OnHookButton;
+        _hook.VerticalWheel -= OnVerticalWheel;
         _hook.MouseMoved -= OnHookMove;
         AbortGesture();
         _foreground.Changed -= OnForegroundChanged;

@@ -31,6 +31,8 @@ public sealed class LowLevelMouseHook : IInputHook
 
     public event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
+    public event EventHandler<HookWheelEventArgs>? VerticalWheel;
+
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
 
     public event EventHandler<HookMoveEventArgs>? MouseMoved;
@@ -196,6 +198,13 @@ public sealed class LowLevelMouseHook : IInputHook
                 {
                     var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
                     if (!IsInjected(data) && RingMouse(msg, data)) return 1; // swallow
+                    if (msg == NativeMethods.WM_MOUSEWHEEL && !IsInjected(data) && VerticalWheel is { } vertical)
+                    {
+                        // Per-app main wheel speed: the engine may swallow this turn and send a scaled one (O(1), never throws).
+                        var args = new HookWheelEventArgs((short)(data.MouseData >> 16));
+                        vertical(this, args);
+                        if (args.Handled) return 1;
+                    }
                 }
                 else if (msg == NativeMethods.WM_MOUSEHWHEEL)
                 {
@@ -263,6 +272,7 @@ public sealed class LowLevelMouseHook : IInputHook
             t = _thread;
         }
         HorizontalWheel = null;
+        VerticalWheel = null;
         ButtonChanged = null;
         MouseMoved = null;
         RingInput = null;

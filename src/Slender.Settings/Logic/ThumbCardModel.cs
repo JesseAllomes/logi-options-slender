@@ -71,6 +71,45 @@ public static class ThumbCardModel
         return config with { Profiles = config.Profiles.Select(p => ReferenceEquals(p, profile) ? p with { SideScrollSpeed = value } : p).ToList() };
     }
 
+    /// <summary>Main wheel speed in the app (100 = the mouse's own scroll); inherited until the app sets its own.</summary>
+    public static ThumbSpeedView WheelSpeed(SlenderConfig config, string? app) =>
+        ProfileOps.Find(config, app)?.WheelSpeed is { } own
+            ? new ThumbSpeedView(own, false)
+            : new ThumbSpeedView(ThumbWheelModes.WheelSpeedFor(config, app), app is not null);
+
+    public static SlenderConfig SetWheelSpeed(SlenderConfig config, string? app, int speed) =>
+        Edit(config, app, p => p with { WheelSpeed = Math.Clamp(speed, PointerSettings.SpeedMin, PointerSettings.SpeedMax) });
+
+    /// <summary>The app's flick setting (own, else All apps'), and whether it is inherited. Never null: off and unassigned when nothing is set.</summary>
+    public static (ThumbWheelFlick Flick, bool Inherited) Flick(SlenderConfig config, string? app)
+    {
+        if (ProfileOps.Find(config, app)?.ThumbFlick is { } own)
+        {
+            return (own, false);
+        }
+
+        ThumbWheelFlick? all = app is null ? null : ProfileOps.Find(config, null)?.ThumbFlick;
+        return (all ?? new ThumbWheelFlick(false, new ActionSpec.None(), new ActionSpec.None()), all is not null);
+    }
+
+    public static SlenderConfig SetFlick(SlenderConfig config, string? app, ThumbWheelFlick flick) =>
+        Edit(config, app, p => p with { ThumbFlick = flick });
+
+    /// <summary>Applies <paramref name="change"/> to the app's own profile, creating it when it has none.</summary>
+    private static SlenderConfig Edit(SlenderConfig config, string? app, Func<Profile, Profile> change)
+    {
+        Profile? profile = ProfileOps.Find(config, app);
+        if (profile is null)
+        {
+            var created = change(new Profile(app, new Dictionary<ushort, ActionSpec>()) { DisplayName = app is null ? "All apps" : null });
+            var profiles = config.Profiles.ToList();
+            profiles.Insert(app is null ? 0 : profiles.Count, created);
+            return config with { Profiles = profiles };
+        }
+
+        return config with { Profiles = config.Profiles.Select(p => ReferenceEquals(p, profile) ? change(p) : p).ToList() };
+    }
+
     public static ThumbSpeedView SecondSpeed(SlenderConfig config, string? app)
     {
         ThumbWheelView view = ThumbWheelOps.View(config, app);

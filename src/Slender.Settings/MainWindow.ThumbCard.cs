@@ -174,6 +174,10 @@ public sealed partial class MainWindow
             v => _config.Update(x => ThumbCardModel.SetSideSpeed(x, app, v)), $"Side scroll speed in {name}",
             ThumbCardModel.TurnChips(binding), chip => ShowPicker(chip, info), chip => ShowPicker(chip, info)));
 
+        // Fast flick: a quick spin of the thumb wheel runs its own action (for example jump to the first or last column).
+        (ThumbWheelFlick flick, bool flickInherited) = ThumbCardModel.Flick(config, app);
+        body.Children.Add(FlickRow(flick, flickInherited, name, f => _config.Update(x => ThumbCardModel.SetFlick(x, app, f))));
+
         // Holding top button: the second action.
         ThumbWheelView view = ThumbWheelOps.View(config, app);
         ThumbWheelSecond? second = view.On ? view.Second : null;
@@ -187,6 +191,12 @@ public sealed partial class MainWindow
             ThumbCardModel.HoldChips(second),
             chip => ShowSecondPicker(chip, "Scroll left", current.Back, name, a => _config.Update(x => ThumbWheelOps.SetBack(x, app, a))),
             chip => ShowSecondPicker(chip, "Scroll right", current.Forward, name, a => _config.Update(x => ThumbWheelOps.SetForward(x, app, a)))));
+
+        // Main wheel: its speed in this app (the wheel itself is never taken over; Slender only rescales its turns).
+        var wheel = new StackPanel { Spacing = 2, Padding = new Thickness(6, 8, 6, 8) };
+        wheel.Children.Add(Ui.Text("Main wheel", 11.5, Ui.Muted));
+        wheel.Children.Add(SpeedRow(ThumbCardModel.WheelSpeed(config, app), $"Main wheel speed in {name}", v => _config.Update(x => ThumbCardModel.SetWheelSpeed(x, app, v))));
+        body.Children.Add(wheel);
 
         // Touch: the thumb resting on the wheel, a tap and a double tap (they need the wheel's touch sensor). While the card is
         // open the dots are a tester: "touching" follows the thumb, and each row's dot lights when the tray recognises it with
@@ -507,6 +517,54 @@ public sealed partial class MainWindow
         grid.Children.Add(slider);
         grid.Children.Add(readout);
         return grid;
+    }
+
+    /// <summary>"Fast flick": on/off and the action for a fast spin each way (inherited from All apps until changed).</summary>
+    private FrameworkElement FlickRow(ThumbWheelFlick flick, bool inherited, string appName, Action<ThumbWheelFlick> set)
+    {
+        var block = new StackPanel { Spacing = 4, Padding = new Thickness(6, 4, 6, 8) };
+        var head = new Grid();
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var label = Ui.Text("Fast flick" + (inherited ? " · same as All apps" : string.Empty), 11.5, Ui.Muted);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        head.Children.Add(label);
+        var toggle = new ToggleSwitch { IsOn = flick.Enabled, OnContent = string.Empty, OffContent = string.Empty, MinWidth = 0, Width = 44, Margin = new Thickness(0, -6, 0, -6) };
+        AutomationProperties.SetName(toggle, "Fast flick in " + appName);
+        toggle.Toggled += (_, _) => set(flick with { Enabled = toggle.IsOn });
+        Grid.SetColumn(toggle, 1);
+        head.Children.Add(toggle);
+        block.Children.Add(head);
+        if (!flick.Enabled)
+        {
+            return block;
+        }
+
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Button Chip(ActionSpec action, string what, HorizontalAlignment align, Func<ActionSpec, ThumbWheelFlick> with)
+        {
+            var text = Ui.Text(action is ActionSpec.None ? "Nothing" : ActionCatalog.Plain(action), 12);
+            text.TextTrimming = TextTrimming.CharacterEllipsis;
+            var chip = new Button { Style = Ui.Res<Style>("QuietButtonStyle"), Content = text, MaxWidth = 128, Padding = new Thickness(8, 3, 8, 3), HorizontalAlignment = align };
+            AutomationProperties.SetName(chip, $"Fast flick {what} in {appName}");
+            chip.Click += (_, _) => ShowSecondPicker(chip, "Fast flick " + what, action, appName, a => set(with(a)));
+            return chip;
+        }
+
+        Button left = Chip(flick.Left, "left", HorizontalAlignment.Left, a => flick with { Left = a });
+        Button right = Chip(flick.Right, "right", HorizontalAlignment.Right, a => flick with { Right = a });
+        var marker = Ui.Text("◀ flick ▶", 11, Ui.Muted);
+        marker.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(marker, 1);
+        Grid.SetColumn(right, 2);
+        row.Children.Add(left);
+        row.Children.Add(marker);
+        row.Children.Add(right);
+        block.Children.Add(row);
+        return block;
     }
 
     /// <summary>A Touch row: what the control does in this app, opening the normal picker.</summary>

@@ -22,6 +22,17 @@ public static class ThumbWheelModes
         ?? config.Profiles.FirstOrDefault(p => p.AppProcess is null)?.SideScrollSpeed
         ?? config.Pointer.SideScrollSpeed;
 
+    /// <summary>Main wheel speed in the app: its own profile's, else the default profile's, else 100 (the mouse's own scroll).</summary>
+    public static int WheelSpeedFor(SlenderConfig config, string? process) =>
+        Own(config, process)?.WheelSpeed ?? config.Profiles.FirstOrDefault(p => p.AppProcess is null)?.WheelSpeed ?? 100;
+
+    /// <summary>Thumb wheel flick actions in the app: its own, else the default profile's; null when off or nothing is set.</summary>
+    public static ThumbWheelFlick? FlickFor(SlenderConfig config, string? process)
+    {
+        var flick = Own(config, process)?.ThumbFlick ?? config.Profiles.FirstOrDefault(p => p.AppProcess is null)?.ThumbFlick;
+        return flick is { Enabled: true } && (flick.Right is not ActionSpec.None || flick.Left is not ActionSpec.None) ? flick : null;
+    }
+
     private static Profile? Own(SlenderConfig config, string? process) => process is null ? null : config.Profiles.FirstOrDefault(p =>
         p.AppProcess is not null && string.Equals(Path.GetFileNameWithoutExtension(p.AppProcess), Path.GetFileNameWithoutExtension(process), StringComparison.OrdinalIgnoreCase));
 

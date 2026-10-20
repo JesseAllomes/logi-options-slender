@@ -6,6 +6,9 @@ public interface IInputHook : IDisposable
     /// <summary>WM_MOUSEHWHEEL. Delta is in WHEEL_DELTA units (120 per notch), positive = right.</summary>
     event EventHandler<HookWheelEventArgs>? HorizontalWheel;
 
+    /// <summary>WM_MOUSEWHEEL from the user's own mouse (not injected, not taken by the ring). Positive = away from the user.</summary>
+    event EventHandler<HookWheelEventArgs>? VerticalWheel { add { } remove { } }
+
     /// <summary>Middle / XButton1 (back) / XButton2 (forward) down and up. Set Handled to swallow both halves.</summary>
     event EventHandler<HookButtonEventArgs>? ButtonChanged;
 
@@ -155,6 +158,9 @@ public interface IActionExecutor
 
     /// <summary>Sends one native sideways scroll (WHEEL_DELTA units, positive = right). False when unsupported or failed.</summary>
     bool SendHorizontalWheel(int delta) => false;
+
+    /// <summary>Sends one native vertical scroll (WHEEL_DELTA units, positive = away from the user). False when unsupported or failed.</summary>
+    bool SendVerticalWheel(int delta) => false;
 }
 
 /// <summary>Bindings for one app. AppProcess null = default profile.</summary>

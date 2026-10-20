@@ -17,6 +17,12 @@ internal sealed class FakeKeyExecutor : IActionExecutor
         return !Fail;
     }
     public List<int> SideScrolls { get; } = [];
+    public List<int> MainScrolls { get; } = [];
+    public bool SendVerticalWheel(int delta)
+    {
+        lock (MainScrolls) MainScrolls.Add(delta);
+        return true;
+    }
     public bool SendHorizontalWheel(int delta)
     {
         lock (SideScrolls) SideScrolls.Add(delta);
