@@ -52,8 +52,9 @@ if (transport == null)
 }
 
 using var channel = new HidppChannel(transport);
-channel.ReportSent += (_, b) => Console.WriteLine($"  TX {Hex(b)}");
-channel.ReportReceived += (_, m) => Console.WriteLine($"  RX {m.ToHex()}{(m.IsError ? $"  (error 0x{m.ErrorCode:X2})" : "")}");
+bool quietWire = false; // --force-log prints its own compact lines
+channel.ReportSent += (_, b) => { if (!quietWire) Console.WriteLine($"  TX {Hex(b)}"); };
+channel.ReportReceived += (_, m) => { if (!quietWire) Console.WriteLine($"  RX {m.ToHex()}{(m.IsError ? $"  (error 0x{m.ErrorCode:X2})" : "")}"); };
 channel.Start();
 using var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -83,6 +84,28 @@ if (device == null)
     return 3;
 }
 Console.WriteLine($"Using device index 0x{device.DeviceIndex:X2}");
+
+// --force-log=<seconds>: read-only. Reads the Sense Panel force value (0x19C0 fn2) every 50 ms and prints it with the time,
+// plus any notification the mouse sends, so pressing the panel shows whether the value tracks pressure (research build m43).
+if (!k860 && args.FirstOrDefault(a => a.StartsWith("--force-log=", StringComparison.Ordinal)) is { } forceArg
+    && int.TryParse(forceArg["--force-log=".Length..], out var forceSeconds) && forceSeconds is > 0 and <= 300)
+{
+    Console.WriteLine($"\n== --force-log {forceSeconds} s (read-only) ==");
+    quietWire = true;
+    var start = Environment.TickCount64;
+    channel.ReportReceived += (_, m) => { if (m.SwId == 0) Console.WriteLine($"{Environment.TickCount64 - start,6} ms  event {m.ToHex()}"); };
+    while (Environment.TickCount64 - start < forceSeconds * 1000L && !ct.IsCancellationRequested)
+    {
+        try
+        {
+            var r = await device.CallAsync(FeatureId.ForceSensing, 2, Array.Empty<byte>(), ct);
+            Console.WriteLine($"{Environment.TickCount64 - start,6} ms  force fn2 {Hex(r.Params[..6])}  u16 {(r.Params[0] << 8) | r.Params[1]}");
+        }
+        catch (HidppException ex) { Console.WriteLine($"  -> {ex.Message}"); }
+        await Task.Delay(50, ct);
+    }
+    return 0;
+}
 
 Console.WriteLine("\n== Features ==");
 var known = new ushort[]

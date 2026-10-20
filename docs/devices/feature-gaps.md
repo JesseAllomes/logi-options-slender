@@ -36,3 +36,11 @@ Full data: `mx-master-4-2b042.inventory.{json,md}`, `ergo-k860-6b359.inventory.{
 
 DFU, host change/pairing, reset, GPIO, onboard profiles and every hidden/engineering feature were listed only.
 Nothing was written to either device.
+
+## Sense Panel pressure (experiment 2026-10-20)
+
+`Slender.Probe --device mx4 --force-log=45` read 0x19C0 fn2 every 50 ms (591 reads) while the panel was left alone, rested on,
+pressed gently and firmly, and held. Every read returned the same value, 4859: fn2 reads back the press threshold Slender
+sets with fn3, not a live force. The only events were 0x1B04 diverted-button press/release reports. Conclusion: over this
+interface the Sense Panel is a threshold button (press / release); there is no analog pressure stream to build on. The
+virtual control 0x00D7 "force raw XY" path remains untested (it needs a temporary divert).
