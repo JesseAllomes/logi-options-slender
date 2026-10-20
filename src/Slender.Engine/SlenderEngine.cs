@@ -48,6 +48,8 @@ public sealed partial class SlenderEngine : IDisposable
     private volatile bool _gestureRaw;        // this press is fed by device raw XY (no hook capture, no swallowing)
     private IReadOnlyList<ushort> _rawXy = [];
     private volatile int _deviceDpi;          // last DPI read from the mouse; 0 = unknown
+    private readonly AppDpiWriter _dpiWriter;
+    private Task _dpiTail = Task.CompletedTask; // under _gate: the newest per-app DPI write, so tests and the tray can wait for it
     private bool _started, _disposed;
     private bool _thumbWanted, _thumbHid; // under _gate: the divert we asked for / the device confirmed it (HID++ path live)
     private long _thumbHidSince, _lastDivertRepair = long.MinValue / 2; // under _gate: when the divert was confirmed / last re-taken
@@ -85,6 +87,7 @@ public sealed partial class SlenderEngine : IDisposable
         _executor = executor;
         _config = config;
         _log = log ?? NullLog.Instance;
+        _dpiWriter = new AppDpiWriter(mouse, _log);
         _queue = queue ?? new BoundedWorker("Slender.Engine", 256, sta: false, _log);
         _clock = clock ?? (() => Environment.TickCount64);
         _holdTimer = holdTimer ?? new ThreadingHoldTimer();
@@ -130,7 +133,30 @@ public sealed partial class SlenderEngine : IDisposable
         try { _ = ObserveAsync(_mouse.StartAsync(_cts.Token), "mouse start"); }
         catch (Exception ex) { _log.Error("mouse start failed", ex); }
         Rediverts(force: true);
-        if (_mouse.IsConnected) PublishStatus(true);
+        if (_mouse.IsConnected) { PublishStatus(true); QueueDpiApply(); }
+    }
+
+    /// <summary>Completes when the newest per-app pointer speed write (foreground change, config change, reconnect) has finished.</summary>
+    public Task DpiSettled { get { lock (_gate) return _dpiTail; } }
+
+    /// <summary>Writes the pointer speed for the app in front when it differs from what was last written. Runs on the thread pool, never on the hook thread.</summary>
+    private void QueueDpiApply()
+    {
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _dpiTail = _dpiTail.ContinueWith(_ => ApplyDpiAsync(), TaskScheduler.Default).Unwrap();
+        }
+    }
+
+    private async Task ApplyDpiAsync()
+    {
+        try
+        {
+            if (await _dpiWriter.ApplyAsync(() => AppDpi.For(_config, _foreground.ProcessName), _cts.Token).ConfigureAwait(false) is { } written) _deviceDpi = written;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { _log.Error("per-app dpi write failed", ex); }
     }
 
     /// <summary>Swaps the config and re-diverts if the bound control set changed.</summary>
@@ -139,7 +165,7 @@ public sealed partial class SlenderEngine : IDisposable
         _config = config;
         bool started;
         lock (_gate) started = _started;
-        if (started) Rediverts(force: false);
+        if (started) { Rediverts(force: false); QueueDpiApply(); }
     }
 
     /// <summary>
@@ -243,6 +269,7 @@ public sealed partial class SlenderEngine : IDisposable
     /// </summary>
     private void RedivertUnlessHeld(long since)
     {
+        QueueDpiApply(); // the pointer speed does not depend on held buttons; repeated calls write nothing when the target is unchanged
         bool held;
         lock (_gate) held = _active.Count > 0 || _gesture.Active;
         if (held && _clock() - since < HeldDivertWaitMs && ForegroundDebounceMs > 0)
@@ -510,7 +537,7 @@ public sealed partial class SlenderEngine : IDisposable
     }
 
     /// <summary>Sensor DPI for scaling the raw threshold: the configured DPI, else the last one read from the device, else the reference.</summary>
-    private int EffectiveDpi() => _config.Pointer.Dpi ?? (_deviceDpi > 0 ? _deviceDpi : GestureTracker.ReferenceDpi);
+    private int EffectiveDpi() => AppDpi.For(_config, _foreground.ProcessName) ?? (_deviceDpi > 0 ? _deviceDpi : GestureTracker.ReferenceDpi);
 
     private async Task FetchDpiAsync()
     {
@@ -1234,7 +1261,8 @@ public sealed partial class SlenderEngine : IDisposable
                 }
             }
             PublishStatus(connected);
-            if (connected) { _ = FetchBatteryAsync(); _ = FetchDpiAsync(); }
+            _dpiWriter.Reset(); // connected or not, what the mouse held is gone
+            if (connected) { _ = FetchBatteryAsync(); _ = FetchDpiAsync(); QueueDpiApply(); }
         }
         catch (Exception ex) { SafeLog("connection handler failed", ex); }
     }

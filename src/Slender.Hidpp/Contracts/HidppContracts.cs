@@ -153,6 +153,12 @@ public interface ILogiMouse : IDisposable
     /// <summary>Current sensor DPI (0x2201 read); null when disconnected or unsupported.</summary>
     Task<int?> GetDpiAsync(CancellationToken ct) => Task.FromResult<int?>(null);
 
+    /// <summary>Sets the sensor DPI now (0x2201 write, only when it differs) and on every reconnect; null leaves the device value alone. No-op when unsupported.</summary>
+    Task SetDpiAsync(int? dpi, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>The DPI values the sensor accepts (0x2201 fn1 read); null when disconnected or unsupported.</summary>
+    Task<DpiCapabilities?> GetDpiCapabilitiesAsync(CancellationToken ct) => Task.FromResult<DpiCapabilities?>(null);
+
     /// <summary>The running firmware, e.g. "RBM 27.03.0019" (0x0003 reads); null when disconnected or unsupported.</summary>
     Task<string?> GetFirmwareVersionAsync(CancellationToken ct) => Task.FromResult<string?>(null);
 

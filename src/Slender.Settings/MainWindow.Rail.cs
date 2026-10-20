@@ -83,7 +83,7 @@ public sealed partial class MainWindow
         };
         string battery = state?.BatteryPercent is { } p ? $", battery {p} percent" : string.Empty;
         AutomationProperties.SetName(button, ControlCatalog.DeviceName(kind) + battery + (offline ? ", not connected" : string.Empty));
-        ToolTipService.SetToolTip(button, ControlCatalog.DeviceName(kind));
+        ToolTipService.SetToolTip(button, ControlCatalog.DeviceName(kind) + (!offline && state?.BatteryEstimate is { Length: > 0 } estimate && state.Charging is false ? " · " + estimate : string.Empty));
         button.Click += (_, _) => SelectDevice(kind);
         return button;
     }
