@@ -16,6 +16,7 @@ public static class ActionText
         ActionSpec.Disabled => "Off",
         ActionSpec.Brightness b => b.StepPercent >= 0 ? "Brightness up" : "Brightness down",
         ActionSpec.Text t => $"Type: {t.Value}",
+        ActionSpec.Macro m => $"Macro: {Slender.Engine.Macros.MacroLabels.NameOf(m.Id)}",
         ActionSpec.TapHold th => $"Press: {Describe(th.Tap)} · Hold: {Describe(th.Hold)}",
         _ => action.GetType().Name,
     };

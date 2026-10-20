@@ -114,6 +114,13 @@ static class Program
         using var excel = new ExcelBridge(log);
         var executor = new ActionExecutor(excel, foreground, log);
         using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, config, log);
+        // Macros run on their own threads (pauses never hold up the engine); Esc, a second press or the time cap ends one.
+        using var macros = new Slender.Engine.Macros.MacroRunner(new Slender.Engine.Macros.WindowsMacroInput(log: log), log: log)
+        {
+            Lookup = id => engine.Config.Macros.FirstOrDefault(m => m.Id == id),
+        };
+        executor.Macros = macros;
+        Slender.Engine.Macros.MacroLabels.Resolver = id => engine.Config.Macros.FirstOrDefault(m => m.Id == id)?.Name;
 
         // ERGO K860: per-app key bindings and Fn lock (m9). Diverts nothing until a key is bound.
         using var keyboard = new LogiKeyboard(keyboardFactory);

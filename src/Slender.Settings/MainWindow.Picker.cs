@@ -90,7 +90,7 @@ public sealed partial class MainWindow
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
             ActionSpec.Brightness when _kind == DeviceKind.Keyboard => "media",
-            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text or ActionSpec.TapHold => "more",
+            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text or ActionSpec.Macro or ActionSpec.TapHold => "more",
             _ => "default",
         };
 
@@ -301,6 +301,7 @@ public sealed partial class MainWindow
         panel.Children.Add(box);
         panel.Children.Add(row);
         panel.Children.Add(TypeTextEditor(own as ActionSpec.Text, commit));
+        panel.Children.Add(MacroSection(own as ActionSpec.Macro, commit));
         if (allowTapHold)
         {
             panel.Children.Add(TapHoldEditor(own as ActionSpec.TapHold, sensePanel, commit));
@@ -360,6 +361,7 @@ public sealed partial class MainWindow
     private (FrameworkElement Panel, Func<ActionSpec?> Get, Action<ActionSpec> Set) TapHoldHalf(string title, ActionSpec? current, Action changed)
     {
         var options = new List<ActionOption>(ActionCatalog.TapHoldChoices(_kind));
+        options.AddRange(_config.Config.Macros.Select(m => new ActionOption("Macro: " + m.Name, new ActionSpec.Macro(m.Id))));
         string typed = string.Empty;
         ActionSpec chosen = current ?? new ActionSpec.None();
         if (chosen is ActionSpec.Keys k && !options.Any(o => o.Action.Equals(chosen)))

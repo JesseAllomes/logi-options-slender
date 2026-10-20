@@ -66,6 +66,13 @@ public static class ChordParser
         return true;
     }
 
+    /// <summary>One key on its own (a modifier included): "Ctrl", "A", "F5". False for empty or unknown names and for chords.</summary>
+    public static bool TryParseKey(string? name, out KeyStroke key)
+    {
+        key = default;
+        return !string.IsNullOrWhiteSpace(name) && Names.TryGetValue(name.Trim(), out key);
+    }
+
     /// <summary>
     /// Parses a comma-separated sequence of chords ("Enter, Ctrl+W"); a single chord gives one step. Key names never contain
     /// a comma (the comma key is "Comma"), so the separator is unambiguous. False if any step is empty or unknown.

@@ -31,6 +31,9 @@ public static class RingSlotText
     public const string KeyboardGlyph = "", GlobeGlyph = "", FolderGlyph = "", TextGlyph = "", BrightnessGlyph = "",
         MouseGlyph = "", BackGlyph = "", ForwardGlyph = "", AppGlyph = "", ExcelGlyph = "", OffGlyph = "", RingGlyph = "";
 
+    /// <summary>Segoe Fluent Icons "Play": a macro.</summary>
+    public const string MacroGlyph = "";
+
     /// <summary>The slot's own name, else one derived from its action.</summary>
     public static string Name(RingSlot slot)
     {
@@ -44,6 +47,7 @@ public static class RingSlotText
             ActionSpec.Excel e => SpaceOut(e.Command.ToString()),
             ActionSpec.Launch l => LaunchName(l.Target),
             ActionSpec.Text t => Snippet(t.Value),
+            ActionSpec.Macro m => Slender.Engine.Macros.MacroLabels.NameOf(m.Id),
             ActionSpec.Brightness b => b.StepPercent >= 0 ? "Brightness up" : "Brightness down",
             ActionSpec.Disabled => "Off",
             ActionSpec.ActionsRing => "Actions ring",
@@ -64,6 +68,7 @@ public static class RingSlotText
             ActionSpec.Excel => "Excel",
             ActionSpec.Launch => "Open",
             ActionSpec.Text => "Text",
+            ActionSpec.Macro => "Macro",
             _ => string.Empty,
         };
     }
@@ -90,6 +95,7 @@ public static class RingSlotText
             ActionSpec.MouseButton m => m.Button.ToLowerInvariant() switch { "back" => BackGlyph, "forward" => ForwardGlyph, _ => MouseGlyph },
             ActionSpec.Launch l => IsUrl(l.Target) ? GlobeGlyph : AppGlyph,
             ActionSpec.Text => TextGlyph,
+            ActionSpec.Macro => MacroGlyph,
             ActionSpec.Brightness => BrightnessGlyph,
             ActionSpec.Excel => ExcelGlyph,
             ActionSpec.Disabled => OffGlyph,

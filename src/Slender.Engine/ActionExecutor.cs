@@ -45,6 +45,9 @@ public sealed class ActionExecutor : IActionExecutor
 
     public bool SupportsKeyEvents => true;
 
+    /// <summary>Runs <see cref="ActionSpec.Macro"/> actions (each on its own thread). Null = macros are logged and ignored.</summary>
+    public Slender.Engine.Macros.IMacroHost? Macros { get; set; }
+
     public bool SendKeyEvents(IReadOnlyList<KeyEvent> events) => events.Count == 0 || _sendEvents(events);
 
     public bool SendHorizontalWheel(int delta) => KeyInjector.SendHorizontalWheel(delta);
@@ -117,6 +120,10 @@ public sealed class ActionExecutor : IActionExecutor
                     break;
                 case ActionSpec.Text t:
                     if (pressed && t.Value.Length > 0 && !_text.Send(TextInput.Build(t.Value))) _log.Error("SendInput failed for text snippet");
+                    break;
+                case ActionSpec.Macro mac:
+                    if (Macros is { } host) host.Handle(mac.Id, pressed); // never blocks: the macro runs on its own thread
+                    else if (pressed) _log.Error($"macro '{mac.Id}' cannot run: no macro runner");
                     break;
                 case ActionSpec.ActionsRing:
                     if (pressed) ActionsRingRequested?.Invoke(this, EventArgs.Empty);

@@ -135,6 +135,7 @@ public sealed class JsonConfigStore : IConfigStore
             Ring = ToRingAppearance(dto.Ring),
             MyShortcuts = ToMyShortcuts(dto.MyShortcuts),
             OnboardRemaps = OnboardRemapKeys.Sanitize(dto.OnboardRemaps?.Where(r => r is { Cid: > 0 and <= ushort.MaxValue, Chord: not null }).Select(r => new OnboardRemap((ushort)r.Cid, r.Chord!))),
+            Macros = MacroDtos.ToMacros(dto.Macros),
         };
     }
 
@@ -334,6 +335,7 @@ public sealed class JsonConfigStore : IConfigStore
             MyShortcuts = config.MyShortcuts.Count == 0
                 ? null
                 : config.MyShortcuts.Select(s => new CustomShortcutDto { Name = s.Name, Chord = s.Chord, App = s.App }).ToList(),
+            Macros = config.Macros.Count == 0 ? null : MacroDtos.FromMacros(config.Macros),
             Ring = new RingDto
             {
                 Style = config.Ring.Style.ToString(),
@@ -442,6 +444,7 @@ public sealed class JsonConfigStore : IConfigStore
         public RingDto? Ring { get; set; }
         public List<CustomShortcutDto>? MyShortcuts { get; set; }
         public List<OnboardRemapDto>? OnboardRemaps { get; set; }
+        public List<MacroDto>? Macros { get; set; }
     }
 
     internal sealed class OnboardRemapDto
