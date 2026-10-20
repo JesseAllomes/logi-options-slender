@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=135 -->
+<!-- drainclamp-build: state; schema=1; generation=136 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -126,7 +126,6 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T03:17:37+00:00 e582c679 m39 card + preview and m40 ring motion built and merged on main (1475 tests, -warnaserror clean); shipping as next release, awaiting the user's live look
 - 2026-10-19T03:23:41+00:00 fb9f34c8 v1.1.20 published 14:23 Melbourne: thumb wheel card with live preview + per-app speeds (m39), ring opening motion (m40), plus 1.1.19 fixes. Open checks: Edge back steps, card preview, ring motion
 - 2026-10-19T05:01:56+00:00 062fdc26 Update loop: OneNote (started 10:58 by the 1.1.18 tray from a ring slot) held SlenderApp\current as cwd; Velopack backup/rename failed (os error 32) and restarted 1.1.18 each time. v1.1.21 (16:01 Melbourne) sets tray/Settings cwd to the profile and launch cwd to the target's folder. User must close that OneNote once, then Restart to update
 - 2026-10-19T05:17:14+00:00 5edc6e33 1.1.21 installed (update loop fixed after OneNote closed); preview pipe confirmed in tray log. User: drawn wheel useless, speed cut off in Excel/Edge, touch settings should be in the card. v1.1.22 (16:17 Melbourne): wheel dropped, Speed on its own row, Touch section (rest/tap) moved from stage into the card
@@ -146,4 +145,5 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 - 2026-10-20T05:17:10+00:00 7284bcc9 m41 haptics (Sonnet builder, 8fc0713/3d874a1) + m42 device events/hosts/wheel mode (Sonnet builder, 865111d) reviewed and merged with m43; wheel-mode haptic wired; Slender.Buzz shipped (AOT) in installer. 1592 tests. v1.1.34 published 16:17 Melbourne. Pending on device: name waveforms 0-14, confirm 0x1D4B/0x2111/0x2121/0x1815 decodes from tray log, 0x4220 sniff
 - 2026-10-20T05:24:58+00:00 9991854a Picker fix: width 480 + scrollable tab row (More/Default were clipped for mouse buttons, hiding Type text); Excel tab only for excel or an existing Excel action (PickerTabs). 1600 tests
 - 2026-10-20T05:48:11+00:00 38f85cd2 Picker: PickerFlyoutPresenterStyle MaxWidth 380 -> 900, picker sizes to its tab row (no scrolling). User reported side-scrolling in 1.1.35
+- 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
 <!-- /DC:LOG -->
