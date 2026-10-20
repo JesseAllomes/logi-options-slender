@@ -8,8 +8,10 @@ public sealed record CachedDevice(string DeviceId, string ImagePath, string Thum
 
 /// <summary>
 /// Copies device renders and hotspot metadata from the local Logi Options+ depots into Slender's own assets folder, so
-/// nothing from Logitech is ever committed. Missing sources are not an error: Ensure returns null and the UI draws a
-/// vector silhouette instead.
+/// nothing from Logitech is ever committed. Slender's copy is kept for good, with a second copy in a backup folder: Options+
+/// can be uninstalled, and "Refresh pictures" once deleted the only copy before finding Options+ gone (user 2026-10-20). A
+/// copy is only ever replaced by a complete new one. Missing sources are not an error: Ensure returns null and the UI draws
+/// a vector silhouette instead.
 /// </summary>
 public sealed class AssetCache
 {
@@ -24,12 +26,17 @@ public sealed class AssetCache
 
     private readonly string _depotsRoot;
     private readonly string _assetsDirectory;
+    private readonly string? _backupDirectory;
 
-    public AssetCache(string depotsRoot, string assetsDirectory)
+    public AssetCache(string depotsRoot, string assetsDirectory, string? backupDirectory = null)
     {
         _depotsRoot = depotsRoot;
         _assetsDirectory = assetsDirectory;
+        _backupDirectory = backupDirectory;
     }
+
+    /// <summary>True when the Options+ picture library is on this PC (Refresh can only work then).</summary>
+    public bool OptionsPlusPresent => Directory.Exists(_depotsRoot);
 
     public static string DefaultDepotsRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "LogiOptionsPlus", "depots");
@@ -50,16 +57,120 @@ public sealed class AssetCache
         CachedDevice? cached = TryLoad(deviceId, dir);
         if (cached is not null)
         {
+            Backup(deviceId, dir);
             return cached;
+        }
+
+        // The local copy is gone: the backup first, then Options+.
+        if (_backupDirectory is not null && TryLoad(deviceId, Path.Combine(_backupDirectory, deviceId)) is not null)
+        {
+            try
+            {
+                CopyFolder(Path.Combine(_backupDirectory, deviceId), dir);
+                if (TryLoad(deviceId, dir) is { } restored)
+                {
+                    return restored;
+                }
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+            }
         }
 
         try
         {
-            return Copy(kind, deviceId, modelId, imageKey, metaKey, dir);
+            CachedDevice? copied = Copy(kind, deviceId, modelId, imageKey, metaKey, dir);
+            if (copied is not null)
+            {
+                Backup(deviceId, dir);
+            }
+
+            return copied;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Copies the device afresh from Options+ into a staging folder and only then replaces Slender's copy (and the backup).
+    /// When Options+ is missing or the copy fails, the pictures Slender has are kept. Refreshed is false then.
+    /// </summary>
+    public (CachedDevice? Device, bool Refreshed) Refresh(DeviceKind kind)
+    {
+        (string deviceId, string modelId, string imageKey, string metaKey) = SpecFor(kind);
+        string dir = Path.Combine(_assetsDirectory, deviceId);
+        string staging = dir + ".new";
+        try
+        {
+            if (Directory.Exists(staging))
+            {
+                Directory.Delete(staging, recursive: true);
+            }
+
+            if (Copy(kind, deviceId, modelId, imageKey, metaKey, staging) is null)
+            {
+                return (Ensure(kind), false);
+            }
+
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+
+            Directory.Move(staging, dir);
+            Backup(deviceId, dir, replace: true);
+            return (TryLoad(deviceId, dir), true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+        {
+            try
+            {
+                if (Directory.Exists(staging))
+                {
+                    Directory.Delete(staging, recursive: true);
+                }
+            }
+            catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
+            {
+            }
+
+            return (Ensure(kind), false);
+        }
+    }
+
+    /// <summary>Keeps the backup in step with a complete local copy (only creates it unless <paramref name="replace"/>).</summary>
+    private void Backup(string deviceId, string dir, bool replace = false)
+    {
+        if (_backupDirectory is null)
+        {
+            return;
+        }
+
+        string target = Path.Combine(_backupDirectory, deviceId);
+        try
+        {
+            if (!replace && TryLoad(deviceId, target) is not null)
+            {
+                return;
+            }
+
+            CopyFolder(dir, target);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    /// <summary>Copies every file of <paramref name="from"/> into <paramref name="to"/>, layout.json last (its presence means complete).</summary>
+    private static void CopyFolder(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        var files = Directory.GetFiles(from).OrderBy(f => string.Equals(Path.GetFileName(f), LayoutFileName, StringComparison.OrdinalIgnoreCase) ? 1 : 0);
+        foreach (string file in files)
+        {
+            File.Copy(file, Path.Combine(to, Path.GetFileName(file)), overwrite: true);
         }
     }
 

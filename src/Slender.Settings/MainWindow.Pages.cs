@@ -346,7 +346,7 @@ public sealed partial class MainWindow
 
         var refresh = new Button { Content = "Refresh pictures", Style = Ui.Res<Style>("QuietButtonStyle") };
         refresh.Click += async (_, _) => await RefreshDevicePicturesAsync(refresh);
-        AddRow("Device pictures", "Copied from Logi Options+ on this PC. Refresh them after Options+ updates.", refresh);
+        AddRow("Device pictures", "Slender keeps its own copy, with a backup. Refresh takes a new copy from Logi Options+ if it is installed, and keeps the pictures you have otherwise.", refresh);
 
         var import = new Button { Content = "Import…", Style = Ui.Res<Style>("QuietButtonStyle") };
         import.Click += async (_, _) => await ImportFromOptionsPlusAsync();
@@ -478,28 +478,22 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>Replaces each device's pictures only with a complete fresh copy from Options+; otherwise keeps them and says so.</summary>
     private async Task RefreshDevicePicturesAsync(Button button)
     {
         button.IsEnabled = false;
+        bool all = true;
         foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
         {
-            string dir = Path.Combine(SlenderPaths.AssetsDirectory, ControlCatalog.DeviceId(kind));
-            try
-            {
-                if (Directory.Exists(dir))
-                {
-                    Directory.Delete(dir, recursive: true);
-                }
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                Services.CrashLog.Write(e);
-            }
-
-            _devices[kind] = await Task.Run(() => _assets.Ensure(kind));
+            (CachedDevice? device, bool refreshed) = await Task.Run(() => _assets.Refresh(kind));
+            _devices[kind] = device;
+            all &= refreshed;
         }
 
         button.IsEnabled = true;
+        button.Content = all ? "Pictures refreshed" : _assets.OptionsPlusPresent
+            ? "Couldn't refresh, kept your pictures"
+            : "Options+ isn't on this PC, kept your pictures";
         RebuildAll();
     }
 }

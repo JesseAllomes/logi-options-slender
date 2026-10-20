@@ -424,6 +424,8 @@ public static class SlenderPaths
     public static string LocalDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Slender");
     public static string StatusFile => Path.Combine(LocalDirectory, "status.json");
     public static string AssetsDirectory => Path.Combine(LocalDirectory, "assets");
+    /// <summary>Second copy of the device pictures, beside the config: Options+ may be gone, so these copies are all there is.</summary>
+    public static string PictureBackupDirectory => Path.Combine(ConfigDirectory, "device-pictures");
     public static string LogsDirectory => Path.Combine(LocalDirectory, "logs");
 }
 

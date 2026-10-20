@@ -40,7 +40,7 @@ public sealed partial class MainWindow : Window
     private readonly UiState _ui = UiState.Load(UiPath);
     private readonly ConfigService _config;
     private readonly StatusMonitor _status;
-    private readonly AssetCache _assets = new(AssetCache.DefaultDepotsRoot, SlenderPaths.AssetsDirectory);
+    private readonly AssetCache _assets = new(AssetCache.DefaultDepotsRoot, SlenderPaths.AssetsDirectory, SlenderPaths.PictureBackupDirectory);
     private readonly IconService _icons;
     private readonly Dictionary<DeviceKind, CachedDevice?> _devices = [];
     private readonly Dictionary<DeviceKind, ushort> _selected = [];

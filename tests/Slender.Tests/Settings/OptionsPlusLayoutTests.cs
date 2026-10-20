@@ -253,6 +253,54 @@ public sealed class AssetCacheTests : IDisposable
         Assert.Equal(2, Directory.GetFiles(Path.Combine(Assets, DeviceIds.Keyboard)).Length); // render + layout.json
     }
 
+    private string Backup => Path.Combine(_root, "backup");
+
+    [Fact]
+    public void Refresh_without_options_plus_keeps_the_pictures()
+    {
+        WriteDepot("1", "mouse-folder", Fixtures.MouseManifest, "core_metadata.json", Fixtures.MouseMetadata, ["side_core.webp", "front_core.webp"]);
+        var cache = new AssetCache(Depots, Assets, Backup);
+        Assert.NotNull(cache.Ensure(DeviceKind.Mouse));
+        Directory.Delete(Depots, recursive: true); // Options+ uninstalled
+
+        (CachedDevice? device, bool refreshed) = cache.Refresh(DeviceKind.Mouse);
+
+        Assert.False(refreshed);
+        Assert.False(cache.OptionsPlusPresent);
+        Assert.NotNull(device);
+        Assert.True(File.Exists(device.ImagePath));
+    }
+
+    [Fact]
+    public void Refresh_replaces_the_pictures_only_with_a_complete_copy()
+    {
+        WriteDepot("1", "mouse-folder", Fixtures.MouseManifest, "core_metadata.json", Fixtures.MouseMetadata, ["side_core.webp", "front_core.webp"]);
+        var cache = new AssetCache(Depots, Assets, Backup);
+        cache.Ensure(DeviceKind.Mouse);
+
+        (CachedDevice? device, bool refreshed) = cache.Refresh(DeviceKind.Mouse);
+
+        Assert.True(refreshed);
+        Assert.NotNull(device);
+        Assert.False(Directory.Exists(Path.Combine(Assets, DeviceIds.Mouse + ".new")));
+        Assert.True(File.Exists(Path.Combine(Backup, DeviceIds.Mouse, "layout.json")));
+    }
+
+    [Fact]
+    public void A_lost_local_copy_comes_back_from_the_backup_without_options_plus()
+    {
+        WriteDepot("1", "mouse-folder", Fixtures.MouseManifest, "core_metadata.json", Fixtures.MouseMetadata, ["side_core.webp", "front_core.webp"]);
+        new AssetCache(Depots, Assets, Backup).Ensure(DeviceKind.Mouse);
+        Directory.Delete(Depots, recursive: true);
+        Directory.Delete(Path.Combine(Assets, DeviceIds.Mouse), recursive: true);
+
+        CachedDevice? device = new AssetCache(Depots, Assets, Backup).Ensure(DeviceKind.Mouse);
+
+        Assert.NotNull(device);
+        Assert.StartsWith(Assets, device.ImagePath);
+        Assert.Equal(7, device.Layout.Hotspots.Count);
+    }
+
     [Fact]
     public void Cached_copy_is_used_after_the_depots_disappear()
     {
