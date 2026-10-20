@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=121 -->
+<!-- drainclamp-build: state; schema=1; generation=122 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-16T03:27:20+00:00 c3a6d551 Lockup 2 root cause (user: locks after Excel use, not Edge): WindowIntegrity used WindowFromPoint inside the mouse hook; it sends WM_NCHITTEST and waits, so a busy Excel (after sheet switches; Options+ Excel add-in still loaded) stalled every mouse event on the PC. Fix: ChildWindowFromPointEx (geometry only), Tab scroll log posted off the hook, hook calls >100 ms switch the chord off for the run and log once. Chord stays off in user config; user will look at the top-button dual function Monday. To-dos t3 (top button Tab scroll), t4 (macros)
 - 2026-10-16T03:30:27+00:00 930a996b 1.1.17 published (hook never waits on another app). Options+ Excel add-in analysed (to-do t5)
 - 2026-10-16T05:26:42+00:00 97da1285 Excel review (user wants PERSONAL.XLSB + book re-activated after review): PERSONAL.XLSB intact, no load-time code (macros user-run only), disabled by Excel Resiliency type 1; issues: Tick macro empty but bound to Ctrl+Shift+T, CalcTimer restores Calculation from Iteration flag (bug), stale ~$ lock files. book.xltm intact, not disabled, QAT buttons for its macros; NewSheet can loop forever if rename keeps failing. Excel faults since 2026-07-22: 13 crashes (7 in Windows.FileExplorer.Common.dll = Open/Save dialog), 6 hangs, none in a Logitech module. Awaiting go-ahead to re-enable (Repair-ExcelAddins.ps1 -EnablePersonalXlsb, Excel closed)
 - 2026-10-18T23:11:10+00:00 26304f52 m31 confirmed live by the user (thumb wheel card works); closed with 1446 tests, -warnaserror clean. User flags Switch with as redundant once t3 (hold top button + thumb wheel = Tab scroll) lands
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-19T22:46:11+00:00 09307094 False touches on grabbing the mouse (user): touch gestures now ignored when the pointer moves > 24 px during the touch (GrabMovePx). 1504 tests
 - 2026-10-19T23:23:53+00:00 a82c97e4 Lost-divert repair + TouchRecorder (trigger %LOCALAPPDATA%/Slender/touch-record.txt: label, seconds, quiet=1) built; 1505 tests; shipping 1.1.28 for the grab/normal calibration recordings
 - 2026-10-19T23:38:23+00:00 24f4981e Touch calibration from user recordings (35 grabs, 75 deliberate): GrabBeforePx 150 / GrabLookbackMs 400 via hook move ring (PointerTravel); replay: 6/7 residual grabs stopped, 0 deliberate lost. docs/devices/touch-calibration.md. 1506 tests
+- 2026-10-20T00:30:43+00:00 bdcfaf71 Touch calibration window built (Settings > Point & scroll and card Calibrate…): floating always-on-top, per-step timers, TouchSampler + TouchCalibration compute GrabBeforePx/GrabMovePx (now PointerSettings), Save / Reset. 1511 tests
 <!-- /DC:LOG -->
