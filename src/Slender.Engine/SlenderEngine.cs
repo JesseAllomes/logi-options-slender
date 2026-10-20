@@ -55,6 +55,7 @@ public sealed class SlenderEngine : IDisposable
     private long _lastRotation = long.MinValue / 2; // clock ms of the last rotation from either source
     private CancellationTokenSource? _thumbRetry;
     private readonly IHoldTimer _holdTimer;
+    private readonly HapticPlayer _player;
     private readonly WheelKeyHold _wheelHold = new(); // engine queue only
     private IDisposable? _holdRelease;                 // engine queue only
     private volatile bool _holding;                     // modifiers are held down by the thumb wheel path
@@ -87,6 +88,7 @@ public sealed class SlenderEngine : IDisposable
         _queue = queue ?? new BoundedWorker("Slender.Engine", 256, sta: false, _log);
         _clock = clock ?? (() => Environment.TickCount64);
         _holdTimer = holdTimer ?? new ThreadingHoldTimer();
+        _player = new HapticPlayer(mouse, _holdTimer, _queue, () => _config.Haptics, _log, _cts.Token);
         _tapHold = new TapHoldTracker(_holdTimer, _queue, _log);
         _hookSource = new HookThumbWheelSource(hook);
         _hidSource = new HidThumbWheelSource(mouse);
@@ -349,13 +351,29 @@ public sealed class SlenderEngine : IDisposable
 
     private void MaybeHaptic(ActionSpec action)
     {
-        var h = _config.Haptics;
-        if (!h.Enabled || action is ActionSpec.Disabled) return;
-        var want = action is ActionSpec.ActionsRing ? h.OnActionsRing : h.OnButtonPress;
-        if (!want) return;
-        try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
-        catch (Exception ex) { _log.Error("haptic failed", ex); }
+        if (action is ActionSpec.Disabled) return;
+        PlayHaptic(action is ActionSpec.ActionsRing ? HapticEvent.RingOpen : HapticEvent.ButtonPress);
     }
+
+    /// <summary>
+    /// Buzzes the mouse for an event with the user's cue (or the built-in one); nothing when haptics or that event are off.
+    /// Any thread: it only queues. Other parts of the app (the tray, a later wheel mode builder) call this.
+    /// </summary>
+    public void PlayHaptic(HapticEvent e)
+    {
+        try { if (HapticCues.Effective(_config.Haptics, e) is { } cue) _player.Play(cue); }
+        catch (Exception ex) { SafeLog("haptic failed", ex); }
+    }
+
+    /// <summary>Buzzes a named alert (an unknown or empty name plays the Alert event's cue); nothing when haptics or that cue are off. Any thread.</summary>
+    public void PlayAlert(string? name)
+    {
+        try { if (HapticCues.EffectiveAlert(_config.Haptics, name) is { } cue) _player.Play(cue); }
+        catch (Exception ex) { SafeLog("alert haptic failed", ex); }
+    }
+
+    /// <summary>Plays one cue as given, whatever the on/off switches say: Settings' Test button. Any thread.</summary>
+    public void PlayCue(HapticCue cue) => _player.Play(cue);
 
     // ---- tap / hold (engine queue) ----
 
@@ -429,10 +447,7 @@ public sealed class SlenderEngine : IDisposable
     /// <summary>A haptic pulse for the ring (tick = selection changed, bump = a slot ran), if haptics and the ring option are on.</summary>
     public void PlayRingHaptic(RingHaptic kind)
     {
-        var h = _config.Haptics;
-        if (!h.Enabled || !h.OnActionsRing) return;
-        try { _ = ObserveAsync(_mouse.PlayHapticAsync(kind == RingHaptic.Tick ? RingHaptics.HoverWaveform : RingHaptics.RunWaveform, _cts.Token), "ring haptic"); }
-        catch (Exception ex) { _log.Error("ring haptic failed", ex); }
+        PlayHaptic(kind == RingHaptic.Tick ? HapticEvent.RingHover : HapticEvent.RingRun);
     }
 
     // ---- gesture button (HID thread: press/release and raw XY moves; hook thread: hook moves) ----
@@ -546,10 +561,10 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("gesture action failed", ex); }
     }
 
-    private void RunGestureAction(ActionSpec action)
+    private void RunGestureAction(ActionSpec action, bool buzz = true)
     {
         if (action is ActionSpec.TapHold th) action = th.Tap; // not offered on swipes; a hand-edited config runs its quick press
-        MaybeHaptic(action);
+        if (buzz) MaybeHaptic(action);
         if (action is ActionSpec.ActionsRing) { RaiseRing(true); RaiseRing(false); return; } // a swipe is a tap: the ring stays open
         Run(action, true);
         Run(action, false);
@@ -887,10 +902,10 @@ public sealed class SlenderEngine : IDisposable
             var action = ResolveAction(ThumbWheelTouchBindingId);
             if (action is ActionSpec.None or ActionSpec.TapHold) return;
             _log.Info($"thumb wheel rest: {action}");
-            MaybeHaptic(action);
+            PlayHaptic(HapticEvent.TouchRest);
             if (action is ActionSpec.ActionsRing) { _touchAction = action; RaiseRing(true); return; }
             if (action is ActionSpec.MouseButton) { _touchAction = action; Run(action, true); return; }
-            RunGestureAction(action);
+            RunGestureAction(action, buzz: false);
         }
         catch (Exception ex) { _log.Error("thumb wheel rest failed", ex); }
     }
@@ -941,7 +956,8 @@ public sealed class SlenderEngine : IDisposable
         var action = ResolveAction(id);
         if (action is ActionSpec.None) return;
         _log.Info($"thumb wheel {(id == ThumbWheelDoubleTapBindingId ? "double tap" : "tap")}: {action}");
-        RunGestureAction(action);
+        PlayHaptic(id == ThumbWheelDoubleTapBindingId ? HapticEvent.TouchDoubleTap : HapticEvent.TouchTap);
+        RunGestureAction(action, buzz: false);
     }
 
     // ---- thumb wheel second action: hold the top button (engine queue) ----
@@ -982,6 +998,7 @@ public sealed class SlenderEngine : IDisposable
         _unheldLogged = false;
         _secondAccumulator.Reset();
         _topSecond = second;
+        PlayHaptic(HapticEvent.TopHoldEngage);
     }
 
     /// <summary>
@@ -1004,13 +1021,8 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { _log.Error("top button release failed", ex); }
     }
 
-    /// <summary>A press-and-hold tick is feedback the user needs, so it follows only the main haptics switch (not "on every button press").</summary>
-    private void PlayFlipHaptic()
-    {
-        if (!_config.Haptics.Enabled) return;
-        try { _ = ObserveAsync(_mouse.PlayHapticAsync(1, _cts.Token), "haptic"); }
-        catch (Exception ex) { _log.Error("haptic failed", ex); }
-    }
+    /// <summary>A press-and-hold tick is feedback the user needs, so its event is on by default and follows only the main haptics switch.</summary>
+    private void PlayFlipHaptic() => PlayHaptic(HapticEvent.HoldStart);
 
     private void RunSecond(ThumbWheelSecond second, int notches)
     {
@@ -1268,6 +1280,7 @@ public sealed class SlenderEngine : IDisposable
         AbortGesture();
         _foreground.Changed -= OnForegroundChanged;
         lock (_gate) { _foregroundDebounce?.Cancel(); _thumbRetry?.Cancel(); }
+        _player.Dispose();
         _cts.Cancel();
         try { if (_holding) { _holding = false; _executor.SendKeyEvents(_wheelHold.Release()); } } catch { } // never leave Ctrl down
         _queue.Dispose();

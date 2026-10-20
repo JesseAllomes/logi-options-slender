@@ -153,6 +153,9 @@ public sealed class TrayApplication : IDisposable
     /// <summary>Caps Lock or Num Lock flipped ("Caps Lock on"); raised on the UI thread, only while the K860 is connected and the option is on.</summary>
     public event EventHandler<string>? LockKeyChanged;
 
+    /// <summary>A device went under its battery alert threshold (raised on the UI thread, with the balloon).</summary>
+    public event EventHandler? BatteryLow;
+
     public SlenderConfig Config => _config;
 
     /// <summary>True when the loop ended because the memory watchdog asked for a restart.</summary>
@@ -502,6 +505,7 @@ public sealed class TrayApplication : IDisposable
         if (fire)
         {
             ShowBalloon("Slender", $"{name} battery low ({battery!.Value.Percent}%) - plug in to charge");
+            BatteryLow?.Invoke(this, EventArgs.Empty);
         }
     }
 
