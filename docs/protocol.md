@@ -283,7 +283,7 @@ set differs: 0xD5 (213) and 0xE1 (225) are here only, and the Easy-Switch keys (
 | 0x6F | 111 | Key 0x0F + Meta | Win+L (lock) |
 
 These look like factory defaults (standard Windows shortcuts and consumer usages), but nothing proves Options+ had not written
-any of them; they are stored in `OnboardSync.K860ObservedDefaults` as "observed", not "factory".
+any of them. Slender therefore keeps no table of expected actions: "is this key remapped" comes from the fn3 status byte (below).
 
 ### Slender implementation
 
@@ -292,7 +292,11 @@ any of them; they are stored in `OnboardSync.K860ObservedDefaults` as "observed"
 - `OnboardChordEncoder`: "Ctrl+Shift+S" gives `01 00 16 03`, "Win+Shift+S" `01 00 16 0A`, media names give Consumer
   (`MediaPlayPause` 0xCD, `MediaNext` 0xB5, `MediaPrevious` 0xB6, `MediaStop` 0xB7, `VolumeMute` 0xE2, `VolumeUp` 0xE9,
   `VolumeDown` 0xEA, `Calculator` 0x192, ...). Rejected: modifiers only, two main keys, modifier + media key, unknown names.
-- `OnboardSync.Plan(desired, current, previouslyManaged, factoryDefaults)` is a pure diff; only changed keys produce an op.
+- `OnboardSync.Plan(desired, current, previouslyManaged)` is a pure diff; only changed keys produce an op. A reset is skipped only
+  when the key's own fn3 status byte is 0 (`OnboardMapping.IsRemapped`); any non-zero status gets the keyboard's fn5 reset. The
+  evidence for the byte is the K860's own behaviour (all 17 keys read 0 before any write; 1 after a fn4 write, see the live test
+  below); Solaar parses the byte but does not interpret it. The reset never writes an assumed default, only fn5. Not recorded: the
+  status read after fn5 (if it stays 1 a later reset is just sent again, which is harmless). The read-back text says "Default (...)" from the same byte.
 - **No write has been sent to a real keyboard.** Unverified on device: fn4 and fn5 reply shapes, whether 0xFF is accepted as host on
   writes, whether a write takes effect immediately, three-modifier masks, and whether a Key remap of a CID that currently reads
   Empty (brightness) is honoured.

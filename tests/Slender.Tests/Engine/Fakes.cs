@@ -41,7 +41,8 @@ internal sealed class FakeMouse : ILogiMouse
     public List<int?> DpiWrites { get; } = [];
     public DpiCapabilities? DpiCaps;
     public Task SetDpiAsync(int? dpi, CancellationToken ct) { lock (DpiWrites) DpiWrites.Add(dpi); if (dpi is { } d) Dpi = d; return Task.CompletedTask; }
-    public Task<DpiCapabilities?> GetDpiCapabilitiesAsync(CancellationToken ct) => Task.FromResult(DpiCaps);
+    public int DpiCapReads;
+    public Task<DpiCapabilities?> GetDpiCapabilitiesAsync(CancellationToken ct) { Interlocked.Increment(ref DpiCapReads); return Task.FromResult(DpiCaps); }
     public int WheelModeToggles;
     public Task<bool> ToggleWheelModeAsync(CancellationToken ct) { WheelModeToggles++; return Task.FromResult(true); }
     public void RawMove(int dx, int dy) => RawXyMoved?.Invoke(this, new RawXyEvent(dx, dy));

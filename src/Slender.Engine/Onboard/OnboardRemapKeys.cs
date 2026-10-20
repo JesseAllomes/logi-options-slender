@@ -24,16 +24,6 @@ public static class OnboardRemapKeys
 
     public static bool IsKnown(ushort cid) => All.Any(k => k.Cid == cid);
 
-    /// <summary>Factory actions: the observed ones plus "empty" for the three keys that read Empty (firmware native).</summary>
-    public static IReadOnlyDictionary<ushort, OnboardAction> FactoryDefaults { get; } = BuildDefaults();
-
-    private static Dictionary<ushort, OnboardAction> BuildDefaults()
-    {
-        var d = new Dictionary<ushort, OnboardAction>(OnboardSync.K860ObservedDefaults);
-        foreach (ushort cid in new ushort[] { 199, 200, 257 }) d[cid] = default;
-        return d;
-    }
-
     /// <summary>Config list to a clean one: known controls only, chords the keyboard can store, one per control (the last wins), by CID.</summary>
     public static List<OnboardRemap> Sanitize(IEnumerable<OnboardRemap>? remaps)
     {

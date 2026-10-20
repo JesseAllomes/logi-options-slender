@@ -198,6 +198,7 @@ static class Program
             if (!status.Connected) app.PostToUi(() => ring.Close(RingCloseReason.DeviceLost));
         };
 
+        engine.DpiCapabilitiesChanged += (_, _) => app.SetDpiCapabilities(engine.DpiCapabilities);
         app.ConfigChanged += (_, changed) =>
         {
             sync.NotifyConfigChanged();

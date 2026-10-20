@@ -66,7 +66,7 @@ public sealed partial class MainWindow
         {
             OnboardKeyInfo captured = key;
             OnboardMapping? mapping = read?.Mappings.Where(m => m.Cid == key.Cid).Select(m => (OnboardMapping?)m).FirstOrDefault();
-            string now = !connected ? (read is null ? "…" : "keyboard not connected") : mapping is { } m ? OnboardChoices.Describe(m.Action) : "not reported";
+            string now = !connected ? (read is null ? "…" : "keyboard not connected") : mapping is { } m ? OnboardChoices.DescribeMapping(m) : "not reported";
             var change = new Button { Content = "Change", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = connected && !_remapBusy };
             AutomationProperties.SetName(change, $"Change {key.Name}");
             change.Flyout = BuildRemapFlyout(captured);

@@ -168,14 +168,16 @@ public sealed partial class MainWindow
         }
 
         int? DeviceDpi() => _status.Device("mx-master-4")?.Dpi; // what the mouse reports now (status.json); shown while the speed is Default
-        int RestDpi() => DeviceDpi() is { } dd ? PointerMapping.SnapDpi(dd) : PointerMapping.DpiShown;
-        Slider dpi = PageSlider("Pointer speed", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep, c.Pointer.Dpi ?? RestDpi(),
-            v => { }, v => PointerMapping.DpiText(PointerMapping.SnapDpi(v)), out TextBlock dpiText);
+        DpiScale DpiNow() => DpiScale.From(_status.Device("mx-master-4")); // the sensor's real range once the tray has read it
+        int RestDpi() => DeviceDpi() is { } dd ? DpiNow().Snap(dd) : DpiNow().Snap(PointerMapping.DpiShown);
+        DpiScale dpiScale = DpiNow();
+        Slider dpi = PageSlider("Pointer speed", dpiScale.Min, dpiScale.Max, dpiScale.Step, c.Pointer.Dpi is { } own ? dpiScale.Snap(own) : RestDpi(),
+            v => { }, v => PointerMapping.DpiText(DpiNow().Snap(v)), out TextBlock dpiText);
         dpiText.Width = 120;
         bool setting = false;
         void ShowDefault(bool isDefault)
         {
-            dpiText.Text = isDefault ? PointerMapping.DefaultText(DeviceDpi()) : PointerMapping.DpiText(PointerMapping.SnapDpi(dpi.Value));
+            dpiText.Text = isDefault ? PointerMapping.DefaultText(DeviceDpi()) : PointerMapping.DpiText(DpiNow().Snap(dpi.Value));
             dpiText.Opacity = isDefault ? 0.6 : 1;
         }
 
@@ -187,7 +189,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            int v = PointerMapping.SnapDpi(e.NewValue);
+            int v = DpiNow().Snap(e.NewValue);
             ShowDefault(false);
             Edit(p => p with { Dpi = v });
         };
@@ -206,6 +208,17 @@ public sealed partial class MainWindow
         dpiRow.Children.Add(reset);
         void OnDpiStatus()
         {
+            DpiScale now = DpiNow(); // the sensor list can arrive after the page was built
+            if (now.Min != (int)dpi.Minimum || now.Max != (int)dpi.Maximum || now.Step != (int)dpi.StepFrequency)
+            {
+                setting = true;
+                dpi.Minimum = now.Min;
+                dpi.Maximum = now.Max;
+                dpi.StepFrequency = now.Step;
+                dpi.Value = _config.Config.Pointer.Dpi is { } kept ? now.Snap(kept) : RestDpi();
+                setting = false;
+            }
+
             if (_config.Config.Pointer.Dpi is null)
             {
                 setting = true;

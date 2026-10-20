@@ -67,8 +67,15 @@ public readonly record struct OnboardAction(OnboardActionType Type, ushort Param
     };
 }
 
-/// <summary>One control as read from 0x1C00: CID, current action and the raw status byte.</summary>
-public readonly record struct OnboardMapping(ushort Cid, OnboardAction Action, byte Status);
+/// <summary>
+/// One control as read from 0x1C00: CID, current action and the raw status byte. The K860 reports status 0 for a control on its
+/// own mapping (all 17 read 0 before any write) and 1 after fn4 stored a mapping (docs/protocol.md, live test 2026-10-15).
+/// </summary>
+public readonly record struct OnboardMapping(ushort Cid, OnboardAction Action, byte Status)
+{
+    /// <summary>The keyboard says a stored mapping replaces the factory one. Any non-zero status counts, so an unknown bit errs towards "remapped" (a reset is idempotent).</summary>
+    public bool IsRemapped => Status != 0;
+}
 
 /// <summary>Converts Slender chord strings to 0x1C00 actions. Anything not expressible is rejected with a reason.</summary>
 public static class OnboardChordEncoder

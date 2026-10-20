@@ -57,7 +57,7 @@ public sealed class OnboardRemapService
             var read = await ReadCoreAsync(ct).ConfigureAwait(false);
             if (!read.Ok) return new(read.Error, []);
 
-            var plan = OnboardSync.Plan(sets, read.Mappings, resetList, OnboardRemapKeys.FactoryDefaults);
+            var plan = OnboardSync.Plan(sets, read.Mappings, resetList);
             var results = new Dictionary<ushort, OnboardKeyResult>();
             foreach (var r in plan.Rejected) results[r.Cid] = new(r.Cid, OnboardOutcome.Failed, r.Reason);
             var listed = read.Mappings.Select(m => m.Cid).ToHashSet();
