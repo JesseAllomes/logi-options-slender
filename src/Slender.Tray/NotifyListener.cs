@@ -14,6 +14,7 @@ internal sealed unsafe class NotifyListener : IDisposable
 {
     private const uint EVENT_SYSTEM_ALERT = 0x0002, WINEVENT_OUTOFCONTEXT = 0, WINEVENT_SKIPOWNPROCESS = 2;
     private const string ToastWindowClass = "Windows.UI.Core.CoreWindow";
+    private const string ToastHostExe = "ShellExperienceHost.exe"; // other apps use the same window class; only the shell's toasts count
 
     private static NotifyListener? s_current;
     private readonly SlenderEngine _engine;
@@ -21,6 +22,7 @@ internal sealed unsafe class NotifyListener : IDisposable
     private readonly ILog _log;
     private nint _hook;
     private long _lastAccepted;
+    private readonly HashSet<string> _ignoredHosts = new(StringComparer.OrdinalIgnoreCase); // logged once each
 
     public NotifyListener(SlenderEngine engine, SeenAppsStore seen, ILog? log = null)
     {
@@ -65,11 +67,34 @@ internal sealed unsafe class NotifyListener : IDisposable
 
     private void Handle(nint hwnd)
     {
+        string? host = OwnerExeName(hwnd);
+        if (!string.Equals(host, ToastHostExe, StringComparison.OrdinalIgnoreCase))
+        {
+            lock (_ignoredHosts) if (!_ignoredHosts.Add(host ?? "?")) return;
+            _log.Info($"notification haptics: alert from {host ?? "an unknown process"} ignored (not the toast host)");
+            return;
+        }
         string app;
         try { app = ToastNames.AppFromAccessibleName(ReadAccessibleName(hwnd)); }
         catch (Exception ex) { _log.Error("notification name read failed", ex); app = ToastNames.Unknown; }
         _seen.Record(app, DateTimeOffset.UtcNow);
         _engine.PlayNotification(app);
+    }
+
+    /// <summary>The file name of the process that owns the window; null when it cannot be read.</summary>
+    private static string? OwnerExeName(nint hwnd)
+    {
+        GetWindowThreadProcessId(hwnd, out uint pid);
+        if (pid == 0) return null;
+        nint process = OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, 0, pid);
+        if (process == 0) return null;
+        try
+        {
+            char* path = stackalloc char[520];
+            uint size = 520;
+            return QueryFullProcessImageNameW(process, 0, path, &size) == 0 ? null : Path.GetFileName(new string(path, 0, (int)size));
+        }
+        finally { CloseHandle(process); }
     }
 
     private static bool IsToastWindow(nint hwnd)
@@ -116,6 +141,10 @@ internal sealed unsafe class NotifyListener : IDisposable
 
     [DllImport("user32.dll")] private static extern nint SetWinEventHook(uint min, uint max, nint mod, delegate* unmanaged<nint, uint, nint, int, int, uint, uint, void> proc, uint pid, uint tid, uint flags);
     [DllImport("user32.dll")] private static extern int UnhookWinEvent(nint hook);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint hwnd, out uint pid);
+    [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, int inherit, uint pid);
+    [DllImport("kernel32.dll")] private static extern int QueryFullProcessImageNameW(nint process, uint flags, char* path, uint* size);
+    [DllImport("kernel32.dll")] private static extern int CloseHandle(nint handle);
     [DllImport("user32.dll")] private static extern int GetClassNameW(nint hwnd, char* name, int max);
     [DllImport("oleacc.dll")] private static extern int AccessibleObjectFromWindow(nint hwnd, uint objectId, Guid* iid, nint* result);
     [DllImport("ole32.dll")] private static extern int CoInitializeEx(nint reserved, uint flags);
