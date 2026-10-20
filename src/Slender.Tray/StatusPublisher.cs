@@ -25,7 +25,8 @@ public sealed record StatusSnapshot(
     IReadOnlyList<HostState>? MouseHosts = null,
     IReadOnlyList<HostState>? KeyboardHosts = null,
     string? MouseBatteryEstimate = null,
-    string? KeyboardBatteryEstimate = null);
+    string? KeyboardBatteryEstimate = null,
+    Slender.Hidpp.DpiCapabilities? MouseDpiCaps = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -47,6 +48,11 @@ public sealed class StatusPublisher : IDisposable
             WheelMode = s.MouseConnected ? s.WheelMode : null,
             Hosts = s.MouseConnected ? s.MouseHosts : null,
         };
+        if (s.MouseConnected && s.MouseDpiCaps is { } caps)
+        {
+            state = state with { DpiMin = caps.Min, DpiMax = caps.Max, DpiStep = caps.Step, DpiValues = caps.IrregularValues };
+        }
+
         if (!s.MouseConnected || s.MouseValues is not { } v) return state;
         // The safe band for the Sense Panel force is 50%-200% of the first reading (LogiMouse.SensePanelBand).
         var band = v.SensePanelBaseline is { } b ? Slender.Hidpp.LogiMouse.SensePanelBand(b) : ((int, int)?)null;

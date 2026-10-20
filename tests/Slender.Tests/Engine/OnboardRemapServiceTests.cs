@@ -15,6 +15,12 @@ public class OnboardRemapServiceTests
         {
             [224] = WinTab, [229] = PlayPause, [199] = default, [233] = OnboardAction.Consumer(0xE9),
         };
+        // What the keyboard holds when untouched; status reads 1 for any control whose action differs from it (the real K860 sets it on fn4, clears it on fn5).
+        private readonly Dictionary<ushort, OnboardAction> _factory = new()
+        {
+            [224] = WinTab, [229] = PlayPause, [199] = default, [233] = OnboardAction.Consumer(0xE9),
+        };
+        public readonly HashSet<ushort> ForceRemapped = [];
         public readonly List<string> Writes = [];
         public int Reads;
         public bool Disconnected;
@@ -30,7 +36,7 @@ public class OnboardRemapServiceTests
         {
             if (Disconnected) throw new HidppException("ERGO K860 not connected");
             Reads++;
-            return Task.FromResult<IReadOnlyList<OnboardMapping>>([.. State.Select(kv => new OnboardMapping(kv.Key, kv.Value, 0))]);
+            return Task.FromResult<IReadOnlyList<OnboardMapping>>([.. State.Select(kv => new OnboardMapping(kv.Key, kv.Value, (byte)(_factory.GetValueOrDefault(kv.Key) == kv.Value && !ForceRemapped.Contains(kv.Key) ? 0 : 1)))]);
         }
 
         public Task SetOnboardActionAsync(ushort cid, OnboardAction a, CancellationToken ct)
@@ -47,7 +53,7 @@ public class OnboardRemapServiceTests
         {
             if (cid == FailOn) throw new HidppException("boom");
             Writes.Add($"reset {cid}");
-            State[cid] = OnboardRemapKeys.FactoryDefaults.GetValueOrDefault(cid);
+            State[cid] = _factory.GetValueOrDefault(cid);
             return Task.CompletedTask;
         }
     }
@@ -259,6 +265,25 @@ public class OnboardRemapServiceTests
         Assert.Equal("Win+E", chord);
         Assert.Equal(("Win", "E"), OnboardChoices.Split("Win+E"));
         Assert.Equal(("", "F5"), OnboardChoices.Split("F5"));
+    }
+
+    [Fact]
+    public async Task Reset_is_sent_when_status_says_remapped_even_if_the_action_looks_like_the_usual_one()
+    {
+        var kb = new FakeOnboard();
+        kb.ForceRemapped.Add(229); // reads Play / pause, but the keyboard says a stored mapping is in force
+        var reply = await new OnboardRemapService(kb).ApplyAsync(new Dictionary<ushort, string>(), [229, 224], default);
+        Assert.Equal(["reset 229"], kb.Writes);
+        Assert.Equal(OnboardOutcome.Applied, reply.Results.Single(r => r.Cid == 229).Outcome);
+        Assert.Equal(OnboardOutcome.Unchanged, reply.Results.Single(r => r.Cid == 224).Outcome);
+    }
+
+    [Fact]
+    public void Read_back_says_Default_from_the_status_byte()
+    {
+        Assert.Equal("Default (Win+Tab)", OnboardChoices.DescribeMapping(new OnboardMapping(224, WinTab, 0)));
+        Assert.Equal("Default (keyboard's own function)", OnboardChoices.DescribeMapping(new OnboardMapping(199, default, 0)));
+        Assert.Equal("Ctrl+Esc", OnboardChoices.DescribeMapping(new OnboardMapping(224, OnboardAction.Keystroke(0x29, OnboardModifiers.Ctrl), 1)));
     }
 
     [Fact]

@@ -51,6 +51,7 @@ public sealed class TrayApplication : IDisposable
     private bool _connected;
     private BatteryStatus? _battery;
     private int? _dpi;
+    private Slender.Hidpp.DpiCapabilities? _dpiCaps; // what the engine read from the sensor this connection
     private MouseValues? _mouseValues;
     private string? _mouseFirmware, _keyboardFirmware; // kept across disconnects: firmware does not change while away
     private bool _keyboardConnected;
@@ -84,7 +85,7 @@ public sealed class TrayApplication : IDisposable
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
                 ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
-                _mouseEstimate?.Text, _keyboardEstimate?.Text),
+                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -690,6 +691,7 @@ public sealed class TrayApplication : IDisposable
             StopTimer(TimerBattery);
             _battery = null;
             _dpi = null;
+            _dpiCaps = null;
             _mouseValues = null;
         }
 
@@ -835,6 +837,9 @@ public sealed class TrayApplication : IDisposable
     }
 
     /// <summary>Re-reads the device DPI after Slender changed it, so status.json stays current.</summary>
+    /// <summary>The engine read (or lost) the sensor's DPI list: publish it so Settings' sliders use the real range.</summary>
+    public void SetDpiCapabilities(Slender.Hidpp.DpiCapabilities? caps) => Post(() => { _dpiCaps = caps; _status.Changed(); });
+
     public void RefreshDpi() => Post(() => _ = RefreshDpiAsync());
 
     /// <summary>Reads the device's running firmware once per connect (read-only) for Settings' Firmware rows.</summary>

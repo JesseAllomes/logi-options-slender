@@ -21,6 +21,29 @@ public sealed class DpiCapabilities
     public int Min => _values.Length > 0 ? _values[0] : _min;
     public int Max => _values.Length > 0 ? _values[^1] : _max;
 
+    /// <summary>Grid spacing: the range's step, or for a list the largest step every listed value sits on (1 for a single value).</summary>
+    public int Step
+    {
+        get
+        {
+            if (_values.Length == 0) return _step;
+            int g = 0;
+            for (int i = 1; i < _values.Length; i++) g = Gcd(g, _values[i] - _values[i - 1]);
+            return Math.Max(1, g);
+        }
+    }
+
+    /// <summary>
+    /// The listed values when they are not simply every <see cref="Step"/> from Min to Max and few enough to publish (at most
+    /// <see cref="MaxPublishedValues"/>); null for a range or an evenly stepped list, where Min/Max/Step say it all.
+    /// </summary>
+    public IReadOnlyList<int>? IrregularValues =>
+        _values.Length > 0 && _values.Length <= MaxPublishedValues && _values.Length != (Max - Min) / Step + 1 ? _values : null;
+
+    public const int MaxPublishedValues = 32;
+
+    private static int Gcd(int a, int b) { while (b != 0) (a, b) = (b, a % b); return a; }
+
     /// <summary>The accepted value nearest <paramref name="dpi"/> (ties go lower).</summary>
     public int Clamp(int dpi)
     {

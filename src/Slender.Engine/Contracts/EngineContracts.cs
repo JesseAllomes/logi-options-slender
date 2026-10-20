@@ -474,6 +474,14 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 {
     /// <summary>Current pointer speed read from the mouse (0x2201); null when unknown or not a mouse.</summary>
     public int? Dpi { get; init; }
+    /// <summary>
+    /// The DPI values the sensor accepts (0x2201 fn1, read once per connection by the engine): Min/Max/Step, plus the explicit
+    /// values only when they are not evenly stepped. All null until the tray has read them (mouse not connected yet).
+    /// </summary>
+    public int? DpiMin { get; init; }
+    public int? DpiMax { get; init; }
+    public int? DpiStep { get; init; }
+    public IReadOnlyList<int>? DpiValues { get; init; }
     /// <summary>Days-left sentence from the battery history ("About 12 days left", "Not enough data yet", "Charging"); null when not known.</summary>
     public string? BatteryEstimate { get; init; }
     /// <summary>Current scroll wheel resistance 0-100 (0x2111 torque); null when unknown.</summary>

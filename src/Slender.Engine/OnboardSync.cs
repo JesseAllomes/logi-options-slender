@@ -28,17 +28,17 @@ public static class OnboardSync
     /// <summary>
     /// <paramref name="desired"/>: CID to chord. <paramref name="current"/>: <see cref="IOnboardKeyboard.ReadOnboardMappingsAsync"/>.
     /// <paramref name="previouslyManaged"/>: CIDs Slender wrote earlier; those missing from <paramref name="desired"/> are reset
-    /// (never touches a key Slender did not manage). <paramref name="factoryDefaults"/>: when given, a reset is skipped for a key
-    /// that already reads its factory action. A desired CID the keyboard does not list is rejected.
+    /// (never touches a key Slender did not manage). A reset is skipped only for a key whose own 0x1C00 status says it is not
+    /// remapped (<see cref="OnboardMapping.IsRemapped"/>); no table of assumed factory actions decides anything. A desired CID
+    /// the keyboard does not list is rejected.
     /// </summary>
     public static OnboardSyncPlan Plan(
         IReadOnlyDictionary<ushort, string> desired,
         IReadOnlyList<OnboardMapping> current,
-        IEnumerable<ushort>? previouslyManaged = null,
-        IReadOnlyDictionary<ushort, OnboardAction>? factoryDefaults = null)
+        IEnumerable<ushort>? previouslyManaged = null)
     {
-        var now = new Dictionary<ushort, OnboardAction>();
-        foreach (var m in current) now[m.Cid] = m.Action;
+        var now = new Dictionary<ushort, OnboardMapping>();
+        foreach (var m in current) now[m.Cid] = m;
 
         var ops = new List<OnboardOp>();
         var rejected = new List<OnboardRejected>();
@@ -47,7 +47,7 @@ public static class OnboardSync
         {
             if (!now.TryGetValue(cid, out var have)) { rejected.Add(new(cid, chord, "keyboard does not list this control")); continue; }
             if (!OnboardChordEncoder.TryEncode(chord, out var want, out var err)) { rejected.Add(new(cid, chord, err)); continue; }
-            if (want != have) ops.Add(new OnboardSetOp(cid, chord, want));
+            if (want != have.Action) ops.Add(new OnboardSetOp(cid, chord, want));
         }
 
         if (previouslyManaged != null)
@@ -55,7 +55,7 @@ public static class OnboardSync
             foreach (var cid in previouslyManaged.Distinct().OrderBy(c => c))
             {
                 if (desired.ContainsKey(cid) || !now.TryGetValue(cid, out var have)) continue;
-                if (factoryDefaults != null && factoryDefaults.TryGetValue(cid, out var def) && def == have) continue;
+                if (!have.IsRemapped) continue; // the keyboard itself says this key is on its own mapping
                 ops.Add(new OnboardResetOp(cid));
             }
         }
@@ -75,26 +75,4 @@ public static class OnboardSync
             }
         }
     }
-
-    /// <summary>
-    /// Actions read from the ERGO K860 on 2026-10-15 (docs/protocol.md). Assumed to be factory defaults but not proven;
-    /// pass to <see cref="Plan"/> to avoid redundant resets.
-    /// </summary>
-    public static IReadOnlyDictionary<ushort, OnboardAction> K860ObservedDefaults { get; } = new Dictionary<ushort, OnboardAction>
-    {
-        [224] = OnboardAction.Keystroke(0x2B, OnboardModifiers.Meta),
-        [225] = OnboardAction.Keystroke(0x04, OnboardModifiers.Meta),
-        [110] = OnboardAction.Keystroke(0x07, OnboardModifiers.Meta),
-        [213] = OnboardAction.Consumer(0x0223),
-        [228] = OnboardAction.Consumer(0x00B6),
-        [229] = OnboardAction.Consumer(0x00CD),
-        [230] = OnboardAction.Consumer(0x00B5),
-        [231] = OnboardAction.Consumer(0x00E2),
-        [232] = OnboardAction.Consumer(0x00EA),
-        [233] = OnboardAction.Consumer(0x00E9),
-        [191] = OnboardAction.Keystroke(0x46, OnboardModifiers.None),
-        [10] = OnboardAction.Consumer(0x0192),
-        [234] = OnboardAction.Keystroke(0x65, OnboardModifiers.None),
-        [111] = OnboardAction.Keystroke(0x0F, OnboardModifiers.Meta),
-    };
 }

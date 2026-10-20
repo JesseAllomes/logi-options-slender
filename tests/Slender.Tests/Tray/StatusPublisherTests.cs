@@ -228,6 +228,38 @@ public sealed class StatusPublisherTests : IDisposable
         Assert.Equal(70, read.Devices[0].BatteryPercent);
         Assert.Equal([path], Directory.GetFiles(_dir));
     }
+
+    [Fact]
+    public void The_sensor_dpi_list_is_published_compactly_and_survives_the_json_round_trip()
+    {
+        var h = new Harness();
+        h.Snapshot = h.Snapshot with { MouseDpiCaps = Slender.Hidpp.DpiCapabilities.Range(200, 8000, 50) };
+        using StatusPublisher pub = h.Create();
+        pub.PublishNow();
+        SlenderStatus back = Slender.Engine.Config.StatusJson.Parse(Slender.Engine.Config.StatusJson.Serialize(h.Written[^1]))!;
+        DeviceState mouse = back.Devices.Single(d => d.Id == "mx-master-4");
+        Assert.Equal((200, 8000, 50), (mouse.DpiMin, mouse.DpiMax, mouse.DpiStep));
+        Assert.Null(mouse.DpiValues); // a plain range needs no list
+
+        h.Snapshot = h.Snapshot with { MouseDpiCaps = Slender.Hidpp.DpiCapabilities.List([800, 1600, 3200]) };
+        pub.PublishNow();
+        back = Slender.Engine.Config.StatusJson.Parse(Slender.Engine.Config.StatusJson.Serialize(h.Written[^1]))!;
+        mouse = back.Devices.Single(d => d.Id == "mx-master-4");
+        Assert.Equal((800, 3200, 800), (mouse.DpiMin, mouse.DpiMax, mouse.DpiStep));
+        Assert.Equal([800, 1600, 3200], mouse.DpiValues);
+    }
+
+    [Fact]
+    public void No_dpi_list_is_published_while_unknown_or_the_mouse_is_away()
+    {
+        var h = new Harness();
+        using StatusPublisher pub = h.Create();
+        pub.PublishNow();
+        Assert.Null(h.Written[^1].Devices.Single(d => d.Id == "mx-master-4").DpiMin);
+        h.Snapshot = h.Snapshot with { MouseConnected = false, MouseDpiCaps = Slender.Hidpp.DpiCapabilities.Range(200, 8000, 50) };
+        pub.PublishNow();
+        Assert.Null(h.Written[^1].Devices.Single(d => d.Id == "mx-master-4").DpiMin);
+    }
 }
 
 public sealed class SettingsLauncherTests : IDisposable

@@ -18,15 +18,16 @@ public sealed partial class MainWindow
         }
 
         AddSection("POINTER SPEED BY APP");
+        DpiScale scale = DpiScale.From(_status.Device("mx-master-4")); // the sensor's real range once the tray has read it
         foreach (Profile app in apps)
         {
             string process = app.AppProcess!;
             string name = ProfileOps.AppName(app);
-            FrameworkElement row = DefaultableSlider($"Pointer speed in {name}", PointerMapping.DpiMin, PointerMapping.DpiMax, PointerMapping.DpiStep,
+            FrameworkElement row = DefaultableSlider($"Pointer speed in {name}", scale.Min, scale.Max, scale.Step,
                 AppDpiModel.Own(_config.Config, process),
                 () => AppDpiModel.Inherited(_config.Config) ?? _status.Device("mx-master-4")?.Dpi,
-                v => PointerMapping.DpiText(PointerMapping.SnapDpi(v)),
-                v => _config.Update(x => AppDpiModel.Set(x, process, v)), PointerMapping.DpiShown);
+                v => PointerMapping.DpiText(scale.Snap(v)),
+                v => _config.Update(x => AppDpiModel.Set(x, process, v, scale)), PointerMapping.DpiShown);
             AddRow(name, "Slender switches the mouse to this speed while the app is in front, and back when you leave it.", row);
         }
     }

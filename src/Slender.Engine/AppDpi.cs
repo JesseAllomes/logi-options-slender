@@ -34,12 +34,17 @@ internal sealed class AppDpiWriter(ILogiMouse mouse, ILog log)
     private int? _written;            // last value this connection wrote (or confirmed); null = nothing yet
     private int? _home;               // the mouse's own speed, read before the first write; survives reconnects
     private DpiCapabilities? _caps;   // what the sensor accepts, read once per connection
+    private bool _capsRead;           // the read was tried this connection (a mouse without the list is not asked again)
+
+    /// <summary>What the sensor accepts, once read on this connection; null before that or when the mouse would not say.</summary>
+    public DpiCapabilities? Capabilities => Volatile.Read(ref _caps);
 
     /// <summary>The mouse reconnected or went away: whatever it held is gone, so the next apply writes again.</summary>
     public void Reset()
     {
         _written = null;
-        _caps = null;
+        Volatile.Write(ref _caps, null);
+        _capsRead = false;
     }
 
     /// <summary>Resolves the target now (after taking the gate, so a stale call never wins) and writes it if it changed. Returns the DPI written, else null.</summary>
@@ -50,12 +55,17 @@ internal sealed class AppDpiWriter(ILogiMouse mouse, ILog log)
         {
             if (!mouse.IsConnected) return null;
             if (_home is null && _written is null && await mouse.GetDpiAsync(ct).ConfigureAwait(false) is { } current) _home = current;
+            if (!_capsRead) // the one list read per connection: it also tells Settings the sensor's real range
+            {
+                Volatile.Write(ref _caps, await mouse.GetDpiCapabilitiesAsync(ct).ConfigureAwait(false));
+                _capsRead = true;
+            }
+
             int? target = resolve();
             if (target is null && _written is null) return null; // nobody asked for a speed and we never changed it
             target ??= _home;
             if (target is not { } wanted) return null;
-            _caps ??= await mouse.GetDpiCapabilitiesAsync(ct).ConfigureAwait(false);
-            if (_caps is not null) wanted = _caps.Clamp(wanted);
+            if (_caps is { } caps) wanted = caps.Clamp(wanted);
             if (_written == wanted) return null;
             if (_written is null && _home == wanted) { _written = wanted; return null; } // the mouse already has it
             await mouse.SetDpiAsync(wanted, ct).ConfigureAwait(false);

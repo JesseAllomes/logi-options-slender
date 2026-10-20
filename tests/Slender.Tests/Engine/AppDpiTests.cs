@@ -107,6 +107,38 @@ public class AppDpiTests
     }
 
     [Fact]
+    public void The_sensor_list_is_read_once_per_connection_and_published_without_a_write()
+    {
+        using var r = new Rig(Cfg(null, App("excel", null)), DpiCapabilities.Range(400, 4000, 100));
+        Assert.Equal(400, r.Engine.DpiCapabilities?.Min); // read by the first apply although nobody asked for a speed
+        Assert.Equal(4000, r.Engine.DpiCapabilities?.Max);
+        Assert.Empty(r.Writes);
+        Assert.Equal(1, r.Mouse.DpiCapReads);
+        r.Switch("excel");
+        r.Switch("notepad");
+        Assert.Equal(1, r.Mouse.DpiCapReads); // not again
+        r.Mouse.IsConnected = false;
+        r.Mouse.Connect(false);
+        r.Settle();
+        Assert.Null(r.Engine.DpiCapabilities); // gone with the connection
+        r.Mouse.IsConnected = true;
+        r.Mouse.Connect(true);
+        r.Settle();
+        Assert.Equal(2, r.Mouse.DpiCapReads);
+    }
+
+    [Fact]
+    public void A_mouse_that_will_not_list_its_speeds_is_asked_only_once()
+    {
+        using var r = new Rig(Cfg(null, App("excel", 3200)), null);
+        r.Switch("excel");
+        r.Switch("notepad");
+        r.Switch("excel");
+        Assert.Null(r.Engine.DpiCapabilities);
+        Assert.Equal(1, r.Mouse.DpiCapReads);
+    }
+
+    [Fact]
     public void A_reconnect_writes_again_because_dpi_does_not_survive_it()
     {
         using var r = new Rig(Cfg(null, App("excel", 3200)));

@@ -137,6 +137,13 @@ public sealed partial class SlenderEngine : IDisposable
     }
 
     /// <summary>Completes when the newest per-app pointer speed write (foreground change, config change, reconnect) has finished.</summary>
+    /// <summary>What the sensor accepts (0x2201 fn1), as the engine read it for the connection; null until read.</summary>
+    public DpiCapabilities? DpiCapabilities => _dpiWriter.Capabilities;
+
+    /// <summary>Raised (thread pool) after the engine's DPI apply changed what <see cref="DpiCapabilities"/> holds, so the tray can republish status.</summary>
+    public event EventHandler? DpiCapabilitiesChanged;
+    private DpiCapabilities? _capsSeen;
+
     public Task DpiSettled { get { lock (_gate) return _dpiTail; } }
 
     /// <summary>Writes the pointer speed for the app in front when it differs from what was last written. Runs on the thread pool, never on the hook thread.</summary>
@@ -154,6 +161,8 @@ public sealed partial class SlenderEngine : IDisposable
         try
         {
             if (await _dpiWriter.ApplyAsync(() => AppDpi.For(_config, _foreground.ProcessName), _cts.Token).ConfigureAwait(false) is { } written) _deviceDpi = written;
+            var caps = _dpiWriter.Capabilities;
+            if (!ReferenceEquals(Interlocked.Exchange(ref _capsSeen, caps), caps)) DpiCapabilitiesChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { _log.Error("per-app dpi write failed", ex); }

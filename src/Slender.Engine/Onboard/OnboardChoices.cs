@@ -61,6 +61,14 @@ public static class OnboardChoices
         m.Equals("Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl"
         : m.Equals("Windows", StringComparison.OrdinalIgnoreCase) || m.Equals("Meta", StringComparison.OrdinalIgnoreCase) ? "Win" : m;
 
+    /// <summary>
+    /// Read-back line for one control: "Default (Win+Tab)" while the keyboard's own status says it is not remapped, else the stored
+    /// action. The status byte decides, not a table of expected actions.
+    /// </summary>
+    public static string DescribeMapping(OnboardMapping m) =>
+        m.IsRemapped ? Describe(m.Action)
+        : m.Action.Type == OnboardActionType.Empty ? "Default (keyboard's own function)" : $"Default ({Describe(m.Action)})";
+
     /// <summary>Plain text for what the keyboard reports, e.g. "Win+Tab", "Play / pause", "Not set".</summary>
     public static string Describe(OnboardAction action)
     {
