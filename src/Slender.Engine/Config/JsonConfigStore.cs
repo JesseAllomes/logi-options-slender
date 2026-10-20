@@ -133,6 +133,7 @@ public sealed class JsonConfigStore : IConfigStore
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
             Ring = ToRingAppearance(dto.Ring),
             MyShortcuts = ToMyShortcuts(dto.MyShortcuts),
+            Macros = MacroDtos.ToMacros(dto.Macros),
         };
     }
 
@@ -331,6 +332,7 @@ public sealed class JsonConfigStore : IConfigStore
             MyShortcuts = config.MyShortcuts.Count == 0
                 ? null
                 : config.MyShortcuts.Select(s => new CustomShortcutDto { Name = s.Name, Chord = s.Chord, App = s.App }).ToList(),
+            Macros = config.Macros.Count == 0 ? null : MacroDtos.FromMacros(config.Macros),
             Ring = new RingDto
             {
                 Style = config.Ring.Style.ToString(),
@@ -437,6 +439,7 @@ public sealed class JsonConfigStore : IConfigStore
         public BatteryAlertsDto? BatteryAlerts { get; set; }
         public RingDto? Ring { get; set; }
         public List<CustomShortcutDto>? MyShortcuts { get; set; }
+        public List<MacroDto>? Macros { get; set; }
     }
 
     internal sealed class CustomShortcutDto

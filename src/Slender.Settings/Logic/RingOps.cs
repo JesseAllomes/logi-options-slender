@@ -102,6 +102,7 @@ public static class RingOps
             ActionSpec.Excel => "Excel",
             ActionSpec.Launch l => ShortTarget(l.Target),
             ActionSpec.Text => "Types text",
+            ActionSpec.Macro => "Macro",
             _ => string.Empty,
         };
         if (sub == title)

@@ -64,6 +64,7 @@ public sealed partial class MainWindow : Window
         _icons = new IconService(_assets.IconsDirectory);
 
         _config.Changed += OnConfigChanged;
+        Slender.Engine.Macros.MacroLabels.Resolver = id => MacroOps.Find(_config.Config, id)?.Name; // labels show a macro by name
         _status.Changed += OnStatusChanged;
         Closed += OnClosed;
 

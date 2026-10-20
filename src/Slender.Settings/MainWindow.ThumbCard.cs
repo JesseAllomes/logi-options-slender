@@ -627,7 +627,7 @@ public sealed partial class MainWindow
             ActionSpec.MouseButton => "mouse",
             ActionSpec.Excel => "excel",
             ActionSpec.ActionsRing => "ring",
-            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text => "more",
+            ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text or ActionSpec.Macro => "more",
             ActionSpec.Keys => "keys",
             _ => "default",
         };

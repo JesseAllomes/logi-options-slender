@@ -94,6 +94,7 @@ public static class RingGlyphs
             ActionSpec.Brightness => "E706",
             ActionSpec.Disabled => "E711",
             ActionSpec.Text => "E8D2",
+            ActionSpec.Macro => "E768", // play
             _ => "E710",
         };
     }

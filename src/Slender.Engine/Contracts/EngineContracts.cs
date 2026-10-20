@@ -134,6 +134,11 @@ public abstract record ActionSpec
     /// <summary>Types the text as Unicode input into the foreground app (a saved snippet).</summary>
     public sealed record Text(string Value) : ActionSpec;
     /// <summary>
+    /// Runs a macro from the config's library (<see cref="SlenderConfig.Macros"/>) by id: press starts it (or ends it if it is
+    /// running), release ends a repeat-while-held macro. A missing id does nothing.
+    /// </summary>
+    public sealed record Macro(string Id) : ActionSpec;
+    /// <summary>
     /// One control, two actions: a release before <see cref="HoldMs"/> runs <paramref name="Tap"/> (press then release);
     /// still down at <see cref="HoldMs"/> starts <paramref name="Hold"/> as a press, released with the physical release.
     /// Neither may itself be a TapHold, and a TapHold is not allowed in a ring slot, a gesture swipe or the thumb wheel.
@@ -422,6 +427,9 @@ public sealed record SlenderConfig(
     public KeyboardSettings Keyboard { get; init; } = new();
     public BatteryAlertSettings BatteryAlerts { get; init; } = new();
     public RingAppearance Ring { get; init; } = new();
+
+    /// <summary>The macro library: <see cref="ActionSpec.Macro"/> refers to an entry by id.</summary>
+    public IReadOnlyList<Slender.Engine.Macros.MacroDef> Macros { get; init; } = [];
 
     /// <summary>The user's own named shortcuts for the picker's Shortcuts tab ("My shortcuts"), in the order added.</summary>
     public IReadOnlyList<CustomShortcut> MyShortcuts { get; init; } = [];

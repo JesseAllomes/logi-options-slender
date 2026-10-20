@@ -122,6 +122,7 @@ public static class ActionCatalog
         ActionSpec.Disabled => new ActionLabel("Off", []),
         ActionSpec.Brightness b => new ActionLabel(b.StepPercent < 0 ? "Brightness down" : "Brightness up", []),
         ActionSpec.Text t => new ActionLabel(TextName(t.Value), []),
+        ActionSpec.Macro m => new ActionLabel("Macro: " + Slender.Engine.Macros.MacroLabels.NameOf(m.Id), []),
         ActionSpec.TapHold th => new ActionLabel(TapHoldName(th), []),
         _ => new ActionLabel("Not assigned", []),
     };
