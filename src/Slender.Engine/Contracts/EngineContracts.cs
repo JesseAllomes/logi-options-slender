@@ -426,6 +426,9 @@ public sealed record SlenderConfig(
     /// <summary>The user's own named shortcuts for the picker's Shortcuts tab ("My shortcuts"), in the order added.</summary>
     public IReadOnlyList<CustomShortcut> MyShortcuts { get; init; } = [];
 
+    /// <summary>K860 remaps the user chose to store ON the keyboard (CID to chord). Written to the keyboard only when Settings asks the tray to apply a saved change, never on connect or reload.</summary>
+    public IReadOnlyList<OnboardRemap> OnboardRemaps { get; init; } = [];
+
     public static SlenderConfig Default { get; } = new(
         CurrentVersion,
         [new Profile(null, new Dictionary<ushort, ActionSpec>()) { DisplayName = "All apps" },

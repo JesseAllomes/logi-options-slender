@@ -155,6 +155,9 @@ static class Program
         // Other programs (a Claude Code hook, a build script) and Settings' Test button buzz the mouse over a current-user pipe.
         using var buzz = new BuzzServer(engine, log);
         buzz.Start();
+        // Settings' on-keyboard remaps (K860 0x1C00): read-back and apply only on its request, never on connect, start or config reload.
+        using var onboard = new OnboardServer(new OnboardRemapService(keyboard, log), log);
+        onboard.Start();
         app.BatteryLow += (_, _) => engine.PlayHaptic(HapticEvent.BatteryLow);
         // Touch calibration recordings start only when a trigger file appears (see TouchRecorder); idle otherwise.
         using var touchRecorder = new TouchRecorder(engine, mouse, SyncPaths.StateDirectory, log);
