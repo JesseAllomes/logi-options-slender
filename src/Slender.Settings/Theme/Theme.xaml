@@ -83,7 +83,7 @@
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12" />
     <Setter Property="MinWidth" Value="340" />
-    <Setter Property="MaxWidth" Value="380" />
+    <Setter Property="MaxWidth" Value="900" /> <!-- pickers grow to fit every tab (was 380: tabs fell off the edge) -->
     <Setter Property="IsDefaultShadowEnabled" Value="True" />
   </Style>
 

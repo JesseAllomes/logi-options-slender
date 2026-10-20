@@ -17,7 +17,7 @@ public sealed partial class MainWindow
 {
     private sealed record PickerTab(string Key, string Title);
 
-    private const double PickerWidth = 480;
+    private const double PickerMinWidth = 316;
 
     private static readonly PickerTab[] MouseTabs =
     [
@@ -160,23 +160,16 @@ public sealed partial class MainWindow
             }
         };
 
-        // Wide enough for every tab (the mouse has 7, the thumb wheel 8): at 316 px "More" and "Default" fell off the edge and
-        // could not be reached (user 2026-10-20). The tab row also scrolls sideways if a longer set ever outgrows it.
-        var root = new StackPanel { Spacing = 10, Width = PickerWidth };
+        // As wide as its tab row (the mouse has 7 tabs, the thumb wheel 8), never narrower than before: every tab is visible
+        // with no scrolling (user 2026-10-20; "More" and "Default" used to fall off the edge, hiding Type text and Launch).
+        var root = new StackPanel { Spacing = 10, MinWidth = PickerMinWidth };
         root.Children.Add(header);
         if (spec.Extra is not null)
         {
             root.Children.Add(spec.Extra());
         }
 
-        root.Children.Add(new ScrollViewer
-        {
-            Content = bar,
-            HorizontalScrollMode = ScrollMode.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollMode = ScrollMode.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-        });
+        root.Children.Add(bar);
         root.Children.Add(host);
         flyout.Content = root;
 
