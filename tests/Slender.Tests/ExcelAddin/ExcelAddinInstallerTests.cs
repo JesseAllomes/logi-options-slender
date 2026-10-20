@@ -27,6 +27,11 @@ internal sealed class FakeFiles : IExcelAddinFiles
     public List<(string From, string To)> Copies { get; } = [];
     public bool LockedTarget;
     public bool LockedDelete;
+    public Dictionary<string, AddinFileStamp> Stamps { get; } = [];
+    public bool SameBytes;
+    public int HashCalls;
+    public List<(string From, string To)> Replaces { get; } = [];
+    public bool LockedReplace;
 
     public bool Exists(string path) => Present.Contains(path);
 
@@ -35,6 +40,22 @@ internal sealed class FakeFiles : IExcelAddinFiles
         if (LockedTarget) throw new IOException("in use");
         Copies.Add((source, destination));
         Present.Add(destination);
+    }
+
+    public AddinFileStamp? Stamp(string path) => Stamps.TryGetValue(path, out var s) ? s : null;
+
+    public bool SameContent(string a, string b)
+    {
+        HashCalls++;
+        return SameBytes;
+    }
+
+    public void ReplaceAtomically(string source, string destination)
+    {
+        if (LockedReplace) throw new IOException("in use");
+        Replaces.Add((source, destination));
+        Present.Add(destination);
+        Stamps[destination] = Stamps[source];
     }
 
     public void Delete(string path)

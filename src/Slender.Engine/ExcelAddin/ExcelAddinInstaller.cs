@@ -20,12 +20,26 @@ public interface IExcelAddinFiles
     void Copy(string source, string destination);
     /// <summary>Deletes the file; a missing file is fine.</summary>
     void Delete(string path);
+    /// <summary>Size and last-write time of the file, or null when it is missing. A stat only; the file is not opened.</summary>
+    AddinFileStamp? Stamp(string path);
+    /// <summary>True when both files hold the same bytes (hashes them; callers do this only when the stamps differ in time).</summary>
+    bool SameContent(string a, string b);
+    /// <summary>
+    /// Copies to a temporary name beside <paramref name="destination"/>, then moves it over the destination in one step, so the
+    /// destination is always whole. Throws IOException or UnauthorizedAccessException when the destination is locked; the temp file is removed.
+    /// </summary>
+    void ReplaceAtomically(string source, string destination);
 }
+
+/// <summary>What a stat says about a file: byte length and last write (UTC ticks).</summary>
+public readonly record struct AddinFileStamp(long Length, long WriteTicksUtc);
 
 public interface IExcelProcessProbe
 {
     bool IsExcelRunning();
 }
+
+public enum AddinRefreshStatus { NotInstalled, SourceMissing, UpToDate, Refreshed, Deferred, Failed }
 
 public enum AddinInstallStatus { Installed, AlreadyInstalled, Removed, NotInstalled, SourceMissing, Failed }
 
@@ -97,6 +111,30 @@ public sealed class ExcelAddinInstaller
         {
             return new(AddinInstallStatus.Failed, running, running ? "Close Excel and try again." : "Could not turn the Excel add-in on: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// After a Slender update: brings the installed copy up to the .xll that now ships, when the add-in is on and the two differ.
+    /// Cheap on the usual path (two stats). Never touches the registry. Never replaces a file Excel may have loaded: when Excel is
+    /// running or the replace hits a lock it returns Deferred and the next call (next tray start, or Settings opening) tries again.
+    /// </summary>
+    public AddinRefreshStatus RefreshInstalledCopy()
+    {
+        try
+        {
+            var slots = ReadSlots();
+            var ours = FindOurs(slots);
+            if (ours < 0 || slots[ours].Value != ValueFor(_installedXll)) return AddinRefreshStatus.NotInstalled;
+            if (_files.Stamp(_sourceXll) is not { } shipped) return AddinRefreshStatus.SourceMissing;
+            if (_files.Stamp(_installedXll) is { } have && have.Length == shipped.Length
+                && (have.WriteTicksUtc == shipped.WriteTicksUtc || _files.SameContent(_sourceXll, _installedXll)))
+                return AddinRefreshStatus.UpToDate;
+            if (_excel.IsExcelRunning() && _files.Exists(_installedXll)) return AddinRefreshStatus.Deferred; // loaded in Excel, so locked
+            _files.ReplaceAtomically(_sourceXll, _installedXll);
+            return AddinRefreshStatus.Refreshed;
+        }
+        catch (IOException) { return AddinRefreshStatus.Deferred; } // locked after all; try again later
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException) { return AddinRefreshStatus.Failed; }
     }
 
     public AddinInstallResult Uninstall()
@@ -204,6 +242,35 @@ public sealed class FileSystemExcelAddinFiles : IExcelAddinFiles
     }
 
     public void Delete(string path) => File.Delete(path);
+
+    public AddinFileStamp? Stamp(string path)
+    {
+        var info = new FileInfo(path);
+        return info.Exists ? new AddinFileStamp(info.Length, info.LastWriteTimeUtc.Ticks) : null;
+    }
+
+    public bool SameContent(string a, string b)
+    {
+        using var sa = new FileStream(a, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var sb = new FileStream(b, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return System.Security.Cryptography.SHA256.HashData(sa).AsSpan().SequenceEqual(System.Security.Cryptography.SHA256.HashData(sb));
+    }
+
+    public void ReplaceAtomically(string source, string destination)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        var temp = destination + ".new";
+        try
+        {
+            File.Copy(source, temp, overwrite: true);
+            File.Move(temp, destination, overwrite: true); // fails while Excel has the destination loaded
+        }
+        catch
+        {
+            try { File.Delete(temp); } catch (Exception) { }
+            throw;
+        }
+    }
 }
 
 public sealed class ExcelProcessProbe : IExcelProcessProbe

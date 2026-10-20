@@ -87,7 +87,7 @@ public sealed partial class MainWindow
             ActionSpec.Keys k when ShortcutShown(target, k.Chord) => "shortcuts",
             ActionSpec.Keys => "keys",
             ActionSpec.MouseButton => "mouse",
-            ActionSpec.Excel => "excel",
+            ActionSpec.Excel or ActionSpec.ExcelMacro => "excel",
             ActionSpec.ActionsRing => "ring",
             ActionSpec.Brightness when _kind == DeviceKind.Keyboard => "media",
             ActionSpec.Launch or ActionSpec.Disabled or ActionSpec.Brightness or ActionSpec.Text or ActionSpec.Macro or ActionSpec.TapHold => "more",
@@ -131,7 +131,7 @@ public sealed partial class MainWindow
             spec.Apply(action);
         }
 
-        PickerTab[] tabs = [.. spec.Tabs.Where(t => PickerTabs.Show(t.Key, spec.ShortcutApp, spec.Own is ActionSpec.Excel, _ui.HideShortcutSuggestions))];
+        PickerTab[] tabs = [.. spec.Tabs.Where(t => PickerTabs.Show(t.Key, spec.ShortcutApp, spec.Own is ActionSpec.Excel or ActionSpec.ExcelMacro, _ui.HideShortcutSuggestions))];
         string initial = tabs.Any(t => t.Key == spec.Initial) ? spec.Initial : tabs[0].Key;
 
         var header = Ui.Text(spec.Header, 12, Ui.Muted);
@@ -216,7 +216,7 @@ public sealed partial class MainWindow
             case "mouse":
                 return OptionList(ActionCatalog.MouseOptions, own, commit);
             case "excel":
-                return OptionList(ActionCatalog.ExcelOptions, own, commit);
+                return ExcelTab(own, commit);
             case "ring":
                 return OptionList(ActionCatalog.RingOptions, own, commit);
             case "more":
