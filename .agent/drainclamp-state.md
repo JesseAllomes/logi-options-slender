@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=123 -->
+<!-- drainclamp-build: state; schema=1; generation=124 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -43,7 +43,7 @@ Onboard K860 -> dig deeper with an input logger before deciding (user)
 Subagents must never click/type on the desktop or launch UI windows without the user's go-ahead (Outlook clicks + pop-ups happened); never kill processes they did not start (python kill happened) (user)
 Onboard K860 -> one modifier max or media key (tested); multi-modifier per app via software divert, same as Options+ (tested)
 Live device writes and Options+ stops only with explicit user go-ahead in the current conversation; user authorised stopping Options+ processes/service only
-Options+ is disabled, not uninstalled; keep it installed for firmware updates (user 2026-10-15)
+Options+ uninstalled on purpose (user 2026-10-20: "I wanted it gone"); supersedes keeping it for firmware updates (2026-10-15). Slender never depends on Options+: its device pictures are Slender's own copies with a backup; "Update firmware..." only explains that Options+ is needed; no own DFU (still blocked)
 New scope (user 2026-10-15): 15% mouse charge alert, open custom apps from a key, turn a key off, migrate all Options+ profile settings
 Options+ import -> one-time, read-only (copy settings.db first, never write Options+ files); unmapped items listed in a report, never silently dropped (agent default)
 Actions Ring -> own ring drawn by the AOT tray; styles Bezel, Compass, Keypad (round-1 prototypes 1-3) switchable in Settings with colour, opacity and layout options; folder slots open nested apps/web pages/actions like Options+; feature parity researched before build (user 2026-10-15)
