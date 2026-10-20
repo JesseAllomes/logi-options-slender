@@ -155,6 +155,22 @@ public class ProfileResolverTests
 public class BoundedWorkerTests
 {
     [Fact]
+    public void Lazy_queue_creates_its_worker_on_the_first_post_only()
+    {
+        int created = 0;
+        var inner = new InlineQueue();
+        var lazy = new LazyWorkQueue(() => { created++; return inner; });
+        Assert.Equal(0, created);
+        int ran = 0;
+        lazy.Post(() => ran++);
+        lazy.Post(() => ran++);
+        Assert.Equal((1, 2), (created, ran));
+        lazy.Dispose();
+        lazy.Post(() => ran++); // after dispose: dropped
+        Assert.Equal(2, ran);
+    }
+
+    [Fact]
     public void DropsOldestWhenFull()
     {
         using var w = new BoundedWorker("t", 3, sta: true);

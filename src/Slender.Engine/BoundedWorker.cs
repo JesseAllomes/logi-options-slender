@@ -6,6 +6,32 @@ internal interface IWorkQueue : IDisposable
     void Post(Action work);
 }
 
+/// <summary>A work queue whose thread is only created by the first Post: a feature that is never used costs no thread.</summary>
+internal sealed class LazyWorkQueue(Func<IWorkQueue> create) : IWorkQueue
+{
+    private readonly object _gate = new();
+    private IWorkQueue? _inner;
+    private bool _disposed;
+
+    public void Post(Action work)
+    {
+        IWorkQueue inner;
+        lock (_gate)
+        {
+            if (_disposed) return;
+            inner = _inner ??= create();
+        }
+        inner.Post(work);
+    }
+
+    public void Dispose()
+    {
+        IWorkQueue? inner;
+        lock (_gate) { _disposed = true; inner = _inner; }
+        inner?.Dispose();
+    }
+}
+
 /// <summary>
 /// Single dedicated thread (optionally STA) with a bounded queue. When full the OLDEST item is dropped
 /// (its onDropped runs). Work exceptions are swallowed and logged: nothing escapes the thread.

@@ -6,7 +6,7 @@ namespace Slender.Engine.ExcelAddin;
 /// Excel actions through the Slender add-in when it answers inside its time box, and through the out-of-process bridge (today's
 /// COM and key-based behaviour) when it does not. Callers return at once: the pipe round trip runs on this class's own worker, never
 /// on the hook or HID thread. Commands only the add-in can do (table style, chart type, macros) have no fallback and report
-/// "not possible" in the log.
+/// "not possible" in the log. The worker thread starts with the first Excel action, so no Excel use costs no thread.
 /// </summary>
 public sealed class AddinFirstExcelBridge : IExcelBridge, IDisposable
 {
@@ -17,7 +17,7 @@ public sealed class AddinFirstExcelBridge : IExcelBridge, IDisposable
     private readonly ILog _log;
 
     public AddinFirstExcelBridge(IExcelBridge fallback, ExcelAddinClient client, ILog? log = null)
-        : this(fallback, client, WindowProcessId, new BoundedWorker("Slender.ExcelAddinPipe", 16, sta: false, log), log) { }
+        : this(fallback, client, WindowProcessId, new LazyWorkQueue(() => new BoundedWorker("Slender.ExcelAddinPipe", 16, sta: false, log)), log) { }
 
     internal AddinFirstExcelBridge(IExcelBridge fallback, ExcelAddinClient client, Func<nint, int> processIdOf, IWorkQueue queue, ILog? log = null)
     {
