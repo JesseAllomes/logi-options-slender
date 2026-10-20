@@ -594,9 +594,19 @@
       "milestone": "m39",
       "status": "open",
       "summary": "Thumb wheel divert silently lost by the mouse (touch/hold dead until an app switch re-sent it); engine now treats a native turn > 500 ms after a confirmed divert as a lost divert, handles it on the hook path and re-diverts (max every 2 s)"
+    },
+    {
+      "at": "2026-10-20T00:59:06+00:00",
+      "cause": "",
+      "chunk": "",
+      "fix": "",
+      "id": "e8",
+      "milestone": "m39",
+      "status": "open",
+      "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 269,
+  "rev": 270,
   "review": {
     "advice": [],
     "config": {
