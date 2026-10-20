@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=136 -->
+<!-- drainclamp-build: state; schema=1; generation=137 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,6 +116,7 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 | m45 | notification haptics: research Windows notification access for an unpackaged app, listener, Haptics page app menu listing every app that notifies with its own cue | src/Slender.Tray;src/Slender.Settings;src/Slender.Engine/Haptics | active | m41 |
 | m46 | per-app pointer speed (Profile.Dpi applied on app switch, volatile 0x2201) and battery days-left estimate for both devices (history file, discharge slope) | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | active | m40 |
 | m47 | K860 disconnect releases held actions (t2) | src/Slender.Engine/KeyboardRouter.cs | active | m27 |
+| m48 | K860 onboard remaps in the app: config list (CID to chord), Settings keyboard page to set/reset the 17 remappable keys with a clear "stored on the keyboard, every PC and channel" note and encodable-only chord picker, tray applies via OnboardSync only when the user saves (never on connect), read-back shows current mappings | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | active | m27 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->

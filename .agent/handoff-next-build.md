@@ -1,7 +1,7 @@
 # Handoff: next build (written 2026-10-20, resume in a fresh session)
 
 State before the build: main at the commit that adds this file, Slender 1.1.36 released, 1600 tests, -warnaserror clean.
-Roadmap rows m44, m37, m45, m46, m47 are the plan (DC:ROADMAP); the decision line "Next build (user 2026-10-20)" is in DC:DECISIONS.
+Roadmap rows m44, m37, m45, m46, m47, m48 are the plan (DC:ROADMAP); the decision line "Next build (user 2026-10-20)" is in DC:DECISIONS.
 
 ## How to run it (user's instructions)
 
@@ -44,7 +44,16 @@ Roadmap rows m44, m37, m45, m46, m47 are the plan (DC:ROADMAP); the decision lin
    the device stage or the Point & scroll page per app. Battery: record each device's battery reading with time to
    `%LOCALAPPDATA%\Slender\battery-history.json` (cap 60 days), estimate days left from the discharge slope (ignore
    charging segments; the K860 only reports 4 levels), show it in Settings and the tray tooltip.
-5. **K860 disconnect (m47, to-do t2)** - do it on main yourself: `KeyboardRouter` releases held actions when the
+5. **Onboard remaps (m48)** - builder `remap`. The HID++ side exists and is tested (`IOnboardKeyboard`, `LogiKeyboard`
+   0x1C00 read/set/reset, `PersistentRemap` chord encoder, `src/Slender.Engine/OnboardSync.cs` plan/apply) but nothing in
+   config, tray or Settings uses it. Build: config list of K860 onboard remaps (CID to chord); a Settings keyboard section
+   listing the 17 remappable keys with their current mapping (read back from the keyboard), a picker that only offers what
+   the keyboard can store (one key with at most one modifier, or a media key; reject the rest with the encoder's reason),
+   per-key reset and reset all, and a plain note that these live ON the keyboard for every PC and Easy-Switch channel and
+   survive uninstalling Slender. The tray writes only when the user saves a change (never on connect or start), through
+   OnboardSync, over a request to the tray (Settings never opens the device). Tests with the existing FakeOnboard. Do not
+   write to the real keyboard.
+6. **K860 disconnect (m47, to-do t2)** - do it on main yourself: `KeyboardRouter` releases held actions when the
    keyboard disconnects (mirror `SlenderEngine.OnConnection`), with a test.
 
 ## Answered / pending with the user
