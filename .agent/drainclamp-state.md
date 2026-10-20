@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=139 -->
+<!-- drainclamp-build: state; schema=1; generation=141 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -20,51 +20,26 @@ Repo: public https://github.com/JesseAllomes/logi-options-slender (main pushed; 
 
 <!-- DC:DECISIONS -->
 Gate 6 review priorities (user 2026-10-20; instruction for every review run, not run yet) -> 1 minimise memory spend to the max (tray idle working set, private bytes, threads, timers, allocations; nothing loaded or running for a feature that is off) while keeping functionality flawless; 2 the Excel add-in must never lock up, freeze or crash Excel (nothing on Excel's main thread beyond a short time box, no blocking waits, every COM call guarded, no work when Slender is absent). Findings against either are high severity
-Direction -> hybrid: trim official Options+ now, build a new native app from the 3 repos, retire Options+ only after feature parity (user)
-Excel features to replicate, in priority -> 1 thumb wheel sideways scroll in Excel, 2 Excel-specific custom buttons, 3 haptics/Actions Ring (user)
-Stack -> C# / .NET (user); target .NET 10 LTS, not .NET 8 (8 leaves support 2026-11-10); SDK installed per-user via official dotnet-install.ps1, no admin (agent correction)
-Devices -> MX Master 4 (BLE B042) and ERGO K860 keyboard (BLE B359) both in scope; keyboard = top-row key customisation, Fn lock, Easy-Switch (user)
-Upstreams -> reference only in .agent/upstream; port logic with attribution (MIT/Apache-2.0), never execute their scripts or binaries (agent default)
-Options+ and Slender never own HID++ at the same time; switch-over needs a documented rollback (Mouser README constraint)
-Options+ reinstall, Excel registry/Resiliency edits and process kills run only after explicit user approval at run time; scripts back up registry first (security boundary)
-Project lives in %USERPROFILE%/Projects/personal, local only, never OneDrive (user memory)
-Build orchestration -> Opus orchestrates on main (scaffold, contracts, review, merge, m6); Sonnet/Haiku subagents build parts in separate git worktrees/branches, merged by Opus (user)
-Button capture -> hybrid: LL hook for middle/back/forward + thumb wheel; temporary HID++ divert (0x03, never persist bit 0x04) only for gesture/Sense Panel/mode shift when bound; firmware remap deferred (spec: temporary, resets on config reset) (user + docs)
-HID++ safety -> allowlist of writable features/functions in code; never touch DFU 0x00D1, host/pairing 0x1814/0x1815, onboard profiles (agent, user asked about device risk)
-Settings UI -> WinUI 3 separate process launched from tray, exits on close; design via product-ui prototype loop, user prefers mix of round-1 directions 1+2+3 with real device renders (user)
-Device renders -> copied at runtime from local Options+ cache (C:/ProgramData/LogiOptionsPlus/depots) into %LOCALAPPDATA%/Slender; never committed (agent, licensing)
-Distribution -> one all-in-one SlenderSetup.exe (Velopack, per-user, no admin, self-update) replacing the PowerShell installer (user)
-Sync -> sign-in with personal Microsoft account; settings stored in the user's own OneDrive app folder (Files.ReadWrite.AppFolder), no server; public-client app registration on the user's personal account; no secrets in repo (user)
-Onboard -> K860 global key remaps stored on the keyboard via 0x1C00 (allowlist writes keyboard-only); mouse power-cycle test decides which device settings are trusted to persist (user)
-Firmware updates -> no own DFU (brick risk, allowlist keeps 0x00D1 blocked); Slender reads firmware versions, and "Update firmware..." launches Options+ temporarily; Options+ service set to Manual otherwise (user asked for updates via Slender)
-Tray -> Win32 rewrite (no WinForms) built NativeAOT-ready, then NativeAOT publish; VS 2022 C++ Build Tools installed for it (user)
-Popover -> WinUI popover kept for looks; runs only while open (process exits when dismissed); unfolds into the full window (user)
-Leak guard -> tray memory watchdog: log + clean self-restart above a threshold (Options+ reached 14 GB; user)
-Onboard K860 -> dig deeper with an input logger before deciding (user)
-Subagents must never click/type on the desktop or launch UI windows without the user's go-ahead (Outlook clicks + pop-ups happened); never kill processes they did not start (python kill happened) (user)
-Onboard K860 -> one modifier max or media key (tested); multi-modifier per app via software divert, same as Options+ (tested)
-Live device writes and Options+ stops only with explicit user go-ahead in the current conversation; user authorised stopping Options+ processes/service only
-Options+ uninstalled on purpose (user 2026-10-20: "I wanted it gone"); supersedes keeping it for firmware updates (2026-10-15). Slender never depends on Options+: its device pictures are Slender's own copies with a backup; "Update firmware..." only explains that Options+ is needed; no own DFU (still blocked)
-New scope (user 2026-10-15): 15% mouse charge alert, open custom apps from a key, turn a key off, migrate all Options+ profile settings
-Options+ import -> one-time, read-only (copy settings.db first, never write Options+ files); unmapped items listed in a report, never silently dropped (agent default)
-Actions Ring -> own ring drawn by the AOT tray; styles Bezel, Compass, Keypad (round-1 prototypes 1-3) switchable in Settings with colour, opacity and layout options; folder slots open nested apps/web pages/actions like Options+; feature parity researched before build (user 2026-10-15)
-Builder worktrees -> only under logi-options-slender/.worktrees/<name> (ignored via .git/info/exclude); remove each once merged; nothing else in the personal folder (user 2026-10-15)
-Gate 6 decisions (rounds R2-R6 of m13) -> orchestrator records fix for every finding the refuter confirms and the Opus adjudicator upholds; asks the user only when recommending waive/dismiss or when a finding argues against a recorded decision (user 2026-10-15)
-Thumb wheel modes -> per-app mode remembered until flipped back, for the life of the tray process (not persisted); browsers preset to tabs (Ctrl+Tab/Ctrl+Shift+Tab); toggle is an action bound to the top (mode shift) button per app (user 2026-10-15)
-Ring + thumb wheel -> while the ring is open the thumb wheel moves the highlight one slot per notch; main wheel keeps adjusting volume/brightness slots (user 2026-10-15)
-Custom firmware -> not pursued (signed-only updates; hardware route irreversible; Slender already covers the gains) (user 2026-10-15)
-Device probe -> read-only inventory: enumerate every feature (incl. hidden/engineering), call only documented getters from a vetted table, list-only for DFU/host/pairing/reset/onboard-profile and unknown features; own SwId so it runs beside the tray (user 2026-10-15)
-Device feature round (user 2026-10-15): build mouse feel, precise thumb wheel + touch, K860 extras, raw-XY gestures, and press-vs-hold (Sense Panel: quick press = chosen task, long press = ring). Each new device write gets its own HidppAllowlist entry for the documented setter only; DFU/host/pairing/reset/onboard profiles stay blocked
-Hosting + OTA (user 2026-10-16) -> public GitHub repo JesseAllomes/logi-options-slender; updates ship as GitHub Releases (anonymous read, no token in the app); release only from a committed, pushed HEAD
-Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trailers in this repo's commits; no Windows username, work hostname or SRS paths in tracked files (use placeholders in fixtures)
-Tab switching (user 2026-10-16) -> new tack: hold Left+Right and turn the thumb wheel; separate Tab scroll and side scroll speed sliders; Excel per-column scroll removed for now; the mode-button toggle stays
-Excel add-in (user 2026-10-16) -> wanted if it genuinely ends the hangs/crashes: first disable the Logitech add-in and measure Excel stability against the baseline, then build a minimal Slender add-in (no network port, idle unless asked, time-boxed calls). Removing Logitech's add-in is what can stop its faults; ours must never add any
-Thumb wheel second action (user 2026-10-19) -> press and hold the top button engages the app's second action, release disengages; a quick press does the top button's own job; default is nothing; no switch/toggle function and no Switch with setting (supersedes the per-app latching mode and t3)
-Thumb wheel card (user 2026-10-19, round 3) -> card 3 variant 2: drawn wheel per mode, per-app side scroll and second action speeds inside the card (7 notches 25-400%), live result preview from the real wheel while the card is open (nothing runs); per-app vertical scroll speed dropped; Point & scroll speed rows removed
-Ring motion (user 2026-10-19, round 3) -> Off / Pop / Clockwise bloom / Fly in, speed Slowest..Quickest where Quickest = old Normal and each step +0.4x (Normal 1.8x default), close = 3/4 of open; sweep rejected
-Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl release; release-on-click alone would make that click a Ctrl+click
-Research build (user 2026-10-20): build every researched idea except K860 Mac layout (0x4531); full haptic customisation per task/alert/function: pattern + pulses by default; Advanced (hidden by default) has buzz length (pulses close together), spacing, and opt-in exact strength (sets the mouse's stored strength for that buzz and restores it: two writes per buzz)
-Next build (user 2026-10-20): macros with adjustable pauses (research first), Excel add-in, notification haptics with a Haptics menu listing all apps, per-app DPI, battery estimate, K860 disconnect fix; one Sonnet builder per part in worktrees; sync sign-in tomorrow (user logs in 2026-10-21)
+Stack and place -> C# / .NET 10 LTS (SDK per-user via dotnet-install.ps1, no admin); project in %USERPROFILE%/Projects/personal, local only, never OneDrive; upstreams reference only in .agent/upstream, port logic with attribution (MIT/Apache-2.0), never run their scripts or binaries (user + agent)
+Devices -> MX Master 4 (BLE B042) and ERGO K860 (BLE B359); keyboard = top-row keys, Fn lock, Easy-Switch, open apps from a key, turn a key off; 15% mouse charge alert (user 2026-10-15)
+Options+ (user 2026-10-20, supersedes 2026-10-15) -> uninstalled on purpose ("I wanted it gone"); never loads, ever, except for a user-started firmware update; Slender never depends on it; it and Slender never own HID++ at once; profile import is one-time and read-only (copy settings.db first, unmapped items reported, never dropped); device pictures are Slender's own copies with a backup, never committed; "Update firmware..." only explains that Options+ is needed
+Device safety -> live device writes, process stops and registry/Excel Resiliency edits only with explicit user go-ahead in the current conversation (scripts back up the registry first); HID++ allowlist in code, each write its own entry for the documented setter; DFU 0x00D1, host/pairing 0x1814/0x1815 writes, reset and onboard profiles stay blocked; no own DFU and no custom firmware (signed-only, irreversible)
+Button capture -> LL hook for middle/back/forward + thumb wheel; temporary HID++ divert (0x03, never persist bit 0x04) only for gesture/Sense Panel/mode shift when bound; raw-XY gestures; press-vs-hold (Sense Panel quick press = chosen task, long press = ring); mouse feel, precise thumb wheel + touch and K860 extras built (user 2026-10-15)
+Device probe -> read-only inventory: every feature listed (incl. hidden/engineering), only vetted documented getters called, list-only for DFU/host/pairing/reset/onboard-profile/unknown; own SwId so it runs beside the tray (user 2026-10-15)
+K860 onboard remaps (0x1C00, keyboard-only writes) -> one key with at most one modifier, or a media key (tested); multi-modifier or per-app goes through software divert like Options+ (tested); a mouse power-cycle test decides which device settings are trusted to persist (user)
+Tray -> Win32 NativeAOT, no WinForms (VS 2022 C++ Build Tools installed); memory watchdog logs and cleanly self-restarts above a threshold (Options+ reached 14 GB) (user)
+Settings -> WinUI 3 separate process launched from the tray, exits on close; popover runs only while open and unfolds into the full window; design locked via the product-ui prototype loop (mix of round-1 directions 1+2+3 with real device renders) (user)
+Distribution and OTA (user 2026-10-16) -> one per-user SlenderSetup.exe (Velopack, no admin, self-update); public GitHub repo JesseAllomes/logi-options-slender, updates as GitHub Releases (anonymous read, no token in the app); release only from a committed, pushed HEAD
+Public repo hygiene (user 2026-10-16) -> no AI co-author or Claude-Session trailers; no Windows username, work hostname or SRS paths in tracked files (placeholders in fixtures)
+Sync -> personal Microsoft account sign-in; settings in the user's own OneDrive app folder (Files.ReadWrite.AppFolder), no server; public-client app registration on the user's personal account; no secrets in repo; user signs in 2026-10-21 (user)
+Build orchestration (user 2026-10-15) -> Opus orchestrates on main (contracts, review, merge, release); Sonnet subagents build parts in their own worktrees, only under logi-options-slender/.worktrees/<name> (ignored via .git/info/exclude), each removed once merged; subagents never click/type on the desktop or launch UI without go-ahead and never kill processes they did not start
+Gate 6 decisions (user 2026-10-15) -> orchestrator records fix for every finding the refuter confirms and the Opus adjudicator upholds; asks the user only when recommending waive/dismiss or when a finding argues against a recorded decision
+Excel (user 2026-10-16) -> priorities: thumb wheel sideways scroll, Excel-specific buttons, haptics/Actions Ring; Logitech's add-in stays removed (its faults caused hangs/crashes); Slender's own add-in is opt-in, no network port, idle unless asked, time-boxed calls, and must never add a fault
+Actions Ring (user 2026-10-15/19) -> drawn by the AOT tray; styles Bezel, Compass, Keypad with colour, opacity and layout options; folder slots open nested apps/web pages/actions; while open the thumb wheel moves the highlight one slot per notch and the main wheel adjusts volume/brightness slots; motion Off / Pop / Clockwise bloom / Fly in, speed Slowest..Quickest (Quickest = old Normal, +0.4x per step, Normal 1.8x default), close = 3/4 of open; sweep rejected
+Thumb wheel second action (user 2026-10-19; supersedes the per-app latching mode, the mode-button toggle, t3 and the Left+Right tab-scroll chord) -> holding the top button engages the app's second action, release disengages; a quick press does the top button's own job; default nothing; no toggle and no Switch with; a lost release ends via the 1.5 s still-wheel Ctrl release (release-on-click would make that click a Ctrl+click)
+Thumb wheel card (user 2026-10-19) -> per-app side scroll and second action speeds in the card (7 notches 25-400%); live result preview from the real wheel while the card is open (nothing runs); drawn wheel later removed at the user's request; Point & scroll speed rows removed
+Research build (user 2026-10-20) -> build every researched idea except K860 Mac layout (0x4531); full haptic customisation per task/alert/function: pattern + pulses by default; Advanced (hidden by default) has buzz length (pulses close together), spacing, and opt-in exact strength (sets the mouse's stored strength for that buzz and restores it: two writes per buzz)
+Next build (user 2026-10-20) -> macros with adjustable pauses (research first), Excel add-in, notification haptics with a Haptics menu listing all apps, per-app DPI, battery estimate, K860 disconnect fix, K860 onboard remaps in the app; one Sonnet builder per part in its own worktree
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -128,7 +103,6 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T05:01:56+00:00 062fdc26 Update loop: OneNote (started 10:58 by the 1.1.18 tray from a ring slot) held SlenderApp\current as cwd; Velopack backup/rename failed (os error 32) and restarted 1.1.18 each time. v1.1.21 (16:01 Melbourne) sets tray/Settings cwd to the profile and launch cwd to the target's folder. User must close that OneNote once, then Restart to update
 - 2026-10-19T05:17:14+00:00 5edc6e33 1.1.21 installed (update loop fixed after OneNote closed); preview pipe confirmed in tray log. User: drawn wheel useless, speed cut off in Excel/Edge, touch settings should be in the card. v1.1.22 (16:17 Melbourne): wheel dropped, Speed on its own row, Touch section (rest/tap) moved from stage into the card
 - 2026-10-19T05:52:33+00:00 096a407b v1.1.23 published 16:52 Melbourne: rest touch fires after 500 ms still (not on every scroll), touch bit 0x02 and 6 counts/step from raw capture (Edge diverted path fixed). My shortcuts: config in, UI next (t8). JsonConfigStore atomic-save test flaked once (file move access denied), passed on rerun
 - 2026-10-19T06:04:22+00:00 6dd2e7ce My shortcuts built (Shortcuts tab: add/edit/delete, name + recorder + All apps / this app, in config). Double tap added as a third touch action (0xF153, 300 ms, single tap waits only when double is set). 1495 tests
@@ -148,4 +122,5 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 - 2026-10-20T05:48:11+00:00 38f85cd2 Picker: PickerFlyoutPresenterStyle MaxWidth 380 -> 900, picker sizes to its tab row (no scrolling). User reported side-scrolling in 1.1.35
 - 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
 - 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
+- 2026-10-20T08:03:22+00:00 df41d376 DECISIONS compacted 46 -> 21 lines (merged, superseded ones folded in); originals in .agent/drainclamp-decisions-archive.md
 <!-- /DC:LOG -->
