@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=137 -->
+<!-- drainclamp-build: state; schema=1; generation=139 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -19,6 +19,7 @@ Repo: public https://github.com/JesseAllomes/logi-options-slender (main pushed; 
 <!-- /DC:ARCH -->
 
 <!-- DC:DECISIONS -->
+Gate 6 review priorities (user 2026-10-20; instruction for every review run, not run yet) -> 1 minimise memory spend to the max (tray idle working set, private bytes, threads, timers, allocations; nothing loaded or running for a feature that is off) while keeping functionality flawless; 2 the Excel add-in must never lock up, freeze or crash Excel (nothing on Excel's main thread beyond a short time box, no blocking waits, every COM call guarded, no work when Slender is absent). Findings against either are high severity
 Direction -> hybrid: trim official Options+ now, build a new native app from the 3 repos, retire Options+ only after feature parity (user)
 Excel features to replicate, in priority -> 1 thumb wheel sideways scroll in Excel, 2 Excel-specific custom buttons, 3 haptics/Actions Ring (user)
 Stack -> C# / .NET (user); target .NET 10 LTS, not .NET 8 (8 leaves support 2026-11-10); SDK installed per-user via official dotnet-install.ps1, no admin (agent correction)
@@ -127,7 +128,6 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T03:23:41+00:00 fb9f34c8 v1.1.20 published 14:23 Melbourne: thumb wheel card with live preview + per-app speeds (m39), ring opening motion (m40), plus 1.1.19 fixes. Open checks: Edge back steps, card preview, ring motion
 - 2026-10-19T05:01:56+00:00 062fdc26 Update loop: OneNote (started 10:58 by the 1.1.18 tray from a ring slot) held SlenderApp\current as cwd; Velopack backup/rename failed (os error 32) and restarted 1.1.18 each time. v1.1.21 (16:01 Melbourne) sets tray/Settings cwd to the profile and launch cwd to the target's folder. User must close that OneNote once, then Restart to update
 - 2026-10-19T05:17:14+00:00 5edc6e33 1.1.21 installed (update loop fixed after OneNote closed); preview pipe confirmed in tray log. User: drawn wheel useless, speed cut off in Excel/Edge, touch settings should be in the card. v1.1.22 (16:17 Melbourne): wheel dropped, Speed on its own row, Touch section (rest/tap) moved from stage into the card
 - 2026-10-19T05:52:33+00:00 096a407b v1.1.23 published 16:52 Melbourne: rest touch fires after 500 ms still (not on every scroll), touch bit 0x02 and 6 counts/step from raw capture (Edge diverted path fixed). My shortcuts: config in, UI next (t8). JsonConfigStore atomic-save test flaked once (file move access denied), passed on rerun
@@ -147,4 +147,5 @@ Next build (user 2026-10-20): macros with adjustable pauses (research first), Ex
 - 2026-10-20T05:24:58+00:00 9991854a Picker fix: width 480 + scrollable tab row (More/Default were clipped for mouse buttons, hiding Type text); Excel tab only for excel or an existing Excel action (PickerTabs). 1600 tests
 - 2026-10-20T05:48:11+00:00 38f85cd2 Picker: PickerFlyoutPresenterStyle MaxWidth 380 -> 900, picker sizes to its tab row (no scrolling). User reported side-scrolling in 1.1.35
 - 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
+- 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
 <!-- /DC:LOG -->
