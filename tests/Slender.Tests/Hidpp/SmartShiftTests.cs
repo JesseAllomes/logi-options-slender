@@ -68,9 +68,11 @@ public class SmartShiftTests
             await same.StartAsync(CancellationToken.None);
             await none.StartAsync(CancellationToken.None);
             await Wait.UntilAsync(() => same.IsConnected && none.IsConnected);
-            await Wait.UntilAsync(() => devSame.CountCalls(SmartShift, 1) == 1);
+            // fn1 reads: one for the threshold compare (only with a setting) plus one for the wheel mode (m42, every connect). No writes.
+            await Wait.UntilAsync(() => devSame.CountCalls(SmartShift, 1) == 2);
             Assert.Equal(0, devSame.CountCalls(SmartShift, 2));
-            Assert.Equal(0, devNone.CountCalls(SmartShift, 1) + devNone.CountCalls(SmartShift, 2));
+            Assert.Equal(1, devNone.CountCalls(SmartShift, 1));
+            Assert.Equal(0, devNone.CountCalls(SmartShift, 2));
         }
     }
 }

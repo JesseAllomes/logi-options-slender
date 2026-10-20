@@ -114,6 +114,7 @@ public sealed class SlenderEngine : IDisposable
         }
         _mouse.ButtonChanged += OnButton;
         _mouse.ConnectionChanged += OnConnection;
+        _mouse.Reconfigured += OnReconfigured;
         _hookSource.ThumbWheelRotated += OnRotation;
         _hidSource.ThumbWheelRotated += OnRotation;
         _mouse.ThumbWheelMoved += OnThumbTouch;
@@ -1220,6 +1221,21 @@ public sealed class SlenderEngine : IDisposable
         catch (Exception ex) { SafeLog("connection handler failed", ex); }
     }
 
+    /// <summary>
+    /// The mouse reconnected or asked to be reconfigured (0x1D4B / 0x0020) and re-applied its own state: send the diverts again and
+    /// take the thumb wheel again, because whatever the device held before is gone.
+    /// </summary>
+    private void OnReconfigured(object? sender, EventArgs e)
+    {
+        try
+        {
+            _log.Info("mouse reconfigured; re-sending diverts and the thumb wheel divert");
+            Rediverts(force: true);
+            EvaluateThumb(force: true, _clock());
+        }
+        catch (Exception ex) { SafeLog("reconfigure handler failed", ex); }
+    }
+
     private void ReleaseHeld(ActionSpec action)
     {
         try { _executor.Execute(action, false); }
@@ -1258,6 +1274,7 @@ public sealed class SlenderEngine : IDisposable
         _mouse.ButtonChanged -= OnButton;
         _mouse.RawXyMoved -= OnRawXy;
         _mouse.ConnectionChanged -= OnConnection;
+        _mouse.Reconfigured -= OnReconfigured;
         _hookSource.ThumbWheelRotated -= OnRotation;
         _hidSource.ThumbWheelRotated -= OnRotation;
         _mouse.ThumbWheelMoved -= OnThumbTouch;

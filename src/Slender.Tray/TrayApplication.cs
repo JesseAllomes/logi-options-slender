@@ -77,7 +77,8 @@ public sealed class TrayApplication : IDisposable
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
                 _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi,
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
-                _mouseFirmware, _keyboardFirmware),
+                _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
+                ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts)),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -118,12 +119,15 @@ public sealed class TrayApplication : IDisposable
         if (_mouse is not null)
         {
             _mouse.ConnectionChanged += OnMouseConnectionChanged;
+            _mouse.WheelModeChanged += OnMouseWheelModeChanged;
+            _mouse.HostsChanged += OnDeviceHostsChanged;
             SetConnected(_mouse.IsConnected);
         }
 
         if (_keyboard is not null)
         {
             _keyboard.ConnectionChanged += OnKeyboardConnectionChanged;
+            _keyboard.HostsChanged += OnDeviceHostsChanged;
             SetKeyboardConnected(_keyboard.IsConnected);
         }
 
@@ -209,6 +213,8 @@ public sealed class TrayApplication : IDisposable
         if (_mouse is not null)
         {
             _mouse.ConnectionChanged -= OnMouseConnectionChanged;
+            _mouse.WheelModeChanged -= OnMouseWheelModeChanged;
+            _mouse.HostsChanged -= OnDeviceHostsChanged;
         }
 
         if (_foreground is not null)
@@ -219,6 +225,7 @@ public sealed class TrayApplication : IDisposable
         if (_keyboard is not null)
         {
             _keyboard.ConnectionChanged -= OnKeyboardConnectionChanged;
+            _keyboard.HostsChanged -= OnDeviceHostsChanged;
         }
 
         _watcher?.Dispose();
@@ -382,6 +389,7 @@ public sealed class TrayApplication : IDisposable
                 break;
             case TimerKeyboard:
                 _ = RefreshKeyboardBatteryAsync();
+                _ = RefreshKeyboardHostsAsync();
                 break;
             case TimerGuard:
                 EvaluateGuard();
@@ -615,6 +623,39 @@ public sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>
+    /// Raised (UI thread) when the scroll wheel flips between ratchet and free-spin, whoever caused it (the wheel's own button,
+    /// Slender's toggle, another app). Not raised for the first read after a connect or for a change to or from Unknown.
+    /// Connected to a haptic by Program.cs (m42, see the TODO(merge) there).
+    /// </summary>
+    public event EventHandler<WheelMode>? WheelModeFlipped;
+
+    private WheelMode _lastWheelMode;
+
+    private void OnMouseWheelModeChanged(object? sender, WheelMode mode) => Post(() =>
+    {
+        WheelMode before = _lastWheelMode;
+        _lastWheelMode = mode;
+        if (before != WheelMode.Unknown && mode != WheelMode.Unknown)
+        {
+            WheelModeFlipped?.Invoke(this, mode);
+        }
+
+        _status.Changed();
+    });
+
+    private void OnDeviceHostsChanged(object? sender, EventArgs e) => Post(() => _status.Changed());
+
+    private static string? WheelModeText(WheelMode mode) => mode switch
+    {
+        WheelMode.Ratchet => "ratchet",
+        WheelMode.FreeSpin => "free-spin",
+        _ => null,
+    };
+
+    private static IReadOnlyList<HostState>? ToHostStates(HostsInfo? info) =>
+        info is null ? null : [.. info.Hosts.Select(h => new HostState(h.Index, h.Name, h.Paired, h.Index == info.Current))];
+
     private void OnMouseConnectionChanged(object? sender, bool connected) =>
         Post(() => SetConnected(connected));
 
@@ -704,6 +745,24 @@ public sealed class TrayApplication : IDisposable
 
         UpdateStatus();
         _status.Changed();
+    }
+
+    /// <summary>Re-reads the keyboard's Easy-Switch channels (read only); HostsChanged republishes status when they differ.</summary>
+    private async Task RefreshKeyboardHostsAsync()
+    {
+        if (_disposed || !_keyboardConnected || _keyboard is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _keyboard.RefreshHostsAsync(_lifetime.Token);
+        }
+        catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException or Slender.Hidpp.HidppException)
+        {
+            // Best effort: the last read stays published.
+        }
     }
 
     private async Task RefreshKeyboardBatteryAsync()

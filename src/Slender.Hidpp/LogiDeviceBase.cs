@@ -18,6 +18,28 @@ public class LogiDeviceOptions
     public TimeSpan DisposeUndivertBudget { get; init; } = TimeSpan.FromMilliseconds(1500);
     /// <summary>Device indices tried in order by the ping probe (docs/protocol.md: PROBE).</summary>
     public byte[] DeviceIndexCandidates { get; init; } = [0xFF, 0x01];
+    /// <summary>Millisecond clock for the notification log limiter and the config-change echo guard. Tests inject one.</summary>
+    public Func<long> Clock { get; init; } = () => Environment.TickCount64;
+    /// <summary>Minimum gap between two logged notifications of the same feature.</summary>
+    public TimeSpan NotificationLogInterval { get; init; } = TimeSpan.FromSeconds(10);
+    /// <summary>A 0x0020 config-change event this soon after a re-apply is taken for the echo of our own writes and ignored.</summary>
+    public TimeSpan ConfigChangeEchoWindow { get; init; } = TimeSpan.FromSeconds(3);
+}
+
+/// <summary>Lets one line per key through per interval (keeps unknown-notification logs from flooding).</summary>
+public sealed class NotificationLogLimiter(TimeSpan interval)
+{
+    private readonly Dictionary<ushort, long> _last = [];
+
+    public bool Allow(ushort key, long nowMs)
+    {
+        lock (_last)
+        {
+            if (_last.TryGetValue(key, out var t) && nowMs - t < (long)interval.TotalMilliseconds) return false;
+            _last[key] = nowMs;
+            return true;
+        }
+    }
 }
 
 /// <summary>
@@ -55,17 +77,37 @@ public abstract class LogiDeviceBase : IDisposable
     private int _started;
     private int _disposed;
     private Task? _runTask;
+    private volatile HostsInfo? _hosts;
+    private readonly NotificationLogLimiter _logLimiter;
+    private long _lastApplyEnd = long.MinValue / 2;
+    private int _reapplyPending;
 
     protected LogiDeviceBase(IHidppTransportFactory factory, LogiDeviceOptions options)
     {
         _factory = factory;
         _options = options;
+        _logLimiter = new NotificationLogLimiter(options.NotificationLogInterval);
     }
 
     public abstract string Name { get; }
     public bool IsConnected => _connected;
 
     public event EventHandler<bool>? ConnectionChanged;
+
+    /// <summary>
+    /// Raised after the device announced a reconnect/wake (0x1D4B) or a configuration change (0x0020) and its volatile state was
+    /// re-applied. SlenderEngine re-sends its diverts and the thumb wheel divert on this.
+    /// </summary>
+    public event EventHandler? Reconfigured;
+
+    /// <summary>Receives diagnostic lines (unhandled notifications, config changes). Null = Debug output only.</summary>
+    public Action<string>? LogSink { get; set; }
+
+    /// <summary>Easy-Switch channels as last read from 0x1814/0x1815; null until read, when unsupported or disconnected.</summary>
+    public HostsInfo? Hosts => _hosts;
+
+    /// <summary>Raised when <see cref="Hosts"/> was read and differs from the previous value.</summary>
+    public event EventHandler? HostsChanged;
 
     /// <summary>Serialises device writes. Held while applying state.</summary>
     protected SemaphoreSlim Gate { get; } = new(1, 1);
@@ -118,8 +160,11 @@ public abstract class LogiDeviceBase : IDisposable
     /// <summary>Called under <see cref="State"/> when device-side state is lost (new connect, end of session).</summary>
     protected virtual void ResetAppliedState() { }
 
-    /// <summary>Notifications other than 0x1B04 diverted-control events.</summary>
-    protected virtual void HandleOtherNotification(Session s, HidppMessage msg) { }
+    /// <summary>Notifications other than 0x1B04 diverted-control events, 0x1D4B and 0x0020. Returns true when the subclass handled it.</summary>
+    protected virtual bool HandleOtherNotification(Session s, HidppMessage msg) => false;
+
+    /// <summary>Called after a session ended (device state is gone), outside the state lock.</summary>
+    protected virtual void OnSessionEnded() { }
 
     /// <summary>Best-effort extra undo on dispose, within the budget token.</summary>
     protected virtual Task UndoOnDisposeAsync(Session s, CancellationToken ct) => Task.CompletedTask;
@@ -200,6 +245,7 @@ public abstract class LogiDeviceBase : IDisposable
             session = new Session(channel, device);
             channel.Notification += OnNotification;
             _session = session;
+            await ResolveEventFeaturesAsync(session, ct).ConfigureAwait(false);
             await ApplyAllAsync(session, ct).ConfigureAwait(false);
             _connected = true;
             RaiseConnection(true);
@@ -276,6 +322,8 @@ public abstract class LogiDeviceBase : IDisposable
             _appliedRawXy.Clear();
             ResetAppliedState();
         }
+        _hosts = null;
+        OnSessionEnded();
         ReleaseHeldControls();
         if (wasConnected) RaiseConnection(false);
     }
@@ -316,7 +364,11 @@ public abstract class LogiDeviceBase : IDisposable
 
             await ApplyAfterDivertsAsync(s, ct).ConfigureAwait(false);
         }
-        finally { Gate.Release(); }
+        finally
+        {
+            Volatile.Write(ref _lastApplyEnd, _options.Clock());
+            Gate.Release();
+        }
     }
 
     protected static async Task<bool> TrySetDivertAsync(Session s, ushort cid, bool divert, CancellationToken ct, bool rawXy = false)
@@ -418,8 +470,209 @@ public abstract class LogiDeviceBase : IDisposable
             HandleControls(ParseDivertedControls(msg));
         else if (reprog != 0 && msg.FeatureIndex == reprog && msg.Function == 1)
             RaiseRawXy(ParseRawXy(msg));
-        else
-            HandleOtherNotification(s, msg);
+        else if (s.Device.TryGetCachedIndex(FeatureId.WirelessDeviceStatus, out var wds) && msg.FeatureIndex == wds)
+            HandleWirelessStatus(s, msg);
+        else if (s.Device.TryGetCachedIndex(FeatureId.ConfigChange, out var cfg) && msg.FeatureIndex == cfg)
+            HandleConfigChange(s, msg);
+        else if (!HandleOtherNotification(s, msg))
+            LogUnhandled(s, msg);
+    }
+
+    /// <summary>
+    /// 0x1D4B fn0 (Solaar): p[0] status (1 = reconnection), p[1] request (1 = software reconfiguration needed), p[2] reason
+    /// (1 = power switch). A reconnection, or a device asking to be reconfigured, re-applies all volatile state.
+    /// </summary>
+    public static (bool Reconnected, bool ReconfigureRequested, byte Reason) ParseWirelessStatus(HidppMessage msg)
+    {
+        var p = msg.Params;
+        return (p[0] == 1, p[1] == 1, p[2]);
+    }
+
+    private void HandleWirelessStatus(Session s, HidppMessage msg)
+    {
+        if (msg.Function != 0)
+        {
+            LogUnhandled(s, msg);
+            return;
+        }
+        var (reconnected, request, reason) = ParseWirelessStatus(msg);
+        Log($"wireless status event: reconnected={reconnected} reconfigure={request} reason={reason}");
+        if (reconnected || request) QueueReapply(s, "wireless status", echoGuard: false);
+    }
+
+    private void HandleConfigChange(Session s, HidppMessage msg)
+    {
+        if (_logLimiter.Allow(FeatureId.ConfigChange, _options.Clock()))
+            Log($"config change event {Convert.ToHexString(msg.Raw.AsSpan(3))}");
+        QueueReapply(s, "config change", echoGuard: true);
+    }
+
+    private void LogUnhandled(Session s, HidppMessage msg)
+    {
+        if (msg.IsError) return;
+        // Limited per feature index (one index is one feature), so a flood costs one dictionary hit and never a device read.
+        if (!_logLimiter.Allow((ushort)(0xFF00 | msg.FeatureIndex), _options.Clock())) return;
+        string hex = Convert.ToHexString(msg.Raw.AsSpan(2));
+        byte index = msg.FeatureIndex;
+        if (s.Device.TryGetFeatureId(index, out var known))
+        {
+            Log($"unhandled notification feature 0x{known:X4}: {hex}");
+            return;
+        }
+        // The feature id behind an index Slender never looked up comes from IFeatureSet (0x0001 fn1, allowlisted). The read must not
+        // block the notification thread, so the line is written when it answers.
+        _ = Task.Run(async () =>
+        {
+            ushort? id = null;
+            try
+            {
+                if (await s.Device.GetFeatureIndexAsync(FeatureId.FeatureSet, _cts.Token).ConfigureAwait(false) != null)
+                {
+                    var p = (await s.Device.CallAsync(FeatureId.FeatureSet, 1, new byte[] { index }, _cts.Token).ConfigureAwait(false)).Params;
+                    id = (ushort)((p[0] << 8) | p[1]);
+                }
+            }
+            catch (Exception ex) when (ex is HidppException or ObjectDisposedException or OperationCanceledException) { }
+            Log(id is { } v ? $"unhandled notification feature 0x{v:X4}: {hex}" : $"unhandled notification feature 0x????: {hex}");
+        });
+    }
+
+    private void Log(string line)
+    {
+        Debug.WriteLine($"{Name}: {line}");
+        try { LogSink?.Invoke($"{Name}: {line}"); }
+        catch (Exception ex) { Debug.WriteLine($"{Name} log sink threw: {ex.Message}"); }
+    }
+
+    /// <summary>Looks up the indices of the event-only features so their notifications can be told apart (IRoot fn0, allowlisted).</summary>
+    private async Task ResolveEventFeaturesAsync(Session s, CancellationToken ct)
+    {
+        foreach (var id in new[] { FeatureId.WirelessDeviceStatus, FeatureId.ConfigChange })
+        {
+            try { await s.Device.GetFeatureIndexAsync(id, ct).ConfigureAwait(false); }
+            catch (HidppException) { }
+        }
+    }
+
+    /// <summary>
+    /// Re-applies everything volatile in the background (the notification thread must not block), then raises
+    /// <see cref="Reconfigured"/> and, when the device had been marked away, <see cref="ConnectionChanged"/>. One re-apply at a time:
+    /// an event arriving while one is queued is folded into it. A config-change event right after an apply is the echo of our own
+    /// writes and is ignored, so a device that reports every write cannot make us write forever.
+    /// </summary>
+    private void QueueReapply(Session s, string reason, bool echoGuard)
+    {
+        if (echoGuard && _options.Clock() - Volatile.Read(ref _lastApplyEnd) < (long)_options.ConfigChangeEchoWindow.TotalMilliseconds) return;
+        if (Interlocked.Exchange(ref _reapplyPending, 1) != 0) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (_disposed != 0 || !ReferenceEquals(_session, s) || s.Ended != 0) return;
+                Interlocked.Exchange(ref _reapplyPending, 0); // an event from here on queues one more pass
+                await ApplyAllAsync(s, _cts.Token).ConfigureAwait(false);
+                bool wasAway = !_connected;
+                _connected = true;
+                Log($"re-applied device state ({reason})");
+                if (wasAway) RaiseConnection(true);
+                RaiseReconfigured();
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) when (ex is HidppException or ObjectDisposedException) { Debug.WriteLine($"{Name} re-apply ({reason}): {ex.Message}"); }
+            finally { Interlocked.Exchange(ref _reapplyPending, 0); }
+        });
+    }
+
+    private void RaiseReconfigured()
+    {
+        try { Reconfigured?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { Debug.WriteLine($"Reconfigured handler threw: {ex.Message}"); }
+    }
+
+    // ---- Easy-Switch channels (read only) -----------------------------------------------------
+
+    private const int MaxHosts = 8;
+    private const int MaxNameBytes = 64;
+
+    /// <summary>0x1814 fn0 getHostInfo (Solaar ChangeHost): p[0] host count, p[1] current host.</summary>
+    public static (int Count, int Current) ParseChangeHost(ReadOnlySpan<byte> p) => (p[0], p[1]);
+
+    /// <summary>0x1815 fn0 (Solaar get_host_names): p[0] capability flags, p[2] host count, p[3] current host.</summary>
+    public static (int Count, int Current) ParseHostsCapabilities(ReadOnlySpan<byte> p) => (p[2], p[3]);
+
+    /// <summary>0x1815 fn1 getHostInfo(host): p[1] status (0 = empty slot), p[2] bus type, p[4] friendly name length.</summary>
+    public static (bool Paired, int NameLength) ParseHostInfo(ReadOnlySpan<byte> p) => (p[1] != 0, p[4]);
+
+    /// <summary>
+    /// Reads Easy-Switch channels: the current host from 0x1814 fn0 (else 0x1815 fn0), then per host 0x1815 fn1 and, for a paired host
+    /// with a name, fn3 [host, offset] chunks (name bytes start at p[2]). Read only. Null when the device has neither feature or a
+    /// read failed.
+    /// </summary>
+    protected async Task<HostsInfo?> ReadHostsAsync(Session s, CancellationToken ct)
+    {
+        try
+        {
+            int count = 0, current = -1;
+            if (await s.Device.GetFeatureIndexAsync(FeatureId.ChangeHost, ct).ConfigureAwait(false) != null)
+                (count, current) = ParseChangeHost((await s.Device.CallAsync(FeatureId.ChangeHost, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
+            var entries = new List<HostEntry>();
+            if (await s.Device.GetFeatureIndexAsync(FeatureId.HostsInfo, ct).ConfigureAwait(false) != null)
+            {
+                var (n, cur) = ParseHostsCapabilities((await s.Device.CallAsync(FeatureId.HostsInfo, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
+                if (count <= 0) count = n;
+                if (current < 0) current = cur;
+                for (int host = 0; host < Math.Min(count, MaxHosts); host++)
+                {
+                    var (paired, nameLength) = ParseHostInfo((await s.Device.CallAsync(FeatureId.HostsInfo, 1, new byte[] { (byte)host }, ct).ConfigureAwait(false)).Params);
+                    string? name = null;
+                    if (paired && nameLength > 0) name = await ReadHostNameAsync(s, host, nameLength, ct).ConfigureAwait(false);
+                    entries.Add(new HostEntry(host, name, paired));
+                }
+            }
+            else
+            {
+                for (int host = 0; host < Math.Min(count, MaxHosts); host++) entries.Add(new HostEntry(host, null, true));
+            }
+            if (entries.Count == 0) return null;
+            if (current < 0 || current >= entries.Count) current = -1;
+            var info = new HostsInfo(current, entries);
+            var before = _hosts;
+            _hosts = info;
+            if (before is null || !before.Equals(info)) RaiseHostsChanged();
+            return info;
+        }
+        catch (HidppException) { return null; }
+        catch (ObjectDisposedException) { return null; }
+    }
+
+    /// <summary>0x1815 fn3 chunks: request [host, offset], reply p[0-1] echo, p[2..] up to 14 name bytes (NUL ends the name).</summary>
+    public static async Task<string?> ReadHostNameChunksAsync(Func<byte[], Task<byte[]>> readChunk, int host, int nameLength)
+    {
+        var buf = new List<byte>();
+        int want = Math.Min(nameLength, MaxNameBytes);
+        for (int guard = 0; buf.Count < want && guard < 8; guard++)
+        {
+            var piece = await readChunk([(byte)host, (byte)buf.Count]).ConfigureAwait(false);
+            int take = Math.Min(want - buf.Count, piece.Length - 2);
+            if (take <= 0) break;
+            int before = buf.Count;
+            for (int i = 0; i < take; i++)
+            {
+                if (piece[2 + i] == 0) { want = buf.Count; break; }
+                buf.Add(piece[2 + i]);
+            }
+            if (buf.Count == before) break;
+        }
+        return buf.Count == 0 ? null : System.Text.Encoding.UTF8.GetString([.. buf]).Trim();
+    }
+
+    private static Task<string?> ReadHostNameAsync(Session s, int host, int nameLength, CancellationToken ct) =>
+        ReadHostNameChunksAsync(async req => (await s.Device.CallAsync(FeatureId.HostsInfo, 3, req, ct).ConfigureAwait(false)).Params.ToArray(), host, nameLength);
+
+    private void RaiseHostsChanged()
+    {
+        try { HostsChanged?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { Debug.WriteLine($"HostsChanged handler threw: {ex.Message}"); }
     }
 
     /// <summary>0x1B04 fn0 diverted-button event: u16 BE CID pairs, terminated by 0x0000 (all zero = all released).</summary>

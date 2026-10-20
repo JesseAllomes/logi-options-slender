@@ -270,8 +270,6 @@ public class KeyboardExtrasTests
     }
 
     [Theory]
-    [InlineData((ushort)0x1814)] // host change
-    [InlineData((ushort)0x1815)] // hosts info
     [InlineData((ushort)0x00C2)] // signed DFU control
     [InlineData((ushort)0x00D0)] // DFU
     [InlineData((ushort)0x00D1)] // DFU

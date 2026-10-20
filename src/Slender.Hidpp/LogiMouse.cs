@@ -99,6 +99,55 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
         await EnsureForceBaselineAsync(s, ct).ConfigureAwait(false);
         if (force is { } f) await TrySetSensePanelForceAsync(s, f, ct).ConfigureAwait(false);
         if (haptic is { } h) await TrySetHapticStrengthAsync(s, h, ct).ConfigureAwait(false);
+        await ReadWheelModeAsync(s, ct).ConfigureAwait(false);
+        await ReadHostsAsync(s, ct).ConfigureAwait(false); // display only
+    }
+
+    // ---- ratchet / free-spin state (0x2111 fn1, 0x2111/0x2121 events) -------------------------
+
+    private volatile int _wheelMode;
+
+    public WheelMode WheelMode => (WheelMode)_wheelMode;
+
+    public event EventHandler<WheelMode>? WheelModeChanged;
+
+    /// <summary>0x2111 fn1 p[0]: 1 = free-spin, 2 = ratchet (docs/protocol.md). Anything else is Unknown.</summary>
+    public static WheelMode ParseWheelMode(ReadOnlySpan<byte> p) => p[0] switch { 1 => WheelMode.FreeSpin, 2 => WheelMode.Ratchet, _ => WheelMode.Unknown };
+
+    /// <summary>
+    /// 0x2121 event 1 "ratchet switch" (Solaar hidpp20 / libratbag): p[0] bit0 = ratchet. Decoded defensively; the caller re-reads
+    /// 0x2111 afterwards, so a wrong guess is corrected within one round trip.
+    /// </summary>
+    public static WheelMode ParseRatchetSwitch(ReadOnlySpan<byte> p) => (p[0] & 1) != 0 ? WheelMode.Ratchet : WheelMode.FreeSpin;
+
+    private void SetWheelMode(WheelMode mode)
+    {
+        if (Interlocked.Exchange(ref _wheelMode, (int)mode) == (int)mode) return;
+        try { WheelModeChanged?.Invoke(this, mode); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"WheelModeChanged handler threw: {ex.Message}"); }
+    }
+
+    private async Task<WheelMode> ReadWheelModeAsync(Session s, CancellationToken ct)
+    {
+        try
+        {
+            var mode = ParseWheelMode((await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
+            SetWheelMode(mode);
+            return mode;
+        }
+        catch (HidppException) { return WheelMode.Unknown; }
+        catch (ObjectDisposedException) { return WheelMode.Unknown; }
+    }
+
+    protected override void OnSessionEnded() => SetWheelMode(WheelMode.Unknown);
+
+    private void ReadWheelModeInBackground(Session s)
+    {
+        _ = Task.Run(async () =>
+        {
+            try { await ReadWheelModeAsync(s, CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"wheel mode read: {ex.Message}"); }
+        });
     }
 
     // ---- wheel resistance (0x2111 tunable torque) ---------------------------------------------
@@ -140,6 +189,7 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
             var p = (await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params;
             var mode = p[0] == 1 ? (byte)2 : (byte)1;
             await s.Device.CallAsync(FeatureId.SmartShiftEnhanced, 2, new byte[] { mode, p[1], p[2] }, ct).ConfigureAwait(false);
+            if (await ReadWheelModeAsync(s, ct).ConfigureAwait(false) == WheelMode.Unknown) SetWheelMode(mode == 1 ? WheelMode.FreeSpin : WheelMode.Ratchet);
             return true;
         }
         catch (HidppException) { return false; }
@@ -491,7 +541,7 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
 
     // ---- notifications ------------------------------------------------------------------------
 
-    protected override void HandleOtherNotification(Session s, HidppMessage msg)
+    protected override bool HandleOtherNotification(Session s, HidppMessage msg)
     {
         if (s.Device.TryGetCachedIndex(FeatureId.ThumbWheel, out var thumb) && msg.FeatureIndex == thumb && msg.Function == 0)
         {
@@ -500,7 +550,22 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
                 try { ThumbWheelMoved?.Invoke(this, ev); }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"ThumbWheelMoved handler threw: {ex.Message}"); }
             }
+            return true;
         }
+        if (s.Device.TryGetCachedIndex(FeatureId.SmartShiftEnhanced, out var ss) && msg.FeatureIndex == ss && msg.Function == 0)
+        {
+            // SmartShift event: p[0] is the new mode when it is 1 or 2; either way the read below is authoritative.
+            if (ParseWheelMode(msg.Params) is var m and not WheelMode.Unknown) SetWheelMode(m);
+            ReadWheelModeInBackground(s);
+            return true;
+        }
+        if (s.Device.TryGetCachedIndex(FeatureId.HiResWheel, out var hr) && msg.FeatureIndex == hr && msg.Function == 1)
+        {
+            SetWheelMode(ParseRatchetSwitch(msg.Params));
+            ReadWheelModeInBackground(s);
+            return true;
+        }
+        return false;
     }
 
     /// <summary>

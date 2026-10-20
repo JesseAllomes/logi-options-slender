@@ -20,7 +20,10 @@ public sealed record StatusSnapshot(
     MouseValues? MouseValues = null,
     int? KeyboardChannel = null,
     string? MouseFirmware = null,
-    string? KeyboardFirmware = null);
+    string? KeyboardFirmware = null,
+    string? WheelMode = null,
+    IReadOnlyList<HostState>? MouseHosts = null,
+    IReadOnlyList<HostState>? KeyboardHosts = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -38,6 +41,8 @@ public sealed class StatusPublisher : IDisposable
         {
             Dpi = s.MouseConnected ? s.MouseDpi : null,
             Firmware = s.MouseFirmware,
+            WheelMode = s.MouseConnected ? s.WheelMode : null,
+            Hosts = s.MouseConnected ? s.MouseHosts : null,
         };
         if (!s.MouseConnected || s.MouseValues is not { } v) return state;
         // The safe band for the Sense Panel force is 50%-200% of the first reading (LogiMouse.SensePanelBand).
@@ -174,7 +179,7 @@ public sealed class StatusPublisher : IDisposable
         return new SlenderStatus(
             [
                 MouseDeviceState(s),
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware },
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null },
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,

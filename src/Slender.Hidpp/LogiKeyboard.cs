@@ -58,8 +58,28 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
 
     public int? CurrentChannel => _currentChannel is var c and >= 0 ? c : null;
 
+    /// <summary>
+    /// Reads the Easy-Switch channels again (0x1814 fn0, 0x1815 fn0/fn1/fn3; read only) and adopts the real current channel.
+    /// Null when disconnected or the keyboard lacks the features.
+    /// </summary>
+    public async Task<HostsInfo?> RefreshHostsAsync(CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return null;
+            var hosts = await ReadHostsAsync(s, ct).ConfigureAwait(false);
+            if (hosts is { Current: >= 0 }) _currentChannel = hosts.Current;
+            return hosts;
+        }
+        finally { Gate.Release(); }
+    }
+
     protected override async Task ApplyAfterDivertsAsync(Session s, CancellationToken ct)
     {
+        // Real Easy-Switch state first (0x1814/0x1815 reads): the current channel it names replaces the 0x40A3 inference below.
+        if (await ReadHostsAsync(s, ct).ConfigureAwait(false) is { Current: >= 0 } hosts) _currentChannel = hosts.Current;
         bool? fn;
         DisabledKeys? disabled;
         bool?[] channels;
@@ -83,9 +103,9 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
 
     /// <summary>
     /// 0x40A3 per host. Solaar settings_templates.py K375sFnSwap: request = [host, state] (write fn1), reply state is the byte after
-    /// the host (read_skip_byte_count 1, fn0). Solaar takes the host byte from 0x1815 HostsInfo; Slender may not call that (blocked), so
-    /// explicit indices 0-2 are used (the 2026-10-15 probe read all three) and the current channel is inferred: the one channel whose
-    /// read matches a read with host 0xFF, when exactly one does.
+    /// the host (read_skip_byte_count 1, fn0). Solaar takes the host byte from 0x1815 HostsInfo; explicit indices 0-2 are used here (the
+    /// 2026-10-15 probe read all three). The current channel comes from the read-only 0x1814/0x1815 reads when the keyboard answers them;
+    /// otherwise it is inferred: the one channel whose read matches a read with host 0xFF, when exactly one does.
     /// </summary>
     private async Task ApplyChannelsAsync(Session s, bool?[] channels, CancellationToken ct)
     {
@@ -98,7 +118,9 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
                 await s.Device.CallAsync(KeyboardFeatureId.FnInversionMultiHost, 1,
                     new byte[] { (byte)i, want ? (byte)1 : (byte)0 }, ct).ConfigureAwait(false);
             }
-            _currentChannel = await InferChannelAsync(s, ct).ConfigureAwait(false) ?? -1;
+            // The real channel (0x1814) wins; the inference (the one channel whose Fn read matches the current host) is the fallback.
+            if (_currentChannel < 0) _currentChannel = await InferChannelAsync(s, ct).ConfigureAwait(false) ?? -1;
+            else await ReadCurrentFnAsync(s, ct).ConfigureAwait(false);
         }
         catch (HidppException) { }
     }

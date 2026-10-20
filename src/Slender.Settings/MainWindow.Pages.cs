@@ -353,6 +353,7 @@ public sealed partial class MainWindow
         AddRow("Import from Options+", "Copies your Logi Options+ buttons and settings into Slender. You see a preview first, and the current settings are backed up.", import);
 
         BuildOptionsPlusSection();
+        BuildHostsSection();
         BuildFirmwareSection();
 
         AddSection("ABOUT");
@@ -462,6 +463,30 @@ public sealed partial class MainWindow
         'logioptionsplus','logioptionsplus_agent','logioptionsplus_appbroker','logioptionsplus_updater','LogiPluginService',
         'LogiPluginServiceExt','logi_crashpad_handler','logi_download_assistant' | ForEach-Object { Get-Process $_ | Stop-Process -Force }
         """;
+
+    /// <summary>Read-only Easy-Switch channels per device, as the tray published them (0x1814/0x1815 reads). Nothing is shown when it did not.</summary>
+    private void BuildHostsSection()
+    {
+        bool any = false;
+        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
+        {
+            if (_status.Device(ControlCatalog.DeviceId(kind))?.Hosts is not { Count: > 0 } hosts)
+            {
+                continue;
+            }
+
+            if (!any)
+            {
+                AddSection("EASY-SWITCH CHANNELS");
+                any = true;
+            }
+
+            foreach (HostState host in hosts)
+            {
+                AddRow(KeyboardOps.HostRowTitle(host), ControlCatalog.DeviceName(kind), new TextBlock());
+            }
+        }
+    }
 
     /// <summary>One row per device whose firmware version the tray published (status.json). Nothing is shown when it did not.</summary>
     private void BuildFirmwareSection()
