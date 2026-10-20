@@ -45,7 +45,17 @@ internal sealed class FakeMouse : ILogiMouse
     public Task PlayHapticAsync(byte w, CancellationToken ct)
     {
         Haptics.Add(w);
+        Calls.Add($"play {w}");
         return ThrowOnHaptic ? Task.FromException(new InvalidOperationException("boom")) : Task.CompletedTask;
+    }
+    /// <summary>Every write of the stored haptic strength, in order; Calls mixes them with plays ("strength N", "play N").</summary>
+    public List<int?> StrengthWrites { get; } = [];
+    public List<string> Calls { get; } = [];
+    public Task SetHapticStrengthAsync(int? strength, CancellationToken ct)
+    {
+        StrengthWrites.Add(strength);
+        Calls.Add($"strength {strength}");
+        return Task.CompletedTask;
     }
     public Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct) => Task.FromResult<BatteryStatus?>(new BatteryStatus(80, false));
     public void Dispose() { }

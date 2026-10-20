@@ -124,6 +124,31 @@ public sealed class JsonConfigStoreTests : IDisposable
         Assert.True(Store().Load().LaunchAtLogin);
     }
 
+    [Fact]
+    public void Haptic_cues_and_named_alerts_round_trip()
+    {
+        var haptics = new HapticSettings(Strength: 70)
+        {
+            Cues = new Dictionary<HapticEvent, HapticCue>
+            {
+                [HapticEvent.TouchTap] = new HapticCue(true, 8, 3, 90, 40),
+                [HapticEvent.ButtonPress] = new HapticCue(false, 2),
+            },
+            Alerts = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["claude"] = new HapticCue(true, 7, 2, 200),
+                ["bad name!"] = new HapticCue(),
+            },
+        };
+        Store().Save(SlenderConfig.Default with { Haptics = haptics });
+        HapticSettings loaded = Store().Load().Haptics;
+
+        Assert.Equal(new HapticCue(true, 8, 3, 90, 40), loaded.Cues[HapticEvent.TouchTap]);
+        Assert.False(loaded.Cues[HapticEvent.ButtonPress].Enabled);
+        Assert.Equal(new HapticCue(true, 7, 2, 200), loaded.Alerts["CLAUDE"]);
+        Assert.Single(loaded.Alerts); // a name the pipe could never carry is dropped on load
+    }
+
     private static void AssertSameConfig(SlenderConfig expected, SlenderConfig actual)
     {
         Assert.Equal(expected.Version, actual.Version);

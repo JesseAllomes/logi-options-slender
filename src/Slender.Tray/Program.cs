@@ -150,6 +150,10 @@ static class Program
         // Settings' thumb wheel card previews the real wheel and top button over a pipe; nothing runs while it is open.
         using var preview = new ThumbPreviewServer(engine, log);
         preview.Start();
+        // Other programs (a Claude Code hook, a build script) and Settings' Test button buzz the mouse over a current-user pipe.
+        using var buzz = new BuzzServer(engine, log);
+        buzz.Start();
+        app.BatteryLow += (_, _) => engine.PlayHaptic(HapticEvent.BatteryLow);
         // Touch calibration recordings start only when a trigger file appears (see TouchRecorder); idle otherwise.
         using var touchRecorder = new TouchRecorder(engine, mouse, SyncPaths.StateDirectory, log);
         touchRecorder.Start();

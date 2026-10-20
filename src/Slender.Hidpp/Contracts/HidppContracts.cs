@@ -148,6 +148,9 @@ public interface ILogiMouse : IDisposable
     /// <summary>Current haptic strength 0-100 (0x19B0); null when disconnected or unsupported.</summary>
     Task<int?> GetHapticStrengthAsync(CancellationToken ct) => Task.FromResult<int?>(null);
 
+    /// <summary>Sets the stored haptic strength 0-100 now and on every reconnect (null leaves the device value alone). The default does nothing.</summary>
+    Task SetHapticStrengthAsync(int? strength, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>First Sense Panel force reading seen (the anchor of the safe band); null until known.</summary>
     int? SensePanelBaseline => null;
 }

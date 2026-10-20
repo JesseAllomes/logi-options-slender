@@ -299,10 +299,7 @@ public sealed partial class MainWindow
         levelText.Width = 80;
         AddRow("Haptic strength", "How strong the tap is, 0 to 100. The four notches at the bottom are quick presets.", WithReadout(level, levelText));
 
-        AddRow("When you press a button", null,
-            PageToggle("Haptics on button press", c.Haptics.OnButtonPress, on => _config.Update(x => x with { Haptics = x.Haptics with { OnButtonPress = on } })));
-        AddRow("When the Actions Ring opens", null,
-            PageToggle("Haptics on the Actions Ring", c.Haptics.OnActionsRing, on => _config.Update(x => x with { Haptics = x.Haptics with { OnActionsRing = on } })));
+        BuildHapticEvents(c);
     }
 
     private void BuildGeneralPage()
