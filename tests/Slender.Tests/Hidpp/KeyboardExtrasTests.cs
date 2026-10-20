@@ -143,6 +143,27 @@ public class KeyboardExtrasTests
     }
 
     [Fact]
+    public async Task Channel_fn_lock_is_written_once_and_a_reconnect_leaves_fn_esc_alone()
+    {
+        var dev = K860(Off3, 0);
+        var t1 = dev.NewTransport();
+        var t2 = dev.NewTransport();
+        var f = new FakeFactory();
+        f.Enqueue(t1);
+        f.Enqueue(t2);
+        using var kb = new LogiKeyboard(f, Fast());
+        await kb.StartAsync(CancellationToken.None);
+        await Wait.UntilAsync(() => kb.IsConnected);
+        await kb.SetChannelFnLockAsync([true, null, null], CancellationToken.None);
+        Assert.True(Wrote(t1, FnIndex, 1, 0, 1));
+
+        t1.Fault();
+        await Wait.UntilAsync(() => f.OpenCalls >= 2 && kb.IsConnected && kb.FnLockNow is not null);
+        await Task.Delay(50);
+        Assert.DoesNotContain(t2.Writes, w => w[2] == FnIndex && w[3] >> 4 == 1); // reconnect: read only
+    }
+
+    [Fact]
     public async Task Current_channel_is_unknown_when_the_reads_cannot_tell_channels_apart()
     {
         var (kb, _) = Rig(K860([true, true, true], current: 1));

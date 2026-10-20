@@ -126,8 +126,8 @@ public interface ILogiKeyboard : IDisposable
     Task<DisabledKeys?> SetDisabledKeysAsync(DisabledKeys keys, CancellationToken ct);
 
     /// <summary>
-    /// Fn inversion per Easy-Switch channel (0x40A3, host index 0-2). A null entry leaves that channel alone. Remembered and applied
-    /// on every (re)connect.
+    /// Fn inversion per Easy-Switch channel (0x40A3, host index 0-2). A null entry leaves that channel alone. Written once (on the
+    /// next connect when offline); reconnects never re-write it, so Fn+Esc on the keyboard stays in charge.
     /// </summary>
     Task SetChannelFnLockAsync(IReadOnlyList<bool?> channels, CancellationToken ct);
 

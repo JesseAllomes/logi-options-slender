@@ -1058,11 +1058,15 @@ public sealed class TrayApplication : IDisposable
     /// UI thread. The keyboard reports a Fn lock that differs from the saved one (Fn+Esc on the keyboard): save the keyboard's,
     /// so Settings shows it and nothing writes the old value back.
     /// </summary>
-    public void MirrorKeyboardFnLock(bool on)
+    public void MirrorKeyboardFnLock(bool on, int? channel)
     {
-        if (_config.Keyboard.FnLock == on) return;
-        _log.Info($"keyboard Fn lock is {(on ? "on" : "off")}; saved");
-        ApplyChange(_config with { Keyboard = _config.Keyboard with { FnLock = on } });
+        var kb = _config.Keyboard;
+        var next = kb with { FnLock = on };
+        // The channel the keyboard is on keeps the same value, so a later start or channel edit never writes the old one back.
+        if (channel is int c && c < kb.FnLockChannels.Count && kb.FnLockChannels[c] is not null) next = next.WithChannel(c, on);
+        if (next == kb) return;
+        _log.Info($"keyboard Fn lock is {(on ? "on" : "off")}{(channel is int n ? $" on channel {n + 1}" : "")}; saved");
+        ApplyChange(_config with { Keyboard = next });
     }
 
     /// <summary>Saves through the store, then raises ConfigChanged. Returns false on a failed save.</summary>

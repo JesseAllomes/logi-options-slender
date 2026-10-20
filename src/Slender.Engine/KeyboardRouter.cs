@@ -7,7 +7,8 @@ namespace Slender.Engine;
 /// the foreground profile with fallback to the default profile on every press, pairs each release with the action chosen
 /// at press time (an app switch while a key is held cannot strand a press). Fn lock belongs to the keyboard (Fn+Esc): it is
 /// written only when the user changes <see cref="KeyboardSettings.FnLock"/>, never at start or reconnect, and what the keyboard
-/// reports is raised as <see cref="FnLockChangedOnKeyboard"/> so the tray saves it.
+/// reports is raised as <see cref="FnLockChangedOnKeyboard"/> so the tray saves it. Per-channel Fn values follow the same rule:
+/// only a channel the user changed is written.
 /// Nothing throws across the HID thread. The router does not dispose the collaborators it is given.
 /// </summary>
 public sealed class KeyboardRouter : IDisposable
@@ -28,7 +29,7 @@ public sealed class KeyboardRouter : IDisposable
     private bool? _fnLock;            // what the keyboard has, as far as Slender knows (config until the first read)
     private volatile bool _fnWritePending; // Slender's own Fn write is queued: a read in between is stale
     private byte? _disabledKeys;
-    private string? _channelFn;
+    private bool?[]? _channels;     // per-channel Fn as last saved or reported (the keyboard keeps its own)
     private Task _chain = Task.CompletedTask;
     private bool _started, _disposed;
 
@@ -165,8 +166,7 @@ public sealed class KeyboardRouter : IDisposable
         var set = ComputeDivertSet(_config, _foreground.ProcessName);
         var fn = _config.Keyboard.FnLock;
         var disabled = _config.Keyboard.DisabledKeys;
-        var channels = _config.Keyboard.FnLockChannels;
-        var channelKey = string.Join(',', channels.Select(c => c is null ? "-" : c.Value ? "1" : "0"));
+        var channels = _config.Keyboard.FnLockChannels.ToArray();
         lock (_gate)
         {
             if (_disposed) return;
@@ -189,10 +189,17 @@ public sealed class KeyboardRouter : IDisposable
                     TaskScheduler.Default).Unwrap()
                     .ContinueWith(_ => { _fnWritePending = false; }, TaskScheduler.Default);
             }
-            if (force || _channelFn != channelKey)
+            // Start never writes them (an update or sign-in must not undo Fn+Esc); a change writes only the channels that changed.
+            var changed = new bool?[channels.Length];
+            bool any = false;
+            for (int i = 0; i < channels.Length && _channels is not null; i++)
             {
-                _channelFn = channelKey;
-                _chain = _chain.ContinueWith(_ => Safe(() => _keyboard.SetChannelFnLockAsync(channels, _cts.Token), "set Fn lock per channel"),
+                if (channels[i] is { } want && _channels[i] != want) { changed[i] = want; any = true; }
+            }
+            _channels = channels;
+            if (any)
+            {
+                _chain = _chain.ContinueWith(_ => Safe(() => _keyboard.SetChannelFnLockAsync(changed, _cts.Token), "set Fn lock per channel"),
                     TaskScheduler.Default).Unwrap();
             }
             if (force || _disabledKeys != disabled)
@@ -325,25 +332,33 @@ public sealed class KeyboardRouter : IDisposable
     public event EventHandler<ushort>? SpareKeyIdentified;
 
     /// <summary>
-    /// The keyboard's Fn lock differs from the saved one (Fn+Esc, or a saved value from an older version): the tray saves it.
-    /// Raised on a background thread.
+    /// The keyboard's Fn lock differs from the saved one, or from the saved value of the channel it is on (Fn+Esc, or a saved value
+    /// from an older version): the tray saves it, with <see cref="KeyboardChannel"/>. Raised on a background thread.
     /// </summary>
     public event EventHandler<bool>? FnLockChangedOnKeyboard;
 
     /// <summary>How often the keyboard's Fn lock is read to catch Fn+Esc. One small read; nothing is written.</summary>
     internal int FnPollMs { get; set; } = 30_000;
 
+    /// <summary>The Easy-Switch channel (0-2) the keyboard is on, when known.</summary>
+    public int? KeyboardChannel => _keyboard.CurrentChannel;
+
     private void OnFnLockRead(object? sender, bool on)
     {
         try
         {
             if (_fnWritePending) return; // Slender's own write is on its way and wins
+            var channel = _keyboard.CurrentChannel;
             lock (_gate)
             {
                 if (_disposed) return;
                 _fnLock = on;
+                // The keyboard already has it: saving it for this channel must not write it back.
+                if (channel is int c && _channels is { } known && c < known.Length && known[c] is not null) known[c] = on;
             }
-            if (_config.Keyboard.FnLock != on) FnLockChangedOnKeyboard?.Invoke(this, on);
+            var k = _config.Keyboard;
+            bool channelDiffers = channel is int ch && ch < k.FnLockChannels.Count && k.FnLockChannels[ch] is { } saved && saved != on;
+            if (k.FnLock != on || channelDiffers) FnLockChangedOnKeyboard?.Invoke(this, on);
         }
         catch (Exception ex) { try { _log.Error("Fn lock read handler failed", ex); } catch { } }
     }

@@ -91,7 +91,8 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
             lock (State) if (_fnDesired == on) _fnDesired = null;
             _fnNow = on ? 1 : 0;
         }
-        await ApplyChannelsAsync(s, channels, ct).ConfigureAwait(false);
+        // Per-channel values work the same way: a change made while away is written once, then forgotten.
+        if (await ApplyChannelsAsync(s, channels, ct).ConfigureAwait(false)) ForgetWrittenChannels(channels);
         if (disabled is { } keys) await TrySetDisabledAsync(s, keys, ct).ConfigureAwait(false);
     }
 
@@ -106,23 +107,35 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
     /// the host (read_skip_byte_count 1, fn0). Solaar takes the host byte from 0x1815 HostsInfo; explicit indices 0-2 are used here (the
     /// 2026-10-15 probe read all three). The current channel comes from the read-only 0x1814/0x1815 reads when the keyboard answers them;
     /// otherwise it is inferred: the one channel whose read matches a read with host 0xFF, when exactly one does.
+    /// Returns true once every chosen value is written.
     /// </summary>
-    private async Task ApplyChannelsAsync(Session s, bool?[] channels, CancellationToken ct)
+    private async Task<bool> ApplyChannelsAsync(Session s, bool?[] channels, CancellationToken ct)
     {
+        bool written = false;
         try
         {
-            if (await s.Device.GetFeatureIndexAsync(KeyboardFeatureId.FnInversionMultiHost, ct).ConfigureAwait(false) == null) return;
+            if (await s.Device.GetFeatureIndexAsync(KeyboardFeatureId.FnInversionMultiHost, ct).ConfigureAwait(false) == null) return false;
             for (int i = 0; i < ChannelCount; i++)
             {
                 if (channels[i] is not { } want) continue;
                 await s.Device.CallAsync(KeyboardFeatureId.FnInversionMultiHost, 1,
                     new byte[] { (byte)i, want ? (byte)1 : (byte)0 }, ct).ConfigureAwait(false);
             }
+            written = true;
             // The real channel (0x1814) wins; the inference (the one channel whose Fn read matches the current host) is the fallback.
             if (_currentChannel < 0) _currentChannel = await InferChannelAsync(s, ct).ConfigureAwait(false) ?? -1;
             else await ReadCurrentFnAsync(s, ct).ConfigureAwait(false);
         }
         catch (HidppException) { }
+        return written;
+    }
+
+    /// <summary>Drops the pending per-channel values that were just written (a newer pending value for a channel is kept).</summary>
+    private void ForgetWrittenChannels(bool?[] written)
+    {
+        lock (State)
+            for (int i = 0; i < ChannelCount; i++)
+                if (written[i] is not null && _channelFnDesired[i] == written[i]) _channelFnDesired[i] = null;
     }
 
     /// <summary>0x40A3 fn0 for the current host: the keyboard's Fn lock now. Records it and raises <see cref="FnLockRead"/>.</summary>
@@ -173,10 +186,13 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
         await Gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            lock (State) _channelFnDesired = wanted;
+            // Merged into what is still pending, so two changes made while the keyboard is away are both written on connect.
+            lock (State)
+                for (int i = 0; i < ChannelCount; i++)
+                    if (wanted[i] is not null) _channelFnDesired[i] = wanted[i];
             var s = CurrentSession;
-            if (s == null || !IsConnected) return;
-            await ApplyChannelsAsync(s, wanted, ct).ConfigureAwait(false);
+            if (s == null || !IsConnected) return; // written on the next connect, then forgotten
+            if (await ApplyChannelsAsync(s, wanted, ct).ConfigureAwait(false)) ForgetWrittenChannels(wanted);
         }
         finally { Gate.Release(); }
     }

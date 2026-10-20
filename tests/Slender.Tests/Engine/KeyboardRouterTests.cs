@@ -25,7 +25,8 @@ internal sealed class FakeKeyboard : ILogiKeyboard
     public Task SetFnLockAsync(bool enabled, CancellationToken ct) { lock (FnLocks) FnLocks.Add(enabled); return Task.CompletedTask; }
     public List<DisabledKeys> Disabled { get; } = [];
     public List<bool?[]> Channels { get; } = [];
-    public int? CurrentChannel => null;
+    public int? Channel;
+    public int? CurrentChannel => Channel;
     public Task<DisabledKeys?> SetDisabledKeysAsync(DisabledKeys keys, CancellationToken ct)
     {
         lock (Disabled) Disabled.Add(keys);

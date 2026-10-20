@@ -70,24 +70,45 @@ public class KeyboardExtrasRouterTests
     }
 
     [Fact]
-    public async Task Disabled_keys_and_channel_fn_are_applied_on_start_and_only_on_change()
+    public async Task Disabled_keys_are_applied_on_start_and_channel_fn_only_when_a_channel_changes()
     {
         var first = new KeyboardSettings(DisabledKeys: (byte)(DisabledKeys.CapsLock | DisabledKeys.Windows), FnLockChannel2: true);
         var (r, kb, _) = Make(Cfg(first));
         using (r)
         {
             r.Start();
-            await Wait.UntilAsync(() => kb.Disabled.Count >= 1 && kb.Channels.Count >= 1);
+            await Wait.UntilAsync(() => kb.Disabled.Count >= 1);
             Assert.Equal(DisabledKeys.CapsLock | DisabledKeys.Windows, kb.Disabled[0]);
-            Assert.Equal(new bool?[] { null, true, null }, kb.Channels[0]);
+            Assert.Empty(kb.Channels); // start (update, sign-in) never undoes Fn+Esc
 
             r.ApplyConfig(Cfg(first with { ShowLockKeyChanges = false })); // unrelated change: nothing re-sent
             r.ApplyConfig(Cfg(first with { DisabledKeys = 0, FnLockChannel1 = false }));
-            await Wait.UntilAsync(() => kb.Disabled.Count >= 2 && kb.Channels.Count >= 2);
+            await Wait.UntilAsync(() => kb.Disabled.Count >= 2 && kb.Channels.Count >= 1);
             Assert.Equal(DisabledKeys.None, kb.Disabled[1]);
-            Assert.Equal(new bool?[] { false, true, null }, kb.Channels[1]);
+            Assert.Equal(new bool?[] { false, null, null }, kb.Channels[0]); // only the channel that changed
             Assert.Equal(2, kb.Disabled.Count);
-            Assert.Equal(2, kb.Channels.Count);
+            Assert.Single(kb.Channels);
+        }
+    }
+
+    [Fact]
+    public async Task Fn_esc_on_a_channel_with_a_saved_value_is_reported_and_not_written_back()
+    {
+        var cfg = new KeyboardSettings(FnLock: false, FnLockChannel1: true, FnLockChannel2: true);
+        var (r, kb, _) = Make(Cfg(cfg));
+        using (r)
+        {
+            var raised = new List<bool>();
+            r.FnLockChangedOnKeyboard += (_, on) => { lock (raised) raised.Add(on); };
+            kb.Channel = 0;
+            r.Start();
+            kb.ReadOnConnect(false); // matches FnLock but not channel 1's saved value
+            lock (raised) Assert.Equal([false], raised);
+            Assert.Equal(0, r.KeyboardChannel);
+
+            r.ApplyConfig(Cfg(cfg with { FnLockChannel1 = false })); // what the tray saves for it
+            await Task.Delay(50);
+            Assert.Empty(kb.Channels);
         }
     }
 }
