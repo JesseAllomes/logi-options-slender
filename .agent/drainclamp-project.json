@@ -606,7 +606,7 @@
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 270,
+  "rev": 271,
   "review": {
     "advice": [],
     "config": {
@@ -13463,6 +13463,14 @@
       "id": "t8",
       "milestone": "",
       "text": "My shortcuts (user 2026-10-19, chose list): config MyShortcuts done (b06b4cb parent); still to build: Shortcuts tab 'My shortcuts' group with Add (name, recorder, All apps / this app), edit, delete"
+    },
+    {
+      "at": "2026-10-20T04:32:30+00:00",
+      "done": false,
+      "done_at": null,
+      "id": "t9",
+      "milestone": "",
+      "text": "Research 2026-10-20 (4-agent probe, report in session scratchpad probe/): top ideas 1 haptic palette + local 'buzz me' pipe trigger (Claude Code hook / build done), 2 re-apply on wake via 0x1D4B/0x0020 events, 3 hi-res diverted main wheel, 4 ratchet state, 5 K860 0x4531 layout per channel (m27 claim not in src), 6 K860 0x1814/0x1815 read-only carve-out, 7 0x4220 lock LED events, 8 Sense Panel pressure decode, 9 thumb wheel flick velocity, 10 Win11 native haptics interplay"
     }
   ],
   "tokens": null

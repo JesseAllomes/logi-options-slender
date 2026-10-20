@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=126 -->
+<!-- drainclamp-build: state; schema=1; generation=127 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-18T23:30:18+00:00 15953794 m38 built ee58ea2 and shipped as v1.1.18 (10:30 Melbourne): hold top button = app's second action, quick press = its own job (native = ratchet flip via 0x2111), no toggle/Switch with/browser preset; 1442 tests. Awaiting the user's live check
 - 2026-10-18T23:48:41+00:00 73168ddb v1.1.19 published 10:48 Melbourne: Left+Right chord removed (hook holds back no clicks), lost-release guard on the top hold, Edge back-step fix (re-press Ctrl on direction change), Tab scroll speed -> Second action speed; 1426 tests. Awaiting user check in Edge
 - 2026-10-19T00:18:17+00:00 1c9ebd98 User 2026-10-19: per-app side scroll + second action speeds go inside the thumb wheel card (vertical per-app speed dropped); thumb wheel touch dropping when the finger lifts is correct behaviour (touch works); ring open/close animation wanted. Round-2 prototypes docs/thumbcard-ring-motion-round2.html published https://claude.ai/artifact/TvtG1ztQ7x8fxgdCqq28SQ; awaiting picks
 - 2026-10-19T00:23:15+00:00 60db84af Round 2 picks: card A3 (drawn wheel) as a live preview (hold top + turn shows speed, nothing runs); ring motion B2 bloom + B4 fly in (and B1 pop) slower with a user speed setting, B3 sweep dropped. Round 3 published https://claude.ai/artifact/WQvTa4BopPVfxfTZ2haqHx (docs/thumbcard-ring-motion-round3.html)
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-20T00:59:07+00:00 61cd6974 Options+ found uninstalled (no Program Files/LogiOptionsPlus, no depots) - firmware-update path via Options+ no longer available until reinstalled. Pictures restored + backup; safe Refresh. 1514 tests
 - 2026-10-20T04:09:57+00:00 cfe38521 Options+ reinstalled for firmware, updated, then switched fully off (service Disabled, Download Assistant startup disabled, processes ended) via scripts/Set-OptionsPlus.ps1. Update firmware button: one elevated script on/open/wait/off. Tray publishes firmware (0x0003 allowlisted fn0-1). Default window 900 tall, clamped to work area. 1517 tests
 - 2026-10-20T04:15:34+00:00 ee96b506 Squash Options+ button in Settings > General (OptionsPlusState: status read without admin; elevated squash script). 1517 tests
+- 2026-10-20T04:32:31+00:00 520f6eb1 4-agent read-only probe + web research: no hidden sensors; MX4 firmware 27.3.19 = newest (Options+ update had nothing to do); K860 unchanged; consumer K860 cannot use Bolt (Unifying/BT only); Bolt gives MX4 little. Ranked ideas in to-do
 <!-- /DC:LOG -->
