@@ -24,6 +24,9 @@ public sealed class UiState
     /// <summary>Suggested shortcuts hidden one by one: ShortcutLibrary.HideKey(group id, chord).</summary>
     public List<string> HiddenShortcuts { get; set; } = [];
 
+    /// <summary>The Haptics page's Advanced expander (pulses, spacing, exact strength) is open; closed by default.</summary>
+    public bool HapticsAdvancedOpen { get; set; }
+
     public static UiState Load(string path)
     {
         try
