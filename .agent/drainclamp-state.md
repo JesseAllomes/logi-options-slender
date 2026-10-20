@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=130 -->
+<!-- drainclamp-build: state; schema=1; generation=131 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -120,7 +120,6 @@ Research build (user 2026-10-20): build every researched idea except K860 Mac la
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T00:18:17+00:00 1c9ebd98 User 2026-10-19: per-app side scroll + second action speeds go inside the thumb wheel card (vertical per-app speed dropped); thumb wheel touch dropping when the finger lifts is correct behaviour (touch works); ring open/close animation wanted. Round-2 prototypes docs/thumbcard-ring-motion-round2.html published https://claude.ai/artifact/TvtG1ztQ7x8fxgdCqq28SQ; awaiting picks
 - 2026-10-19T00:23:15+00:00 60db84af Round 2 picks: card A3 (drawn wheel) as a live preview (hold top + turn shows speed, nothing runs); ring motion B2 bloom + B4 fly in (and B1 pop) slower with a user speed setting, B3 sweep dropped. Round 3 published https://claude.ai/artifact/WQvTa4BopPVfxfTZ2haqHx (docs/thumbcard-ring-motion-round3.html)
 - 2026-10-19T00:33:21+00:00 9af09c44 Round 3 picks: card variant 2 (Result preview: tab strip / sliding sheet under each wheel); ring speeds rescaled so Quickest = old Normal (x1.0), Normal = old Slowest (x1.8), Slowest x2.6 (steps 1.0/1.4/1.8/2.2/2.6). Awaiting build go-ahead
 - 2026-10-19T03:17:37+00:00 e582c679 m39 card + preview and m40 ring motion built and merged on main (1475 tests, -warnaserror clean); shipping as next release, awaiting the user's live look
@@ -140,4 +139,5 @@ Research build (user 2026-10-20): build every researched idea except K860 Mac la
 - 2026-10-20T04:15:34+00:00 ee96b506 Squash Options+ button in Settings > General (OptionsPlusState: status read without admin; elevated squash script). 1517 tests
 - 2026-10-20T04:32:31+00:00 520f6eb1 4-agent read-only probe + web research: no hidden sensors; MX4 firmware 27.3.19 = newest (Options+ update had nothing to do); K860 unchanged; consumer K860 cannot use Bolt (Unifying/BT only); Bolt gives MX4 little. Ranked ideas in to-do
 - 2026-10-20T05:05:10+00:00 2a62253c m43: per-app main wheel speed + thumb flick built (1525 tests); force-log experiment: 0x19C0 fn2 constant 4859 = threshold readback, no pressure stream (docs/devices/feature-gaps.md)
+- 2026-10-20T05:17:10+00:00 7284bcc9 m41 haptics (Sonnet builder, 8fc0713/3d874a1) + m42 device events/hosts/wheel mode (Sonnet builder, 865111d) reviewed and merged with m43; wheel-mode haptic wired; Slender.Buzz shipped (AOT) in installer. 1592 tests. v1.1.34 published 16:17 Melbourne. Pending on device: name waveforms 0-14, confirm 0x1D4B/0x2111/0x2121/0x1815 decodes from tray log, 0x4220 sniff
 <!-- /DC:LOG -->
