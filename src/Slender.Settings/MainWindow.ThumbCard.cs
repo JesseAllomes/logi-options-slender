@@ -632,7 +632,10 @@ public sealed partial class MainWindow
             _ => "default",
         };
         ShowPickerCore(anchor, new PickerSpec($"{what} in {appName} (holding top button)", MouseTabs, initial, own, "Do nothing", false,
-            picked => set(picked ?? new ActionSpec.None())));
+            picked => set(picked ?? new ActionSpec.None()))
+        {
+            ShortcutApp = _app,
+        });
     }
 
     /// <summary>The faint copper wash marks which mode the real wheel is previewing.</summary>

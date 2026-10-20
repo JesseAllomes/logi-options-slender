@@ -17,6 +17,8 @@ public sealed partial class MainWindow
 {
     private sealed record PickerTab(string Key, string Title);
 
+    private const double PickerWidth = 480;
+
     private static readonly PickerTab[] MouseTabs =
     [
         new("keys", "Keys"), new("shortcuts", "Shortcuts"), new("mouse", "Mouse"), new("excel", "Excel"), new("ring", "Ring"), new("more", "More"), new("default", "Default"),
@@ -60,9 +62,10 @@ public sealed partial class MainWindow
         /// <summary>The Sense Panel: Press / Hold shows the one-click "Hold opens the Actions Ring" preset.</summary>
         public bool SensePanel { get; init; }
 
-        /// <summary>The app whose suggested shortcuts the Shortcuts tab lists; null = All apps.</summary>
+        /// <summary>The app whose suggested shortcuts the Shortcuts tab lists; null = All apps. It also decides the Excel tab.</summary>
         public string? ShortcutApp { get; init; }
     }
+
 
     /// <summary>
     /// The action picker: a flyout anchored under the label. Tabs for the device, a recorder for key chords. Nothing is saved
@@ -128,7 +131,7 @@ public sealed partial class MainWindow
             spec.Apply(action);
         }
 
-        PickerTab[] tabs = _ui.HideShortcutSuggestions ? [.. spec.Tabs.Where(t => t.Key != "shortcuts")] : spec.Tabs;
+        PickerTab[] tabs = [.. spec.Tabs.Where(t => PickerTabs.Show(t.Key, spec.ShortcutApp, spec.Own is ActionSpec.Excel, _ui.HideShortcutSuggestions))];
         string initial = tabs.Any(t => t.Key == spec.Initial) ? spec.Initial : tabs[0].Key;
 
         var header = Ui.Text(spec.Header, 12, Ui.Muted);
@@ -157,14 +160,23 @@ public sealed partial class MainWindow
             }
         };
 
-        var root = new StackPanel { Spacing = 10, Width = 316 };
+        // Wide enough for every tab (the mouse has 7, the thumb wheel 8): at 316 px "More" and "Default" fell off the edge and
+        // could not be reached (user 2026-10-20). The tab row also scrolls sideways if a longer set ever outgrows it.
+        var root = new StackPanel { Spacing = 10, Width = PickerWidth };
         root.Children.Add(header);
         if (spec.Extra is not null)
         {
             root.Children.Add(spec.Extra());
         }
 
-        root.Children.Add(bar);
+        root.Children.Add(new ScrollViewer
+        {
+            Content = bar,
+            HorizontalScrollMode = ScrollMode.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollMode = ScrollMode.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        });
         root.Children.Add(host);
         flyout.Content = root;
 
