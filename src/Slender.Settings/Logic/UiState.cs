@@ -6,7 +6,13 @@ namespace Slender.Settings.Logic;
 public sealed class UiState
 {
     public int Width { get; set; } = 1160;
-    public int Height { get; set; } = 700;
+    public int Height { get; set; } = DefaultHeight;
+
+    /// <summary>Default window height (DIPs); taller since 2026-10-20 (user asked: the card and pages need the room).</summary>
+    public const int DefaultHeight = 900;
+
+    /// <summary>2 = the remembered height has had the taller default applied once (missing in older files, so 0).</summary>
+    public int SizeVersion { get; set; }
     public string Device { get; set; } = DeviceIds.Mouse;
 
     /// <summary>Process name of the selected app; null = All apps.</summary>
@@ -29,6 +35,11 @@ public sealed class UiState
                 {
                     s.Width = Math.Clamp(s.Width, 1040, 4000);
                     s.Height = Math.Clamp(s.Height, 640, 3000);
+                    if (s.SizeVersion < 2)
+                    {
+                        s.Height = Math.Max(s.Height, DefaultHeight); // files from before the taller default grow once
+                        s.SizeVersion = 2;
+                    }
                     return s;
                 }
             }
@@ -43,6 +54,7 @@ public sealed class UiState
 
     public void Save(string path)
     {
+        SizeVersion = 2; // whatever is saved now is the user's own size
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);

@@ -76,6 +76,33 @@ public abstract class LogiDeviceBase : IDisposable
     protected LogiDeviceOptions Options => _options;
     protected Session? CurrentSession => _session;
 
+    /// <summary>
+    /// The running firmware: the active firmware entity of 0x0003 as "NAME major.minor.build" (Solaar hidpp20.py get_firmware
+    /// layout: p[0] kind, p[1-3] name, p[4-5] version BCD, p[6-7] build, p[8] bit0 active). Null when disconnected or unreadable.
+    /// </summary>
+    public async Task<string?> GetFirmwareVersionAsync(CancellationToken ct)
+    {
+        var s = CurrentSession;
+        if (s == null) return null;
+        try
+        {
+            int count = (await s.Device.CallAsync(FeatureId.DeviceFwVersion, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params[0];
+            string? first = null;
+            for (int i = 0; i < Math.Min(count, 8); i++)
+            {
+                var r = (await s.Device.CallAsync(FeatureId.DeviceFwVersion, 1, new byte[] { (byte)i }, ct).ConfigureAwait(false)).Params;
+                if ((r[0] & 0x0F) != 0) continue; // 0 = main firmware (bootloader and hardware entities are skipped)
+                string name = System.Text.Encoding.ASCII.GetString(r.Slice(1, 3)).Trim('\0', ' ');
+                string version = $"{name} {r[4]:X2}.{r[5]:X2}.{r[6]:X2}{r[7]:X2}".Trim();
+                if ((r[8] & 1) != 0) return version;
+                first ??= version;
+            }
+            return first;
+        }
+        catch (HidppException) { return null; }
+        catch (ObjectDisposedException) { return null; }
+    }
+
     /// <summary>Controls that may be left diverted by another driver; reset to native on every connect unless wanted.</summary>
     protected abstract IReadOnlyCollection<ushort> KnownDivertableControls { get; }
 

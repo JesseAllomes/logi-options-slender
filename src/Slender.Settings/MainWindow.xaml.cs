@@ -152,7 +152,9 @@ public sealed partial class MainWindow : Window
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _scale = NativeMethods.GetDpiForWindow(_hwnd) / 96.0;
-        AppWindow.Resize(new SizeInt32((int)(_ui.Width * _scale), (int)(_ui.Height * _scale)));
+        // Never taller or wider than the screen's work area (a small or scaled display would otherwise lose the bottom bar).
+        RectInt32 work = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        AppWindow.Resize(new SizeInt32(Math.Min((int)(_ui.Width * _scale), work.Width), Math.Min((int)(_ui.Height * _scale), work.Height)));
         ApplyFullChrome();
     }
 

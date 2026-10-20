@@ -51,6 +51,7 @@ public sealed class TrayApplication : IDisposable
     private BatteryStatus? _battery;
     private int? _dpi;
     private MouseValues? _mouseValues;
+    private string? _mouseFirmware, _keyboardFirmware; // kept across disconnects: firmware does not change while away
     private bool _keyboardConnected;
     private BatteryStatus? _keyboardBattery;
     private readonly BatteryAlertState _batteryAlerts = new();
@@ -75,7 +76,8 @@ public sealed class TrayApplication : IDisposable
             () => new StatusSnapshot(
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
                 _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi,
-                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel),
+                _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
+                _mouseFirmware, _keyboardFirmware),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -630,6 +632,7 @@ public sealed class TrayApplication : IDisposable
             _ = RefreshBatteryAsync();
             _ = RefreshDpiAsync();
             _ = RefreshMouseValuesAsync();
+            _ = RefreshFirmwareAsync(keyboard: false);
         }
         else
         {
@@ -691,6 +694,7 @@ public sealed class TrayApplication : IDisposable
         {
             StartTimer(TimerKeyboard, KeyboardBatteryIntervalMs);
             _ = RefreshKeyboardBatteryAsync();
+            _ = RefreshFirmwareAsync(keyboard: true);
         }
         else
         {
@@ -762,6 +766,34 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Re-reads the device DPI after Slender changed it, so status.json stays current.</summary>
     public void RefreshDpi() => Post(() => _ = RefreshDpiAsync());
+
+    /// <summary>Reads the device's running firmware once per connect (read-only) for Settings' Firmware rows.</summary>
+    private async Task RefreshFirmwareAsync(bool keyboard)
+    {
+        try
+        {
+            string? version = keyboard
+                ? _keyboard is null ? null : await _keyboard.GetFirmwareVersionAsync(_lifetime.Token)
+                : _mouse is null ? null : await _mouse.GetFirmwareVersionAsync(_lifetime.Token);
+            if (version is null)
+            {
+                return;
+            }
+
+            Post(() =>
+            {
+                if (keyboard) _keyboardFirmware = version; else _mouseFirmware = version;
+                _status.Changed();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception e)
+        {
+            _log.Error("firmware version read failed", e);
+        }
+    }
 
     /// <summary>Re-reads wheel resistance, Sense Panel force and haptic strength after a change or connect, so status.json stays current.</summary>
     public void RefreshMouseValues() => Post(() => _ = RefreshMouseValuesAsync());

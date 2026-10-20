@@ -386,6 +386,8 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
     public int? SensePanelForceMax { get; init; }
     /// <summary>Current haptic strength 0-100 (0x19B0); null when unknown.</summary>
     public int? HapticStrength { get; init; }
+    /// <summary>Running firmware, e.g. "RBM 27.03.0019" (0x0003 reads); null when not read yet.</summary>
+    public string? Firmware { get; init; }
 
     /// <summary>Easy-Switch channel (0-2) the keyboard is on, when it could be told; null when unknown or not a keyboard.</summary>
     public int? Channel { get; init; }

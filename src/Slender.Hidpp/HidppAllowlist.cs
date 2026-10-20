@@ -25,6 +25,7 @@ public static class HidppAllowlist
     {
         [0x0000] = 1,
         [0x0001] = 1,
+        [0x0003] = 1, // device firmware version: fn0 entity count, fn1 entity info. Reads only; firmware update (0x00D0/0x00D1) stays blocked
         [0x0005] = 1,
         [0x1000] = 0,
         [0x1004] = 1,

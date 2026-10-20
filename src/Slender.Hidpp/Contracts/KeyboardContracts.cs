@@ -134,6 +134,9 @@ public interface ILogiKeyboard : IDisposable
     /// <summary>The Easy-Switch channel (0-2) the keyboard is on now, as far as it could be told from 0x40A3 reads; null when unknown.</summary>
     int? CurrentChannel { get; }
 
+    /// <summary>The running firmware, e.g. "MPK 10.00.0010" (0x0003 reads); null when disconnected or unsupported.</summary>
+    Task<string?> GetFirmwareVersionAsync(CancellationToken ct) => Task.FromResult<string?>(null);
+
     /// <summary>Battery state, or null when unavailable or disconnected.</summary>
     Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct);
 }

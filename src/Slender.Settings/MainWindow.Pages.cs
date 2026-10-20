@@ -389,6 +389,25 @@ public sealed partial class MainWindow
 
     private const string OptionsPlusExe = @"C:\Program Files\LogiOptionsPlus\logioptionsplus.exe";
 
+    /// <summary>
+    /// Run elevated (one prompt) for a firmware update (user 2026-10-20: Options+ must never load except to update). Turns the
+    /// Options+ updater service on, opens Options+ un-elevated through Explorer, waits for its window to close, then turns
+    /// everything off again: service Disabled and every Options+ and plugin process ended, as scripts/Set-OptionsPlus.ps1 -Off.
+    /// </summary>
+    private const string OptionsPlusForFirmwareScript = """
+        $ErrorActionPreference = 'SilentlyContinue'
+        $svc = 'OptionsPlusUpdaterService'
+        Set-Service $svc -StartupType Manual; Start-Service $svc
+        Start-Sleep -Seconds 3
+        Start-Process explorer.exe '"C:\Program Files\LogiOptionsPlus\logioptionsplus.exe"'
+        $deadline = (Get-Date).AddMinutes(3)
+        while (-not (Get-Process logioptionsplus) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
+        while (Get-Process logioptionsplus) { Start-Sleep -Seconds 3 }
+        Stop-Service $svc -Force; Set-Service $svc -StartupType Disabled
+        'logioptionsplus','logioptionsplus_agent','logioptionsplus_appbroker','logioptionsplus_updater','LogiPluginService',
+        'LogiPluginServiceExt','logi_crashpad_handler','logi_download_assistant' | ForEach-Object { Get-Process $_ | Stop-Process -Force }
+        """;
+
     /// <summary>One row per device whose firmware version the tray published (status.json). Nothing is shown when it did not.</summary>
     private void BuildFirmwareSection()
     {
@@ -420,7 +439,8 @@ public sealed partial class MainWindow
             Title = "Update firmware",
             Content = new TextBlock
             {
-                Text = "Slender will open Logi Options+ to update firmware, then you can close it and Slender resumes.",
+                Text = "Slender turns Logi Options+ on (one Windows admin prompt) and opens it. Update the firmware there, then close "
+                    + "Options+: it switches fully off again by itself and Slender takes the mouse and keyboard back.",
                 TextWrapping = TextWrapping.Wrap,
             },
             PrimaryButtonText = "Continue",
@@ -443,12 +463,22 @@ public sealed partial class MainWindow
         {
             try
             {
-                using Process? p = Process.Start(new ProcessStartInfo(OptionsPlusExe) { UseShellExecute = true });
+                using Process? p = Process.Start(new ProcessStartInfo("powershell.exe",
+                    "-NoProfile -WindowStyle Hidden -EncodedCommand " + Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(OptionsPlusForFirmwareScript)))
+                {
+                    UseShellExecute = true,
+                    Verb = "runas", // the service and its startup type need admin
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                });
+            }
+            catch (System.ComponentModel.Win32Exception e) when (e.NativeErrorCode == 1223)
+            {
+                return; // the admin prompt was declined: nothing changed
             }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception or IOException)
             {
                 Services.CrashLog.Write(e);
-                failure = "Logi Options+ couldn't be started. Open it from the Start menu to update the firmware.";
+                failure = "Logi Options+ couldn't be turned on. Run scripts\\Set-OptionsPlus.ps1 -On from the Slender folder instead.";
             }
         }
 

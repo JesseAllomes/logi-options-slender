@@ -18,7 +18,9 @@ public sealed record StatusSnapshot(
     string? AvailableVersion = null,
     bool UpdateReady = false,
     MouseValues? MouseValues = null,
-    int? KeyboardChannel = null);
+    int? KeyboardChannel = null,
+    string? MouseFirmware = null,
+    string? KeyboardFirmware = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -35,6 +37,7 @@ public sealed class StatusPublisher : IDisposable
         var state = new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging)
         {
             Dpi = s.MouseConnected ? s.MouseDpi : null,
+            Firmware = s.MouseFirmware,
         };
         if (!s.MouseConnected || s.MouseValues is not { } v) return state;
         // The safe band for the Sense Panel force is 50%-200% of the first reading (LogiMouse.SensePanelBand).
@@ -171,7 +174,7 @@ public sealed class StatusPublisher : IDisposable
         return new SlenderStatus(
             [
                 MouseDeviceState(s),
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null },
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware },
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,

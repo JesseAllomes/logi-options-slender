@@ -4,6 +4,7 @@ namespace Slender.Hidpp;
 public static class FeatureId
 {
     public const ushort Root = 0x0000;
+    public const ushort DeviceFwVersion = 0x0003;
     public const ushort FeatureSet = 0x0001;
     public const ushort DeviceName = 0x0005;
     public const ushort Battery = 0x1000;
@@ -128,6 +129,9 @@ public interface ILogiMouse : IDisposable
 
     /// <summary>Current sensor DPI (0x2201 read); null when disconnected or unsupported.</summary>
     Task<int?> GetDpiAsync(CancellationToken ct) => Task.FromResult<int?>(null);
+
+    /// <summary>The running firmware, e.g. "RBM 27.03.0019" (0x0003 reads); null when disconnected or unsupported.</summary>
+    Task<string?> GetFirmwareVersionAsync(CancellationToken ct) => Task.FromResult<string?>(null);
 
     /// <summary>Current wheel resistance 0-100 (0x2111 torque); null when disconnected or unsupported.</summary>
     Task<int?> GetWheelResistanceAsync(CancellationToken ct) => Task.FromResult<int?>(null);
