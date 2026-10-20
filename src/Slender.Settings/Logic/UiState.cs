@@ -5,11 +5,15 @@ namespace Slender.Settings.Logic;
 /// <summary>Window size and last selection, remembered between runs (%LOCALAPPDATA%\Slender\settings-ui.json).</summary>
 public sealed class UiState
 {
-    public int Width { get; set; } = 1160;
+    public int Width { get; set; } = MinWidth;
     public int Height { get; set; } = DefaultHeight;
 
     /// <summary>Default window height (DIPs); taller since 2026-10-20 (user asked: the card and pages need the room).</summary>
     public const int DefaultHeight = 900;
+
+    /// <summary>Smallest window (DIPs): the size the user set on 2026-10-21 and asked never to go below.</summary>
+    public const int MinWidth = 1166;
+    public const int MinHeight = 869;
 
     /// <summary>2 = the remembered height has had the taller default applied once (missing in older files, so 0).</summary>
     public int SizeVersion { get; set; }
@@ -36,8 +40,8 @@ public sealed class UiState
                 UiState? s = JsonSerializer.Deserialize<UiState>(File.ReadAllText(path));
                 if (s is not null)
                 {
-                    s.Width = Math.Clamp(s.Width, 1040, 4000);
-                    s.Height = Math.Clamp(s.Height, 640, 3000);
+                    s.Width = Math.Clamp(s.Width, MinWidth, 4000);
+                    s.Height = Math.Clamp(s.Height, MinHeight, 3000);
                     if (s.SizeVersion < 2)
                     {
                         s.Height = Math.Max(s.Height, DefaultHeight); // files from before the taller default grow once

@@ -422,12 +422,12 @@ public sealed class UiStateTests : IDisposable
     public void State_round_trips()
     {
         string path = Path.Combine(_dir, "ui.json");
-        new UiState { Width = 1300, Height = 800, Device = DeviceIds.Keyboard, App = "excel" }.Save(path);
+        new UiState { Width = 1300, Height = 880, Device = DeviceIds.Keyboard, App = "excel" }.Save(path);
 
         UiState loaded = UiState.Load(path);
 
         Assert.Equal(1300, loaded.Width);
-        Assert.Equal(800, loaded.Height);
+        Assert.Equal(880, loaded.Height);
         Assert.Equal(DeviceIds.Keyboard, loaded.Device);
         Assert.Equal("excel", loaded.App);
     }
@@ -450,7 +450,7 @@ public sealed class UiStateTests : IDisposable
     public void Missing_or_corrupt_file_gives_defaults_and_size_is_clamped_to_the_minimum()
     {
         string path = Path.Combine(_dir, "ui.json");
-        Assert.Equal(1160, UiState.Load(path).Width);
+        Assert.Equal(1166, UiState.Load(path).Width);
 
         Directory.CreateDirectory(_dir);
         File.WriteAllText(path, "{ nope");
@@ -458,7 +458,7 @@ public sealed class UiStateTests : IDisposable
 
         File.WriteAllText(path, """{ "Width": 200, "Height": 100, "SizeVersion": 2 }""");
         UiState small = UiState.Load(path);
-        Assert.Equal(1040, small.Width);
-        Assert.Equal(640, small.Height);
+        Assert.Equal(1166, small.Width);
+        Assert.Equal(869, small.Height);
     }
 }

@@ -17,9 +17,9 @@ public sealed class UiStateSizeTests : IDisposable
         File.WriteAllText(_file, """{"Width":1160,"Height":700}""");
         UiState s = UiState.Load(_file);
         Assert.Equal(UiState.DefaultHeight, s.Height);
-        s.Height = 760; // the user makes it shorter again afterwards: that is kept
+        s.Height = 880; // the user makes it shorter again afterwards: that is kept
         s.Save(_file);
-        Assert.Equal(760, UiState.Load(_file).Height);
+        Assert.Equal(880, UiState.Load(_file).Height);
     }
 
     [Fact]

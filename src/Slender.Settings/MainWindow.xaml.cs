@@ -170,8 +170,10 @@ public sealed partial class MainWindow : Window
 
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
-            presenter.PreferredMinimumWidth = (int)(1040 * _scale);
-            presenter.PreferredMinimumHeight = (int)(640 * _scale);
+            // Never smaller than the user's chosen size, except where the screen's work area is smaller still.
+            RectInt32 work = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+            presenter.PreferredMinimumWidth = Math.Min((int)(UiState.MinWidth * _scale), work.Width);
+            presenter.PreferredMinimumHeight = Math.Min((int)(UiState.MinHeight * _scale), work.Height);
         }
 
         AppWindowTitleBar bar = AppWindow.TitleBar;
@@ -211,7 +213,8 @@ public sealed partial class MainWindow : Window
         {
             _ui.Device = DeviceIds_For(_kind);
             _ui.App = _app;
-            if (AppWindow.Size.Width > 0 && _scale > 0)
+            // Only a restored window's size is the user's own; minimised it reads 160x28, maximised it is the screen.
+            if (AppWindow.Size.Width > 0 && _scale > 0 && AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Restored })
             {
                 _ui.Width = (int)(AppWindow.Size.Width / _scale);
                 _ui.Height = (int)(AppWindow.Size.Height / _scale);
