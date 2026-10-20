@@ -352,6 +352,7 @@ public sealed partial class MainWindow
         import.Click += async (_, _) => await ImportFromOptionsPlusAsync();
         AddRow("Import from Options+", "Copies your Logi Options+ buttons and settings into Slender. You see a preview first, and the current settings are backed up.", import);
 
+        BuildOptionsPlusSection();
         BuildFirmwareSection();
 
         AddSection("ABOUT");
@@ -385,6 +386,60 @@ public sealed partial class MainWindow
         {
             Services.NativeMethods.PostMessageW(tray, message, 0, 0);
         }
+    }
+
+    /// <summary>
+    /// Logi Options+ status and the "Squash Options+" button (user 2026-10-20): one admin prompt, then the updater service is
+    /// disabled, its startup entry switched off and every Options+ process ended, so it never loads until Update firmware.
+    /// </summary>
+    private void BuildOptionsPlusSection()
+    {
+        OptionsPlusStatus status = OptionsPlusState.Read();
+        if (status == OptionsPlusStatus.NotInstalled)
+        {
+            return;
+        }
+
+        AddSection("LOGI OPTIONS+");
+        var squash = new Button
+        {
+            Content = status == OptionsPlusStatus.Off ? "Squashed" : "Squash Options+",
+            Style = Ui.Res<Style>("QuietButtonStyle"),
+            IsEnabled = status != OptionsPlusStatus.Off,
+        };
+        AutomationProperties.SetName(squash, "Squash Logi Options+: turn it fully off");
+        squash.Click += async (_, _) =>
+        {
+            squash.IsEnabled = false;
+            try
+            {
+                using Process? p = Process.Start(new ProcessStartInfo("powershell.exe",
+                    "-NoProfile -WindowStyle Hidden -EncodedCommand " + Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(OptionsPlusState.SquashScript)))
+                {
+                    UseShellExecute = true,
+                    Verb = "runas",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                });
+                if (p is not null)
+                {
+                    await p.WaitForExitAsync();
+                }
+            }
+            catch (System.ComponentModel.Win32Exception e) when (e.NativeErrorCode == 1223)
+            {
+                // The admin prompt was declined: nothing changed.
+            }
+            catch (Exception e) when (e is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
+            {
+                Services.CrashLog.Write(e);
+            }
+
+            if (_page == Page.General)
+            {
+                BuildPage(); // show the new state
+            }
+        };
+        AddRow("Logi Options+", OptionsPlusState.Describe(status), squash);
     }
 
     private const string OptionsPlusExe = @"C:\Program Files\LogiOptionsPlus\logioptionsplus.exe";
