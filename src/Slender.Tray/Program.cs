@@ -172,6 +172,10 @@ static class Program
         // Other programs (a Claude Code hook, a build script) and Settings' Test button buzz the mouse over a current-user pipe.
         using var buzz = new BuzzServer(engine, log);
         buzz.Start();
+        // Notification haptics (m45): the WinEvent hook exists only while the setting is on (see NotifyListener).
+        using var notify = new NotifyListener(engine, new SeenAppsStore(SyncPaths.StateDirectory, log), log);
+        void ApplyNotify(SlenderConfig c) => app.PostToUi(() => notify.SetEnabled(c.Haptics.Enabled && c.Haptics.Notify.Enabled));
+        ApplyNotify(engine.Config);
         // Settings' on-keyboard remaps (K860 0x1C00): read-back and apply only on its request, never on connect, start or config reload.
         using var onboard = new OnboardServer(new OnboardRemapService(keyboard, log), log);
         onboard.Start();
@@ -203,6 +207,7 @@ static class Program
         {
             sync.NotifyConfigChanged();
             engine.ApplyConfig(changed);
+            ApplyNotify(changed);
             keys.ApplyConfig(changed);
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);

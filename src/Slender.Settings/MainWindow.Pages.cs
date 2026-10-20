@@ -314,6 +314,7 @@ public sealed partial class MainWindow
         AddRow("Haptic strength", "How strong the tap is, 0 to 100. The four notches at the bottom are quick presets.", WithReadout(level, levelText));
 
         BuildHapticEvents(c);
+        BuildNotificationHaptics();
     }
 
     private void BuildGeneralPage()

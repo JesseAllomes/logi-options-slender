@@ -124,6 +124,7 @@ public sealed class JsonConfigStore : IConfigStore
             {
                 Cues = ToCues(haptics.Cues),
                 Alerts = ToAlerts(haptics.Alerts),
+                Notify = ToNotify(haptics.Notify),
             },
             dto.LaunchAtLogin)
         {
@@ -296,6 +297,7 @@ public sealed class JsonConfigStore : IConfigStore
                 Strength = config.Haptics.Strength,
                 Cues = config.Haptics.Cues.Count == 0 ? null : config.Haptics.Cues.ToDictionary(kv => kv.Key.ToString(), kv => FromCue(kv.Value)),
                 Alerts = config.Haptics.Alerts.Count == 0 ? null : config.Haptics.Alerts.ToDictionary(kv => kv.Key, kv => FromCue(kv.Value)),
+                Notify = FromNotify(config.Haptics.Notify),
             },
             Pointer = new PointerDto
             {
@@ -557,6 +559,7 @@ public sealed class JsonConfigStore : IConfigStore
         public int? Strength { get; set; }
         public Dictionary<string, HapticCueDto>? Cues { get; set; }
         public Dictionary<string, HapticCueDto>? Alerts { get; set; }
+        public NotifyHapticsDto? Notify { get; set; }
     }
 
     internal sealed class HapticCueDto
@@ -601,4 +604,35 @@ public sealed class JsonConfigStore : IConfigStore
 
     public static bool IsAlertName(string? name) =>
         name is { Length: > 0 and <= 32 } && name.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '-' or '_');
+
+    internal sealed class NotifyHapticsDto
+    {
+        public bool Enabled { get; set; }
+        public HapticCueDto? Default { get; set; }
+        public Dictionary<string, HapticCueDto>? Apps { get; set; }
+    }
+
+    /// <summary>App names are trimmed and kept up to 64 characters; empty names and anything past 200 apps are dropped.</summary>
+    private static NotifyHapticSettings ToNotify(NotifyHapticsDto? raw)
+    {
+        var apps = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase);
+        if (raw?.Apps is not null)
+            foreach (var (name, cue) in raw.Apps)
+            {
+                string key = (name ?? string.Empty).Trim();
+                if (cue is null || key.Length is 0 or > NotifyHapticSettings.MaxAppNameLength || apps.Count >= NotifyHapticSettings.MaxApps) continue;
+                apps[key] = ToCue(cue);
+            }
+
+        var result = new NotifyHapticSettings { Enabled = raw?.Enabled ?? false, Apps = apps };
+        return raw?.Default is { } d ? result with { Default = ToCue(d) } : result;
+    }
+
+    private static NotifyHapticsDto? FromNotify(NotifyHapticSettings n) =>
+        n.Equals(new NotifyHapticSettings()) ? null : new NotifyHapticsDto
+        {
+            Enabled = n.Enabled,
+            Default = FromCue(n.Default),
+            Apps = n.Apps.Count == 0 ? null : n.Apps.ToDictionary(kv => kv.Key, kv => FromCue(kv.Value)),
+        };
 }
