@@ -90,7 +90,10 @@ try {
     if ((Test-Path $installer) -and ($env:PATH -notlike "*$installer*")) { $env:PATH = "$installer;$env:PATH" }
     & dotnet publish $TrayProj -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version "-p:SlenderUpdateSource=$updateSource" -o $Staging --nologo
     if ($LASTEXITCODE -ne 0) { throw "Tray publish failed ($LASTEXITCODE)." }
-    foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe') {
+    # Slender.Buzz: the tiny client hooks and scripts call to buzz the mouse (docs/buzz.md). NativeAOT so it starts at once.
+    & dotnet publish (Join-Path $RepoRoot 'tools\Slender.Buzz\Slender.Buzz.csproj') -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version -o $Staging --nologo
+    if ($LASTEXITCODE -ne 0) { throw "Buzz publish failed ($LASTEXITCODE)." }
+    foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe', 'Slender.Buzz.exe') {
         if (-not (Test-Path -LiteralPath (Join-Path $Staging $exe))) { throw "Publish did not produce $exe." }
     }
 

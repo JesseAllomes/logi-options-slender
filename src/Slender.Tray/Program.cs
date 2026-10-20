@@ -163,10 +163,10 @@ static class Program
         // Lock keys: a short label near the cursor.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
         app.LockKeyChanged += (_, text) => toast.Show(text);
-        // m42: the wheel flipped between ratchet and free-spin (any cause). The haptic player lands on another branch.
+        // The wheel flipped between ratchet and free-spin (any cause): its haptic event, off unless the user turns it on.
         app.WheelModeFlipped += (_, mode) =>
         {
-            // TODO(merge): engine.PlayHaptic(HapticEvent.WheelModeChange)
+            engine.PlayHaptic(HapticEvent.WheelModeChange);
             log.Info($"scroll wheel is now {mode}");
         };
         // Settings' "Identify" panel: the tray writes which spare key was pressed where Settings can read it.

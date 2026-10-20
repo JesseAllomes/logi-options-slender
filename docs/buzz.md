@@ -16,7 +16,8 @@ Alert names are letters, digits, `-` and `_`, up to 32 characters, and are not c
 Slender.Buzz.exe [name]
 ```
 
-`tools/Slender.Buzz` builds it. Put the exe somewhere on your PATH or call it by its full path. It connects with a 1 second
+The installer puts it next to Slender: `%LOCALAPPDATA%\SlenderApp\current\Slender.Buzz.exe` (`tools/Slender.Buzz` builds it from
+source). Call it by that full path, or add the folder to your PATH. It connects with a 1 second
 timeout and writes the line. Exit code 0 means sent; 2 means Slender is not running (it prints a message and nothing else
 happens, so a hook can ignore the failure).
 
