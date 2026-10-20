@@ -118,7 +118,7 @@ public static class ActionCatalog
         ActionSpec.Keys keys => new ActionLabel(
             ChordNames.GetValueOrDefault(keys.Chord) ?? ShortcutLibrary.WindowsName(keys.Chord) ?? string.Empty, ChordParts(keys.Chord)),
         ActionSpec.Excel excel => new ActionLabel(ExcelName(excel.Command), ExcelChord(excel.Command) is { } c ? ChordParts(c) : []),
-        ActionSpec.ExcelMacro macro => new ActionLabel("Macro " + macro.Name, []),
+        ActionSpec.ExcelMacro macro => new ActionLabel("Excel macro: " + macro.Name, []),
         ActionSpec.MouseButton mouse => new ActionLabel(MouseName(mouse.Button), []),
         ActionSpec.ActionsRing => new ActionLabel("Actions Ring", []),
         ActionSpec.Launch launch => new ActionLabel(LaunchName(launch.Target), []),

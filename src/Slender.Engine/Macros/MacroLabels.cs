@@ -8,11 +8,12 @@ public static class MacroLabels
 {
     public static volatile Func<string, string?>? Resolver;
 
-    /// <summary>The macro's name, or "Macro" when it is unknown (deleted, or the resolver is not set).</summary>
+    /// <summary>The macro's name; "Macro (deleted)" when the config has no such macro; "Macro" when there is no resolver to ask.</summary>
     public static string NameOf(string id)
     {
-        try { if (Resolver?.Invoke(id) is { Length: > 0 } name) return name; }
-        catch { }
-        return "Macro";
+        var resolver = Resolver;
+        if (resolver is null) return "Macro";
+        try { return resolver(id) is { Length: > 0 } name ? name : "Macro (deleted)"; }
+        catch { return "Macro"; }
     }
 }

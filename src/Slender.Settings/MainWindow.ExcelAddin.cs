@@ -15,6 +15,10 @@ public sealed partial class MainWindow
         var installer = ExcelAddinInstaller.CreateDefault();
         bool available = installer.IsAvailable();
         bool installed = installer.IsInstalled();
+        if (installed)
+        {
+            installer.RefreshInstalledCopy(); // an update may have shipped a newer add-in; skipped while Excel is open
+        }
 
         AddSection("EXCEL");
         var note = Ui.Text(string.Empty, 12, Ui.Muted);

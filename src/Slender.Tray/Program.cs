@@ -111,6 +111,13 @@ static class Program
             });
         using IInputHook hook = noDevices ? new InertHook() : new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
+        // After a Slender update the add-in copy Excel opens may be older than the shipped one: refresh it when the add-in is on and
+        // Excel is closed (a stat; hashes only when sizes match but times differ). Runs once on the pool and ends; retried next start.
+        _ = Task.Run(() =>
+        {
+            try { log.Info("excel add-in copy: " + Slender.Engine.ExcelAddin.ExcelAddinInstaller.CreateDefault().RefreshInstalledCopy()); }
+            catch (Exception ex) { log.Info("excel add-in copy refresh failed: " + ex.Message); }
+        });
         using var excel = new ExcelBridge(log);
         // Slender Excel add-in (opt-in, m37): asked first, with a short time box; the bridge above stays the fallback.
         using var excelOrAddin = new Slender.Engine.ExcelAddin.AddinFirstExcelBridge(excel,

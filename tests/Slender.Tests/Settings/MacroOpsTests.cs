@@ -108,7 +108,7 @@ public class MacroOpsTests
         {
             MacroLabels.Resolver = id => id == "m" ? "Sign off" : null;
             Assert.Equal("Macro: Sign off", ActionCatalog.Describe(new ActionSpec.Macro("m")).Text);
-            Assert.Equal("Macro: Macro", ActionCatalog.Describe(new ActionSpec.Macro("gone")).Text);
+            Assert.Equal("Macro: Macro (deleted)", ActionCatalog.Describe(new ActionSpec.Macro("gone")).Text);
             Assert.Equal("E768", RingGlyphs.AutoGlyph(new RingSlot(new ActionSpec.Macro("m"))));
         }
         finally { MacroLabels.Resolver = old; }

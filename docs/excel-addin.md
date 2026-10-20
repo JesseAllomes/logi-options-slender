@@ -23,4 +23,8 @@ When the foreground is Excel and the add-in answers, it is used; otherwise Slend
 
 Close Excel, flip the switch. Slender copies `ExcelAddin\Slender.ExcelAddin64-packed.xll` to `%LOCALAPPDATA%\Slender\ExcelAddin` and writes `HKCU\Software\Microsoft\Office\16.0\Excel\Options\OPEN[n]` = `/R "<path>"`. Excel loads it at next start; it may ask to enable the unsigned add-in. Turning it off removes that value (later OPEN values move down so Excel still reads them) and deletes the copy. To remove by hand: delete the OPEN value that names `Slender.ExcelAddin64-packed.xll`.
 
+After a Slender update the copy Excel opens is refreshed when it differs from the shipped one (size, then hash only if sizes match but times differ). It happens at tray start and when Settings opens the General page, only while Excel is closed; the new file is copied to a temporary name and moved over the old one, and the registry is not touched. If Excel has it loaded the refresh waits for the next try.
+
+To run a macro from a control: picker > Excel tab > type the macro name (e.g. `Book1.xlsm!MyMacro`). Names are checked as you type; it needs the add-in on.
+
 Not verified in a real Excel yet: the first run needs a manual check on a machine the user chooses.

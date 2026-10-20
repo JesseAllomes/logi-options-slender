@@ -38,6 +38,7 @@ public sealed class MacroEditorWindow : Window
     private readonly CheckBox _recordMoves;
     private readonly MacroRecorderModel _recorder = new();
     private readonly Button _deleteMacro;
+    private readonly TextBlock _deleteNote = Ui.Text(string.Empty, 12, Ui.Muted);
     private bool _recording;
     private bool _building;
     private bool _confirmDelete;
@@ -165,6 +166,9 @@ public sealed class MacroEditorWindow : Window
         cancel.Click += (_, _) => Close();
         _deleteMacro = new Button { Content = "Delete macro", Style = Ui.Res<Style>("QuietButtonStyle"), Visibility = isNew ? Visibility.Collapsed : Visibility.Visible };
         _deleteMacro.Click += (_, _) => DeleteMacro();
+        _deleteNote.TextWrapping = TextWrapping.Wrap;
+        _deleteNote.Visibility = Visibility.Collapsed;
+        root.Children.Add(_deleteNote);
         var footer = new Grid();
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -706,11 +710,13 @@ public sealed class MacroEditorWindow : Window
         if (!_confirmDelete)
         {
             _confirmDelete = true;
+            _deleteNote.Text = MacroReferences.UsageText(MacroReferences.Count(_config.Config, _id));
+            _deleteNote.Visibility = Visibility.Visible;
             _deleteMacro.Content = "Click again to delete";
             return;
         }
 
-        _config.Update(c => MacroOps.Remove(c, _id));
+        _config.Update(c => MacroReferences.Delete(c, _id)); // also turns off every control that used it
         Close();
     }
 }
