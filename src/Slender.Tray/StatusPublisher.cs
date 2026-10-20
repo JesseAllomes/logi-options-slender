@@ -23,7 +23,9 @@ public sealed record StatusSnapshot(
     string? KeyboardFirmware = null,
     string? WheelMode = null,
     IReadOnlyList<HostState>? MouseHosts = null,
-    IReadOnlyList<HostState>? KeyboardHosts = null);
+    IReadOnlyList<HostState>? KeyboardHosts = null,
+    string? MouseBatteryEstimate = null,
+    string? KeyboardBatteryEstimate = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -40,6 +42,7 @@ public sealed class StatusPublisher : IDisposable
         var state = new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging)
         {
             Dpi = s.MouseConnected ? s.MouseDpi : null,
+            BatteryEstimate = s.MouseConnected ? s.MouseBatteryEstimate : null,
             Firmware = s.MouseFirmware,
             WheelMode = s.MouseConnected ? s.WheelMode : null,
             Hosts = s.MouseConnected ? s.MouseHosts : null,
@@ -179,7 +182,7 @@ public sealed class StatusPublisher : IDisposable
         return new SlenderStatus(
             [
                 MouseDeviceState(s),
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null },
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { BatteryEstimate = s.KeyboardConnected ? s.KeyboardBatteryEstimate : null, Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null },
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,

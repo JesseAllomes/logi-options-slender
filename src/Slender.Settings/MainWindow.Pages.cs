@@ -218,6 +218,7 @@ public sealed partial class MainWindow
         _status.Changed += OnDpiStatus;
         dpiRow.Unloaded += (_, _) => _status.Changed -= OnDpiStatus;
         AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
+        BuildAppDpiSection();
         // The thumb wheel's speeds and second action live in its card on the device stage (user 2026-10-19).
 
         AddSection("THUMB WHEEL TOUCH");
@@ -352,6 +353,7 @@ public sealed partial class MainWindow
         BuildOptionsPlusSection();
         BuildHostsSection();
         BuildFirmwareSection();
+        BuildBatterySection();
 
         AddSection("ABOUT");
         BuildVersionRow();

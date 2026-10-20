@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Slender.Engine;
+using Slender.Engine.Battery;
 using Slender.Engine.Config;
 using Slender.Hidpp;
 using Slender.Tray.Native;
@@ -55,6 +56,9 @@ public sealed class TrayApplication : IDisposable
     private bool _keyboardConnected;
     private BatteryStatus? _keyboardBattery;
     private readonly BatteryAlertState _batteryAlerts = new();
+    private readonly BatteryHistory _batteryHistory;
+    private BatteryEstimate? _mouseEstimate, _keyboardEstimate;
+    private string _tip = "Slender";
     private bool _paused;
     private bool _disposed;
     private string _statusText = string.Empty;
@@ -72,13 +76,15 @@ public sealed class TrayApplication : IDisposable
         _foreground = foreground;
         _watchdog = watchdog;
         _log = log ?? NullLog.Instance;
+        _batteryHistory = new BatteryHistory(statusPath is null ? null : Path.Combine(Path.GetDirectoryName(statusPath) ?? string.Empty, "battery-history.json"), log: _log);
         _status = new StatusPublisher(
             () => new StatusSnapshot(
                 _connected, _battery?.Percent, _battery?.Charging ?? false, _foreground?.ProcessName,
                 _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, _paused, _dpi,
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
-                ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts)),
+                ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
+                _mouseEstimate?.Text, _keyboardEstimate?.Text),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -475,7 +481,7 @@ public sealed class TrayApplication : IDisposable
             uCallbackMessage = WM_TRAY,
             hIcon = _icon,
         };
-        "Slender".AsSpan().CopyTo(new Span<char>(nid.szTip, 128));
+        _tip.AsSpan(0, Math.Min(_tip.Length, BatteryTip.MaxLength)).CopyTo(new Span<char>(nid.szTip, 128));
         return nid;
     }
 
@@ -788,6 +794,7 @@ public sealed class TrayApplication : IDisposable
 
                 _keyboardBattery = status ?? _keyboardBattery;
                 CheckBatteryAlert("keyboard", "ERGO K860", _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent);
+                RecordBattery("ergo-k860", _keyboardBattery, ref _keyboardEstimate);
                 UpdateStatus();
                 _status.Changed();
             });
@@ -949,6 +956,7 @@ public sealed class TrayApplication : IDisposable
 
                 _battery = status ?? _battery;
                 CheckBatteryAlert("mouse", "MX Master 4", _battery, _config.BatteryAlerts.MouseThresholdPercent);
+                RecordBattery("mx-master-4", _battery, ref _mouseEstimate);
                 UpdateStatus();
                 _status.Changed();
             });
@@ -962,12 +970,50 @@ public sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>UI thread. Adds the reading to the battery history and refreshes the days-left estimate. A failing history never reaches the tray.</summary>
+    private void RecordBattery(string deviceId, BatteryStatus? battery, ref BatteryEstimate? estimate)
+    {
+        try
+        {
+            if (battery is { } b) _batteryHistory.Record(deviceId, b.Percent, b.Charging);
+            estimate = _batteryHistory.Estimate(deviceId);
+        }
+        catch (Exception ex)
+        {
+            _log.Error("battery history failed", ex);
+        }
+    }
+
+    private static string? ShortEstimate(BatteryEstimate? e) => e is { Kind: BatteryEstimateKind.Estimate } ? e.Short : null;
+
     private void UpdateStatus()
     {
+        string? mouseShort = ShortEstimate(_mouseEstimate), keyboardShort = ShortEstimate(_keyboardEstimate);
         _statusText = _paused
             ? TrayText.Paused
-            : TrayText.Device("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false);
-        _keyboardText = TrayText.Device("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false);
+            : TrayText.Device("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort);
+        _keyboardText = TrayText.Device("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort);
+        string tip = BatteryTip.Build(
+        [
+            new TipDevice("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort),
+            new TipDevice("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort),
+        ]);
+        if (tip != _tip)
+        {
+            _tip = tip;
+            RefreshTip();
+        }
+    }
+
+    private unsafe void RefreshTip()
+    {
+        if (!_iconAdded || _hwnd == 0)
+        {
+            return;
+        }
+
+        Win32.NOTIFYICONDATAW nid = IconData();
+        Win32.Shell_NotifyIconW(Win32.NIM_MODIFY, &nid);
     }
 
     private void OnLaunchClicked(bool wanted)

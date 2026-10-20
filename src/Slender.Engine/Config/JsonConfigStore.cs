@@ -108,6 +108,7 @@ public sealed class JsonConfigStore : IConfigStore
                     : null,
                 SideScrollSpeed = ClampSpeed(p.SideScrollSpeed),
                 WheelSpeed = ClampSpeed(p.WheelSpeed),
+                Dpi = p.Dpi is { } pd ? Math.Clamp(pd, 200, 8000) : null,
                 ThumbFlick = p.ThumbFlick is { } f ? new ThumbWheelFlick(f.Enabled, f.Right ?? new ActionSpec.None(), f.Left ?? new ActionSpec.None()) : null,
             });
         }
@@ -375,6 +376,7 @@ public sealed class JsonConfigStore : IConfigStore
                     : null,
                 SideScrollSpeed = profile.SideScrollSpeed,
                 WheelSpeed = profile.WheelSpeed,
+                Dpi = profile.Dpi,
                 ThumbFlick = profile.ThumbFlick is { } fl ? new ThumbFlickDto { Enabled = fl.Enabled, Right = fl.Right, Left = fl.Left } : null,
             });
         }
@@ -524,6 +526,7 @@ public sealed class JsonConfigStore : IConfigStore
         public ThumbWheelSecondDto? ThumbWheelAlt { get; set; }
         public int? SideScrollSpeed { get; set; }
         public int? WheelSpeed { get; set; }
+        public int? Dpi { get; set; }
         public ThumbFlickDto? ThumbFlick { get; set; }
     }
 
