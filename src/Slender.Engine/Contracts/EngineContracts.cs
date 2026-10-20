@@ -99,6 +99,9 @@ public interface IExcelBridge
 
     /// <summary>Runs an Excel command. False if not possible.</summary>
     bool TryRunCommand(nint excelWindow, ExcelCommand command);
+
+    /// <summary>Runs a named VBA macro in the foreground Excel (needs the Slender Excel add-in). False if not possible.</summary>
+    bool TryRunMacro(nint excelWindow, string macroName) => false;
 }
 
 public enum ExcelCommand
@@ -110,6 +113,10 @@ public enum ExcelCommand
     ZoomReset,
     ScrollToFirstColumn,
     ScrollToLastUsedColumn,
+    /// <summary>Needs the Slender Excel add-in: next table style for the table at the active cell.</summary>
+    CycleTableStyle,
+    /// <summary>Needs the Slender Excel add-in: next chart type for the selected chart.</summary>
+    CycleChartType,
 }
 
 /// <summary>What a control does. Exactly one variant per binding.</summary>
@@ -119,6 +126,8 @@ public abstract record ActionSpec
     /// <summary>Key chord, e.g. "Ctrl+Shift+P", "Alt+Left", "Ctrl+PageDown".</summary>
     public sealed record Keys(string Chord) : ActionSpec;
     public sealed record Excel(ExcelCommand Command) : ActionSpec;
+    /// <summary>Runs a named VBA macro in Excel through the Slender Excel add-in (e.g. "Module1.Tidy"); does nothing without the add-in.</summary>
+    public sealed record ExcelMacro(string Name) : ActionSpec;
     /// <summary>Mouse button: "Left", "Right", "Middle", "Back", "Forward".</summary>
     public sealed record MouseButton(string Button) : ActionSpec;
     public sealed record ActionsRing : ActionSpec;

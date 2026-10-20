@@ -93,6 +93,16 @@ try {
     # Slender.Buzz: the tiny client hooks and scripts call to buzz the mouse (docs/buzz.md). NativeAOT so it starts at once.
     & dotnet publish (Join-Path $RepoRoot 'tools\Slender.Buzz\Slender.Buzz.csproj') -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version -o $Staging --nologo
     if ($LASTEXITCODE -ne 0) { throw "Buzz publish failed ($LASTEXITCODE)." }
+    # Slender Excel add-in (opt-in from Settings; docs/excel-addin.md): one packed 64-bit .xll, staged as ExcelAddin\. Nothing registers it
+    # at install time; Settings copies it to %LOCALAPPDATA%\Slender\ExcelAddin and writes the HKCU OPEN value only when the user turns it on.
+    $AddinProj = Join-Path $RepoRoot 'src\Slender.ExcelAddin\Slender.ExcelAddin.csproj'
+    & dotnet build $AddinProj -c Release -p:Version=$Version --nologo
+    if ($LASTEXITCODE -ne 0) { throw "Excel add-in build failed ($LASTEXITCODE)." }
+    $xll = Join-Path $RepoRoot 'src\Slender.ExcelAddin\bin\Release\net10.0-windows\publish\Slender.ExcelAddin64-packed.xll'
+    if (-not (Test-Path -LiteralPath $xll)) { throw 'The Excel add-in build did not produce Slender.ExcelAddin64-packed.xll.' }
+    New-Item -ItemType Directory -Force -Path (Join-Path $Staging 'ExcelAddin') | Out-Null
+    Copy-Item -LiteralPath $xll -Destination (Join-Path $Staging 'ExcelAddin\Slender.ExcelAddin64-packed.xll') -Force
+
     foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe', 'Slender.Buzz.exe') {
         if (-not (Test-Path -LiteralPath (Join-Path $Staging $exe))) { throw "Publish did not produce $exe." }
     }

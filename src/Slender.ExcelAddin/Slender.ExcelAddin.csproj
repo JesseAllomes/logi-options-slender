@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Slender.ExcelAddin</AssemblyName>
+    <RootNamespace>Slender.ExcelAddin</RootNamespace>
+    <!-- Excel-DNA loads this into Excel. 64-bit Excel only: the 32-bit .xll is not built. -->
+    <ExcelDnaCreate32BitAddIn>false</ExcelDnaCreate32BitAddIn>
+    <ExcelDnaCreate64BitAddIn>true</ExcelDnaCreate64BitAddIn>
+    <RunExcelDnaPack>true</RunExcelDnaPack>
+    <ExcelAddInName>Slender</ExcelAddInName>
+    <ExcelAddInFileName>Slender.ExcelAddin</ExcelAddInFileName>
+    <ExcelDnaPackXllSuffix>-packed</ExcelDnaPackXllSuffix>
+    <ExcelDnaAllowPackageReferenceUpdate>false</ExcelDnaAllowPackageReferenceUpdate>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExcelDna.AddIn" Version="1.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The wire format and the add-in's decisions are shared source with the tray (no reference to the engine or the HID layer). -->
+    <Compile Include="..\Slender.Engine\ExcelAddin\ExcelAddinProtocol.cs" Link="Shared\ExcelAddinProtocol.cs" />
+    <Compile Include="..\Slender.Engine\ExcelAddin\ExcelAddinLogic.cs" Link="Shared\ExcelAddinLogic.cs" />
+  </ItemGroup>
+
+</Project>
