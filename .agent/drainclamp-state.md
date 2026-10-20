@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=124 -->
+<!-- drainclamp-build: state; schema=1; generation=125 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -116,7 +116,6 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-16T05:26:42+00:00 97da1285 Excel review (user wants PERSONAL.XLSB + book re-activated after review): PERSONAL.XLSB intact, no load-time code (macros user-run only), disabled by Excel Resiliency type 1; issues: Tick macro empty but bound to Ctrl+Shift+T, CalcTimer restores Calculation from Iteration flag (bug), stale ~$ lock files. book.xltm intact, not disabled, QAT buttons for its macros; NewSheet can loop forever if rename keeps failing. Excel faults since 2026-07-22: 13 crashes (7 in Windows.FileExplorer.Common.dll = Open/Save dialog), 6 hangs, none in a Logitech module. Awaiting go-ahead to re-enable (Repair-ExcelAddins.ps1 -EnablePersonalXlsb, Excel closed)
 - 2026-10-18T23:11:10+00:00 26304f52 m31 confirmed live by the user (thumb wheel card works); closed with 1446 tests, -warnaserror clean. User flags Switch with as redundant once t3 (hold top button + thumb wheel = Tab scroll) lands
 - 2026-10-18T23:30:18+00:00 15953794 m38 built ee58ea2 and shipped as v1.1.18 (10:30 Melbourne): hold top button = app's second action, quick press = its own job (native = ratchet flip via 0x2111), no toggle/Switch with/browser preset; 1442 tests. Awaiting the user's live check
 - 2026-10-18T23:48:41+00:00 73168ddb v1.1.19 published 10:48 Melbourne: Left+Right chord removed (hook holds back no clicks), lost-release guard on the top hold, Edge back-step fix (re-press Ctrl on direction change), Tab scroll speed -> Second action speed; 1426 tests. Awaiting user check in Edge
@@ -136,4 +135,5 @@ Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl rel
 - 2026-10-19T23:38:23+00:00 24f4981e Touch calibration from user recordings (35 grabs, 75 deliberate): GrabBeforePx 150 / GrabLookbackMs 400 via hook move ring (PointerTravel); replay: 6/7 residual grabs stopped, 0 deliberate lost. docs/devices/touch-calibration.md. 1506 tests
 - 2026-10-20T00:30:43+00:00 bdcfaf71 Touch calibration window built (Settings > Point & scroll and card Calibrate…): floating always-on-top, per-step timers, TouchSampler + TouchCalibration compute GrabBeforePx/GrabMovePx (now PointerSettings), Save / Reset. 1511 tests
 - 2026-10-20T00:59:07+00:00 61cd6974 Options+ found uninstalled (no Program Files/LogiOptionsPlus, no depots) - firmware-update path via Options+ no longer available until reinstalled. Pictures restored + backup; safe Refresh. 1514 tests
+- 2026-10-20T04:09:57+00:00 cfe38521 Options+ reinstalled for firmware, updated, then switched fully off (service Disabled, Download Assistant startup disabled, processes ended) via scripts/Set-OptionsPlus.ps1. Update firmware button: one elevated script on/open/wait/off. Tray publishes firmware (0x0003 allowlisted fn0-1). Default window 900 tall, clamped to work area. 1517 tests
 <!-- /DC:LOG -->
