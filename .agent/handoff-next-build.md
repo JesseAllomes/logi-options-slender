@@ -1,66 +1,52 @@
-# Handoff: next build (written 2026-10-20, resume in a fresh session)
+# Handoff (written 2026-10-21, resume in a fresh session)
 
-State before the build: main at the commit that adds this file, Slender 1.1.36 released, 1600 tests, -warnaserror clean.
-Roadmap rows m44, m37, m45, m46, m47, m48 are the plan (DC:ROADMAP); the decision line "Next build (user 2026-10-20)" is in DC:DECISIONS.
+State: main pushed, Slender 1.1.38 released, 1919 tests, -warnaserror clean, no worktrees open.
+1.1.37 shipped macros (m44), Excel add-in (m37), notification haptics (m45), per-app DPI + battery estimate (m46),
+K860 disconnect fix (m47), K860 onboard remaps in the app (m48) and the gap fixes (Excel macro picker, add-in copy refresh,
+macro reference scrub, real DPI steps in Settings, onboard reset from the 0x1C00 status byte, Excel pipe worker lazy).
+1.1.38 added HapticCue.Repeats / RepeatGapMs (pulse group repeated with a pause, 15 s cap) for a phone ringer.
 
-## How to run it (user's instructions)
+## Waiting on the user
 
-- One Sonnet builder per part, each in its OWN worktree (user: "separate worktrees"), made by hand under `.worktrees/<name>`
-  on branch `wt-<name>`, removed once merged. Opus orchestrates on main, reviews, merges, resolves conflicts, ships.
-- Shared-file conflicts expected and resolved at merge: `src/Slender.Engine/Contracts/EngineContracts.cs`,
-  `src/Slender.Engine/Config/JsonConfigStore.cs`, `src/Slender.Settings/MainWindow.Pages.cs`, `src/Slender.Tray/Program.cs`.
-  Tell builders to put new types in NEW files and keep edits to shared files minimal.
-- Builder rules (same as before): build `dotnet build Slender.slnx -warnaserror`, test `dotnet test Slender.slnx --nologo`
-  (per-user SDK: `export PATH="$LOCALAPPDATA/Microsoft/dotnet:$PATH"`); never touch the real devices, never click/type on
-  the desktop or launch Slender/Settings/GUIs, never kill processes they did not start; commit on their branch with plain
-  messages and NO AI/Co-Authored-By/Claude-Session trailers (public repo), no usernames/hostnames/work paths in tracked
-  files; do not push or merge; do not edit AGENTS.md, CLAUDE.md, .gitignore, .agent/, .grok/; they cannot write report
-  files, so they reply with everything.
-- After merging: wire leftovers, full test run, `scripts/Build-Setup.ps1` publishes the next release (1.1.37).
+- **3CX ringer (m49): go-ahead asked, not given.** Plan below.
+- Device/UI checks of everything above (nothing new has been seen on screen or on the devices): remaps on one key first,
+  per-app pointer speed, macro editor/recorder, battery lines, notification haptics (what name the first toasts show), Excel
+  add-in (opt-in, Excel closed; first real run unproven).
+- Memory: measure the 1.1.38 tray once installed and idle, against 1.1.36 = 39.7 MB WS / 12.1 MB private.
+- Gate 6 review: run only when the user says; priorities are the first line of DC:DECISIONS.
+- Sync sign-in (m14) today 2026-10-21. m7 stays open until next week's payrun.
+- Older user tests: name haptic waveforms 0-14, Easy-Switch names, Win11 native double buzz, Caps/Num for the 0x4220 log.
 
-## The parts
+## 3CX ringer plan (m49)
 
-1. **Macros (m44)** - builder `macros`. Research first (AutoHotkey, Logitech G Hub, Razer Synapse, Pulover's Macro
-   Creator, TinyTask, PowerToys): steps, timing, run modes, editors, safety. Build: `ActionSpec.Macro(id)` plus a macro
-   library in config; steps = key down/up/tap chord, type text, mouse button down/up/click, mouse move (relative and
-   absolute), wheel, launch, and ADJUSTABLE PAUSES (user requirement); run modes once / repeat while held / toggle;
-   recorder (keys and mouse, with real gaps captured as pauses) and a step editor in the picker (insert, edit, delete,
-   reorder, pause length); safety stop (a second press or Esc ends a running macro, a hard time cap). Must work on mouse
-   buttons, keys, ring slots and press-and-hold.
-2. **Excel add-in (m37)** - builder `exceladdin`. Replaces Logitech's add-in (none is registered now). Opt-in, per user,
-   no network port (current-user named pipe), idle unless Slender asks, every call time-boxed, does nothing without Slender.
-   Actions: next/previous visible sheet, zoom steps, cycle table style, cycle chart type, context-aware thumb wheel, run a
-   named macro. Research the add-in technology first (Excel-DNA .xll on .NET vs others) and say which and why. Settings
-   gets an install/uninstall toggle (the user's go-ahead is needed before it is turned on; Excel closed).
-   `scripts/Repair-ExcelAddins.ps1` and `docs/switch-over.md` have context.
-3. **Notification haptics (m45)** - builder `notifyhaptics`. Buzz on Windows notifications, chosen per app. User: "it
-   will need a haptic menu specifically, listing all apps". Research how an UNPACKAGED app can see notifications
-   (UserNotificationListener needs package identity; alternatives: sparse package, toast-window detection, per-app hooks)
-   and pick the safest working route; the tray is NativeAOT with a tight memory budget, so a WinRT-heavy listener may
-   belong in a separate small process. Haptics page: a dedicated app menu listing every app that has notified (with icons
-   where possible), each with its own HapticCue (pattern, pulses, advanced), plus a default for new apps and an off switch.
-4. **Per-app DPI + battery estimate (m46)** - builder `dpibattery`. DPI: `Profile.Dpi` (null = All apps, then global);
-   the engine writes 0x2201 on app switch only when it differs (DPI is volatile on the mouse), restores on leaving; UI in
-   the device stage or the Point & scroll page per app. Battery: record each device's battery reading with time to
-   `%LOCALAPPDATA%\Slender\battery-history.json` (cap 60 days), estimate days left from the discharge slope (ignore
-   charging segments; the K860 only reports 4 levels), show it in Settings and the tray tooltip.
-5. **Onboard remaps (m48)** - builder `remap`. The HID++ side exists and is tested (`IOnboardKeyboard`, `LogiKeyboard`
-   0x1C00 read/set/reset, `PersistentRemap` chord encoder, `src/Slender.Engine/OnboardSync.cs` plan/apply) but nothing in
-   config, tray or Settings uses it. Build: config list of K860 onboard remaps (CID to chord); a Settings keyboard section
-   listing the 17 remappable keys with their current mapping (read back from the keyboard), a picker that only offers what
-   the keyboard can store (one key with at most one modifier, or a media key; reject the rest with the encoder's reason),
-   per-key reset and reset all, and a plain note that these live ON the keyboard for every PC and Easy-Switch channel and
-   survive uninstalling Slender. The tray writes only when the user saves a change (never on connect or start), through
-   OnboardSync, over a request to the tray (Settings never opens the device). Tests with the existing FakeOnboard. Do not
-   write to the real keyboard.
-6. **K860 disconnect (m47, to-do t2)** - do it on main yourself: `KeyboardRouter` releases held actions when the
-   keyboard disconnects (mirror `SlenderEngine.OnConnection`), with a test.
+User's phone is the 3CX web client installed as an Edge PWA (Default profile); a Yealink USB headset base also rings.
+Findings from reading the web client's public bundle (main.*.js; not run):
+- The client drives the Yealink over WebHID: `device.sendReport(reportId, data)` with output usages, logged as
+  "Send Actions to Headset on report N: <usage> (0x..) : true/false". Ring on/off = the Telephony Ringer usage (0x0B:0x9E).
+- Its call notification (`new Notification(title, {requireInteraction: true, tag: localConnectionId})`) is created only
+  when the window is NOT focused, closed when the call leaves Ringing (answered anywhere / ended) and auto-closed after 30 s.
+  With push enabled a service-worker push notification is used instead (tags "call-<id>").
+- So the WinEvent toast route (m45) misses calls while 3CX is focused and stops at 30 s.
 
-## Answered / pending with the user
+Build (one Sonnet builder, own worktree):
+1. MV3 Edge extension, unpacked, matches only the user's 3CX origin. Slender writes the manifest locally from a Settings
+   field; the PBX hostname never enters the repo. Main-world script wraps `HIDDevice.prototype.sendReport`, decodes the
+   Ringer bit from `device.collections` output report items, emits ring-start / ring-stop; fallback wraps `Notification`
+   (call notifications only: requireInteraction + numeric tag) and its close(). Logs only which signal fired, never call data.
+2. Native messaging host: tiny AOT exe registered per user (HKCU\Software\Microsoft\Edge\NativeMessagingHosts), one-shot
+   `sendNativeMessage` per event, forwards to the buzz pipe and exits. No port, nothing idle between calls.
+3. Tray: a ringer state: plays the app's ringer cue from ring-start until ring-stop, a mouse click or key (existing hook),
+   or a safety cap; ringer cues are not cut by ordinary buzzes. Settings: 3CX section (origin, ringer cue, install folder,
+   steps: Edge developer mode -> Load unpacked).
+4. First real call with the user decides which signal is reliable. Work browser policy allows unpacked extensions and
+   native messaging (checked read-only); a security-monitoring extension means IT can see it (user informed).
 
-- Onboard remaps (0x1C00) explained: only the K860's 17 remappable keys, each to one key with at most one modifier or a
-  media key, stored on the keyboard for every PC and channel; no multi-modifier, text, macros, launch, per-app or mouse.
-- Sync sign-in (m14): user logs in on 2026-10-21.
-- User tests still open: name haptic waveforms 0-14 with the Test buttons; check Easy-Switch channel names in Settings >
-  General; report any double buzz from Windows 11 native haptics; toggle Caps/Num Lock so the log shows the 0x4220 layout;
-  check that the picker now fits every tab (1.1.36).
+## Builder rules (unchanged)
+
+Sonnet builder per part in `.worktrees/<name>` on `wt-<name>`, removed once merged; build `dotnet build Slender.slnx
+-warnaserror`, test `dotnet test Slender.slnx --nologo` (per-user SDK on PATH); never touch real devices, desktop, GUIs or
+processes they did not start; plain commits with NO AI/Co-Authored-By/Claude-Session trailers; no usernames, hostnames or
+work paths in tracked files; never push/merge; never edit AGENTS.md, CLAUDE.md, .gitignore, .agent/, .grok/. Time-box
+research and commit increments (a builder once stalled for hours with no edits). Memory to the max and flawless function;
+the Excel add-in must never lock up, freeze or crash Excel. Release: `scripts/Build-Setup.ps1 -Version 1.1.N` from a
+clean, pushed HEAD.

@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=145 -->
+<!-- drainclamp-build: state; schema=1; generation=147 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -93,6 +93,7 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 | m46 | per-app pointer speed (Profile.Dpi applied on app switch, volatile 0x2201) and battery days-left estimate for both devices (history file, discharge slope) | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | done | m40 |
 | m47 | K860 disconnect releases held actions (t2) | src/Slender.Engine/KeyboardRouter.cs | done | m27 |
 | m48 | K860 onboard remaps in the app: config list (CID to chord), Settings keyboard page to set/reset the 17 remappable keys with a clear "stored on the keyboard, every PC and channel" note and encodable-only chord picker, tray applies via OnboardSync only when the user saves (never on connect), read-back shows current mappings | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | done | m27 |
+| m49 | 3CX ringer: Edge extension on the 3CX web client (wraps WebHID sendReport Ringer usage, Notification fallback) -> one-shot native messaging host -> buzz pipe; tray ringer cue until ring stop, click/key or cap, not cut by other buzzes; PBX hostname written locally only (plan in .agent/handoff-next-build.md; awaiting user go-ahead) | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m45 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -103,7 +104,6 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T06:04:22+00:00 6dd2e7ce My shortcuts built (Shortcuts tab: add/edit/delete, name + recorder + All apps / this app, in config). Double tap added as a third touch action (0xF153, 300 ms, single tap waits only when double is set). 1495 tests
 - 2026-10-19T06:11:09+00:00 ee50348a Touch tuning (user): wobble under one wheel step (6 counts) no longer cancels rest/tap; rest default 250 ms; PointerSettings.TouchRestMs/DoubleTapMs with sliders in the card. 1497 tests
 - 2026-10-19T22:29:10+00:00 5618c095 Touch tester in the card (dots: touching, rest, tap, double tap; preview diverts the wheel and reports gestures with the user's timings; nothing runs); touch actions logged in slender.log. User: touch works but intermittently, to diagnose with the tester. 1502 tests
 - 2026-10-19T22:46:11+00:00 09307094 False touches on grabbing the mouse (user): touch gestures now ignored when the pointer moves > 24 px during the touch (GrabMovePx). 1504 tests
@@ -123,4 +123,5 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 - 2026-10-20T08:03:22+00:00 df41d376 DECISIONS compacted 46 -> 21 lines (merged, superseded ones folded in); originals in .agent/drainclamp-decisions-archive.md
 - 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
 - 2026-10-20T09:57:25+00:00 8cb78553 Released 1.1.37: macros, Excel add-in, notification haptics, per-app DPI, battery estimate, K860 disconnect fix, onboard remaps, gap fixes; 1916 tests; device/UI checks and memory measurement pending
+- 2026-10-20T21:42:58+00:00 8eb4d25f 1.1.38 released (cue repeats for a ringer). 3CX ringer researched (web client drives the Yealink via WebHID; call notification only when unfocused, 30 s auto-close); m49 planned, awaiting go-ahead. Handoff rewritten for a fresh session
 <!-- /DC:LOG -->
