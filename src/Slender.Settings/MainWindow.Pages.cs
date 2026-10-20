@@ -311,6 +311,7 @@ public sealed partial class MainWindow
             PageToggle("Launch at login", c.LaunchAtLogin, on => _config.Update(x => x with { LaunchAtLogin = on })));
 
         BuildSyncSection();
+        BuildExcelAddinSection();
 
         AddSection("KEYBOARD");
         AddRow("F-keys first (Fn lock)", "Function keys act as F1 to F12 without holding Fn.",

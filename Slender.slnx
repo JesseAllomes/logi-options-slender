@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Slender.Engine/Slender.Engine.csproj" />
+    <Project Path="src/Slender.ExcelAddin/Slender.ExcelAddin.csproj" />
     <Project Path="src/Slender.Hidpp/Slender.Hidpp.csproj" />
     <Project Path="src/Slender.Settings/Slender.Settings.csproj" />
     <Project Path="src/Slender.Sync/Slender.Sync.csproj" />

@@ -112,8 +112,11 @@ static class Program
         using IInputHook hook = noDevices ? new InertHook() : new LowLevelMouseHook(log);
         using var foreground = new ForegroundAppWatcher(log);
         using var excel = new ExcelBridge(log);
-        var executor = new ActionExecutor(excel, foreground, log);
-        using var engine = new SlenderEngine(mouse, hook, foreground, excel, executor, config, log);
+        // Slender Excel add-in (opt-in, m37): asked first, with a short time box; the bridge above stays the fallback.
+        using var excelOrAddin = new Slender.Engine.ExcelAddin.AddinFirstExcelBridge(excel,
+            new Slender.Engine.ExcelAddin.ExcelAddinClient(new Slender.Engine.ExcelAddin.NamedPipeExcelAddinTransport()), log);
+        var executor = new ActionExecutor(excelOrAddin, foreground, log);
+        using var engine = new SlenderEngine(mouse, hook, foreground, excelOrAddin, executor, config, log);
         // Macros run on their own threads (pauses never hold up the engine); Esc, a second press or the time cap ends one.
         using var macros = new Slender.Engine.Macros.MacroRunner(new Slender.Engine.Macros.WindowsMacroInput(log: log), log: log)
         {

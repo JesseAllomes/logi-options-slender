@@ -10,6 +10,7 @@ public static class ActionText
         ActionSpec.None => "None",
         ActionSpec.Keys keys => keys.Chord,
         ActionSpec.Excel excel => $"Excel: {excel.Command}",
+        ActionSpec.ExcelMacro macro => $"Excel macro: {macro.Name}",
         ActionSpec.MouseButton mouse => $"Mouse: {mouse.Button}",
         ActionSpec.ActionsRing => "Actions ring",
         ActionSpec.Launch launch => $"Open: {launch.Target}",

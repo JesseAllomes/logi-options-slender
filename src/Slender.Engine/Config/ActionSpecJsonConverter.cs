@@ -26,6 +26,7 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             "none" => new ActionSpec.None(),
             "keys" => new ActionSpec.Keys(ReadString(root, "chord")),
             "excel" => new ActionSpec.Excel(ParseCommand(ReadString(root, "command"))),
+            "excelMacro" => new ActionSpec.ExcelMacro(ReadString(root, "name")),
             "mouseButton" => new ActionSpec.MouseButton(ReadString(root, "button")),
             "actionsRing" => new ActionSpec.ActionsRing(),
             "launch" => new ActionSpec.Launch(ReadString(root, "target"), ReadOptionalString(root, "arguments")),
@@ -57,6 +58,10 @@ public sealed class ActionSpecJsonConverter : JsonConverter<ActionSpec>
             case ActionSpec.Excel excel:
                 writer.WriteString("type", "excel");
                 writer.WriteString("command", excel.Command.ToString());
+                break;
+            case ActionSpec.ExcelMacro macro:
+                writer.WriteString("type", "excelMacro");
+                writer.WriteString("name", macro.Name);
                 break;
             case ActionSpec.MouseButton mouse:
                 writer.WriteString("type", "mouseButton");

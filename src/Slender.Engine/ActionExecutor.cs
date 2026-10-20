@@ -102,6 +102,9 @@ public sealed class ActionExecutor : IActionExecutor
                 case ActionSpec.Excel e:
                     if (pressed && !_excel.TryRunCommand(_foreground.WindowHandle, e.Command)) _log.Info($"excel command {e.Command} not possible");
                     break;
+                case ActionSpec.ExcelMacro macro:
+                    if (pressed && !_excel.TryRunMacro(_foreground.WindowHandle, macro.Name)) _log.Info("excel macro not possible");
+                    break;
                 case ActionSpec.Launch l:
                     if (pressed)
                     {
