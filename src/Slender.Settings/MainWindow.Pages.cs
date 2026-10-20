@@ -315,6 +315,7 @@ public sealed partial class MainWindow
         AddRow("F-keys first (Fn lock)", "Function keys act as F1 to F12 without holding Fn.",
             PageToggle("F-keys first", c.Keyboard.FnLock, on => _config.Update(x => x with { Keyboard = x.Keyboard with { FnLock = on } })));
         BuildKeyboardExtras(c);
+        BuildOnboardRemapsSection(c);
 
         AddSection("SHORTCUTS");
         AddRow("Suggested shortcuts", "A Shortcuts tab when you choose an action: the app's own shortcuts, then common and Windows ones.",

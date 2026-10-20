@@ -133,6 +133,7 @@ public sealed class JsonConfigStore : IConfigStore
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
             Ring = ToRingAppearance(dto.Ring),
             MyShortcuts = ToMyShortcuts(dto.MyShortcuts),
+            OnboardRemaps = OnboardRemapKeys.Sanitize(dto.OnboardRemaps?.Where(r => r is { Cid: > 0 and <= ushort.MaxValue, Chord: not null }).Select(r => new OnboardRemap((ushort)r.Cid, r.Chord!))),
         };
     }
 
@@ -328,6 +329,7 @@ public sealed class JsonConfigStore : IConfigStore
                 MouseThresholdPercent = config.BatteryAlerts.MouseThresholdPercent,
                 KeyboardThresholdPercent = config.BatteryAlerts.KeyboardThresholdPercent,
             },
+            OnboardRemaps = config.OnboardRemaps.Count == 0 ? null : config.OnboardRemaps.Select(r => new OnboardRemapDto { Cid = r.Cid, Chord = r.Chord }).ToList(),
             MyShortcuts = config.MyShortcuts.Count == 0
                 ? null
                 : config.MyShortcuts.Select(s => new CustomShortcutDto { Name = s.Name, Chord = s.Chord, App = s.App }).ToList(),
@@ -437,6 +439,13 @@ public sealed class JsonConfigStore : IConfigStore
         public BatteryAlertsDto? BatteryAlerts { get; set; }
         public RingDto? Ring { get; set; }
         public List<CustomShortcutDto>? MyShortcuts { get; set; }
+        public List<OnboardRemapDto>? OnboardRemaps { get; set; }
+    }
+
+    internal sealed class OnboardRemapDto
+    {
+        public int Cid { get; set; }
+        public string? Chord { get; set; }
     }
 
     internal sealed class CustomShortcutDto
