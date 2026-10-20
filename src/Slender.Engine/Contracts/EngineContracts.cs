@@ -280,6 +280,17 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// </summary>
     public IReadOnlyDictionary<string, HapticCue> Alerts { get; init; } = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Value equality including the cue and alert maps (a record compares dictionaries by reference otherwise).</summary>
+    public bool Equals(HapticSettings? other) =>
+        other is not null && Enabled == other.Enabled && Level == other.Level && OnButtonPress == other.OnButtonPress
+        && OnActionsRing == other.OnActionsRing && Strength == other.Strength
+        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts);
+
+    public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count);
+
+    private static bool SameMap<TKey>(IReadOnlyDictionary<TKey, HapticCue> a, IReadOnlyDictionary<TKey, HapticCue> b) =>
+        a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v == kv.Value);
+
     /// <summary>Device haptic level 0-100: Strength when set, else the Level notch mapped to 25/50/75/100.</summary>
     public int EffectiveStrength => Strength is { } s ? Math.Clamp(s, 0, 100) : (Math.Clamp(Level, 0, 3) + 1) * 25;
 
