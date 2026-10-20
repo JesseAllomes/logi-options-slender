@@ -35,6 +35,24 @@ public sealed partial class MainWindow
     private Border? _touchingDot;
     private readonly Dictionary<TouchGesture, Border> _gestureDots = [];
     private bool _previewTouching;
+    private CalibrationWindow? _calibration;
+
+    /// <summary>Opens the floating touch calibration window (one at a time); the thumb wheel card closes so the window gets the preview link.</summary>
+    private void OpenCalibration()
+    {
+        _thumbCard?.Hide();
+        StopPreview();
+        if (_calibration is { } open)
+        {
+            open.Activate();
+            return;
+        }
+
+        var window = new CalibrationWindow(_config);
+        window.Closed += (_, _) => _calibration = null;
+        _calibration = window;
+        window.Activate();
+    }
 
     private void ShowThumbCard(FrameworkElement anchor, ControlInfo info)
     {
@@ -180,7 +198,16 @@ public sealed partial class MainWindow
         _touchingDot = Dot();
         touchHead.Children.Add(_touchingDot);
         touchHead.Children.Add(Ui.Text(_previewLive ? "touching" : string.Empty, 11, Ui.Muted));
-        touch.Children.Add(touchHead);
+        var calibrate = new Button { Content = "Calibrate…", Style = Ui.Res<Style>("QuietButtonStyle"), Padding = new Thickness(8, 2, 8, 2) };
+        AutomationProperties.SetName(calibrate, "Calibrate touch");
+        calibrate.Click += (_, _) => OpenCalibration();
+        var touchHeadRow = new Grid();
+        touchHeadRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        touchHeadRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        touchHeadRow.Children.Add(touchHead);
+        Grid.SetColumn(calibrate, 1);
+        touchHeadRow.Children.Add(calibrate);
+        touch.Children.Add(touchHeadRow);
         foreach (ControlInfo control in ControlCatalog.ThumbTouchControls)
         {
             touch.Children.Add(TouchRow(control, name));

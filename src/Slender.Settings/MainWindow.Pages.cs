@@ -219,6 +219,13 @@ public sealed partial class MainWindow
         dpiRow.Unloaded += (_, _) => _status.Changed -= OnDpiStatus;
         AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
         // The thumb wheel's speeds and second action live in its card on the device stage (user 2026-10-19).
+
+        AddSection("THUMB WHEEL TOUCH");
+        var calibrate = new Button { Content = "Open calibration", Style = Ui.Res<Style>("QuietButtonStyle") };
+        calibrate.Click += (_, _) => OpenCalibration();
+        AddRow("Touch calibration",
+            $"Teaches Slender to tell taking hold of the mouse from a deliberate rest or tap. Now: {c.Pointer.GrabBeforePx} px before a touch, {c.Pointer.GrabMovePx} px during.",
+            calibrate);
     }
 
     /// <summary>

@@ -814,7 +814,7 @@ public sealed class SlenderEngine : IDisposable
             if (r.Down)
             {
                 var at = CursorPosition();
-                var grab = _hook.PointerTravel(GrabLookbackMs) > GrabBeforePx;
+                var grab = _hook.PointerTravel(GrabLookbackMs) > _config.Pointer.GrabBeforePx;
                 _queue.Post(() => HandleTouchDown(at, grab));
             }
             if ((r.Down || r.Up) && _preview is { } preview) preview.Touch(r.Down);
@@ -837,23 +837,18 @@ public sealed class SlenderEngine : IDisposable
         NativeMethods.GetCursorPos(out var pt) ? (pt.X, pt.Y) : (0, 0);
 
     /// <summary>
-    /// Pointer travel (pixels, either axis) during a touch above which it was the hand taking hold of the mouse, not a rest or
-    /// tap: grabbing the mouse brushes the thumb wheel and fired touch actions (user 2026-10-20).
+    /// Grabbing the mouse brushes the thumb wheel and fired touch actions (user 2026-10-20). A touch is a grab, and runs nothing,
+    /// when the pointer moved more than PointerSettings.GrabBeforePx in the last GrabLookbackMs before it, or moves more than
+    /// GrabMovePx during it. Defaults from the user's recordings (docs/devices/touch-calibration.md); Settings' touch calibration
+    /// window measures them again.
     /// </summary>
-    internal const int GrabMovePx = 24;
-
-    /// <summary>
-    /// A touch that lands while the pointer has moved more than GrabBeforePx in the last GrabLookbackMs is the hand taking hold
-    /// of a moving mouse. Calibrated on 2026-10-20 from the user's recordings: 75 deliberate touches had at most 127 px of
-    /// travel in the 400 ms before (nearly all under 20); grabs mostly 150-1500 px. This caught 6 of the 7 grabs the travel
-    /// rule missed, and no deliberate touch.
-    /// </summary>
-    internal const int GrabBeforePx = 150, GrabLookbackMs = 400;
+    public const int GrabLookbackMs = 400;
 
     private bool PointerMovedSinceTouch()
     {
         var now = CursorPosition();
-        return Math.Abs(now.X - _touchAt.X) > GrabMovePx || Math.Abs(now.Y - _touchAt.Y) > GrabMovePx;
+        int limit = _config.Pointer.GrabMovePx;
+        return Math.Abs(now.X - _touchAt.X) > limit || Math.Abs(now.Y - _touchAt.Y) > limit;
     }
 
     private void HandleTouchDown((int X, int Y) at, bool grab)

@@ -170,7 +170,9 @@ public sealed class JsonConfigStore : IConfigStore
             Math.Clamp(p.SideScrollSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
             Math.Clamp(p.SecondActionSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
             Math.Clamp(p.TouchRestMs, PointerSettings.RestMinMs, PointerSettings.RestMaxMs),
-            Math.Clamp(p.DoubleTapMs, PointerSettings.DoubleTapMinMs, PointerSettings.DoubleTapMaxMs));
+            Math.Clamp(p.DoubleTapMs, PointerSettings.DoubleTapMinMs, PointerSettings.DoubleTapMaxMs),
+            Math.Clamp(p.GrabBeforePx, PointerSettings.GrabBeforeMin, PointerSettings.GrabBeforeMax),
+            Math.Clamp(p.GrabMovePx, PointerSettings.GrabMoveMin, PointerSettings.GrabMoveMax));
     }
 
     private static Dictionary<GestureDirection, ActionSpec> ParseSwipes(Dictionary<string, ActionSpec>? raw)
@@ -299,6 +301,8 @@ public sealed class JsonConfigStore : IConfigStore
                 SecondActionSpeed = config.Pointer.SecondActionSpeed,
                 TouchRestMs = config.Pointer.TouchRestMs,
                 DoubleTapMs = config.Pointer.DoubleTapMs,
+                GrabBeforePx = config.Pointer.GrabBeforePx,
+                GrabMovePx = config.Pointer.GrabMovePx,
             },
             Keyboard = new KeyboardDto
             {
@@ -483,6 +487,8 @@ public sealed class JsonConfigStore : IConfigStore
         public int SecondActionSpeed { get; set; } = 100;
         public int TouchRestMs { get; set; } = 250;
         public int DoubleTapMs { get; set; } = 300;
+        public int GrabBeforePx { get; set; } = 150;
+        public int GrabMovePx { get; set; } = 24;
     }
 
     internal sealed class KeyboardDto

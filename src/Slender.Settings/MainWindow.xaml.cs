@@ -219,6 +219,7 @@ public sealed partial class MainWindow : Window
 
         _deferred?.Cancel();
         StopIdentify();
+        _calibration?.Close(); // it shares this window's config service
         _config.Dispose();
         _status.Dispose();
         if (_popoverStarted)

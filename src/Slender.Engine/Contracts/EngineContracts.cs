@@ -288,10 +288,13 @@ public sealed record PointerSettings(
     int SideScrollSpeed = 100,  // thumb wheel side scroll, percent of normal (25-400); 100 leaves the native scroll alone
     int SecondActionSpeed = 100, // second action steps per amount of thumb wheel travel (top button held), percent (25-400)
     int TouchRestMs = 250,       // thumb resting still on the wheel this long fires the rest action (100-1000)
-    int DoubleTapMs = 300)       // longest gap between the two taps of a double tap (150-600)
+    int DoubleTapMs = 300,       // longest gap between the two taps of a double tap (150-600)
+    int GrabBeforePx = 150,      // pointer travel in the 400 ms before a touch above which it is a grab (30-600; touch calibration)
+    int GrabMovePx = 24)         // pointer travel during a touch above which it is the hand moving the mouse (8-120; touch calibration)
 {
     public const int SpeedMin = 25, SpeedMax = 400;
     public const int RestMinMs = 100, RestMaxMs = 1000, DoubleTapMinMs = 150, DoubleTapMaxMs = 600;
+    public const int GrabBeforeMin = 30, GrabBeforeMax = 600, GrabMoveMin = 8, GrabMoveMax = 120;
 }
 
 /// <summary>

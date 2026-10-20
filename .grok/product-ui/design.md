@@ -38,3 +38,10 @@ from: round 4 (round-3 variant 3 + variant 4 bottom bar and button picker)
 - Quickest = base timings (Pop 240 ms open, Bloom 440 ms, Fly in 400 ms); each step slower adds 0.4x (Normal 1.8x, Slowest 2.6x). Close = 3/4 of open.
 - Bloom: hub first, then wedges grow from the hub clockwise from 12 o'clock with a small overshoot, rim turns in; close runs anticlockwise. Fly in: wedges slide in along their own direction with a slight twist, rim spins a quarter turn; close throws them out. Pop: whole ring grows from the cursor with overshoot.
 - The ring takes input from the first frame. Off or Windows animations off: 90 ms fade.
+
+## Touch calibration window (2026-10-20)
+
+- A small always-on-top window (400 x 600), draggable anywhere, opened from Settings > Point & scroll > Touch calibration or the
+  card's Touch "Calibrate…". Mica, same type and colours. Two numbered step boxes (copper edge on the current one, soft copper
+  fill while running), each with its own length (30/60/90/120 s) and a live count; a large Archivo countdown; one accent button
+  (Start step 1 / Stop / Start step 2 / Run again); the result as label/value lines with Save, and Reset to defaults when changed.
