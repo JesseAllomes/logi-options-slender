@@ -107,6 +107,8 @@ public sealed class JsonConfigStore : IConfigStore
                     ? new ThumbWheelSecond(tw.Enabled, tw.Forward ?? new ActionSpec.None(), tw.Back ?? new ActionSpec.None()) { Speed = ClampSpeed(tw.Speed) }
                     : null,
                 SideScrollSpeed = ClampSpeed(p.SideScrollSpeed),
+                WheelSpeed = ClampSpeed(p.WheelSpeed),
+                ThumbFlick = p.ThumbFlick is { } f ? new ThumbWheelFlick(f.Enabled, f.Right ?? new ActionSpec.None(), f.Left ?? new ActionSpec.None()) : null,
             });
         }
 
@@ -117,7 +119,11 @@ public sealed class JsonConfigStore : IConfigStore
             profiles,
             new ExcelSettings(excel.ThumbWheelScrollsColumns, Math.Clamp(excel.ColumnsPerNotch, 1, 10)),
             new HapticSettings(haptics.Enabled, Math.Clamp(haptics.Level, 0, 3), haptics.OnButtonPress, haptics.OnActionsRing,
-                haptics.Strength is { } strength ? Math.Clamp(strength, 0, 100) : null),
+                haptics.Strength is { } strength ? Math.Clamp(strength, 0, 100) : null)
+            {
+                Cues = ToCues(haptics.Cues),
+                Alerts = ToAlerts(haptics.Alerts),
+            },
             dto.LaunchAtLogin)
         {
             Pointer = ToPointer(dto.Pointer),
@@ -285,6 +291,8 @@ public sealed class JsonConfigStore : IConfigStore
                 OnButtonPress = config.Haptics.OnButtonPress,
                 OnActionsRing = config.Haptics.OnActionsRing,
                 Strength = config.Haptics.Strength,
+                Cues = config.Haptics.Cues.Count == 0 ? null : config.Haptics.Cues.ToDictionary(kv => kv.Key.ToString(), kv => FromCue(kv.Value)),
+                Alerts = config.Haptics.Alerts.Count == 0 ? null : config.Haptics.Alerts.ToDictionary(kv => kv.Key, kv => FromCue(kv.Value)),
             },
             Pointer = new PointerDto
             {
@@ -366,6 +374,8 @@ public sealed class JsonConfigStore : IConfigStore
                     ? new ThumbWheelSecondDto { Enabled = tw.Enabled, Forward = tw.Forward, Back = tw.Back, Speed = tw.Speed }
                     : null,
                 SideScrollSpeed = profile.SideScrollSpeed,
+                WheelSpeed = profile.WheelSpeed,
+                ThumbFlick = profile.ThumbFlick is { } fl ? new ThumbFlickDto { Enabled = fl.Enabled, Right = fl.Right, Left = fl.Left } : null,
             });
         }
 
@@ -513,6 +523,8 @@ public sealed class JsonConfigStore : IConfigStore
         public List<RingSlotDto>? RingSlots { get; set; }
         public ThumbWheelSecondDto? ThumbWheelAlt { get; set; }
         public int? SideScrollSpeed { get; set; }
+        public int? WheelSpeed { get; set; }
+        public ThumbFlickDto? ThumbFlick { get; set; }
     }
 
     internal sealed class ExcelDto
@@ -528,5 +540,50 @@ public sealed class JsonConfigStore : IConfigStore
         public bool OnButtonPress { get; set; }
         public bool OnActionsRing { get; set; } = true;
         public int? Strength { get; set; }
+        public Dictionary<string, HapticCueDto>? Cues { get; set; }
+        public Dictionary<string, HapticCueDto>? Alerts { get; set; }
     }
+
+    internal sealed class HapticCueDto
+    {
+        public bool Enabled { get; set; } = true;
+        public int Pattern { get; set; } = 1;
+        public int Pulses { get; set; } = 1;
+        public int SpacingMs { get; set; } = 150;
+        public int? Strength { get; set; }
+    }
+
+    internal sealed class ThumbFlickDto
+    {
+        public bool Enabled { get; set; }
+        public ActionSpec? Right { get; set; }
+        public ActionSpec? Left { get; set; }
+    }
+
+    private static HapticCue ToCue(HapticCueDto d) => new HapticCue(d.Enabled, d.Pattern, d.Pulses, d.SpacingMs, d.Strength).Clamped();
+
+    private static HapticCueDto FromCue(HapticCue c) => new() { Enabled = c.Enabled, Pattern = c.Pattern, Pulses = c.Pulses, SpacingMs = c.SpacingMs, Strength = c.Strength };
+
+    /// <summary>Unknown event names are dropped (a newer file read by an older Slender).</summary>
+    private static Dictionary<HapticEvent, HapticCue> ToCues(Dictionary<string, HapticCueDto>? raw)
+    {
+        var result = new Dictionary<HapticEvent, HapticCue>();
+        if (raw is null) return result;
+        foreach (var (name, cue) in raw)
+            if (cue is not null && Enum.TryParse(name, ignoreCase: true, out HapticEvent e)) result[e] = ToCue(cue);
+        return result;
+    }
+
+    /// <summary>Alert names keep letters, digits, '-' and '_' only (up to 32); anything else is dropped.</summary>
+    private static Dictionary<string, HapticCue> ToAlerts(Dictionary<string, HapticCueDto>? raw)
+    {
+        var result = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase);
+        if (raw is null) return result;
+        foreach (var (name, cue) in raw)
+            if (cue is not null && IsAlertName(name)) result[name] = ToCue(cue);
+        return result;
+    }
+
+    public static bool IsAlertName(string? name) =>
+        name is { Length: > 0 and <= 32 } && name.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '-' or '_');
 }

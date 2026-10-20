@@ -194,6 +194,12 @@ public sealed record Profile(string? AppProcess, IReadOnlyDictionary<ushort, Act
 
     /// <summary>Thumb wheel side scroll speed in this app, percent (25-400); null = All apps' (then PointerSettings.SideScrollSpeed).</summary>
     public int? SideScrollSpeed { get; init; }
+
+    /// <summary>Main (vertical) wheel speed in this app, percent (25-400); null = All apps' (then 100 = the mouse's own scroll).</summary>
+    public int? WheelSpeed { get; init; }
+
+    /// <summary>Thumb wheel flick actions in this app; null = All apps' (then none).</summary>
+    public ThumbWheelFlick? ThumbFlick { get; init; }
 }
 
 /// <summary>
@@ -265,12 +271,63 @@ public enum GestureDirection
 /// </summary>
 public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnButtonPress = false, bool OnActionsRing = true, int? Strength = null)
 {
+    /// <summary>Per-event buzz overrides (user 2026-10-20); an event missing here uses HapticCues.Default for it.</summary>
+    public IReadOnlyDictionary<HapticEvent, HapticCue> Cues { get; init; } = new Dictionary<HapticEvent, HapticCue>();
+
+    /// <summary>
+    /// Named alerts other programs can trigger through Slender's local buzz pipe ("build", "claude", ...). Names are
+    /// case-insensitive letters, digits, '-' or '_'; an unknown name plays the Alert event's cue.
+    /// </summary>
+    public IReadOnlyDictionary<string, HapticCue> Alerts { get; init; } = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Device haptic level 0-100: Strength when set, else the Level notch mapped to 25/50/75/100.</summary>
     public int EffectiveStrength => Strength is { } s ? Math.Clamp(s, 0, 100) : (Math.Clamp(Level, 0, 3) + 1) * 25;
 
     /// <summary>The notch (0-3) nearest a 0-100 strength, so the quick presets stay lit sensibly.</summary>
     public static int NotchFor(int strength) => Math.Clamp((strength + 12) / 25 - 1, 0, 3);
 }
+
+/// <summary>Everything Slender can buzz the mouse for (user 2026-10-20: every task, alert and function customisable).</summary>
+public enum HapticEvent
+{
+    ButtonPress,      // any bound button or key action runs (was HapticSettings.OnButtonPress)
+    RingOpen,         // the Actions Ring opens (was OnActionsRing)
+    RingHover,        // the ring's highlight moves to another slot
+    RingRun,          // a ring slot runs
+    HoldStart,        // a press-and-hold reaches its hold
+    TopHoldEngage,    // the top button is held and the thumb wheel's second action takes over
+    TouchRest,        // thumb wheel rest fired
+    TouchTap,         // thumb wheel tap fired
+    TouchDoubleTap,   // thumb wheel double tap fired
+    WheelModeChange,  // the scroll wheel switched between ratchet and free-spin
+    BatteryLow,       // a device went under its battery alert threshold
+    Alert,            // the buzz pipe was asked for a name it does not know, or for no name
+}
+
+/// <summary>
+/// One buzz: a built-in waveform (0-14, Solaar's names in HapticCues.PatternNames), played Pulses times SpacingMs apart (a
+/// longer buzz is several pulses close together). Strength null = the global strength; a number briefly sets the mouse's own
+/// stored strength for this buzz and puts it back (two writes to the mouse per buzz, opt-in, advanced).
+/// </summary>
+public sealed record HapticCue(bool Enabled = true, int Pattern = 1, int Pulses = 1, int SpacingMs = 150, int? Strength = null)
+{
+    public const int PatternMax = 14, PulsesMax = 6, SpacingMin = 40, SpacingMax = 1000;
+
+    /// <summary>The same cue with every field inside its limits.</summary>
+    public HapticCue Clamped() => this with
+    {
+        Pattern = Math.Clamp(Pattern, 0, PatternMax),
+        Pulses = Math.Clamp(Pulses, 1, PulsesMax),
+        SpacingMs = Math.Clamp(SpacingMs, SpacingMin, SpacingMax),
+        Strength = Strength is { } s ? Math.Clamp(s, 0, 100) : null,
+    };
+}
+
+/// <summary>
+/// Thumb wheel flick (user 2026-10-20): a fast spin of the thumb wheel runs its own action instead of scrolling, e.g. jump to
+/// the first or last column. Null actions = a flick scrolls like any turn.
+/// </summary>
+public sealed record ThumbWheelFlick(bool Enabled, ActionSpec Right, ActionSpec Left);
 
 public sealed record ExcelSettings(bool ThumbWheelScrollsColumns = true, int ColumnsPerNotch = 1);
 
