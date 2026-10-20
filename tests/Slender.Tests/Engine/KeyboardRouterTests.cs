@@ -8,7 +8,8 @@ internal sealed class FakeKeyboard : ILogiKeyboard
 {
     public string Name => "fake-kb";
     public bool IsConnected { get; set; } = true;
-    public event EventHandler<bool>? ConnectionChanged { add { } remove { } }
+    public event EventHandler<bool>? ConnectionChanged;
+    public void Connect(bool connected) { IsConnected = connected; ConnectionChanged?.Invoke(this, connected); }
     public event EventHandler<ButtonEvent>? KeyChanged;
     public List<ushort[]> Diverts { get; } = [];
     public List<bool> FnLocks { get; } = [];
@@ -77,6 +78,27 @@ public class KeyboardRouterTests
             P("excel", (KeyboardId.Mute, new ActionSpec.Keys("Ctrl+N")), (KeyboardId.Calculator, new ActionSpec.Excel(ExcelCommand.NextSheet))));
         Assert.Equal(new ushort[] { KeyboardId.Calculator, KeyboardId.Mute }, KeyboardRouter.ComputeDivertSet(cfg));
         Assert.Empty(KeyboardRouter.ComputeDivertSet(SlenderConfig.Default));
+    }
+
+    [Fact]
+    public void A_disconnect_releases_held_keys_and_their_later_release_runs_nothing()
+    {
+        var (r, kb, _, ex, _) = Make(Cfg(false, P(null, (KeyboardId.Mute, new ActionSpec.Keys("Ctrl+M")), (KeyboardId.Lock, new ActionSpec.ActionsRing()))));
+        using (r)
+        {
+            var ring = new List<bool>();
+            r.RingTrigger += (_, e) => ring.Add(e.Pressed);
+            r.Start();
+            kb.Key(KeyboardId.Mute, true);
+            kb.Key(KeyboardId.Lock, true);
+            kb.Connect(false);
+            Assert.Equal([(new ActionSpec.Keys("Ctrl+M"), true), (new ActionSpec.Keys("Ctrl+M"), false)], ex.Calls);
+            Assert.Equal([true, false], ring);
+
+            kb.Connect(true);
+            kb.Key(KeyboardId.Mute, false); // a stale release after reconnect: already released
+            Assert.Equal(2, ex.Calls.Count);
+        }
     }
 
     [Fact]

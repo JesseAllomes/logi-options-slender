@@ -143,6 +143,7 @@ public sealed class KeyboardRouter : IDisposable
         }
         _keyboard.KeyChanged += OnKey;
         _keyboard.FnLockRead += OnFnLockRead;
+        _keyboard.ConnectionChanged += OnConnection;
         _foreground.Changed += OnForegroundChanged;
         try { _ = ObserveAsync(_keyboard.StartAsync(_cts.Token), "keyboard start"); }
         catch (Exception ex) { _log.Error("keyboard start failed", ex); }
@@ -263,6 +264,39 @@ public sealed class KeyboardRouter : IDisposable
 
     private void RunAction(ActionSpec action, bool pressed) => _executor.Execute(action, pressed);
 
+    /// <summary>HID thread: a disconnected keyboard never reports the release of a held key, so its action is released now.</summary>
+    private void OnConnection(object? sender, bool connected)
+    {
+        if (connected) return;
+        try { _queue.Post(ReleaseAllHeld); }
+        catch (Exception ex) { try { _log.Error("keyboard disconnect dispatch failed", ex); } catch { } }
+    }
+
+    /// <summary>Worker: ends every held key's action (queued after any key events already in flight), like the mouse does.</summary>
+    private void ReleaseAllHeld()
+    {
+        KeyValuePair<ushort, ActionSpec>[] held;
+        lock (_gate) { held = [.. _active]; _active.Clear(); }
+        foreach (var (key, action) in held)
+        {
+            try
+            {
+                if (action is ActionSpec.TapHold)
+                {
+                    // A started hold is released; a quick press that never reached its hold runs nothing.
+                    if (_tapHold.TryRelease(key, out var th, out var started) && started && th.Hold is not ActionSpec.None)
+                    {
+                        if (th.Hold is ActionSpec.ActionsRing) RaiseRing(false);
+                        else RunAction(th.Hold, false);
+                    }
+                }
+                else if (action is ActionSpec.ActionsRing) RaiseRing(false);
+                else if (action is not ActionSpec.None) RunAction(action, false);
+            }
+            catch (Exception ex) { _log.Error("held key release failed", ex); }
+        }
+    }
+
     /// <summary>Hold threshold reached while the key is still down: the hold action starts as a press (the keyboard has no haptics).</summary>
     private void StartHold(ActionSpec.TapHold th)
     {
@@ -362,6 +396,7 @@ public sealed class KeyboardRouter : IDisposable
         }
         _keyboard.KeyChanged -= OnKey;
         _keyboard.FnLockRead -= OnFnLockRead;
+        _keyboard.ConnectionChanged -= OnConnection;
         _foreground.Changed -= OnForegroundChanged;
         lock (_gate) _foregroundDebounce?.Cancel();
         _cts.Cancel();
