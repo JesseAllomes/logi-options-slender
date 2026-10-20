@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=143 -->
+<!-- drainclamp-build: state; schema=1; generation=145 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -87,12 +87,12 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 | m41 | haptics, fully customisable: HapticCues defaults + every buzz routed by HapticEvent (pattern 0-14, pulses, spacing, opt-in exact strength = set/restore 0x19B0 level), Haptics page with per-event rows, test buttons and an Advanced section hidden by default, named alerts; local buzz pipe (current-user) + tools/Slender.Buzz CLI for hooks (Claude Code, builds); pattern-naming session on device | src/Slender.Engine/Haptics;src/Slender.Engine/SlenderEngine.cs;src/Slender.Settings/MainWindow.Pages.cs;src/Slender.Tray;tools/Slender.Buzz;tests/Slender.Tests | done | m40 |
 | m42 | device events: 0x1D4B wake/reconnect -> re-apply everything + re-divert, 0x0020 config change, unknown-notification log; K860 0x1814 fn0 + 0x1815 getters read-only (real channel, host names) shown in Settings; 0x4220 lock LED events (sniff then decode); ratchet/free-spin state (0x2111 read + 0x2121 event) in status + WheelModeChange haptic | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | done | m40 |
 | m43 | per-app main wheel speed (hook rescale like side scroll, no device divert) and thumb wheel flick actions (fast spin -> action) in the cards; Sense Panel force logger (read-only probe flag) and Windows 11 native haptics check | src/Slender.Engine/SlenderEngine.cs;src/Slender.Settings/MainWindow.ThumbCard.cs;tools/Slender.Probe | done | m40 |
-| m44 | macros: research (AutoHotkey, G Hub, Synapse, Pulover etc.), ActionSpec.Macro + macro library in config, steps (keys, text, mouse buttons/moves/wheel, launch, adjustable pauses), run modes (once / repeat while held / toggle), recorder + step editor in the picker, safety stop | src/Slender.Engine;src/Slender.Settings;tests | active | m43 |
-| m37 | Excel add-in (replaces Logitech's): opt-in per-user add-in, current-user named pipe, idle unless asked, time-boxed; actions next/prev visible sheet, zoom, table style, chart type, context thumb wheel, run named macro | src/Slender.ExcelAddin;src/Slender.Engine/ExcelBridge.cs;src/Slender.Settings | active | m36 |
-| m45 | notification haptics: research Windows notification access for an unpackaged app, listener, Haptics page app menu listing every app that notifies with its own cue | src/Slender.Tray;src/Slender.Settings;src/Slender.Engine/Haptics | active | m41 |
-| m46 | per-app pointer speed (Profile.Dpi applied on app switch, volatile 0x2201) and battery days-left estimate for both devices (history file, discharge slope) | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | active | m40 |
+| m44 | macros: research (AutoHotkey, G Hub, Synapse, Pulover etc.), ActionSpec.Macro + macro library in config, steps (keys, text, mouse buttons/moves/wheel, launch, adjustable pauses), run modes (once / repeat while held / toggle), recorder + step editor in the picker, safety stop | src/Slender.Engine;src/Slender.Settings;tests | done | m43 |
+| m37 | Excel add-in (replaces Logitech's): opt-in per-user add-in, current-user named pipe, idle unless asked, time-boxed; actions next/prev visible sheet, zoom, table style, chart type, context thumb wheel, run named macro | src/Slender.ExcelAddin;src/Slender.Engine/ExcelBridge.cs;src/Slender.Settings | done | m36 |
+| m45 | notification haptics: research Windows notification access for an unpackaged app, listener, Haptics page app menu listing every app that notifies with its own cue | src/Slender.Tray;src/Slender.Settings;src/Slender.Engine/Haptics | done | m41 |
+| m46 | per-app pointer speed (Profile.Dpi applied on app switch, volatile 0x2201) and battery days-left estimate for both devices (history file, discharge slope) | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | done | m40 |
 | m47 | K860 disconnect releases held actions (t2) | src/Slender.Engine/KeyboardRouter.cs | done | m27 |
-| m48 | K860 onboard remaps in the app: config list (CID to chord), Settings keyboard page to set/reset the 17 remappable keys with a clear "stored on the keyboard, every PC and channel" note and encodable-only chord picker, tray applies via OnboardSync only when the user saves (never on connect), read-back shows current mappings | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | active | m27 |
+| m48 | K860 onboard remaps in the app: config list (CID to chord), Settings keyboard page to set/reset the 17 remappable keys with a clear "stored on the keyboard, every PC and channel" note and encodable-only chord picker, tray applies via OnboardSync only when the user saves (never on connect), read-back shows current mappings | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | done | m27 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -103,7 +103,6 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T05:52:33+00:00 096a407b v1.1.23 published 16:52 Melbourne: rest touch fires after 500 ms still (not on every scroll), touch bit 0x02 and 6 counts/step from raw capture (Edge diverted path fixed). My shortcuts: config in, UI next (t8). JsonConfigStore atomic-save test flaked once (file move access denied), passed on rerun
 - 2026-10-19T06:04:22+00:00 6dd2e7ce My shortcuts built (Shortcuts tab: add/edit/delete, name + recorder + All apps / this app, in config). Double tap added as a third touch action (0xF153, 300 ms, single tap waits only when double is set). 1495 tests
 - 2026-10-19T06:11:09+00:00 ee50348a Touch tuning (user): wobble under one wheel step (6 counts) no longer cancels rest/tap; rest default 250 ms; PointerSettings.TouchRestMs/DoubleTapMs with sliders in the card. 1497 tests
 - 2026-10-19T22:29:10+00:00 5618c095 Touch tester in the card (dots: touching, rest, tap, double tap; preview diverts the wheel and reports gestures with the user's timings; nothing runs); touch actions logged in slender.log. User: touch works but intermittently, to diagnose with the tester. 1502 tests
@@ -123,4 +122,5 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 - 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
 - 2026-10-20T08:03:22+00:00 df41d376 DECISIONS compacted 46 -> 21 lines (merged, superseded ones folded in); originals in .agent/drainclamp-decisions-archive.md
 - 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
+- 2026-10-20T09:57:25+00:00 8cb78553 Released 1.1.37: macros, Excel add-in, notification haptics, per-app DPI, battery estimate, K860 disconnect fix, onboard remaps, gap fixes; 1916 tests; device/UI checks and memory measurement pending
 <!-- /DC:LOG -->
