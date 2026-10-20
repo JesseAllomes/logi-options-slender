@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=133 -->
+<!-- drainclamp-build: state; schema=1; generation=135 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -63,6 +63,7 @@ Thumb wheel card (user 2026-10-19, round 3) -> card 3 variant 2: drawn wheel per
 Ring motion (user 2026-10-19, round 3) -> Off / Pop / Clockwise bloom / Fly in, speed Slowest..Quickest where Quickest = old Normal and each step +0.4x (Normal 1.8x default), close = 3/4 of open; sweep rejected
 Lost top button release (user 2026-10-19) -> keep the 1.5 s still-wheel Ctrl release; release-on-click alone would make that click a Ctrl+click
 Research build (user 2026-10-20): build every researched idea except K860 Mac layout (0x4531); full haptic customisation per task/alert/function: pattern + pulses by default; Advanced (hidden by default) has buzz length (pulses close together), spacing, and opt-in exact strength (sets the mouse's stored strength for that buzz and restores it: two writes per buzz)
+Next build (user 2026-10-20): macros with adjustable pauses (research first), Excel add-in, notification haptics with a Haptics menu listing all apps, per-app DPI, battery estimate, K860 disconnect fix; one Sonnet builder per part in worktrees; sync sign-in tomorrow (user logs in 2026-10-21)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -110,6 +111,11 @@ Research build (user 2026-10-20): build every researched idea except K860 Mac la
 | m41 | haptics, fully customisable: HapticCues defaults + every buzz routed by HapticEvent (pattern 0-14, pulses, spacing, opt-in exact strength = set/restore 0x19B0 level), Haptics page with per-event rows, test buttons and an Advanced section hidden by default, named alerts; local buzz pipe (current-user) + tools/Slender.Buzz CLI for hooks (Claude Code, builds); pattern-naming session on device | src/Slender.Engine/Haptics;src/Slender.Engine/SlenderEngine.cs;src/Slender.Settings/MainWindow.Pages.cs;src/Slender.Tray;tools/Slender.Buzz;tests/Slender.Tests | active | m40 |
 | m42 | device events: 0x1D4B wake/reconnect -> re-apply everything + re-divert, 0x0020 config change, unknown-notification log; K860 0x1814 fn0 + 0x1815 getters read-only (real channel, host names) shown in Settings; 0x4220 lock LED events (sniff then decode); ratchet/free-spin state (0x2111 read + 0x2121 event) in status + WheelModeChange haptic | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | active | m40 |
 | m43 | per-app main wheel speed (hook rescale like side scroll, no device divert) and thumb wheel flick actions (fast spin -> action) in the cards; Sense Panel force logger (read-only probe flag) and Windows 11 native haptics check | src/Slender.Engine/SlenderEngine.cs;src/Slender.Settings/MainWindow.ThumbCard.cs;tools/Slender.Probe | active | m40 |
+| m44 | macros: research (AutoHotkey, G Hub, Synapse, Pulover etc.), ActionSpec.Macro + macro library in config, steps (keys, text, mouse buttons/moves/wheel, launch, adjustable pauses), run modes (once / repeat while held / toggle), recorder + step editor in the picker, safety stop | src/Slender.Engine;src/Slender.Settings;tests | active | m43 |
+| m37 | Excel add-in (replaces Logitech's): opt-in per-user add-in, current-user named pipe, idle unless asked, time-boxed; actions next/prev visible sheet, zoom, table style, chart type, context thumb wheel, run named macro | src/Slender.ExcelAddin;src/Slender.Engine/ExcelBridge.cs;src/Slender.Settings | active | m36 |
+| m45 | notification haptics: research Windows notification access for an unpackaged app, listener, Haptics page app menu listing every app that notifies with its own cue | src/Slender.Tray;src/Slender.Settings;src/Slender.Engine/Haptics | active | m41 |
+| m46 | per-app pointer speed (Profile.Dpi applied on app switch, volatile 0x2201) and battery days-left estimate for both devices (history file, discharge slope) | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings | active | m40 |
+| m47 | K860 disconnect releases held actions (t2) | src/Slender.Engine/KeyboardRouter.cs | active | m27 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
