@@ -403,6 +403,22 @@ public sealed partial class SlenderEngine : IDisposable
         catch (Exception ex) { SafeLog("haptic failed", ex); }
     }
 
+    private readonly NotifyRateLimiter _notifyLimiter = new();
+
+    /// <summary>
+    /// Buzzes for a Windows notification from an app (roadmap m45): nothing when haptics or notification haptics are off, the
+    /// app's own cue is off, or the app/global rate limit says it buzzed too recently. Any thread.
+    /// </summary>
+    public void PlayNotification(string app)
+    {
+        try
+        {
+            var haptics = _config.Haptics;
+            if (haptics.Enabled && haptics.Notify.Effective(app) is { } cue && _notifyLimiter.TryAcquire(app)) _player.Play(cue);
+        }
+        catch (Exception ex) { SafeLog("notification haptic failed", ex); }
+    }
+
     /// <summary>Buzzes a named alert (an unknown or empty name plays the Alert event's cue); nothing when haptics or that cue are off. Any thread.</summary>
     public void PlayAlert(string? name)
     {

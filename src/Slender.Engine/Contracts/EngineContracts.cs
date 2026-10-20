@@ -303,11 +303,14 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// </summary>
     public IReadOnlyDictionary<string, HapticCue> Alerts { get; init; } = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Buzz on Windows notifications, per app (roadmap m45); off by default.</summary>
+    public NotifyHapticSettings Notify { get; init; } = new();
+
     /// <summary>Value equality including the cue and alert maps (a record compares dictionaries by reference otherwise).</summary>
     public bool Equals(HapticSettings? other) =>
         other is not null && Enabled == other.Enabled && Level == other.Level && OnButtonPress == other.OnButtonPress
         && OnActionsRing == other.OnActionsRing && Strength == other.Strength
-        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts);
+        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && Notify.Equals(other.Notify);
 
     public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count);
 
