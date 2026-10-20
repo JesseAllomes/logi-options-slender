@@ -134,6 +134,18 @@ public interface ILogiKeyboard : IDisposable
     /// <summary>The Easy-Switch channel (0-2) the keyboard is on now, as far as it could be told from 0x40A3 reads; null when unknown.</summary>
     int? CurrentChannel { get; }
 
+    /// <summary>
+    /// Easy-Switch channels and the real current channel from 0x1814/0x1815 reads (display only); null until read or when the
+    /// keyboard lacks them. <see cref="CurrentChannel"/> prefers this value over its 0x40A3 inference.
+    /// </summary>
+    HostsInfo? Hosts => null;
+
+    /// <summary>Raised when <see cref="Hosts"/> was read and differs from the previous value.</summary>
+    event EventHandler? HostsChanged { add { } remove { } }
+
+    /// <summary>Reads the Easy-Switch channels again (read only); null when offline or unsupported.</summary>
+    Task<HostsInfo?> RefreshHostsAsync(CancellationToken ct) => Task.FromResult<HostsInfo?>(null);
+
     /// <summary>The running firmware, e.g. "MPK 10.00.0010" (0x0003 reads); null when disconnected or unsupported.</summary>
     Task<string?> GetFirmwareVersionAsync(CancellationToken ct) => Task.FromResult<string?>(null);
 

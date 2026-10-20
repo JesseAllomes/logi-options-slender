@@ -16,7 +16,7 @@ public sealed class HidppBlockedRequestException : HidppException
 
 /// <summary>
 /// The only (feature, function) requests Slender may send. Anything else (notably firmware update 0x00D0/0x00D1,
-/// host change/pairing 0x1814/0x1815 and onboard profiles 0x8100) is refused by <see cref="HidppDevice"/>
+/// host switch/pairing writes (0x1814 fn1, 0x1815 writes) and onboard profiles 0x8100) is refused by <see cref="HidppDevice"/>
 /// before the feature index is even looked up.
 /// </summary>
 public static class HidppAllowlist
@@ -51,6 +51,18 @@ public static class HidppAllowlist
     };
 
     /// <summary>
+    /// Features allowed by an explicit function set instead of a maximum, because a write sits between reads.
+    /// 0x1814 ChangeHost: fn0 getHostInfo (host count, current host) only; fn1 (switch host, drops the link) stays refused.
+    /// 0x1815 HostsInfo (Solaar hidpp20.py get_host_names): fn0 capabilities/count, fn1 getHostInfo(host), fn3 getHostFriendlyName(host, offset).
+    /// fn2 and everything above fn3 (set name, pairing, delete host) stay refused. Read only: nothing here changes the device.
+    /// </summary>
+    private static readonly Dictionary<ushort, byte[]> AllowedFunctions = new()
+    {
+        [0x1814] = [0],
+        [0x1815] = [0, 1, 3],
+    };
+
+    /// <summary>
     /// The only controls whose 0x1B04 setCidReporting may carry the raw XY bits (flags bit4 value, bit5 valid): the gesture button
     /// 0x00C3 and its virtual twin 0x00D7. Raw XY makes the mouse report movement deltas instead of moving the cursor while the
     /// control is held, so it is confined to the gesture path. The persistent bits (0x04/0x08), force raw XY (0x40/0x80) and any
@@ -61,7 +73,9 @@ public static class HidppAllowlist
     private const byte DivertBits = 0x03, RawXyBits = 0x30;
 
     public static bool IsAllowed(ushort featureId, byte function) =>
-        MaxFunction.TryGetValue(featureId, out var max) && function <= max;
+        AllowedFunctions.TryGetValue(featureId, out var set)
+            ? Array.IndexOf(set, function) >= 0
+            : MaxFunction.TryGetValue(featureId, out var max) && function <= max;
 
     /// <summary>
     /// Payload rule on top of <see cref="IsAllowed"/>: 0x1B04 fn3 (setCidReporting) may only set the temporary divert bits, plus the

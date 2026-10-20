@@ -54,6 +54,18 @@ public sealed class HidppDevice
         return false;
     }
 
+    /// <summary>The feature id behind a cached feature index (only features already looked up are known).</summary>
+    public bool TryGetFeatureId(byte index, out ushort featureId)
+    {
+        lock (_lock)
+        {
+            foreach (var (id, idx) in _cache)
+                if (idx == index) { featureId = id; return true; }
+        }
+        featureId = 0;
+        return false;
+    }
+
     public void ClearCache() { lock (_lock) _cache.Clear(); }
 
     public async Task<HidppMessage> CallAsync(ushort featureId, byte function, ReadOnlyMemory<byte> parameters, CancellationToken ct)

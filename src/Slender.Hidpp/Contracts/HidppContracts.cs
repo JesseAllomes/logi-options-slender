@@ -17,6 +17,14 @@ public static class FeatureId
     public const ushort HiResWheel = 0x2121;
     public const ushort ThumbWheel = 0x2150;
     public const ushort AdjustableDpi = 0x2201;
+    /// <summary>ConfigChange: events only (layout unknown). Logged and treated as a reconfiguration request.</summary>
+    public const ushort ConfigChange = 0x0020;
+    /// <summary>WirelessDeviceStatus: fn0 broadcast on reconnect/wake (Solaar: p[0] 1 = reconnection, p[1] 1 = reconfigure, p[2] 1 = power switch).</summary>
+    public const ushort WirelessDeviceStatus = 0x1D4B;
+    /// <summary>ChangeHost: only fn0 (host count, current host) is allowlisted; fn1 switches host and stays refused.</summary>
+    public const ushort ChangeHost = 0x1814;
+    /// <summary>HostsInfo: only the reads fn0/fn1/fn3 are allowlisted.</summary>
+    public const ushort HostsInfo = 0x1815;
 }
 
 /// <summary>MX Master 4 control IDs. Entries marked PROBE in docs/protocol.md are unconfirmed.</summary>
@@ -73,6 +81,21 @@ public static class ThumbWheelUnits
 }
 
 public readonly record struct BatteryStatus(int Percent, bool Charging);
+
+/// <summary>The scroll wheel's mode (0x2111 fn1 p[0]: 1 free-spin, 2 ratchet).</summary>
+public enum WheelMode { Unknown = 0, Ratchet = 1, FreeSpin = 2 }
+
+/// <summary>One Easy-Switch channel (host slot). Name is the host's friendly name when the device stores one.</summary>
+public sealed record HostEntry(int Index, string? Name, bool Paired);
+
+/// <summary>Easy-Switch channels as read from 0x1814/0x1815. Current is the active channel index, or -1 when unknown.</summary>
+public sealed record HostsInfo(int Current, IReadOnlyList<HostEntry> Hosts)
+{
+    public bool Equals(HostsInfo? other) =>
+        other is not null && Current == other.Current && Hosts.SequenceEqual(other.Hosts);
+
+    public override int GetHashCode() => HashCode.Combine(Current, Hosts.Count);
+}
 
 /// <summary>
 /// High-level MX Master 4 surface consumed by Slender.Engine. Implementations must raise events
@@ -153,4 +176,25 @@ public interface ILogiMouse : IDisposable
 
     /// <summary>First Sense Panel force reading seen (the anchor of the safe band); null until known.</summary>
     int? SensePanelBaseline => null;
+
+    /// <summary>
+    /// The scroll wheel's mode (0x2111), read on connect, after Slender's toggle and when a 0x2111/0x2121 event arrives.
+    /// Unknown when disconnected or unreadable.
+    /// </summary>
+    WheelMode WheelMode => WheelMode.Unknown;
+
+    /// <summary>Raised (background thread) with the new mode whenever <see cref="WheelMode"/> changes, including to/from Unknown.</summary>
+    event EventHandler<WheelMode>? WheelModeChanged { add { } remove { } }
+
+    /// <summary>
+    /// Raised after the device told us it reconnected or needs reconfiguring (0x1D4B, 0x0020) and its volatile state was
+    /// re-applied. The engine re-sends its diverts and the thumb wheel divert.
+    /// </summary>
+    event EventHandler? Reconfigured { add { } remove { } }
+
+    /// <summary>Easy-Switch channels read from 0x1814/0x1815 (display only); null until read or when unsupported.</summary>
+    HostsInfo? Hosts => null;
+
+    /// <summary>Raised when <see cref="Hosts"/> was read and differs from the previous value.</summary>
+    event EventHandler? HostsChanged { add { } remove { } }
 }

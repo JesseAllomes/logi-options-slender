@@ -117,6 +117,8 @@ static class Program
 
         // ERGO K860: per-app key bindings and Fn lock (m9). Diverts nothing until a key is bound.
         using var keyboard = new LogiKeyboard(keyboardFactory);
+        mouse.LogSink = log.Info; // unhandled-notification and config-change lines (decode aid, rate limited in the device layer)
+        keyboard.LogSink = log.Info;
         using var keys = new KeyboardRouter(keyboard, foreground, executor, config, log);
 
         // Options+ and Slender must never both own HID++ diverts (docs/switch-over.md): the engines wait for it to go.
@@ -161,6 +163,12 @@ static class Program
         // Lock keys: a short label near the cursor.
         using var toast = new ThumbWheelToast(() => engine.Config, () => ring.IsOpen, log);
         app.LockKeyChanged += (_, text) => toast.Show(text);
+        // m42: the wheel flipped between ratchet and free-spin (any cause). The haptic player lands on another branch.
+        app.WheelModeFlipped += (_, mode) =>
+        {
+            // TODO(merge): engine.PlayHaptic(HapticEvent.WheelModeChange)
+            log.Info($"scroll wheel is now {mode}");
+        };
         // Settings' "Identify" panel: the tray writes which spare key was pressed where Settings can read it.
         keys.SpareKeyIdentified += (_, cid) => SpareKeyReport.Write(SyncPaths.StateDirectory, cid, log);
         // Fn lock belongs to the keyboard (Fn+Esc): what it reports is saved, so an update or restart never flips it back.

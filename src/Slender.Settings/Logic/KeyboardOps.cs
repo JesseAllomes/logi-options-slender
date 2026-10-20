@@ -35,4 +35,14 @@ public static class KeyboardOps
     /// <summary>"Channel 2 (in use now)" for the channel the keyboard is on, else "Channel 2".</summary>
     public static string ChannelTitle(int channel, int? current) =>
         current == channel ? $"Channel {channel + 1} (in use now)" : $"Channel {channel + 1}";
+
+    /// <summary>"Channel 1 · Laptop · current" for a channel row (read-only Easy-Switch list). Unpaired slots say so; no name is skipped.</summary>
+    public static string HostRowTitle(HostState host)
+    {
+        var parts = new List<string> { $"Channel {host.Index + 1}" };
+        if (!host.Paired) parts.Add("not paired");
+        else if (!string.IsNullOrWhiteSpace(host.Name)) parts.Add(host.Name!);
+        if (host.Current) parts.Add("current");
+        return string.Join(" · ", parts);
+    }
 }

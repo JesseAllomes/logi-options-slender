@@ -79,7 +79,7 @@ public class OnboardRemapTests
         for (byte fn = 0; fn <= 5; fn++) Assert.True(HidppAllowlist.IsAllowed(0x1C00, fn), $"fn{fn}");
         for (byte fn = 6; fn < 16; fn++) Assert.False(HidppAllowlist.IsAllowed(0x1C00, fn), $"fn{fn}");
         // other persistent-memory features stay blocked
-        foreach (ushort never in new ushort[] { 0x8100, 0x8101, 0x1814, 0x1815, 0x00D0, 0x00D1, 0x1C01, 0x1BFF })
+        foreach (ushort never in new ushort[] { 0x8100, 0x8101, 0x00D0, 0x00D1, 0x1C01, 0x1BFF })
             for (byte fn = 0; fn < 16; fn++) Assert.False(HidppAllowlist.IsAllowed(never, fn), $"{never:X4} fn{fn}");
     }
 

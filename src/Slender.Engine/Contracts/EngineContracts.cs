@@ -465,7 +465,16 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 
     /// <summary>Easy-Switch channel (0-2) the keyboard is on, when it could be told; null when unknown or not a keyboard.</summary>
     public int? Channel { get; init; }
+
+    /// <summary>Scroll wheel mode of the mouse: "ratchet" or "free-spin" (0x2111); null when unknown or not a mouse.</summary>
+    public string? WheelMode { get; init; }
+
+    /// <summary>Easy-Switch channels read from 0x1814/0x1815 (display only); null when not read or unsupported.</summary>
+    public IReadOnlyList<HostState>? Hosts { get; init; }
 }
+
+/// <summary>One Easy-Switch channel as the device reports it. Name is the host's friendly name, when the device stores one.</summary>
+public sealed record HostState(int Index, string? Name, bool Paired, bool Current);
 
 /// <summary>
 /// Written by the tray to %LOCALAPPDATA%\Slender\status.json whenever it changes (atomic replace); read by the settings app.

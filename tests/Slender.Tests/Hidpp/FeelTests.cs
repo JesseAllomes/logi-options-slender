@@ -55,7 +55,8 @@ public class FeelTests
         {
             await high.StartAsync(CancellationToken.None);
             await same.StartAsync(CancellationToken.None);
-            await Wait.UntilAsync(() => devHigh.CountCalls(SmartShift, 1) == 1 && devSame.CountCalls(SmartShift, 1) == 1);
+            // one fn1 read for the torque compare, one for the wheel mode (m42)
+            await Wait.UntilAsync(() => devHigh.CountCalls(SmartShift, 1) == 2 && devSame.CountCalls(SmartShift, 1) == 2);
             Assert.Equal(0, devHigh.CountCalls(SmartShift, 2)); // 500 clamps to 100 = what the device already has
             Assert.Equal(0, devSame.CountCalls(SmartShift, 2));
         }

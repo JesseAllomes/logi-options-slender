@@ -17,7 +17,10 @@ public class ThumbWheelDivertTests
         public void Press(ushort id, bool pressed) => ButtonChanged?.Invoke(this, new ButtonEvent(id, pressed));
         public event EventHandler<ThumbWheelEvent>? ThumbWheelMoved;
         public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
-        public Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct) => Task.CompletedTask;
+        public int DivertCalls;
+        public event EventHandler? Reconfigured;
+        public void Reconfigure() => Reconfigured?.Invoke(this, EventArgs.Empty);
+        public Task SetDivertedControlsAsync(IReadOnlyCollection<ushort> controlIds, CancellationToken ct) { Interlocked.Increment(ref DivertCalls); return Task.CompletedTask; }
         public Task SetThumbWheelDivertedAsync(bool diverted, CancellationToken ct) => TrySetThumbWheelDivertedAsync(diverted, ct);
         public Task<bool> TrySetThumbWheelDivertedAsync(bool diverted, CancellationToken ct)
         {
@@ -302,6 +305,23 @@ public class ThumbWheelDivertTests
 
         r.Now = 5500; // in flight right after the repair: left to Windows, never handled twice
         Assert.False(r.Hook.Wheel(120).Handled);
+    }
+
+    [Fact]
+    public void Reconfigured_event_resends_the_diverts_and_the_thumb_wheel_divert()
+    {
+        var r = new Rig();
+        Assert.True(Until(() => r.Engine.ThumbWheelDiverted));
+        int diverts = r.Mouse.DivertCalls;
+        Assert.Equal([true], r.Mouse.Snapshot());
+        r.Now = 3000;
+
+        r.Mouse.Reconfigure(); // 0x1D4B reconnection (or 0x0020): the device forgot its volatile state
+
+        Assert.True(Until(() => r.Mouse.DivertCalls > diverts)); // diverts sent again even though the set did not change
+        Assert.True(Until(() => r.Mouse.Snapshot().Length == 2));
+        Assert.Equal([true, true], r.Mouse.Snapshot());
+        Assert.True(r.Engine.ThumbWheelDiverted);
     }
 
     [Fact]

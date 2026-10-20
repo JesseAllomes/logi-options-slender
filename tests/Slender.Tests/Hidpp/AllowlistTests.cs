@@ -33,8 +33,9 @@ public class AllowlistTests
     [Theory]
     [InlineData((ushort)0x00D0, (byte)0)]
     [InlineData((ushort)0x00D1, (byte)0)]
-    [InlineData((ushort)0x1814, (byte)0)]
-    [InlineData((ushort)0x1815, (byte)1)]
+    [InlineData((ushort)0x1814, (byte)1)]   // switch host: drops the link
+    [InlineData((ushort)0x1815, (byte)2)]   // not one of the read getters
+    [InlineData((ushort)0x1815, (byte)4)]
     [InlineData((ushort)0x8100, (byte)2)]
     [InlineData((ushort)0x1B04, (byte)4)]   // function beyond the allowed range
     [InlineData((ushort)0x19C0, (byte)4)]   // force sensing: only fn0-3 (fn3 = set force)
@@ -65,8 +66,41 @@ public class AllowlistTests
             for (byte fn = 0; fn <= max; fn++) Assert.True(HidppAllowlist.IsAllowed(f, fn), $"{f:X4} fn{fn}");
             Assert.False(HidppAllowlist.IsAllowed(f, (byte)(max + 1)), $"{f:X4} fn{max + 1}");
         }
-        foreach (ushort never in new ushort[] { 0x00D0, 0x00D1, 0x1814, 0x1815, 0x8100 })
+        foreach (ushort never in new ushort[] { 0x00D0, 0x00D1, 0x8100 })
             for (byte fn = 0; fn < 16; fn++) Assert.False(HidppAllowlist.IsAllowed(never, fn));
+    }
+
+    [Fact]
+    public void Host_features_allow_only_their_read_functions()
+    {
+        // 0x1814 ChangeHost: fn0 getHostInfo only; fn1 switches host.
+        Assert.True(HidppAllowlist.IsAllowed(0x1814, 0));
+        for (byte fn = 1; fn < 16; fn++) Assert.False(HidppAllowlist.IsAllowed(0x1814, fn), $"0x1814 fn{fn}");
+        // 0x1815 HostsInfo: fn0 capabilities/count, fn1 getHostInfo, fn3 getHostFriendlyName. fn2 and the rest stay refused.
+        foreach (byte fn in new byte[] { 0, 1, 3 }) Assert.True(HidppAllowlist.IsAllowed(0x1815, fn), $"0x1815 fn{fn}");
+        foreach (byte fn in new byte[] { 2, 4, 5, 6, 7, 8, 15 }) Assert.False(HidppAllowlist.IsAllowed(0x1815, fn), $"0x1815 fn{fn}");
+        Assert.Throws<HidppBlockedRequestException>(() => HidppAllowlist.EnsureAllowed(0x1814, 1));
+        Assert.Throws<HidppBlockedRequestException>(() => HidppAllowlist.EnsureAllowed(0x1815, 2, new byte[] { 0 }));
+    }
+
+    [Fact]
+    public async Task Host_reads_pass_and_host_writes_write_nothing()
+    {
+        var (d, t, ch) = Rig(dev =>
+        {
+            dev.Features[0x1815] = 24;
+            dev.Handlers[(21, 0)] = _ => [3, 1];
+            dev.Handlers[(24, 0)] = _ => [0, 0, 3, 1];
+        });
+        using (ch)
+        {
+            await d.CallAsync(0x1814, 0, ReadOnlyMemory<byte>.Empty, CancellationToken.None);
+            await d.CallAsync(0x1815, 0, ReadOnlyMemory<byte>.Empty, CancellationToken.None);
+            int before = t.Writes.Count;
+            await Assert.ThrowsAsync<HidppBlockedRequestException>(() => d.CallAsync(0x1814, 1, new byte[] { 1 }, CancellationToken.None));
+            await Assert.ThrowsAsync<HidppBlockedRequestException>(() => d.SendAsync(0x1815, 2, new byte[] { 0, 1 }, CancellationToken.None));
+            Assert.Equal(before, t.Writes.Count);
+        }
     }
 
     [Fact]

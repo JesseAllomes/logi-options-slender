@@ -132,8 +132,18 @@ persistent-divert bit (0x04) is never set. Controls Slender does not want are un
 Write allowlist, enforced in `HidppDevice` by feature ID before any index lookup (`HidppAllowlist`,
 throws `HidppBlockedRequestException`, nothing is written): 0x0000 fn0-1, 0x0001 fn0-1, 0x0005 fn0-1,
 0x1000 fn0, 0x1004 fn0-1, 0x19B0 fn0-4, 0x19C0 fn0-2 (reads), 0x1B04 fn0-3, 0x2110 fn0-1, 0x2111 fn0-2,
-0x2121 fn0-2, 0x2150 fn0-2, 0x2201 fn0-3. Never: 0x00D0/0x00D1 (firmware), 0x1814/0x1815 (host
-change/pairing), 0x8100 (onboard profiles). Slender.Probe goes through the same layer.
+0x2121 fn0-2, 0x2150 fn0-2, 0x2201 fn0-3, and two explicit read-only function sets: 0x1814 fn0 (host count,
+current host) and 0x1815 fn0/fn1/fn3 (host capabilities, host info, host name chunks; Solaar `get_host_names`).
+Never: 0x00D0/0x00D1 (firmware), 0x1814 fn1 and every other 0x1815 function (host switch, pairing, rename),
+0x8100 (onboard profiles).
+
+Events (no request, so no allowlist entry): 0x1D4B WirelessDeviceStatus fn0 (Solaar: p[0] status 1 = reconnection,
+p[1] request 1 = software reconfiguration needed, p[2] reason 1 = power switch) re-applies all volatile state;
+0x0020 ConfigChange (layout unknown) is logged and treated as a reconfiguration request. Every other notification from
+a feature Slender does not handle is logged (max one line per feature per 10 s) so it can be decoded later;
+0x4220 LockKeyState on the K860 is decoded that way (nothing is written, no getter is used).
+Wheel mode: 0x2111 fn1 p[0] 1 = free-spin, 2 = ratchet is read on connect, after Slender's toggle and on a 0x2111 or
+0x2121 event (0x2121 event 1 "ratchet switch": p[0] bit0 = ratchet). Slender.Probe goes through the same layer.
 
 ### Haptics play (2026-10-15, Options+ stopped)
 
