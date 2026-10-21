@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         text.Width = 64;
         text.TextAlignment = TextAlignment.Right;
         text.VerticalAlignment = VerticalAlignment.Center;
-        var slider = new Slider { Minimum = min, Maximum = max, StepFrequency = step, Value = value, Width = 200, IsThumbToolTipEnabled = false };
+        var slider = Ui.WheelSteps(new Slider { Minimum = min, Maximum = max, StepFrequency = step, Value = value, Width = 200, IsThumbToolTipEnabled = false });
         AutomationProperties.SetName(slider, name);
         slider.ValueChanged += (_, e) =>
         {

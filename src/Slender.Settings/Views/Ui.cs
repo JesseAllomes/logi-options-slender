@@ -15,6 +15,21 @@ internal static class Ui
 {
     public static T Res<T>(string key) => (T)Application.Current.Resources[key];
 
+    /// <summary>The mouse wheel moves the slider one step per notch while the pointer is over it (the page does not scroll then).</summary>
+    public static Slider WheelSteps(Slider slider)
+    {
+        int carry = 0;
+        slider.PointerWheelChanged += (_, e) =>
+        {
+            var point = e.GetCurrentPoint(slider);
+            if (!slider.IsEnabled || point.Properties.IsHorizontalMouseWheel) return;
+            double step = slider.StepFrequency > 0 ? slider.StepFrequency : slider.SmallChange;
+            slider.Value = SliderWheel.Apply(slider.Value, slider.Minimum, slider.Maximum, step, point.Properties.MouseWheelDelta, ref carry);
+            e.Handled = true;
+        };
+        return slider;
+    }
+
     public static Brush Brush(string key) => Res<Brush>(key);
 
     public static Brush Ink => Brush("InkBrush");

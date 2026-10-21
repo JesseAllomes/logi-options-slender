@@ -506,7 +506,7 @@ public sealed partial class MainWindow
         var readout = Ui.Text(value + " ms", 11.5, Ui.Muted);
         readout.VerticalAlignment = VerticalAlignment.Center;
         readout.HorizontalAlignment = HorizontalAlignment.Right;
-        var slider = new Slider { Minimum = min, Maximum = max, StepFrequency = step, SmallChange = step, Value = value, IsThumbToolTipEnabled = false, VerticalAlignment = VerticalAlignment.Center };
+        var slider = Ui.WheelSteps(new Slider { Minimum = min, Maximum = max, StepFrequency = step, SmallChange = step, Value = value, IsThumbToolTipEnabled = false, VerticalAlignment = VerticalAlignment.Center });
         AutomationProperties.SetName(slider, automationName);
         slider.ValueChanged += (_, e) => readout.Text = (int)e.NewValue + " ms";
         // Saving on every tick would rebuild the card under the pointer; save once the drag or key press is done.
