@@ -32,7 +32,11 @@
     <!-- Rail -->
     <Border x:Name="RailBorder" Grid.Row="1" Grid.Column="0" Background="{StaticResource RailBrush}"
             BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,1,0">
-      <StackPanel x:Name="RailPanel" Padding="8,12,8,12" Spacing="6" />
+      <Grid>
+        <StackPanel x:Name="RailPanel" Padding="8,12,8,12" Spacing="6" />
+        <TextBlock x:Name="RailVersion" FontSize="11" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"
+                   VerticalAlignment="Bottom" Margin="0,0,0,12" />
+      </Grid>
     </Border>
 
     <!-- Stage -->

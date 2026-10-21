@@ -4,6 +4,46 @@ namespace Slender.Tests.Settings;
 
 public sealed class PopoverPlacementTests
 {
+    // The user's desk (2026-10-21): ultrawide primary, 1440p right, a 4K laptop at 200%, and a 2560x720 strip holding the taskbar.
+    private static readonly List<(PxRect Work, double Scale, bool Primary)> Desk =
+    [
+        (new PxRect(6000, 1026, 3000, 1780), 2.0, false),
+        (new PxRect(3440, 0, 2560, 1392), 1.0, false),
+        (new PxRect(0, 0, 3440, 1392), 1.0, true),
+        (new PxRect(1455, 1440, 2560, 672), 1.0, false),
+    ];
+
+    [Fact]
+    public void Full_window_too_tall_for_the_strip_opens_centred_on_the_primary_screen()
+    {
+        PxRect? r = PopoverPlacement.OtherScreen(Desk, last: null, 1166, 900);
+        Assert.Equal(new PxRect((3440 - 1166) / 2, (1392 - 900) / 2, 1166, 900), r);
+    }
+
+    [Fact]
+    public void It_returns_to_the_spot_it_was_last_on()
+    {
+        Assert.Equal(new PxRect(3500, 100, 1166, 900), PopoverPlacement.OtherScreen(Desk, new PxPoint(3500, 100), 1166, 900));
+    }
+
+    [Fact]
+    public void Size_follows_the_chosen_screens_scale()
+    {
+        Assert.Equal(new PxRect(6100, 1100, 2332, 1400), PopoverPlacement.OtherScreen(Desk, new PxPoint(6100, 1100), 1166, 700));
+    }
+
+    [Fact]
+    public void A_last_spot_on_a_screen_it_does_not_fit_falls_back_to_the_primary()
+    {
+        // 900 DIPs at 200% is taller than the laptop's work area, and the strip is too short.
+        Assert.Equal(new PxRect((3440 - 1166) / 2, (1392 - 900) / 2, 1166, 900), PopoverPlacement.OtherScreen(Desk, new PxPoint(6100, 1100), 1166, 900));
+        Assert.Equal(new PxRect((3440 - 1166) / 2, (1392 - 900) / 2, 1166, 900), PopoverPlacement.OtherScreen(Desk, new PxPoint(2000, 1500), 1166, 900));
+    }
+
+    [Fact]
+    public void Nowhere_big_enough_gives_null() =>
+        Assert.Null(PopoverPlacement.OtherScreen(Desk, null, 4000, 3000));
+
     private static readonly PxRect Monitor = new(0, 0, 1920, 1080);
     private static readonly PxRect WorkBottomTaskbar = new(0, 0, 1920, 1032);
 

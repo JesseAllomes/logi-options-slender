@@ -22,6 +22,7 @@ public sealed partial class MainWindow
     private void BuildRail()
     {
         RailPanel.Children.Clear();
+        RailVersion.Text = "v" + OwnVersion;
         foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
         {
             RailPanel.Children.Add(DeviceTile(kind));

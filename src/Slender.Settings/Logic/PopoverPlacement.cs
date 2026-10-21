@@ -107,6 +107,44 @@ public static class PopoverPlacement
         return new PxRect(x, y, w, h);
     }
 
+    /// <summary>
+    /// When the full window does not fit the tray's screen (a short strip display), the screen to open it on instead: the one
+    /// holding its last position when the window fits there, else the primary screen, else the roomiest screen it fits on; null
+    /// when it fits nowhere (it then unfolds on the tray's screen as before). Sizes are DIPs; each screen has its own scale.
+    /// Returns the target rectangle in pixels: at the last position when that screen was chosen, else centred.
+    /// </summary>
+    public static PxRect? OtherScreen(IReadOnlyList<(PxRect Work, double Scale, bool Primary)> screens, PxPoint? last, int widthDip, int heightDip, int marginDip = 12)
+    {
+        bool Fits((PxRect Work, double Scale, bool Primary) s) =>
+            widthDip * s.Scale + 2 * marginDip * s.Scale <= s.Work.Width && heightDip * s.Scale + 2 * marginDip * s.Scale <= s.Work.Height;
+        static bool Holds(PxRect r, PxPoint p) => p.X >= r.X && p.X < r.Right && p.Y >= r.Y && p.Y < r.Bottom;
+
+        int pick = -1;
+        if (last is { } at) pick = IndexOf(screens, s => Holds(s.Work, at) && Fits(s));
+        bool atLast = pick >= 0;
+        if (pick < 0) pick = IndexOf(screens, s => s.Primary && Fits(s));
+        if (pick < 0)
+        {
+            for (int i = 0; i < screens.Count; i++)
+                if (Fits(screens[i]) && (pick < 0 || (long)screens[i].Work.Width * screens[i].Work.Height > (long)screens[pick].Work.Width * screens[pick].Work.Height)) pick = i;
+        }
+        if (pick < 0) return null;
+
+        var (work, scale, _) = screens[pick];
+        int w = (int)(widthDip * scale), h = (int)(heightDip * scale), m = (int)Math.Round(marginDip * scale);
+        int x = atLast ? last!.Value.X : work.X + (work.Width - w) / 2;
+        int y = atLast ? last!.Value.Y : work.Y + (work.Height - h) / 2;
+        x = Math.Clamp(x, work.X + m, work.Right - w - m);
+        y = Math.Clamp(y, work.Y + m, work.Bottom - h - m);
+        return new PxRect(x, y, w, h);
+    }
+
+    private static int IndexOf<T>(IReadOnlyList<T> items, Func<T, bool> match)
+    {
+        for (int i = 0; i < items.Count; i++) if (match(items[i])) return i;
+        return -1;
+    }
+
     /// <summary>Ease-out cubic, t clamped to 0..1.</summary>
     public static double EaseOut(double t)
     {

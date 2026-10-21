@@ -565,7 +565,7 @@ public sealed class TrayApplication : IDisposable
             Append(menu, _config.Haptics.Enabled ? Win32.MF_CHECKED : 0, CmdHaptics, "Haptics");
             Append(menu, _config.LaunchAtLogin ? Win32.MF_CHECKED : 0, CmdLaunch, "Launch at login");
             Append(menu, 0, CmdSettings, "Settings…");
-            Append(menu, 0, CmdUpdateCheck, "Check for updates");
+            Append(menu, 0, CmdUpdateCheck, _updates?.CurrentVersion is { } version ? $"Check for updates (v{version})" : "Check for updates");
             Win32.AppendMenuW(menu, Win32.MF_SEPARATOR, 0, null);
             Append(menu, 0, CmdQuit, "Quit");
 

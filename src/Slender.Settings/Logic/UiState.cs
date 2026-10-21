@@ -18,6 +18,10 @@ public sealed class UiState
     public const int MinWidth = 1166;
     public const int MinHeight = 770;
 
+    /// <summary>Top-left of the full window when it was last closed (screen pixels); null until then.</summary>
+    public int? X { get; set; }
+    public int? Y { get; set; }
+
     /// <summary>2 = the remembered height has had the taller default applied once (missing in older files, so 0).</summary>
     public int SizeVersion { get; set; }
     public string Device { get; set; } = DeviceIds.Mouse;

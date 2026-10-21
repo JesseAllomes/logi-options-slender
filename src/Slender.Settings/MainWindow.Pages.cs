@@ -395,9 +395,12 @@ public sealed partial class MainWindow
             buttons.Children.Add(apply);
         }
 
-        string own = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
-        AddRow("Slender", UpdateText.Version(_status.Status, own), buttons);
+        AddRow("Slender", UpdateText.Version(_status.Status, OwnVersion), buttons);
     }
+
+    /// <summary>This build's version ("1.1.39"), shown on the General page, the popover and the rail.</summary>
+    private static readonly string OwnVersion =
+        Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
 
     /// <summary>Posts one of the registered update messages to the tray's hidden window. The tray does the update work.</summary>
     private static void AskTray(string messageName)

@@ -218,6 +218,8 @@ public sealed partial class MainWindow : Window
             {
                 _ui.Width = (int)(AppWindow.Size.Width / _scale);
                 _ui.Height = (int)(AppWindow.Size.Height / _scale);
+                _ui.X = AppWindow.Position.X;
+                _ui.Y = AppWindow.Position.Y;
             }
 
             _ui.Save(UiPath);

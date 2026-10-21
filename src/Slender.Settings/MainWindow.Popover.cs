@@ -228,7 +228,13 @@ public sealed partial class MainWindow
             },
         });
         header.Children.Add(Ui.Text("Slender", 14, Ui.Ink, Ui.Heading));
-        stack.Children.Add(header);
+        var headerRow = new Grid();
+        headerRow.Children.Add(header);
+        var version = Ui.Text("v" + OwnVersion, 11.5, Ui.Muted);
+        version.HorizontalAlignment = HorizontalAlignment.Right;
+        version.VerticalAlignment = VerticalAlignment.Center;
+        headerRow.Children.Add(version);
+        stack.Children.Add(headerRow);
         stack.Children.Add(_popRows);
 
         // Quick toggles: the same ones as the bottom bar, grouped by device.
@@ -539,6 +545,22 @@ public sealed partial class MainWindow
         int margin = (int)Math.Round(12 * _scale);
         PxRect to = PopoverPlacement.Unfold(from, (int)(_ui.Width * _scale), (int)(_ui.Height * _scale), _workArea, margin);
         bool animate = new Windows.UI.ViewManagement.UISettings().AnimationsEnabled;
+        // The tray's screen is too short or narrow for the full window (user 2026-10-21: a 2560x720 strip under the main screen):
+        // open it on the screen it was last on, or the primary one, at full size. No grow animation across screens.
+        if (to.Width < (int)(_ui.Width * _scale) || to.Height < (int)(_ui.Height * _scale))
+        {
+            PxPoint? last = _ui.X is { } lx && _ui.Y is { } ly ? new PxPoint(lx, ly) : null;
+            if (PopoverPlacement.OtherScreen(Screens(), last, _ui.Width, _ui.Height) is { } other)
+            {
+                AppWindow.Move(new PointInt32(other.X, other.Y)); // onto the other screen first, so its DPI applies
+                _scale = NativeMethods.GetDpiForWindow(_hwnd) is var d and > 0 ? d / 96.0 : _scale;
+                DisplayArea area = DisplayArea.GetFromPoint(new PointInt32(other.X, other.Y), DisplayAreaFallback.Nearest);
+                _workArea = new PxRect(area.WorkArea.X, area.WorkArea.Y, area.WorkArea.Width, area.WorkArea.Height);
+                from = new PxRect(other.X, other.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+                to = other;
+                animate = false;
+            }
+        }
 
         // Build the whole window at its final size behind the popover; it fades in as the frame grows.
         bool right = from.X + from.Width / 2 >= _workArea.X + _workArea.Width / 2;
@@ -579,6 +601,23 @@ public sealed partial class MainWindow
         }
 
         FinishUnfold(to);
+    }
+
+    /// <summary>Every screen's work area (pixels), its scale and whether it is the primary one.</summary>
+    private static List<(PxRect Work, double Scale, bool Primary)> Screens()
+    {
+        var screens = new List<(PxRect, double, bool)>();
+        DisplayArea primary = DisplayArea.Primary;
+        foreach (DisplayArea a in DisplayArea.FindAll())
+        {
+            RectInt32 w = a.WorkArea;
+            var centre = new NativeMethods.Point { X = w.X + w.Width / 2, Y = w.Y + w.Height / 2 };
+            nint monitor = NativeMethods.MonitorFromPoint(centre, 2);
+            double scale = NativeMethods.GetDpiForMonitor(monitor, 0, out uint dpi, out _) == 0 && dpi > 0 ? dpi / 96.0 : 1.0;
+            screens.Add((new PxRect(w.X, w.Y, w.Width, w.Height), scale, a.DisplayId.Value == primary.DisplayId.Value));
+        }
+
+        return screens;
     }
 
     private void FinishUnfold(PxRect to)
