@@ -242,6 +242,7 @@ public sealed partial class MainWindow
         {
             if (!_syncingFn) _config.Update(c => c with { Keyboard = c.Keyboard with { FnLock = on } });
         });
+        ToolTipService.SetToolTip(_fnLockToggle, "On: F1 to F12 work without holding Fn; hold Fn for the media keys. Fn+Esc on the keyboard flips it too.");
         toggles.Children.Add(PopRow("F-keys first (Fn lock)", _fnLockToggle));
         stack.Children.Add(toggles);
 

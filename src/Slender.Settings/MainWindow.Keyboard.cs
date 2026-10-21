@@ -56,7 +56,7 @@ public sealed partial class MainWindow
                 bool? value = KeyboardOps.FromChoiceIndex(choice.SelectedIndex);
                 _config.Update(x => x with { Keyboard = x.Keyboard.WithChannel(channel, value) });
             };
-            AddRow(KeyboardOps.ChannelTitle(channel, current), channel == 0 ? "Fn lock for each Easy-Switch channel. Written to the keyboard when you change it; Fn+Esc updates the channel you are on." : null, choice);
+            AddRow(KeyboardOps.ChannelTitle(channel, current), channel == 0 ? "Channels are the 1, 2 and 3 Easy-Switch keys: each connects the keyboard to a different computer or phone. F-keys first means F1 to F12 work without holding Fn. Written to the keyboard when you change it; Fn+Esc updates the channel you are on." : null, choice);
         }
     }
 
@@ -129,7 +129,7 @@ public sealed partial class MainWindow
             AutomationProperties.SetName(button, info.Name + ": " + PlainActionText(info));
             ControlInfo captured = info;
             button.Click += (_, _) => ShowPicker(button, captured);
-            ToolTipService.SetToolTip(button, info.Name + ": " + PlainActionText(info));
+            ToolTipService.SetToolTip(button, info.Tip);
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             Grid.SetColumn(button, row.Children.Count);
             row.Children.Add(button);

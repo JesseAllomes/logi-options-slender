@@ -41,8 +41,12 @@ public static class DeviceIds
     }
 }
 
-/// <summary>One assignable control: a mouse button, the thumb wheel or a keyboard key.</summary>
-public sealed record ControlInfo(ushort Id, string Name, string NativeText);
+/// <summary>One assignable control: a mouse button, the thumb wheel or a keyboard key. Description = where it is or what it is, for the hover text.</summary>
+public sealed record ControlInfo(ushort Id, string Name, string NativeText, string? Description = null)
+{
+    /// <summary>Hover text: the name, then the description when there is one.</summary>
+    public string Tip => Description is null ? Name : Name + Environment.NewLine + Description;
+}
 
 /// <summary>A copper hotspot on a device render. X and Y are percent of the image; LabelSide -1 = left, 1 = right.</summary>
 public sealed record Hotspot(ushort ControlId, string Name, string Slot, double X, double Y, int LabelSide);
@@ -55,20 +59,20 @@ public static class ControlCatalog
 {
     public static IReadOnlyList<ControlInfo> MouseControls { get; } =
     [
-        new(ControlId.Middle, "Middle click", "Middle click"),
-        new(ControlId.ModeShift, "Mode shift", "Ratchet / free-spin"),
-        new(DeviceIds.ThumbWheelPseudoId, "Thumb wheel", "Scroll sideways"),
-        new(DeviceIds.ThumbWheelTouchPseudoId, "Thumb wheel touch", "Not assigned"),
-        new(DeviceIds.ThumbWheelTapPseudoId, "Thumb wheel tap", "Not assigned"),
-        new(DeviceIds.ThumbWheelDoubleTapPseudoId, "Thumb wheel double tap", "Not assigned"),
-        new(ControlId.Forward, "Forward", "Forward"),
-        new(ControlId.Back, "Back", "Back"),
-        new(ControlId.Gesture, "Gesture click", "Not assigned"),
-        new(DeviceIds.SwipeId(GestureDirection.Up), "Gesture swipe up", "Not assigned"),
-        new(DeviceIds.SwipeId(GestureDirection.Down), "Gesture swipe down", "Not assigned"),
-        new(DeviceIds.SwipeId(GestureDirection.Left), "Gesture swipe left", "Not assigned"),
-        new(DeviceIds.SwipeId(GestureDirection.Right), "Gesture swipe right", "Not assigned"),
-        new(ControlId.SensePanel, "Sense Panel", "Not assigned"),
+        new(ControlId.Middle, "Middle click", "Middle click", "Pressing the main scroll wheel down until it clicks."),
+        new(ControlId.ModeShift, "Mode shift", "Ratchet / free-spin", "The small button just behind the scroll wheel. Out of the box it switches the wheel between clicky (ratchet) and free-spin."),
+        new(DeviceIds.ThumbWheelPseudoId, "Thumb wheel", "Scroll sideways", "The small wheel on the side, under your thumb. Turning it scrolls sideways unless you change it."),
+        new(DeviceIds.ThumbWheelTouchPseudoId, "Thumb wheel touch", "Not assigned", "Resting your thumb on the thumb wheel without turning it."),
+        new(DeviceIds.ThumbWheelTapPseudoId, "Thumb wheel tap", "Not assigned", "One quick tap on the thumb wheel without turning it."),
+        new(DeviceIds.ThumbWheelDoubleTapPseudoId, "Thumb wheel double tap", "Not assigned", "Two quick taps on the thumb wheel."),
+        new(ControlId.Forward, "Forward", "Forward", "The front one of the two side buttons by your thumb."),
+        new(ControlId.Back, "Back", "Back", "The rear one of the two side buttons by your thumb."),
+        new(ControlId.Gesture, "Gesture click", "Not assigned", "Pressing and letting go of the gesture button without moving the mouse."),
+        new(DeviceIds.SwipeId(GestureDirection.Up), "Gesture swipe up", "Not assigned", "Hold the gesture button and move the mouse up."),
+        new(DeviceIds.SwipeId(GestureDirection.Down), "Gesture swipe down", "Not assigned", "Hold the gesture button and move the mouse down."),
+        new(DeviceIds.SwipeId(GestureDirection.Left), "Gesture swipe left", "Not assigned", "Hold the gesture button and move the mouse left."),
+        new(DeviceIds.SwipeId(GestureDirection.Right), "Gesture swipe right", "Not assigned", "Hold the gesture button and move the mouse right."),
+        new(ControlId.SensePanel, "Sense Panel", "Not assigned", "The pressure-sensitive pad on the thumb rest. It buzzes back when you press it."),
     ];
 
     /// <summary>The four swipe rows, in Up, Down, Left, Right order.</summary>
@@ -96,11 +100,16 @@ public static class ControlCatalog
         new(10, "Calculator", "Calculator"),
         new(234, "Look up", "Look up"),
         new(111, "Lock", "Lock"),
-        // Spare divertable controls found by the 2026-10-15 inventory; labels from Solaar's task names (SpareKeys).
-        new(KeyboardId.Spare00EB, SpareKeys.Label(KeyboardId.Spare00EB), "Not assigned"),
-        new(KeyboardId.Spare00EC, SpareKeys.Label(KeyboardId.Spare00EC), "Not assigned"),
-        new(KeyboardId.Spare0101, SpareKeys.Label(KeyboardId.Spare0101), "Not assigned"),
+        // Spare divertable controls found by the 2026-10-15 inventory. No printed key is known for them, so they are numbered; the
+        // hover text keeps Logitech's internal task name (Solaar, SpareKeys) and points at Identify.
+        new(KeyboardId.Spare00EB, "Spare key 1", "Not assigned", SpareTip(KeyboardId.Spare00EB)),
+        new(KeyboardId.Spare00EC, "Spare key 2", "Not assigned", SpareTip(KeyboardId.Spare00EC)),
+        new(KeyboardId.Spare0101, "Spare key 3", "Not assigned", SpareTip(KeyboardId.Spare0101)),
     ];
+
+    private static string SpareTip(ushort cid) =>
+        $"A key the K860 reports but has no printed name for{(SpareKeys.All.First(k => k.Cid == cid).SolaarTask is { } task ? $" (Logitech's internal name: {task})" : "")}. "
+        + "It may not exist on your keyboard. Press Identify, then press keys, to find out which one it is.";
 
     /// <summary>The three spare keys, bindable like the rest but with no spot on the keyboard picture.</summary>
     public static IReadOnlyList<ControlInfo> SpareKeyControls => KeyboardControls.Where(c => SpareKeys.IsSpare(c.Id)).ToList();

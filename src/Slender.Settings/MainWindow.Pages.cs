@@ -140,7 +140,7 @@ public sealed partial class MainWindow
                 thresholdText.Opacity = on ? 1 : 0.5;
                 Edit(p => p with { SmartShiftEnabled = on });
             }));
-        AddRow("Sensitivity", "Lower switches to free-spin sooner.", WithReadout(threshold, thresholdText));
+        AddRow("Sensitivity", "How fast you have to spin the wheel before SmartShift lets it free-spin. Lower switches sooner.", WithReadout(threshold, thresholdText));
 
         AddRow("Smooth scrolling", "Smoother scrolling in browsers and Office; older apps still scroll per notch",
             PageToggle("Smooth scrolling", c.Pointer.SmoothScroll, on => Edit(p => p with { SmoothScroll = on })));
@@ -232,7 +232,7 @@ public sealed partial class MainWindow
 
         _status.Changed += OnDpiStatus;
         dpiRow.Unloaded += (_, _) => _status.Changed -= OnDpiStatus;
-        AddRow("Pointer speed", "Dots per inch. Default keeps the speed the mouse already has.", dpiRow);
+        AddRow("Pointer speed", "How far the pointer moves when you move the mouse (DPI). Higher is faster. Default keeps the speed the mouse already has.", dpiRow);
         BuildAppDpiSection();
         // The thumb wheel's speeds and second action live in its card on the device stage (user 2026-10-19).
 
@@ -240,7 +240,7 @@ public sealed partial class MainWindow
         var calibrate = new Button { Content = "Open calibration", Style = Ui.Res<Style>("QuietButtonStyle") };
         calibrate.Click += (_, _) => OpenCalibration();
         AddRow("Touch calibration",
-            $"Teaches Slender to tell taking hold of the mouse from a deliberate rest or tap. Now: {c.Pointer.GrabBeforePx} px before a touch, {c.Pointer.GrabMovePx} px during.",
+            "Teaches Slender to tell picking up or holding the mouse apart from a deliberate thumb rest or tap on the thumb wheel.",
             calibrate);
     }
 

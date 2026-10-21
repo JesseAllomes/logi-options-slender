@@ -247,7 +247,7 @@ public sealed partial class MainWindow
             Content = grid,
         };
         AutomationProperties.SetName(button, item.Info.Name);
-        ToolTipService.SetToolTip(button, item.Info.Name);
+        ToolTipService.SetToolTip(button, item.Info.Tip);
         Canvas.SetLeft(button, item.Position.X - 17);
         Canvas.SetTop(button, item.Position.Y - 17);
         button.Click += (_, _) => ActivateControl(id);
@@ -273,6 +273,7 @@ public sealed partial class MainWindow
         };
         button.Click += (_, _) => ActivateControl(id);
         button.GotFocus += (_, _) => SelectControl(id);
+        ToolTipService.SetToolTip(button, item.Info.Tip);
         return button;
     }
 
@@ -385,6 +386,7 @@ public sealed partial class MainWindow
         _kbLabel.Background = Ui.MarkSoft;
         _kbLabel.BorderBrush = Ui.Mark;
         AutomationProperties.SetName(_kbLabel, item.Info.Name + ": " + PlainActionText(item.Info));
+        ToolTipService.SetToolTip(_kbLabel, item.Info.Tip);
     }
 
     private void RefreshKeyboardList()
@@ -567,6 +569,7 @@ public sealed partial class MainWindow
             {
                 item.Label.Content = LabelContent(item, item.LabelOnLeft);
                 AutomationProperties.SetName(item.Label, item.Info.Name + ": " + PlainActionText(item.Info));
+                ToolTipService.SetToolTip(item.Label, item.Info.Tip);
             }
 
             RefreshItemVisual(item, id);

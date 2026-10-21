@@ -43,7 +43,7 @@ public sealed partial class MainWindow
         };
         AddRow("Excel add-in",
             available || installed
-                ? "Lets the mouse change sheets, zoom, table styles and chart types, run a macro, and scroll by cells or sheets depending on what is selected. Slender asks it over a private pipe for your account only; with Slender closed it does nothing. Close Excel before changing this."
+                ? "Lets the mouse change sheets, zoom, table styles and chart types, run a macro, and scroll by cells or sheets depending on what is selected. It only talks to Slender on this PC, and does nothing while Slender is closed. Close Excel before changing this."
                 : "This Slender install does not include the Excel add-in.",
             toggle);
         PagePanel.Children.Add(note);

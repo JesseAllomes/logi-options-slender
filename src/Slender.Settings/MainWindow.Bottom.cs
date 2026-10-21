@@ -106,6 +106,7 @@ public sealed partial class MainWindow
         {
             BottomBarItems.Children.Add(LabelWith("Haptic feel", HapticNotches()));
             _smartShiftToggle = Toggle("SmartShift free-spin", on => _config.Update(c => c with { Pointer = c.Pointer with { SmartShiftEnabled = on } }));
+            ToolTipService.SetToolTip(_smartShiftToggle, "On: the scroll wheel switches to free-spin by itself when you spin it fast.");
             BottomBarItems.Children.Add(LabelWith("SmartShift free-spin", _smartShiftToggle));
         }
         else
@@ -114,6 +115,7 @@ public sealed partial class MainWindow
             {
                 if (!_syncingFn) _config.Update(c => c with { Keyboard = c.Keyboard with { FnLock = on } });
             });
+            ToolTipService.SetToolTip(_fnLockToggle, "On: F1 to F12 work without holding Fn; hold Fn for the media keys. Fn+Esc on the keyboard flips it too.");
             BottomBarItems.Children.Add(LabelWith("F-keys first (Fn lock)", _fnLockToggle));
             BottomBarItems.Children.Add(LabelWith("Easy-Switch", EasySwitchChips()));
         }
@@ -188,7 +190,7 @@ public sealed partial class MainWindow
             row.Children.Add(Ui.Chip(l, 12));
         }
 
-        ToolTipService.SetToolTip(row, "Switch hosts with the Easy-Switch keys on the keyboard.");
+        ToolTipService.SetToolTip(row, "The keyboard's Easy-Switch keys 1, 2 and 3. Each one connects it to a different computer or phone; press one on the keyboard to switch.");
         return row;
     }
 

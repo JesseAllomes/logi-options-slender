@@ -67,7 +67,7 @@ public sealed class KeyboardSettingsTests : IDisposable
     [Fact]
     public void Spare_keys_are_in_the_keyboard_catalog_with_their_labels()
     {
-        Assert.Equal(["Key 0x00EB", "Second left click", "Menu / virtual keyboard / Launchpad"], ControlCatalog.SpareKeyControls.Select(c => c.Name));
+        Assert.Equal(["Spare key 1", "Spare key 2", "Spare key 3"], ControlCatalog.SpareKeyControls.Select(c => c.Name));
         Assert.Contains(ControlCatalog.KeyboardControls, c => c.Id == 0x0101);
     }
 
