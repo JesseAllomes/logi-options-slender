@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=147 -->
+<!-- drainclamp-build: state; schema=1; generation=159 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -40,6 +40,9 @@ Thumb wheel second action (user 2026-10-19; supersedes the per-app latching mode
 Thumb wheel card (user 2026-10-19) -> per-app side scroll and second action speeds in the card (7 notches 25-400%); live result preview from the real wheel while the card is open (nothing runs); drawn wheel later removed at the user's request; Point & scroll speed rows removed
 Research build (user 2026-10-20) -> build every researched idea except K860 Mac layout (0x4531); full haptic customisation per task/alert/function: pattern + pulses by default; Advanced (hidden by default) has buzz length (pulses close together), spacing, and opt-in exact strength (sets the mouse's stored strength for that buzz and restores it: two writes per buzz)
 Next build (user 2026-10-20) -> macros with adjustable pauses (research first), Excel add-in, notification haptics with a Haptics menu listing all apps, per-app DPI, battery estimate, K860 disconnect fix, K860 onboard remaps in the app; one Sonnet builder per part in its own worktree
+Haptics redesign (user 2026-10-21; supersedes Light/Normal/Strong = 1/2/3 pulses) -> Light/Normal/Strong are real strength 33/66/100 (Strong = device max); every row gets a 1x/2x/3x cycles picker; a pattern builder (replaces the per-event Advanced expander) saves named patterns (buzz, cycles, gap, repeats, pause) that appear in every Pattern list and carry their own length; stored strength written only when a buzz needs a different level, overall Haptic feel restored after 5 s idle; everything has a Test button
+Settings sliders (user 2026-10-21) -> every slider moves with the mouse wheel while hovered (one step per notch)
+Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 640); Fn lock is the keyboard's: Fn+Esc shows at once in the popover and Settings and is never written back on start/connect
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -94,6 +97,8 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 | m47 | K860 disconnect releases held actions (t2) | src/Slender.Engine/KeyboardRouter.cs | done | m27 |
 | m48 | K860 onboard remaps in the app: config list (CID to chord), Settings keyboard page to set/reset the 17 remappable keys with a clear "stored on the keyboard, every PC and channel" note and encodable-only chord picker, tray applies via OnboardSync only when the user saves (never on connect), read-back shows current mappings | src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | done | m27 |
 | m49 | 3CX ringer: Edge extension on the 3CX web client (wraps WebHID sendReport Ringer usage, Notification fallback) -> one-shot native messaging host -> buzz pipe; tray ringer cue until ring stop, click/key or cap, not cut by other buzzes; PBX hostname written locally only (plan in .agent/handoff-next-build.md; awaiting user go-ahead) | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m45 |
+| m50 | haptics redesign: strength levels 33/66/100, cycles picker per row, named pattern builder replacing Advanced, minimal strength writes with idle restore, Test everywhere (Haptics + Notifications pages) | src/Slender.Engine;src/Slender.Settings;tests | done | m45 |
+| m51 | mouse wheel adjusts every Settings slider while hovered | src/Slender.Settings | done | m48 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -104,14 +109,6 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-19T06:11:09+00:00 ee50348a Touch tuning (user): wobble under one wheel step (6 counts) no longer cancels rest/tap; rest default 250 ms; PointerSettings.TouchRestMs/DoubleTapMs with sliders in the card. 1497 tests
-- 2026-10-19T22:29:10+00:00 5618c095 Touch tester in the card (dots: touching, rest, tap, double tap; preview diverts the wheel and reports gestures with the user's timings; nothing runs); touch actions logged in slender.log. User: touch works but intermittently, to diagnose with the tester. 1502 tests
-- 2026-10-19T22:46:11+00:00 09307094 False touches on grabbing the mouse (user): touch gestures now ignored when the pointer moves > 24 px during the touch (GrabMovePx). 1504 tests
-- 2026-10-19T23:23:53+00:00 a82c97e4 Lost-divert repair + TouchRecorder (trigger %LOCALAPPDATA%/Slender/touch-record.txt: label, seconds, quiet=1) built; 1505 tests; shipping 1.1.28 for the grab/normal calibration recordings
-- 2026-10-19T23:38:23+00:00 24f4981e Touch calibration from user recordings (35 grabs, 75 deliberate): GrabBeforePx 150 / GrabLookbackMs 400 via hook move ring (PointerTravel); replay: 6/7 residual grabs stopped, 0 deliberate lost. docs/devices/touch-calibration.md. 1506 tests
-- 2026-10-20T00:30:43+00:00 bdcfaf71 Touch calibration window built (Settings > Point & scroll and card Calibrate…): floating always-on-top, per-step timers, TouchSampler + TouchCalibration compute GrabBeforePx/GrabMovePx (now PointerSettings), Save / Reset. 1511 tests
-- 2026-10-20T00:59:07+00:00 61cd6974 Options+ found uninstalled (no Program Files/LogiOptionsPlus, no depots) - firmware-update path via Options+ no longer available until reinstalled. Pictures restored + backup; safe Refresh. 1514 tests
-- 2026-10-20T04:09:57+00:00 cfe38521 Options+ reinstalled for firmware, updated, then switched fully off (service Disabled, Download Assistant startup disabled, processes ended) via scripts/Set-OptionsPlus.ps1. Update firmware button: one elevated script on/open/wait/off. Tray publishes firmware (0x0003 allowlisted fn0-1). Default window 900 tall, clamped to work area. 1517 tests
 - 2026-10-20T04:15:34+00:00 ee96b506 Squash Options+ button in Settings > General (OptionsPlusState: status read without admin; elevated squash script). 1517 tests
 - 2026-10-20T04:32:31+00:00 520f6eb1 4-agent read-only probe + web research: no hidden sensors; MX4 firmware 27.3.19 = newest (Options+ update had nothing to do); K860 unchanged; consumer K860 cannot use Bolt (Unifying/BT only); Bolt gives MX4 little. Ranked ideas in to-do
 - 2026-10-20T05:05:10+00:00 2a62253c m43: per-app main wheel speed + thumb flick built (1525 tests); force-log experiment: 0x19C0 fn2 constant 4859 = threshold readback, no pressure stream (docs/devices/feature-gaps.md)
@@ -124,4 +121,12 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 - 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
 - 2026-10-20T09:57:25+00:00 8cb78553 Released 1.1.37: macros, Excel add-in, notification haptics, per-app DPI, battery estimate, K860 disconnect fix, onboard remaps, gap fixes; 1916 tests; device/UI checks and memory measurement pending
 - 2026-10-20T21:42:58+00:00 8eb4d25f 1.1.38 released (cue repeats for a ringer). 3CX ringer researched (web client drives the Yealink via WebHID; call notification only when unfocused, 30 s auto-close); m49 planned, awaiting go-ahead. Handoff rewritten for a fresh session
+- 2026-10-20T22:06:03+00:00 862bd1ab 187888a Settings window minimum raised to 1166x869 DIPs (user 2026-10-21: never smaller than current size, capped to work area); closing minimised/maximised no longer saves the size (had saved 160x28); 1919 tests; pushed, not released
+- 2026-10-20T23:56:33+00:00 d52c0a1b Fn lock reset on update/login fixed: per-channel Fn (all ON in config) was written on every start/connect, undoing Fn+Esc; now written only on change, Fn+Esc mirrors to current channel; 1921 tests; pushed, not released. Open: arrow keys 'disabled' (no hotkey held, nothing in config), keyboard page button cut in half (need screenshot)
+- 2026-10-21T00:31:10+00:00 97bd1037 Fn+Esc live: 0x40A3 event triggers read (was 30 s poll); Settings popover/bottom/General toggles + channel pickers refresh in place, pending local edits adopt file Fn values (no stale write-back); ring open/close logged to diagnose ~1 h arrow-key outage (ended at 10:48 tray restart); 1923 tests; pushed, not released
+- 2026-10-21T00:57:41+00:00 b3ca45ba Window min height 869 -> 770 DIPs (user: old 640 + 2.5 rail icons of 52; supersedes 869), width min 1166 kept; keyboard page spare-key cards in star grid, Identify Auto column (was cut off at 1040 wide); 1923 tests; pushed, not released, not visually checked
+- 2026-10-21T01:35:27+00:00 51569bfa 1a337ea labels: ControlInfo.Description hover text on stage dots/labels/spare cards, spare keys -> Spare key 1-3 (Solaar names in tooltip), clearer Sensitivity/Pointer speed/Touch calibration/Excel/channel texts, bottom bar + popover tooltips; Haptics page labels deferred to haptics redesign (awaiting user: real intensity + 1-3 cycles, minimal strength writes); 1923 tests; pushed, not released
+- 2026-10-21T04:06:32+00:00 c994bb7f m51 done: Ui.WheelSteps on both slider factories (PageSlider, ThumbCard), SliderWheel carry for hi-res wheels; 1926 tests; pushed
+- 2026-10-21T04:07:49+00:00 40c24404 m50 handed to one Sonnet builder in .worktrees/m50 (branch m50-haptics from 65e5238): levels 33/66/100, cycles picker, named pattern builder, 5 s idle restore, Test everywhere incl. Notifications/alerts
+- 2026-10-21T04:18:27+00:00 c73f716f m50 merged ff ed32cc2 + pushed: levels 33/66/100 (null=Normal 66), cycles picker, MY PATTERNS builder (HapticPattern, cue.Custom, scrub on delete), player writes only on level change + 5 s idle restore, Test on events/alerts/notify/patterns; 1955 tests; UI not seen on screen; not released. Note: null-strength cues now 66 not global feel
 <!-- /DC:LOG -->
