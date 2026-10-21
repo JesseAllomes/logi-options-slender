@@ -62,68 +62,22 @@ public sealed partial class MainWindow
             void Set(HapticCue q) => _config.Update(x => x with { Haptics = NotifyOps.WithAppCue(x.Haptics, app, q) });
             var block = new StackPanel();
             block.Children.Add(CueRow(app, NotifyOps.SeenText(row, DateTimeOffset.UtcNow), Get, Set, Get().Enabled, on => Set(Get() with { Enabled = on })));
-            block.Children.Add(NotifyAdvanced(app, Get, Set));
             block.Children.Add(new Border { Height = 1, Background = Ui.Rule, Opacity = 0.6 });
             list.Children.Add(block);
         }
     }
 
-    /// <summary>Name, on/off, pattern, strength, test: the same controls as an event row.</summary>
+    /// <summary>Name, on/off, then the same Pattern, Strength, Cycles and Test controls as an event row.</summary>
     private Grid CueRow(string title, string? sub, Func<HapticCue> get, Action<HapticCue> set, bool enabled, Action<bool> toggled)
     {
-        var grid = new Grid { Padding = new Thickness(0, 8, 0, 4), ColumnSpacing = 10 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        for (int i = 0; i < 4; i++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var grid = CueGrid();
+        grid.Padding = new Thickness(0, 8, 0, 4);
         var name = new StackPanel();
         name.Children.Add(Ui.Text(title, 14));
         if (sub is not null) name.Children.Add(Ui.Text(sub, 11, Ui.Muted));
         Place(grid, name, 0);
         Place(grid, PageToggle(title, enabled, toggled), 1);
-        Place(grid, CuePatternBox(title, get, set), 2);
-        Place(grid, CueIntensityBox(title, get, set), 3);
-        Place(grid, TestButton(title, () => get() with { Enabled = true }), 4);
+        AddCueControls(grid, 2, title, get, set, _hapticRefresh);
         return grid;
-    }
-
-    /// <summary>Pulses, gap, repeat (a phone ringer: 6 taps, 1 s pause, again) and exact strength for one app; collapsed by default like the Advanced section above.</summary>
-    private Expander NotifyAdvanced(string app, Func<HapticCue> get, Action<HapticCue> set)
-    {
-        var pulses = new ComboBox { Width = 70 };
-        for (int i = 1; i <= HapticCue.PulsesMax; i++) pulses.Items.Add(i.ToString());
-        pulses.SelectedIndex = get().Pulses - 1;
-        AutomationProperties.SetName(pulses, $"{app}: pulses");
-        pulses.SelectionChanged += (_, _) =>
-        {
-            if (pulses.SelectedIndex >= 0 && pulses.SelectedIndex + 1 != get().Pulses) set(get() with { Pulses = pulses.SelectedIndex + 1 });
-        };
-        Slider gap = PageSlider($"{app}: gap", HapticCue.SpacingMin, HapticCue.SpacingMax, 10, get().SpacingMs,
-            v => { if ((int)v != get().SpacingMs) set(get() with { SpacingMs = (int)v }); }, v => $"{(int)v} ms", out TextBlock gapText);
-        gapText.Width = 70;
-        Slider exact = PageSlider($"{app}: exact strength", 0, 100, 5, get().Strength ?? _config.Config.Haptics.EffectiveStrength,
-            v => { if (get().Strength is { } s && (int)v != s) set(get() with { Strength = (int)v }); }, v => $"{(int)v}", out TextBlock exactText);
-        exact.IsEnabled = get().Strength is not null;
-        var exactToggle = PageToggle($"{app}: exact strength", get().Strength is not null, on =>
-        {
-            exact.IsEnabled = on;
-            set(get() with { Strength = on ? (int)exact.Value : null });
-        });
-
-        var line1 = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        line1.Children.Add(Ui.Text("Pulses", 12, Ui.Muted));
-        line1.Children.Add(pulses);
-        line1.Children.Add(Ui.Text("Gap", 12, Ui.Muted));
-        line1.Children.Add(WithReadout(gap, gapText));
-        var line2 = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        line2.Children.Add(Ui.Text("Exact strength", 12, Ui.Muted));
-        line2.Children.Add(exactToggle);
-        line2.Children.Add(WithReadout(exact, exactText));
-        foreach (var line in new[] { line1, line2 })
-            foreach (UIElement child in line.Children) if (child is FrameworkElement f) f.VerticalAlignment = VerticalAlignment.Center;
-
-        var inner = new StackPanel { Spacing = 8, Padding = new Thickness(4) };
-        inner.Children.Add(line1);
-        inner.Children.Add(CueRepeatLine(app, get, set, out _));
-        inner.Children.Add(line2);
-        return new Expander { Header = "Advanced", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Content = inner };
     }
 }

@@ -37,8 +37,8 @@ public class HapticPlayerTests
         var r = new Rig();
         r.Player.Play(new HapticCue(true, 3, 1, 200));
         Assert.Equal([(byte)3], r.Mouse.Haptics);
-        Assert.Empty(r.Timer.Delays);
-        Assert.Empty(r.Mouse.StrengthWrites);
+        Assert.Equal([HapticPlayer.RestoreDelayMs], r.Timer.Delays); // only the idle restore, no pulse timer
+        Assert.Equal([HapticCues.NormalStrength], r.Mouse.StrengthWrites); // no strength set plays at Normal
     }
 
     [Fact]
@@ -52,9 +52,9 @@ public class HapticPlayerTests
         Assert.Equal([(byte)5, (byte)5], r.Mouse.Haptics);
         r.Timer.Elapse();
         Assert.Equal([(byte)5, (byte)5, (byte)5], r.Mouse.Haptics);
-        Assert.Equal([120, 120], r.Timer.Delays);
+        Assert.Equal([120, 120, HapticPlayer.RestoreDelayMs], r.Timer.Delays);
         r.Timer.Elapse();
-        Assert.Equal(3, r.Mouse.Haptics.Count); // nothing left
+        Assert.Equal(3, r.Mouse.Haptics.Count); // nothing left but the restore
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class HapticPlayerTests
         r.Player.Play(new HapticCue(true, 5, 3, 100, Repeats: 2, RepeatGapMs: 1000));
         for (int i = 0; i < 10; i++) r.Timer.Elapse();
         Assert.Equal(6, r.Mouse.Haptics.Count); // 3 taps, pause, 3 taps, then nothing
-        Assert.Equal([100, 100, 1000, 100, 100], r.Timer.Delays);
+        Assert.Equal([100, 100, 1000, 100, 100, HapticPlayer.RestoreDelayMs], r.Timer.Delays);
     }
 
     [Fact]
@@ -127,23 +127,80 @@ public class HapticPlayerTests
     }
 
     [Fact]
-    public void A_cue_without_strength_after_an_exact_one_puts_the_global_strength_back_first()
+    public void A_cue_without_strength_after_a_light_one_plays_at_normal()
     {
         var r = new Rig();
         r.Player.Play(new HapticCue(true, 5, 1, 100, 30));
         r.Player.Play(new HapticCue(true, 2, 1, 100));
-        Assert.Equal(["strength 30", "play 5", "strength 60", "play 2"], r.Mouse.Calls);
-        r.Timer.Elapse(); // the cancelled restore does not write again
-        Assert.Equal([30, 60], r.Mouse.StrengthWrites);
+        Assert.Equal(["strength 30", "play 5", "strength 66", "play 2"], r.Mouse.Calls);
     }
 
     [Fact]
-    public void Plain_cues_never_write_the_strength()
+    public void Back_to_back_buzzes_at_one_level_write_the_strength_once()
     {
         var r = new Rig();
-        for (int i = 0; i < 4; i++) r.Player.Play(new HapticCue(true, 1, 2, 100));
+        for (int i = 0; i < 4; i++) r.Player.Play(new HapticCue(true, 1, 2, 100)); // all Normal
+        r.Timer.Elapse();
+        r.Player.Play(new HapticCue(true, 3, 1, 100, HapticCues.NormalStrength));
+        Assert.Equal([66], r.Mouse.StrengthWrites);
+    }
+
+    [Fact]
+    public void A_different_level_writes_once_more()
+    {
+        var r = new Rig();
+        r.Player.Play(new HapticCue(true, 1, Strength: 33));
+        r.Player.Play(new HapticCue(true, 1, Strength: 33));
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        Assert.Equal([33, 100], r.Mouse.StrengthWrites);
+    }
+
+    [Fact]
+    public void A_buzz_at_the_global_strength_writes_nothing()
+    {
+        var r = new Rig();
+        r.Settings = new HapticSettings(Strength: 66);
+        r.Player.Play(new HapticCue(true, 1, 2, 100));
         r.Timer.Elapse();
         Assert.Empty(r.Mouse.StrengthWrites);
+        Assert.Equal([(byte)1, (byte)1], r.Mouse.Haptics);
+        Assert.Equal([100], r.Timer.Delays); // and nothing to restore later
+    }
+
+    [Fact]
+    public void The_global_strength_comes_back_only_after_five_idle_seconds()
+    {
+        var r = new Rig();
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        Assert.Equal([5000], r.Timer.Delays);
+        Assert.Equal([100], r.Mouse.StrengthWrites);
+        r.Timer.Elapse();
+        Assert.Equal([100, 60], r.Mouse.StrengthWrites);
+    }
+
+    [Fact]
+    public void A_buzz_within_five_seconds_postpones_the_restore()
+    {
+        var r = new Rig();
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        r.Player.Play(new HapticCue(true, 2, Strength: 100));
+        Assert.Equal([5000, 5000], r.Timer.Delays); // the first restore was cancelled, a new one scheduled
+        r.Timer.Elapse(); // only the live timer fires
+        Assert.Equal([100, 60], r.Mouse.StrengthWrites);
+        Assert.Single(r.Mouse.StrengthWrites, 60);
+    }
+
+    [Fact]
+    public void A_cue_naming_a_pattern_is_expanded_before_it_plays()
+    {
+        var r = new Rig();
+        r.Settings = new HapticSettings(Strength: 60) { Patterns = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase) { ["Ringer"] = new HapticPattern(12, 2, 90, 2, 1000) } };
+        r.Player.Play(new HapticCue(true, 1, Strength: 100, Custom: "ringer"));
+        for (int i = 0; i < 5; i++) r.Timer.Elapse();
+        Assert.Equal(4, r.Mouse.Haptics.Count);
+        Assert.All(r.Mouse.Haptics, h => Assert.Equal((byte)12, h));
+        Assert.Equal([100, 60], r.Mouse.StrengthWrites);
     }
 
     [Fact]
@@ -156,7 +213,7 @@ public class HapticPlayerTests
     }
 
     [Fact]
-    public void Dispose_puts_an_exact_strength_back()
+    public void Dispose_puts_a_buzz_strength_back()
     {
         var r = new Rig();
         r.Player.Play(new HapticCue(true, 5, 1, 100, 30));

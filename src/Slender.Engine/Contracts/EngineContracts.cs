@@ -306,16 +306,19 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// <summary>Buzz on Windows notifications, per app (roadmap m45); off by default.</summary>
     public NotifyHapticSettings Notify { get; init; } = new();
 
-    /// <summary>Value equality including the cue and alert maps (a record compares dictionaries by reference otherwise).</summary>
+    /// <summary>The user's named patterns (waveform, cycles, gap, repeats); a cue plays one by naming it in HapticCue.Custom. Names are case-insensitive.</summary>
+    public IReadOnlyDictionary<string, HapticPattern> Patterns { get; init; } = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Value equality including the cue, alert and pattern maps (a record compares dictionaries by reference otherwise).</summary>
     public bool Equals(HapticSettings? other) =>
         other is not null && Enabled == other.Enabled && Level == other.Level && OnButtonPress == other.OnButtonPress
         && OnActionsRing == other.OnActionsRing && Strength == other.Strength
-        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && Notify.Equals(other.Notify);
+        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && SameMap(Patterns, other.Patterns) && Notify.Equals(other.Notify);
 
-    public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count);
+    public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count, Patterns.Count);
 
-    private static bool SameMap<TKey>(IReadOnlyDictionary<TKey, HapticCue> a, IReadOnlyDictionary<TKey, HapticCue> b) =>
-        a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v == kv.Value);
+    private static bool SameMap<TKey, TValue>(IReadOnlyDictionary<TKey, TValue> a, IReadOnlyDictionary<TKey, TValue> b) where TValue : IEquatable<TValue> =>
+        a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v.Equals(kv.Value));
 
     /// <summary>Device haptic level 0-100: Strength when set, else the Level notch mapped to 25/50/75/100.</summary>
     public int EffectiveStrength => Strength is { } s ? Math.Clamp(s, 0, 100) : (Math.Clamp(Level, 0, 3) + 1) * 25;
@@ -343,13 +346,15 @@ public enum HapticEvent
 
 /// <summary>
 /// One buzz: a built-in waveform (0-14, Solaar's names in HapticCues.PatternNames), played Pulses times SpacingMs apart (a
-/// longer buzz is several pulses close together). Strength null = the global strength; a number briefly sets the mouse's own
-/// stored strength for this buzz and puts it back (two writes to the mouse per buzz, opt-in, advanced). The whole group of
+/// longer buzz is several pulses close together). Strength 0-100 is how hard the mouse buzzes (Light 33, Normal 66, Strong
+/// 100, see HapticCues); null plays at Normal. Custom names one of the user's patterns (HapticSettings.Patterns), whose
+/// waveform, pulses, spacing and repeats replace this cue's own while HapticCues.Expand runs; Enabled and Strength stay the
+/// cue's. A name that no longer exists leaves the cue's own fields in force. The whole group of
 /// pulses plays Repeats times with RepeatGapMs of quiet between groups (user 2026-10-20: "6 taps, 1 sec gap, 6 taps"), never
 /// longer than MaxTotalMs in all.
 /// </summary>
 public sealed record HapticCue(bool Enabled = true, int Pattern = 1, int Pulses = 1, int SpacingMs = 150, int? Strength = null,
-    int Repeats = 1, int RepeatGapMs = 1000)
+    int Repeats = 1, int RepeatGapMs = 1000, string? Custom = null)
 {
     public const int PatternMax = 14, PulsesMax = 6, SpacingMin = 40, SpacingMax = 1000;
     public const int RepeatsMax = 10, RepeatGapMin = 200, RepeatGapMax = 5000, MaxTotalMs = 15_000;
@@ -371,6 +376,29 @@ public sealed record HapticCue(bool Enabled = true, int Pattern = 1, int Pulses 
         };
         while (c.Repeats > 1 && c.TotalMs > MaxTotalMs) c = c with { Repeats = c.Repeats - 1 };
         return c;
+    }
+}
+
+/// <summary>A named pattern the user built: a waveform played Pulses times SpacingMs apart, the group Repeats times RepeatGapMs apart. Same limits as <see cref="HapticCue"/>.</summary>
+public sealed record HapticPattern(int Pattern = 1, int Pulses = 1, int SpacingMs = 150, int Repeats = 1, int RepeatGapMs = 1000)
+{
+    /// <summary>The pattern as a cue (on, no strength, no reference), not yet clamped.</summary>
+    public HapticCue ToCue() => new(true, Pattern, Pulses, SpacingMs, null, Repeats, RepeatGapMs);
+
+    public static HapticPattern From(HapticCue c) => new(c.Pattern, c.Pulses, c.SpacingMs, c.Repeats, c.RepeatGapMs);
+
+    /// <summary>The same pattern with every field inside the cue limits (including the 15 s cap on repeats).</summary>
+    public HapticPattern Clamped() => From(ToCue().Clamped());
+
+    /// <summary>For the saved list, e.g. "6 x Knock, 3 repeats".</summary>
+    public string Summary
+    {
+        get
+        {
+            var c = Clamped();
+            string text = $"{c.Pulses} x {HapticCues.PatternName(c.Pattern)}";
+            return c.Repeats > 1 ? $"{text}, {c.Repeats} repeats" : text;
+        }
     }
 }
 

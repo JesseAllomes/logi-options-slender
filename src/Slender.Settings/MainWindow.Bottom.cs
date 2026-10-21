@@ -168,7 +168,7 @@ public sealed partial class MainWindow
                 Content = bar,
             };
             AutomationProperties.SetName(button, $"Haptic feel: {HapticNames[level]}");
-            ToolTipService.SetToolTip(button, HapticNames[level]);
+            ToolTipService.SetToolTip(button, $"{HapticNames[level]}. {HapticFeelTip}");
             button.Click += (_, _) => _config.Update(c =>
             {
                 bool off = c.Haptics.Enabled && c.Haptics.Level == 0 && level == 0; // tapping the only lit notch turns haptics off

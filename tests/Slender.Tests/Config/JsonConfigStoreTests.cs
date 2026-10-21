@@ -151,6 +151,62 @@ public sealed class JsonConfigStoreTests : IDisposable
         Assert.Equal(2, loaded.Alerts.Count); // a name the pipe could never carry is dropped on load
     }
 
+    [Fact]
+    public void Patterns_and_cue_references_round_trip()
+    {
+        var haptics = new HapticSettings
+        {
+            Patterns = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Phone ringer"] = new HapticPattern(12, 6, 80, 3, 1500),
+            },
+            Cues = new Dictionary<HapticEvent, HapticCue> { [HapticEvent.TouchTap] = new HapticCue(true, 8, 1, 150, 100, Custom: "Phone ringer") },
+            Alerts = new Dictionary<string, HapticCue>(StringComparer.OrdinalIgnoreCase) { ["call"] = new HapticCue(true, 5, Custom: "phone ringer") },
+        };
+        Store().Save(SlenderConfig.Default with { Haptics = haptics });
+        HapticSettings loaded = Store().Load().Haptics;
+
+        Assert.Equal(new HapticPattern(12, 6, 80, 3, 1500), loaded.Patterns["PHONE RINGER"]);
+        Assert.Equal("Phone ringer", loaded.Cues[HapticEvent.TouchTap].Custom);
+        Assert.Equal(100, loaded.Cues[HapticEvent.TouchTap].Strength);
+        Assert.Equal("phone ringer", loaded.Alerts["call"].Custom);
+        Assert.Equal(haptics, loaded);
+    }
+
+    [Fact]
+    public void Bad_pattern_data_is_dropped_or_clamped_on_load()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, """
+            {"version":1,"profiles":[],"excel":{},"haptics":{"patterns":{
+              "Good":{"pattern":99,"pulses":50,"spacingMs":1,"repeats":0,"repeatGapMs":999999},
+              "good":{"pattern":2},
+              "Knock":{"pattern":2},
+              "bad name!":{"pattern":2},
+              "":{"pattern":2}},
+             "cues":{"touchTap":{"pattern":3,"custom":"no good!"}}}}
+            """);
+
+        HapticSettings loaded = Store().Load().Haptics;
+
+        Assert.Equal(new HapticPattern(14, 6, 40, 1, 5000), Assert.Single(loaded.Patterns).Value); // built-in names, bad characters and case duplicates are dropped
+        Assert.Null(loaded.Cues[HapticEvent.TouchTap].Custom);
+    }
+
+    [Fact]
+    public void An_old_config_without_patterns_loads_as_before()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, """{"version":1,"profiles":[],"excel":{},"haptics":{"cues":{"touchTap":{"pattern":8,"pulses":2,"spacingMs":90,"strength":40}}}}""");
+
+        HapticSettings loaded = Store().Load().Haptics;
+
+        Assert.Empty(loaded.Patterns);
+        Assert.Equal(new HapticCue(true, 8, 2, 90, 40), loaded.Cues[HapticEvent.TouchTap]);
+        Store().Save(SlenderConfig.Default with { Haptics = loaded });
+        Assert.DoesNotContain("patterns\": {", File.ReadAllText(FilePath));
+    }
+
     private static void AssertSameConfig(SlenderConfig expected, SlenderConfig actual)
     {
         Assert.Equal(expected.Version, actual.Version);

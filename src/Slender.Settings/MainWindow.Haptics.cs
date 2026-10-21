@@ -7,21 +7,29 @@ using Slender.Settings.Views;
 
 namespace Slender.Settings;
 
-/// <summary>The Haptics page's per-event buzzes, the Advanced expander and the named alerts (docs/buzz.md).</summary>
+/// <summary>The Haptics page's per-event buzzes, My patterns builder and the named alerts (docs/buzz.md).</summary>
 public sealed partial class MainWindow
 {
     private readonly List<Action> _hapticRefresh = [];
+    private readonly List<Action> _alertRefresh = [];
     private bool _hapticRefreshing;
     private TextBlock? _hapticTestNote;
     private StackPanel? _alertList;
 
     private const string PatternNote = "Pattern names come from the Solaar project and are not verified on this mouse.";
+    private const string PatternTip = "The buzz shape. * = your pattern.";
+    private const string LevelTip = "How strong each buzz is. Strong is the strongest the mouse can do.";
+    private const string CyclesTip = "How many times the buzz plays";
+    private const string FixedCyclesTip = "This pattern sets its own length";
+    internal const string HapticFeelTip = "The mouse's own strength between Slender's buzzes. Slender's buzzes use each event's Light / Normal / Strong.";
+
+    private HapticSettings Haptics => _config.Config.Haptics;
 
     private void BuildHapticEvents(SlenderConfig c)
     {
         _hapticRefresh.Clear();
         AddSection("EVENTS");
-        _hapticTestNote = Ui.Text(PatternNote + " Test plays through the running Slender tray.", 12, Ui.Muted);
+        _hapticTestNote = Ui.Text(PatternNote + " Test plays through the running Slender tray. * = your pattern.", 12, Ui.Muted);
         _hapticTestNote.TextWrapping = TextWrapping.Wrap;
         _hapticTestNote.Margin = new Thickness(0, 0, 0, 6);
         PagePanel.Children.Add(_hapticTestNote);
@@ -29,35 +37,42 @@ public sealed partial class MainWindow
         foreach (HapticEvent e in HapticOps.EventOrder)
         {
             HapticEvent ev = e;
-            HapticCue Get() => HapticCues.Resolve(_config.Config.Haptics, ev);
-            void Edit(Func<HapticCue, HapticCue> f) => _config.Update(x => x with { Haptics = HapticOps.WithCue(x.Haptics, ev, f(HapticCues.Resolve(x.Haptics, ev))) });
+            HapticCue Get() => HapticCues.Configured(Haptics, ev);
+            void Edit(HapticCue q) => _config.Update(x => x with { Haptics = HapticOps.WithCue(x.Haptics, ev, q) });
 
-            var grid = new Grid { Padding = new Thickness(0, 8, 0, 8), ColumnSpacing = 10 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
+            var grid = CueGrid();
             string label = HapticCues.EventLabel(ev);
             var name = Ui.Text(label, 14);
             name.VerticalAlignment = VerticalAlignment.Center;
-            var toggle = PageToggle(label, Get().Enabled, on => { if (!_hapticRefreshing) Edit(q => q with { Enabled = on }); });
-            var pattern = CuePatternBox(label, Get, q => Edit(_ => q));
-            var intensity = CueIntensityBox(label, Get, q => Edit(_ => q));
-            var test = TestButton(label, () => HapticCues.Resolve(_config.Config.Haptics, ev));
+            var toggle = PageToggle(label, Get().Enabled, on => { if (!_hapticRefreshing) Edit(Get() with { Enabled = on }); });
             _hapticRefresh.Add(() => toggle.IsOn = Get().Enabled);
 
             Place(grid, name, 0);
             Place(grid, toggle, 1);
-            Place(grid, pattern, 2);
-            Place(grid, intensity, 3);
-            Place(grid, test, 4);
+            AddCueControls(grid, 2, label, Get, Edit, _hapticRefresh);
             AddRule(grid);
         }
 
-        BuildHapticAdvanced();
+        BuildMyPatterns();
         BuildNamedAlerts();
+    }
+
+    /// <summary>Name, then five columns: on, Pattern, Strength, Cycles, Test (alert rows have Pattern first and Delete last).</summary>
+    private static Grid CueGrid()
+    {
+        var grid = new Grid { Padding = new Thickness(0, 8, 0, 8), ColumnSpacing = 10 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        for (int i = 0; i < 5; i++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        return grid;
+    }
+
+    /// <summary>The Pattern, Strength, Cycles and Test controls of one cue, from <paramref name="column"/> on. Every cue row uses these.</summary>
+    private void AddCueControls(Grid grid, int column, string label, Func<HapticCue> get, Action<HapticCue> set, List<Action> sink)
+    {
+        Place(grid, CuePatternBox(label, get, set, sink), column);
+        Place(grid, CueLevelBox(label, get, set, sink), column + 1);
+        Place(grid, CueCyclesBox(label, get, set, sink), column + 2);
+        Place(grid, TestButton(label, () => HapticCues.ForTest(Haptics, get())), column + 3);
     }
 
     private static void Place(Grid grid, FrameworkElement element, int column)
@@ -75,44 +90,85 @@ public sealed partial class MainWindow
         PagePanel.Children.Add(wrap);
     }
 
-    private ComboBox CuePatternBox(string name, Func<HapticCue> get, Action<HapticCue> set)
+    /// <summary>Fills the box with <paramref name="items"/> (only touching the list when it changed) and selects one.</summary>
+    private static void FillBox(ComboBox box, List<string> items, int selected)
     {
-        var box = new ComboBox { Width = 160 };
-        foreach (string n in HapticCues.PatternNames) box.Items.Add(n);
-        box.SelectedIndex = get().Pattern;
+        bool same = box.Items.Count == items.Count;
+        for (int i = 0; same && i < items.Count; i++) same = (box.Items[i] as string) == items[i];
+        if (!same)
+        {
+            box.Items.Clear();
+            foreach (string item in items) box.Items.Add(item);
+        }
+
+        box.SelectedIndex = selected;
+    }
+
+    private ComboBox CuePatternBox(string name, Func<HapticCue> get, Action<HapticCue> set, List<Action> sink)
+    {
+        var box = new ComboBox { Width = 170 };
         AutomationProperties.SetName(box, $"{name}: pattern");
+        ToolTipService.SetToolTip(box, PatternTip);
+        void Fill() => FillBox(box, HapticOps.PatternChoices(Haptics), HapticOps.PatternChoiceIndex(Haptics, get()));
+        Fill();
         box.SelectionChanged += (_, _) =>
         {
-            if (!_hapticRefreshing && box.SelectedIndex >= 0 && box.SelectedIndex != get().Pattern) set(get() with { Pattern = box.SelectedIndex });
+            if (_hapticRefreshing || box.SelectedIndex < 0) return;
+            var next = HapticOps.WithPatternChoice(Haptics, get(), box.SelectedIndex);
+            if (next == get()) return;
+            set(next);
+            RefreshHapticRows(); // a saved pattern fixes the cycles, so the Cycles box changes
         };
-        _hapticRefresh.Add(() => box.SelectedIndex = get().Pattern);
+        sink.Add(Fill);
         return box;
     }
 
-    /// <summary>Light / Normal / Strong = 1 / 2 / 3 pulses. A cue edited by hand to more pulses shows an extra "Custom" choice.</summary>
-    private ComboBox CueIntensityBox(string name, Func<HapticCue> get, Action<HapticCue> set)
+    /// <summary>Light / Normal / Strong = real strength 33 / 66 / 100. A strength set by hand shows as "Custom (N)" until a level is picked.</summary>
+    private ComboBox CueLevelBox(string name, Func<HapticCue> get, Action<HapticCue> set, List<Action> sink)
     {
-        var box = new ComboBox { Width = 100 };
+        var box = new ComboBox { Width = 120 };
         AutomationProperties.SetName(box, $"{name}: strength");
+        ToolTipService.SetToolTip(box, LevelTip);
         void Fill()
         {
-            box.Items.Clear();
-            foreach (string n in HapticOps.IntensityNames) box.Items.Add(n);
-            int index = HapticOps.IntensityIndex(get());
-            if (index < 0) box.Items.Add("Custom");
-            box.SelectedIndex = index < 0 ? 3 : index;
+            int index = HapticOps.LevelIndex(get());
+            FillBox(box, HapticOps.LevelChoices(get()), index < 0 ? HapticCues.LevelNames.Count : index);
         }
 
         Fill();
         box.SelectionChanged += (_, _) =>
         {
             if (_hapticRefreshing || box.SelectedIndex is < 0 or > 2) return;
-            if (box.SelectedIndex != HapticOps.IntensityIndex(get())) set(HapticOps.WithIntensity(get(), box.SelectedIndex));
+            if (HapticCues.StrengthOf(box.SelectedIndex) != get().Strength) set(HapticOps.WithLevel(get(), box.SelectedIndex));
         };
-        _hapticRefresh.Add(Fill);
+        sink.Add(Fill);
         return box;
     }
 
+    /// <summary>1x / 2x / 3x = how many times the buzz plays. Disabled and "--" when the row uses a saved pattern, which has its own length.</summary>
+    private ComboBox CueCyclesBox(string name, Func<HapticCue> get, Action<HapticCue> set, List<Action> sink)
+    {
+        var box = new ComboBox { Width = 80 };
+        AutomationProperties.SetName(box, $"{name}: cycles");
+        void Fill()
+        {
+            bool fixedLength = HapticOps.UsesPattern(Haptics, get());
+            box.IsEnabled = !fixedLength;
+            ToolTipService.SetToolTip(box, fixedLength ? FixedCyclesTip : CyclesTip);
+            FillBox(box, fixedLength ? ["--"] : HapticOps.CyclesChoicesFor(get()), fixedLength ? 0 : HapticOps.CyclesIndex(get()));
+        }
+
+        Fill();
+        box.SelectionChanged += (_, _) =>
+        {
+            if (_hapticRefreshing || !box.IsEnabled || box.SelectedIndex is < 0 or >= HapticOps.CyclesChoices) return;
+            if (box.SelectedIndex != HapticOps.CyclesIndex(get())) set(HapticOps.WithCycles(get(), box.SelectedIndex));
+        };
+        sink.Add(Fill);
+        return box;
+    }
+
+    /// <summary>A Test button; <paramref name="cue"/> returns the finished cue (pattern expanded, strength filled).</summary>
     private Button TestButton(string name, Func<HapticCue> cue)
     {
         var test = new Button { Content = "Test", Style = Ui.Res<Style>("QuietButtonStyle") };
@@ -123,149 +179,168 @@ public sealed partial class MainWindow
             bool sent = await Task.Run(() => BuzzProtocol.TrySend(line));
             if (_hapticTestNote is { } note)
             {
-                note.Text = sent ? PatternNote + " Test plays through the running Slender tray." : "Slender is not running, so there is nothing to buzz. Start it from the tray first.";
+                note.Text = sent ? PatternNote + " Test plays through the running Slender tray. * = your pattern." : "Slender is not running, so there is nothing to buzz. Start it from the tray first.";
                 note.Foreground = sent ? Ui.Muted : Ui.Warn;
             }
         };
         return test;
     }
 
-    /// <summary>Re-reads every row after an edit elsewhere on the page (pulses in Advanced change the strength choice).</summary>
+    /// <summary>Re-reads every cue row after an edit elsewhere on the page (a saved pattern changes the Pattern lists and the Cycles boxes).</summary>
     private void RefreshHapticRows()
     {
         _hapticRefreshing = true;
-        try { foreach (Action refresh in _hapticRefresh.ToArray()) refresh(); }
+        try
+        {
+            foreach (Action refresh in _hapticRefresh.ToArray()) refresh();
+            foreach (Action refresh in _alertRefresh.ToArray()) refresh();
+        }
         finally { _hapticRefreshing = false; }
     }
 
-    /// <summary>
-    /// Repeat the pulse group (e.g. a phone ringer: 6 taps, 1 s quiet, 6 taps): how many groups and the quiet between them.
-    /// <paramref name="refresh"/> puts the controls back to the cue's values without writing.
-    /// </summary>
-    private StackPanel CueRepeatLine(string label, Func<HapticCue> get, Action<HapticCue> set, out Action refresh)
+    /// <summary>Every list that shows saved patterns, after one was saved or deleted. Notification app rows are rebuilt; the rest are refreshed in place.</summary>
+    private void PatternsChanged()
     {
-        bool loading = false;
-        var repeats = new ComboBox { Width = 70 };
-        for (int i = 1; i <= HapticCue.RepeatsMax; i++) repeats.Items.Add(i == 1 ? "Once" : $"{i}x");
-        repeats.SelectedIndex = get().Repeats - 1;
-        AutomationProperties.SetName(repeats, $"{label}: repeat");
-        Slider pause = PageSlider($"{label}: pause between repeats", HapticCue.RepeatGapMin, HapticCue.RepeatGapMax, 100, get().RepeatGapMs,
-            v => { if (!loading && (int)v != get().RepeatGapMs) set(get() with { RepeatGapMs = (int)v }); }, v => $"{v / 1000:0.0} s", out TextBlock pauseText);
-        pauseText.Width = 70;
-        pause.IsEnabled = get().Repeats > 1;
-        repeats.SelectionChanged += (_, _) =>
-        {
-            if (loading || repeats.SelectedIndex < 0 || repeats.SelectedIndex + 1 == get().Repeats) return;
-            pause.IsEnabled = repeats.SelectedIndex > 0;
-            set(get() with { Repeats = repeats.SelectedIndex + 1 });
-        };
-        refresh = () =>
-        {
-            loading = true;
-            try
-            {
-                HapticCue q = get();
-                repeats.SelectedIndex = q.Repeats - 1;
-                pause.Value = q.RepeatGapMs;
-                pause.IsEnabled = q.Repeats > 1;
-            }
-            finally { loading = false; }
-        };
-
-        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        line.Children.Add(Ui.Text("Repeat", 12, Ui.Muted));
-        line.Children.Add(repeats);
-        line.Children.Add(Ui.Text("Pause", 12, Ui.Muted));
-        line.Children.Add(WithReadout(pause, pauseText));
-        foreach (UIElement child in line.Children) if (child is FrameworkElement f) f.VerticalAlignment = VerticalAlignment.Center;
-        return line;
+        RefreshHapticRows();
+        FillNotifyApps();
     }
 
-    private void BuildHapticAdvanced()
+    private void BuildMyPatterns()
     {
-        var inner = new StackPanel { Spacing = 14, Padding = new Thickness(4, 6, 4, 6) };
-        foreach (HapticEvent e in HapticOps.EventOrder)
+        AddSection("MY PATTERNS");
+        var help = Ui.Text("Build your own buzz, save it, then pick it from any Pattern list above (marked *). Saving under an existing name replaces it.", 12, Ui.Muted);
+        help.TextWrapping = TextWrapping.Wrap;
+        help.Margin = new Thickness(0, 0, 0, 6);
+        PagePanel.Children.Add(help);
+
+        var nameBox = new TextBox { PlaceholderText = "Name, for example ringer", MaxLength = HapticCues.MaxPatternNameLength, Width = 220 };
+        AutomationProperties.SetName(nameBox, "Pattern name");
+        ToolTipService.SetToolTip(nameBox, "Letters, digits, space, - or _");
+
+        var buzz = new ComboBox { Width = 170 };
+        foreach (string n in HapticCues.PatternNames) buzz.Items.Add(n);
+        buzz.SelectedIndex = 1;
+        AutomationProperties.SetName(buzz, "Pattern: buzz");
+        ToolTipService.SetToolTip(buzz, "The built-in buzz this pattern repeats");
+
+        var cycles = new ComboBox { Width = 80 };
+        for (int i = 1; i <= HapticCue.PulsesMax; i++) cycles.Items.Add($"{i}x");
+        cycles.SelectedIndex = 0;
+        AutomationProperties.SetName(cycles, "Pattern: cycles");
+        ToolTipService.SetToolTip(cycles, CyclesTip);
+
+        Slider gap = PageSlider("Pattern: gap", HapticCue.SpacingMin, HapticCue.SpacingMax, 10, 150, _ => { }, v => $"{(int)v} ms", out TextBlock gapText);
+        ToolTipService.SetToolTip(gap, "Time between buzzes");
+        gapText.Width = 70;
+
+        var repeat = new ComboBox { Width = 80 };
+        for (int i = 1; i <= HapticCue.RepeatsMax; i++) repeat.Items.Add(i == 1 ? "Once" : $"{i}x");
+        repeat.SelectedIndex = 0;
+        AutomationProperties.SetName(repeat, "Pattern: repeat");
+        ToolTipService.SetToolTip(repeat, "Play the whole group again, e.g. for a phone ringer");
+
+        Slider pause = PageSlider("Pattern: pause between repeats", HapticCue.RepeatGapMin, HapticCue.RepeatGapMax, 100, 1000, _ => { }, v => $"{v / 1000:0.0} s", out TextBlock pauseText);
+        ToolTipService.SetToolTip(pause, "Quiet time between repeats");
+        pauseText.Width = 70;
+        pause.IsEnabled = false;
+        repeat.SelectionChanged += (_, _) => pause.IsEnabled = repeat.SelectedIndex > 0;
+
+        HapticPattern Current() => new HapticPattern(Math.Max(buzz.SelectedIndex, 0), Math.Max(cycles.SelectedIndex, 0) + 1, (int)gap.Value,
+            Math.Max(repeat.SelectedIndex, 0) + 1, (int)pause.Value).Clamped();
+
+        FrameworkElement Field(string label, string tip, FrameworkElement control)
         {
-            HapticEvent ev = e;
-            HapticCue Get() => HapticCues.Resolve(_config.Config.Haptics, ev);
-            void Edit(Func<HapticCue, HapticCue> f)
-            {
-                _config.Update(x => x with { Haptics = HapticOps.WithCue(x.Haptics, ev, f(HapticCues.Resolve(x.Haptics, ev))) });
-                RefreshHapticRows();
-            }
-
-            string label = HapticCues.EventLabel(ev);
-            var block = new StackPanel { Spacing = 6 };
-            block.Children.Add(Ui.Text(label, 13));
-
-            var pulses = new ComboBox { Width = 70 };
-            for (int i = 1; i <= HapticCue.PulsesMax; i++) pulses.Items.Add(i.ToString());
-            pulses.SelectedIndex = Get().Pulses - 1;
-            AutomationProperties.SetName(pulses, $"{label}: pulses");
-            pulses.SelectionChanged += (_, _) =>
-            {
-                if (!_hapticRefreshing && pulses.SelectedIndex >= 0 && pulses.SelectedIndex + 1 != Get().Pulses) Edit(q => q with { Pulses = pulses.SelectedIndex + 1 });
-            };
-            Slider spacing = PageSlider($"{label}: spacing", HapticCue.SpacingMin, HapticCue.SpacingMax, 10, Get().SpacingMs,
-                v => { if (!_hapticRefreshing) Edit(q => q with { SpacingMs = (int)v }); }, v => $"{(int)v} ms", out TextBlock spacingText);
-            spacingText.Width = 70;
-
-            var line1 = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-            line1.Children.Add(Ui.Text("Pulses", 12, Ui.Muted));
-            line1.Children.Add(pulses);
-            line1.Children.Add(Ui.Text("Gap", 12, Ui.Muted));
-            line1.Children.Add(WithReadout(spacing, spacingText));
-            foreach (UIElement child in line1.Children) if (child is FrameworkElement f) f.VerticalAlignment = VerticalAlignment.Center;
-            block.Children.Add(line1);
-            block.Children.Add(CueRepeatLine(label, Get, q => Edit(_ => q), out Action refreshRepeat));
-
-            var note = Ui.Text("Writes the mouse's stored strength for this buzz and puts it back.", 12, Ui.Muted);
-            note.TextWrapping = TextWrapping.Wrap;
-            Slider exact = PageSlider($"{label}: exact strength", 0, 100, 5, Get().Strength ?? _config.Config.Haptics.EffectiveStrength,
-                v => { if (!_hapticRefreshing && Get().Strength is not null) Edit(q => q with { Strength = (int)v }); }, v => $"{(int)v}", out TextBlock exactText);
-            var exactToggle = PageToggle($"{label}: exact strength", Get().Strength is not null, on =>
-            {
-                if (_hapticRefreshing) return;
-                exact.IsEnabled = on;
-                note.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-                Edit(q => q with { Strength = on ? (int)exact.Value : null });
-            });
-            exact.IsEnabled = Get().Strength is not null;
-            note.Visibility = Get().Strength is not null ? Visibility.Visible : Visibility.Collapsed;
-            var line2 = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-            line2.Children.Add(Ui.Text("Exact strength", 12, Ui.Muted));
-            line2.Children.Add(exactToggle);
-            line2.Children.Add(WithReadout(exact, exactText));
-            foreach (UIElement child in line2.Children) if (child is FrameworkElement f) f.VerticalAlignment = VerticalAlignment.Center;
-            block.Children.Add(line2);
-            block.Children.Add(note);
-
-            _hapticRefresh.Add(() =>
-            {
-                HapticCue q = Get();
-                pulses.SelectedIndex = q.Pulses - 1;
-                spacing.Value = q.SpacingMs;
-                refreshRepeat();
-                exactToggle.IsOn = q.Strength is not null;
-                exact.IsEnabled = q.Strength is not null;
-                note.Visibility = q.Strength is not null ? Visibility.Visible : Visibility.Collapsed;
-                if (q.Strength is { } s) exact.Value = s;
-            });
-            inner.Children.Add(block);
+            var text = Ui.Text(label, 12, Ui.Muted);
+            ToolTipService.SetToolTip(text, tip);
+            text.VerticalAlignment = VerticalAlignment.Center;
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            line.Children.Add(text);
+            line.Children.Add(control);
+            control.VerticalAlignment = VerticalAlignment.Center;
+            return line;
         }
 
-        var expander = new Expander
+        FrameworkElement Line(params FrameworkElement[] items)
         {
-            Header = "Advanced",
-            IsExpanded = _ui.HapticsAdvancedOpen,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Content = inner,
-            Margin = new Thickness(0, 12, 0, 0),
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
+            foreach (var item in items) line.Children.Add(item);
+            return line;
+        }
+
+        var list = new StackPanel();
+        var error = Ui.Text(string.Empty, 12, Ui.Warn);
+        var save = new Button { Content = "Save pattern", Style = Ui.Res<Style>("QuietButtonStyle") };
+        save.Click += (_, _) =>
+        {
+            string? problem = HapticOps.PatternNameProblem(Haptics, nameBox.Text);
+            error.Text = problem ?? string.Empty;
+            if (problem is not null) return;
+            string name = nameBox.Text.Trim();
+            HapticPattern pattern = Current();
+            _config.Update(x => x with { Haptics = HapticOps.WithPattern(x.Haptics, name, pattern) });
+            FillPatterns();
+            PatternsChanged();
         };
-        expander.Expanding += (_, _) => { _ui.HapticsAdvancedOpen = true; SaveUiNow(); };
-        expander.Collapsed += (_, _) => { _ui.HapticsAdvancedOpen = false; SaveUiNow(); };
-        PagePanel.Children.Add(expander);
+        var test = TestButton("unsaved pattern", () => HapticCues.ForTest(Haptics, Current().ToCue()));
+
+        var builder = new StackPanel { Spacing = 8, Padding = new Thickness(0, 4, 0, 4) };
+        builder.Children.Add(Line(Field("Name", "What this pattern is called in the Pattern lists", nameBox)));
+        builder.Children.Add(Line(Field("Buzz", "The built-in buzz this pattern repeats", buzz), Field("Cycles", CyclesTip, cycles), Field("Gap", "Time between buzzes", WithReadout(gap, gapText))));
+        builder.Children.Add(Line(Field("Repeat", "Play the whole group again, e.g. for a phone ringer", repeat), Field("Pause", "Quiet time between repeats", WithReadout(pause, pauseText))));
+        builder.Children.Add(Line(test, save));
+        builder.Children.Add(error);
+        PagePanel.Children.Add(builder);
+
+        PagePanel.Children.Add(list);
+
+        void Load(string name, HapticPattern p)
+        {
+            nameBox.Text = name;
+            buzz.SelectedIndex = p.Pattern;
+            cycles.SelectedIndex = p.Pulses - 1;
+            gap.Value = p.SpacingMs;
+            repeat.SelectedIndex = p.Repeats - 1;
+            pause.Value = p.RepeatGapMs;
+            error.Text = string.Empty;
+        }
+
+        void FillPatterns()
+        {
+            list.Children.Clear();
+            foreach (string saved in HapticOps.PatternNamesSorted(Haptics))
+            {
+                string name = saved;
+                HapticPattern Get() => Haptics.Patterns.TryGetValue(name, out var p) ? p : new HapticPattern();
+                var grid = new Grid { Padding = new Thickness(0, 8, 0, 8), ColumnSpacing = 10 };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                for (int i = 0; i < 3; i++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                var title = Ui.Text(name, 13, Ui.Ink, Ui.Mono);
+                var summary = Ui.Text(Get().Summary, 12, Ui.Muted);
+                var rowTest = TestButton($"pattern {name}", () => HapticCues.ForTest(Haptics, Get().ToCue()));
+                var edit = new Button { Content = "Edit", Style = Ui.Res<Style>("QuietButtonStyle") };
+                AutomationProperties.SetName(edit, $"Edit pattern {name}");
+                edit.Click += (_, _) => Load(name, Get());
+                var delete = new Button { Content = "Delete", Style = Ui.Res<Style>("QuietButtonStyle") };
+                AutomationProperties.SetName(delete, $"Delete pattern {name}");
+                ToolTipService.SetToolTip(delete, "Cues that use it keep playing the same buzz");
+                delete.Click += (_, _) =>
+                {
+                    _config.Update(x => x with { Haptics = HapticOps.WithoutPattern(x.Haptics, name) });
+                    FillPatterns();
+                    PatternsChanged();
+                };
+                Place(grid, title, 0);
+                Place(grid, summary, 1);
+                Place(grid, rowTest, 2);
+                Place(grid, edit, 3);
+                Place(grid, delete, 4);
+                list.Children.Add(grid);
+                list.Children.Add(new Border { Height = 1, Background = Ui.Rule, Opacity = 0.6 });
+            }
+        }
+
+        FillPatterns();
     }
 
     private void BuildNamedAlerts()
@@ -315,19 +390,15 @@ public sealed partial class MainWindow
     {
         if (_alertList is not { } list) return;
         list.Children.Clear();
+        _alertRefresh.Clear();
         foreach (string alert in _config.Config.Haptics.Alerts.Keys.Order(StringComparer.OrdinalIgnoreCase))
         {
             string name = alert;
             HapticCue Get() => _config.Config.Haptics.Alerts.TryGetValue(name, out var c) ? c.Clamped() : new HapticCue();
             void Set(HapticCue q) => _config.Update(x => x with { Haptics = HapticOps.WithAlertCue(x.Haptics, name, q) });
 
-            var grid = new Grid { Padding = new Thickness(0, 8, 0, 8), ColumnSpacing = 10 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            for (int i = 0; i < 4; i++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var grid = CueGrid();
             var title = Ui.Text(name, 13, Ui.Ink, Ui.Mono);
-            var pattern = CuePatternBox($"Alert {name}", Get, Set);
-            var intensity = CueIntensityBox($"Alert {name}", Get, Set);
-            var test = TestButton($"alert {name}", () => Get() with { Enabled = true });
             var delete = new Button { Content = Ui.Glyph("", 12), Style = Ui.Res<Style>("QuietButtonStyle") };
             AutomationProperties.SetName(delete, $"Delete alert {name}");
             delete.Click += (_, _) =>
@@ -336,10 +407,8 @@ public sealed partial class MainWindow
                 FillAlerts();
             };
             Place(grid, title, 0);
-            Place(grid, pattern, 1);
-            Place(grid, intensity, 2);
-            Place(grid, test, 3);
-            Place(grid, delete, 4);
+            AddCueControls(grid, 1, $"Alert {name}", Get, Set, _alertRefresh);
+            Place(grid, delete, 5);
             list.Children.Add(grid);
             list.Children.Add(new Border { Height = 1, Background = Ui.Rule, Opacity = 0.6 });
         }

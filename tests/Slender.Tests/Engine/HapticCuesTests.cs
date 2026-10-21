@@ -98,4 +98,65 @@ public class HapticCuesTests
         Assert.Equal("Happy alert", HapticCues.PatternName(5));
         Assert.Equal("Ringing", HapticCues.PatternName(99));
     }
+
+    private static HapticSettings WithRinger() => new()
+    {
+        Patterns = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase) { ["Ringer"] = new HapticPattern(12, 6, 80, 3, 1500) },
+    };
+
+    [Fact]
+    public void A_pattern_reference_expands_but_keeps_enabled_and_strength()
+    {
+        var s = WithRinger();
+        var cue = new HapticCue(false, 2, 1, 150, 33, Custom: "ringer");
+        var expanded = HapticCues.Expand(s, cue);
+        Assert.Equal(new HapticCue(false, 12, 6, 80, 33, 3, 1500), expanded);
+        Assert.Null(expanded.Custom);
+    }
+
+    [Fact]
+    public void A_missing_pattern_falls_back_to_the_cues_own_fields()
+    {
+        var cue = new HapticCue(true, 2, 3, 90, Custom: "gone");
+        Assert.Equal(cue, HapticCues.Expand(WithRinger(), cue));
+        Assert.Equal(cue, HapticCues.Expand(new HapticSettings(), cue));
+    }
+
+    [Fact]
+    public void Resolve_expands_while_Configured_keeps_the_reference()
+    {
+        var s = WithRinger() with { Cues = new Dictionary<HapticEvent, HapticCue> { [HapticEvent.TouchTap] = new HapticCue(true, 1, Custom: "Ringer") } };
+        Assert.Equal("Ringer", HapticCues.Configured(s, HapticEvent.TouchTap).Custom);
+        Assert.Equal(new HapticCue(true, 12, 6, 80, null, 3, 1500), HapticCues.Resolve(s, HapticEvent.TouchTap));
+    }
+
+    [Fact]
+    public void ForTest_sends_a_finished_cue()
+    {
+        var test = HapticCues.ForTest(WithRinger(), new HapticCue(false, 1, Custom: "ringer"));
+        Assert.Equal(new HapticCue(true, 12, 6, 80, HapticCues.NormalStrength, 3, 1500), test);
+        Assert.Equal(100, HapticCues.ForTest(new HapticSettings(), new HapticCue(true, 1, Strength: 100)).Strength);
+    }
+
+    [Fact]
+    public void Levels_map_to_real_strengths_and_unknown_numbers_are_custom()
+    {
+        Assert.Equal([33, 66, 100], new[] { HapticCues.StrengthOf(0), HapticCues.StrengthOf(1), HapticCues.StrengthOf(2) });
+        Assert.Equal(0, HapticCues.LevelOf(33));
+        Assert.Equal(1, HapticCues.LevelOf(66));
+        Assert.Equal(2, HapticCues.LevelOf(100));
+        Assert.Equal(1, HapticCues.LevelOf(null));
+        Assert.Equal(-1, HapticCues.LevelOf(50));
+    }
+
+    [Theory]
+    [InlineData("Ringer", true)]
+    [InlineData("my pattern_2-b", true)]
+    [InlineData("", false)]
+    [InlineData(" lead", false)]
+    [InlineData("trail ", false)]
+    [InlineData("bad!", false)]
+    [InlineData("knock", false)] // a built-in waveform name, any case
+    [InlineData("abcdefghijklmnopqrstuvwxyz0123456", false)] // 33 characters
+    public void Pattern_names_follow_the_alert_rules_plus_spaces(string name, bool ok) => Assert.Equal(ok, HapticCues.IsPatternName(name));
 }

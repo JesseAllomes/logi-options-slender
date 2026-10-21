@@ -26,6 +26,15 @@ public class BuzzProtocolTests
     }
 
     [Fact]
+    public void A_resolved_test_cue_carries_strength_and_repeats_to_the_tray()
+    {
+        var s = new HapticSettings { Patterns = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase) { ["Ringer"] = new HapticPattern(12, 6, 80, 3, 1500) } };
+        var cue = HapticCues.ForTest(s, new HapticCue(true, 1, Strength: 33, Custom: "ringer"));
+        Assert.Equal("!test 12 6 80 33 3 1500", BuzzProtocol.TestLine(cue));
+        Assert.Equal(cue, BuzzProtocol.Parse(BuzzProtocol.TestLine(cue))!.TestCue);
+    }
+
+    [Fact]
     public void A_name_is_trimmed()
     {
         Assert.Equal(new BuzzRequest("claude", null), BuzzProtocol.Parse(" claude \r"));

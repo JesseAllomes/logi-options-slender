@@ -313,6 +313,7 @@ public sealed partial class MainWindow
         Slider level = PageSlider("Haptic strength", 0, 100, 5, c.Haptics.EffectiveStrength,
             v => _config.Update(x => x with { Haptics = x.Haptics with { Strength = (int)v, Level = HapticSettings.NotchFor((int)v) } }), v => $"{(int)v}", out TextBlock levelText);
         levelText.Width = 80;
+        ToolTipService.SetToolTip(level, HapticFeelTip);
         AddRow("Haptic strength", "How strong the tap is, 0 to 100. The four notches at the bottom are quick presets.", WithReadout(level, levelText));
 
         BuildHapticEvents(c);

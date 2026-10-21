@@ -5,14 +5,15 @@ namespace Slender.Engine;
 /// <summary>
 /// Plays a <see cref="HapticCue"/> on the mouse: Pulses times, SpacingMs apart, the group Repeats times RepeatGapMs apart. A new cue cancels whatever is left of the
 /// previous one (cues never overlap). Everything runs on the engine's work queue and timers, never on a hook or HID thread
-/// (<see cref="Play"/> only queues). A cue with an exact Strength writes the mouse's stored strength before its first pulse and
-/// puts the global strength back after its last; a burst of cues with the same strength therefore writes only twice, because
-/// the restore waits <see cref="RestoreDelayMs"/> for a follow-up cue.
+/// (<see cref="Play"/> only queues). Every buzz has a strength (the cue's, else Normal). The mouse's stored strength is written
+/// only when a buzz needs a different one than what is in place (device memory wear is unknown), and the global "Haptic feel"
+/// strength is put back only after <see cref="RestoreDelayMs"/> with no buzz, so a burst at one level writes once. A cue that
+/// names a user pattern is expanded here, so every caller (events, alerts, notifications) gets patterns for free.
 /// </summary>
 internal sealed class HapticPlayer : IDisposable
 {
-    /// <summary>How long after the last pulse the global strength is put back (the motor plays the waveform on its own).</summary>
-    public const int RestoreDelayMs = 400;
+    /// <summary>How long after the last pulse with no new buzz the global strength is put back.</summary>
+    public const int RestoreDelayMs = 5000;
 
     private readonly ILogiMouse _mouse;
     private readonly IHoldTimer _timer;
@@ -23,7 +24,7 @@ internal sealed class HapticPlayer : IDisposable
     private Task _io = Task.CompletedTask; // queue thread only: mouse calls run in order
     private IDisposable? _next;            // queue thread only: the next pulse or the restore
     private int _seq;                      // queue thread only: bumped by every new cue, so stale timers do nothing
-    private int? _applied;                 // queue thread only: exact strength currently written to the mouse; null = the global one is in place
+    private int? _applied;                 // queue thread only: strength currently written to the mouse; null = the global one is in place
     private volatile bool _disposed;
 
     public HapticPlayer(ILogiMouse mouse, IHoldTimer timer, IWorkQueue queue, Func<HapticSettings> settings, ILog log, CancellationToken ct)
@@ -48,18 +49,16 @@ internal sealed class HapticPlayer : IDisposable
         if (_disposed) return;
         try
         {
-            cue = cue.Clamped();
+            var settings = _settings();
+            cue = HapticCues.Expand(settings, cue).Clamped();
             CancelPending();
             var seq = _seq;
-            if (cue.Strength is { } s)
+            int level = cue.Strength ?? HapticCues.NormalStrength;
+            if (level != (_applied ?? settings.EffectiveStrength))
             {
-                if (_applied != s)
-                {
-                    _applied = s;
-                    Io(() => _mouse.SetHapticStrengthAsync(s, _ct), "haptic strength");
-                }
+                _applied = level == settings.EffectiveStrength ? null : level; // writing the global value is the restore
+                Io(() => _mouse.SetHapticStrengthAsync(level, _ct), "haptic strength");
             }
-            else if (_applied is not null) RestoreNow();
             Pulse(seq, cue, cue.Pulses, cue.Repeats);
         }
         catch (Exception ex) { _log.Error("haptic failed", ex); }

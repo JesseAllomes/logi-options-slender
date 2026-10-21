@@ -124,6 +124,7 @@ public sealed class JsonConfigStore : IConfigStore
             {
                 Cues = ToCues(haptics.Cues),
                 Alerts = ToAlerts(haptics.Alerts),
+                Patterns = ToPatterns(haptics.Patterns),
                 Notify = ToNotify(haptics.Notify),
             },
             dto.LaunchAtLogin)
@@ -297,6 +298,7 @@ public sealed class JsonConfigStore : IConfigStore
                 Strength = config.Haptics.Strength,
                 Cues = config.Haptics.Cues.Count == 0 ? null : config.Haptics.Cues.ToDictionary(kv => kv.Key.ToString(), kv => FromCue(kv.Value)),
                 Alerts = config.Haptics.Alerts.Count == 0 ? null : config.Haptics.Alerts.ToDictionary(kv => kv.Key, kv => FromCue(kv.Value)),
+                Patterns = config.Haptics.Patterns.Count == 0 ? null : config.Haptics.Patterns.ToDictionary(kv => kv.Key, kv => FromPattern(kv.Value)),
                 Notify = FromNotify(config.Haptics.Notify),
             },
             Pointer = new PointerDto
@@ -559,6 +561,7 @@ public sealed class JsonConfigStore : IConfigStore
         public int? Strength { get; set; }
         public Dictionary<string, HapticCueDto>? Cues { get; set; }
         public Dictionary<string, HapticCueDto>? Alerts { get; set; }
+        public Dictionary<string, HapticPatternDto>? Patterns { get; set; }
         public NotifyHapticsDto? Notify { get; set; }
     }
 
@@ -571,6 +574,16 @@ public sealed class JsonConfigStore : IConfigStore
         public int? Strength { get; set; }
         public int Repeats { get; set; } = 1;
         public int RepeatGapMs { get; set; } = 1000;
+        public string? Custom { get; set; }
+    }
+
+    internal sealed class HapticPatternDto
+    {
+        public int Pattern { get; set; } = 1;
+        public int Pulses { get; set; } = 1;
+        public int SpacingMs { get; set; } = 150;
+        public int Repeats { get; set; } = 1;
+        public int RepeatGapMs { get; set; } = 1000;
     }
 
     internal sealed class ThumbFlickDto
@@ -580,9 +593,22 @@ public sealed class JsonConfigStore : IConfigStore
         public ActionSpec? Left { get; set; }
     }
 
-    private static HapticCue ToCue(HapticCueDto d) => new HapticCue(d.Enabled, d.Pattern, d.Pulses, d.SpacingMs, d.Strength, d.Repeats, d.RepeatGapMs).Clamped();
+    private static HapticCue ToCue(HapticCueDto d) => new HapticCue(d.Enabled, d.Pattern, d.Pulses, d.SpacingMs, d.Strength, d.Repeats, d.RepeatGapMs, HapticCues.IsPatternName(d.Custom) ? d.Custom : null).Clamped();
 
-    private static HapticCueDto FromCue(HapticCue c) => new() { Enabled = c.Enabled, Pattern = c.Pattern, Pulses = c.Pulses, SpacingMs = c.SpacingMs, Strength = c.Strength, Repeats = c.Repeats, RepeatGapMs = c.RepeatGapMs };
+    private static HapticCueDto FromCue(HapticCue c) => new() { Enabled = c.Enabled, Pattern = c.Pattern, Pulses = c.Pulses, SpacingMs = c.SpacingMs, Strength = c.Strength, Repeats = c.Repeats, RepeatGapMs = c.RepeatGapMs, Custom = c.Custom };
+
+    private static HapticPatternDto FromPattern(HapticPattern p) => new() { Pattern = p.Pattern, Pulses = p.Pulses, SpacingMs = p.SpacingMs, Repeats = p.Repeats, RepeatGapMs = p.RepeatGapMs };
+
+    /// <summary>Pattern names must pass HapticCues.IsPatternName (so never a built-in waveform name); duplicates ignoring case keep the first, and only 50 are kept. Values are clamped.</summary>
+    private static Dictionary<string, HapticPattern> ToPatterns(Dictionary<string, HapticPatternDto>? raw)
+    {
+        var result = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase);
+        if (raw is null) return result;
+        foreach (var (name, p) in raw)
+            if (p is not null && HapticCues.IsPatternName(name) && result.Count < HapticCues.MaxPatterns)
+                result.TryAdd(name, new HapticPattern(p.Pattern, p.Pulses, p.SpacingMs, p.Repeats, p.RepeatGapMs).Clamped());
+        return result;
+    }
 
     /// <summary>Unknown event names are dropped (a newer file read by an older Slender).</summary>
     private static Dictionary<HapticEvent, HapticCue> ToCues(Dictionary<string, HapticCueDto>? raw)
