@@ -43,6 +43,9 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
     private int? _forceDesired;
     private int? _forceBaseline;
     private int? _hapticDesired;
+    private volatile int _hapticNow = -1; // stored strength as last read or written; -1 unknown
+
+    public int? HapticStrengthNow => _hapticNow is var h and >= 0 ? h : null;
 
     public LogiMouse(IHidppTransportFactory factory, LogiMouseOptions? options = null)
         : base(factory, options ?? new LogiMouseOptions())
@@ -69,7 +72,11 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
 
     protected override void DispatchRawXy(RawXyEvent e) => RawXyMoved?.Invoke(this, e);
 
-    protected override void ResetAppliedState() => _thumbApplied = false;
+    protected override void ResetAppliedState()
+    {
+        _thumbApplied = false;
+        _hapticNow = -1;
+    }
 
     // ---- applying device state --------------------------------------------------------------
 
@@ -287,15 +294,28 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
 
     // ---- haptic strength (0x19B0) -------------------------------------------------------------
 
-    /// <summary>0x19B0 fn1 read, fn2 write [enabled, level 0-100] only when the level differs. The device's enabled flag is set on.</summary>
-    private static async Task<bool> TrySetHapticStrengthAsync(Session s, int strength, CancellationToken ct)
+    /// <summary>
+    /// 0x19B0 fn2 write [enabled, level 0-100] only when the level differs from what the mouse holds. Every write goes through here,
+    /// so the cached value is the mouse's real one; it is read (fn1) only when unknown. The device's enabled flag is set on.
+    /// </summary>
+    private async Task<bool> TrySetHapticStrengthAsync(Session s, int strength, CancellationToken ct)
     {
         try
         {
             var value = (byte)Math.Clamp(strength, 0, 100);
-            var p = (await s.Device.CallAsync(FeatureId.Haptics, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params;
-            if ((p[0] & 1) != 0 && p[1] == value) return true;
+            if (_hapticNow == value) return true;
+            if (_hapticNow < 0)
+            {
+                var p = (await s.Device.CallAsync(FeatureId.Haptics, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params;
+                if ((p[0] & 1) != 0 && p[1] == value)
+                {
+                    _hapticNow = value;
+                    return true;
+                }
+            }
+            _hapticNow = -1; // unknown until the write is confirmed
             await s.Device.CallAsync(FeatureId.Haptics, 2, new byte[] { 1, value }, ct).ConfigureAwait(false);
+            _hapticNow = value;
             return true;
         }
         catch (HidppException) { return false; }
@@ -324,6 +344,18 @@ public sealed class LogiMouse : LogiDeviceBase, ILogiMouse
             var s = CurrentSession;
             if (s == null || !IsConnected || strength is not { } v) return;
             await TrySetHapticStrengthAsync(s, v, ct).ConfigureAwait(false);
+        }
+        finally { Gate.Release(); }
+    }
+
+    public async Task SetHapticLevelAsync(int level, CancellationToken ct)
+    {
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var s = CurrentSession;
+            if (s == null || !IsConnected) return;
+            await TrySetHapticStrengthAsync(s, level, ct).ConfigureAwait(false);
         }
         finally { Gate.Release(); }
     }

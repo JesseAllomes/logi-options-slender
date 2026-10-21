@@ -180,6 +180,15 @@ public interface ILogiMouse : IDisposable
     /// <summary>Sets the stored haptic strength 0-100 now and on every reconnect (null leaves the device value alone). The default does nothing.</summary>
     Task SetHapticStrengthAsync(int? strength, CancellationToken ct) => Task.CompletedTask;
 
+    /// <summary>
+    /// Sets the stored haptic strength for the next buzz only: a reconnect still puts back the value from <see cref="SetHapticStrengthAsync"/>.
+    /// Skipped when the mouse already holds it. The default forwards to <see cref="SetHapticStrengthAsync"/>.
+    /// </summary>
+    Task SetHapticLevelAsync(int level, CancellationToken ct) => SetHapticStrengthAsync(level, ct);
+
+    /// <summary>The strength stored on the mouse as last read or written (anyone's write); null when unknown or disconnected.</summary>
+    int? HapticStrengthNow => null;
+
     /// <summary>First Sense Panel force reading seen (the anchor of the safe band); null until known.</summary>
     int? SensePanelBaseline => null;
 

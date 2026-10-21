@@ -60,8 +60,19 @@ internal sealed class FakeMouse : ILogiMouse
     {
         StrengthWrites.Add(strength);
         Calls.Add($"strength {strength}");
+        if (strength is { } s) HapticNow = s;
         return Task.CompletedTask;
     }
+    /// <summary>Per-buzz level writes; recorded with the others (StrengthWrites, Calls) and flagged in LevelWrites.</summary>
+    public List<int> LevelWrites { get; } = [];
+    public Task SetHapticLevelAsync(int level, CancellationToken ct)
+    {
+        LevelWrites.Add(level);
+        return SetHapticStrengthAsync(level, ct);
+    }
+    /// <summary>What the mouse holds; null = unknown. Set it to model another writer (a settings save re-applying the global).</summary>
+    public int? HapticNow;
+    public int? HapticStrengthNow => HapticNow;
     public Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct) => Task.FromResult<BatteryStatus?>(new BatteryStatus(80, false));
     public void Dispose() { }
     public void Press(ushort id, bool pressed) => ButtonChanged?.Invoke(this, new ButtonEvent(id, pressed));

@@ -157,6 +157,27 @@ public class HapticPlayerTests
     }
 
     [Fact]
+    public void A_settings_save_that_rewrites_the_global_strength_mid_burst_does_not_weaken_the_next_strong_buzz()
+    {
+        var r = new Rig();
+        r.Settings = new HapticSettings(Strength: 25);
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        r.Mouse.HapticNow = 25; // the tray re-applied the global feel after a config save
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        Assert.Equal([100, 100], r.Mouse.LevelWrites); // written again once, then the mouse holds it
+        Assert.Equal(["strength 100", "play 1", "strength 100", "play 1", "play 1"], r.Mouse.Calls);
+    }
+
+    [Fact]
+    public void Per_buzz_levels_never_become_the_reconnect_value()
+    {
+        var r = new Rig();
+        r.Player.Play(new HapticCue(true, 1, Strength: 100));
+        Assert.Equal([100], r.Mouse.LevelWrites); // through SetHapticLevelAsync, not the stored-on-reconnect setter
+    }
+
+    [Fact]
     public void A_buzz_at_the_global_strength_writes_nothing()
     {
         var r = new Rig();

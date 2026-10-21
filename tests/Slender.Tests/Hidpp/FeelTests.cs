@@ -159,6 +159,29 @@ public class FeelTests
     }
 
     [Fact]
+    public async Task Per_buzz_levels_are_written_once_and_tracked_whoever_wrote_last()
+    {
+        var (mouse, dev) = Create(haptic: 25, currentHaptic: 25);
+        using (mouse)
+        {
+            await mouse.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => mouse.HapticStrengthNow == 25); // read on connect, already right: no write
+            Assert.Equal(0, dev.CountCalls(Haptic, 2));
+
+            await mouse.SetHapticLevelAsync(100, CancellationToken.None);
+            await mouse.SetHapticLevelAsync(100, CancellationToken.None);
+            Assert.Equal(1, dev.CountCalls(Haptic, 2));
+            Assert.Equal(100, mouse.HapticStrengthNow);
+
+            await mouse.SetHapticStrengthAsync(25, CancellationToken.None); // a settings save re-applies the global feel
+            Assert.Equal(25, mouse.HapticStrengthNow);
+            await mouse.SetHapticLevelAsync(100, CancellationToken.None);   // so the next strong buzz writes again
+            Assert.Equal(3, dev.CountCalls(Haptic, 2));
+            Assert.Equal(new byte[] { 1, 100 }, dev.Calls.Last(c => c.Feature == Haptic && c.Function == 2).Params[..2]);
+        }
+    }
+
+    [Fact]
     public async Task Same_haptic_strength_writes_nothing_and_over_range_clamps()
     {
         var (same, devSame) = Create(haptic: 45);

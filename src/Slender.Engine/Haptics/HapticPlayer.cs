@@ -54,11 +54,12 @@ internal sealed class HapticPlayer : IDisposable
             CancelPending();
             var seq = _seq;
             int level = cue.Strength ?? HapticCues.NormalStrength;
-            if (level != (_applied ?? settings.EffectiveStrength))
-            {
-                _applied = level == settings.EffectiveStrength ? null : level; // writing the global value is the restore
-                Io(() => _mouse.SetHapticStrengthAsync(level, _ct), "haptic strength");
-            }
+            int global = settings.EffectiveStrength;
+            // What the mouse really holds wins over what this player last asked for: saving any setting re-applies the global
+            // strength, and a stale guess here played a whole burst at that (weak) level (user 2026-10-22).
+            int current = _mouse.HapticStrengthNow ?? _applied ?? global;
+            if (level != current) Io(() => _mouse.SetHapticLevelAsync(level, _ct), "haptic strength");
+            _applied = level == global ? null : level; // null: nothing to restore later
             Pulse(seq, cue, cue.Pulses, cue.Repeats);
         }
         catch (Exception ex) { _log.Error("haptic failed", ex); }
