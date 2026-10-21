@@ -419,6 +419,7 @@ public sealed partial class MainWindow : Window
         BuildStrip();
         UpdateHeading();
         SyncBottomBar();
+        RefreshFnControls();
         if (_page == Page.Device)
         {
             RefreshStageLabels();

@@ -96,6 +96,21 @@ public sealed class LogiKeyboard : LogiDeviceBase, ILogiKeyboard, IOnboardKeyboa
         if (disabled is { } keys) await TrySetDisabledAsync(s, keys, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// 0x40A3 event: the keyboard announces Fn+Esc at once. The read that follows is authoritative and raises <see cref="FnLockRead"/>,
+    /// so the tray saves the new state within a moment instead of at the next 30 s poll. Read only.
+    /// </summary>
+    protected override bool HandleOtherNotification(Session s, HidppMessage msg)
+    {
+        if (!s.Device.TryGetCachedIndex(KeyboardFeatureId.FnInversionMultiHost, out var fn) || msg.FeatureIndex != fn) return false;
+        _ = Task.Run(async () =>
+        {
+            try { await ReadFnLockAsync(CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Fn lock read after event: {ex.Message}"); }
+        });
+        return true;
+    }
+
     protected override void ResetAppliedState()
     {
         _currentChannel = -1;

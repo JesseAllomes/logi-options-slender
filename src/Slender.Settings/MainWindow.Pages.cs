@@ -14,6 +14,8 @@ public sealed partial class MainWindow
 {
     private void BuildPage()
     {
+        _pageFnToggle = null;
+        _channelChoices = null;
         PagePanel.Children.Clear();
         PagePanel.Spacing = 0;
         PagePanel.MaxWidth = 660;
@@ -328,8 +330,11 @@ public sealed partial class MainWindow
         BuildExcelAddinSection();
 
         AddSection("KEYBOARD");
-        AddRow("F-keys first (Fn lock)", "Function keys act as F1 to F12 without holding Fn.",
-            PageToggle("F-keys first", c.Keyboard.FnLock, on => _config.Update(x => x with { Keyboard = x.Keyboard with { FnLock = on } })));
+        _pageFnToggle = PageToggle("F-keys first", c.Keyboard.FnLock, on =>
+        {
+            if (!_syncingFn) _config.Update(x => x with { Keyboard = x.Keyboard with { FnLock = on } });
+        });
+        AddRow("F-keys first (Fn lock)", "Function keys act as F1 to F12 without holding Fn. Fn+Esc on the keyboard changes it too.", _pageFnToggle);
         BuildKeyboardExtras(c);
         BuildOnboardRemapsSection(c);
 

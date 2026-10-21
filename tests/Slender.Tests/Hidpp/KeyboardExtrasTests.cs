@@ -179,6 +179,28 @@ public class KeyboardExtrasTests
     // ---- Fn lock reads (the keyboard owns Fn lock; Fn+Esc changes it) ----
 
     [Fact]
+    public async Task Fn_esc_event_reads_the_new_fn_lock_at_once_without_writing()
+    {
+        bool on = false;
+        var dev = K860(Off3, 0, setup: d => d.Handlers[(FnIndex, 0)] = p => [p[0], (byte)(on ? 1 : 0), 1, 1]);
+        var (kb, t) = Rig(dev);
+        using (kb)
+        {
+            var reads = new List<bool>();
+            kb.FnLockRead += (_, v) => { lock (reads) reads.Add(v); };
+            await kb.StartAsync(CancellationToken.None);
+            await Wait.UntilAsync(() => kb.FnLockNow is not null);
+            Assert.False(kb.FnLockNow);
+
+            on = true; // Fn+Esc
+            t.Inject(FakeDevice.Frame(0xFF, FnIndex, 0, 0, [0x00, 0x01, 0x01]));
+            await Wait.UntilAsync(() => kb.FnLockNow == true);
+            lock (reads) Assert.True(reads[^1]);
+            Assert.DoesNotContain(t.Writes, w => w[2] == FnIndex && w[3] >> 4 == 1);
+        }
+    }
+
+    [Fact]
     public async Task Connect_reads_the_keyboards_fn_lock_and_raises_it()
     {
         var (kb, t) = Rig(K860([true, false, false], current: 0));

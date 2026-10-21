@@ -82,4 +82,23 @@ public sealed class KeyboardSettingsTests : IDisposable
         Assert.False(SpareKeyReport.TryParse("garbage", out _, out _));
         Assert.False(SpareKeyReport.TryParse("1 4000000000000000000", out _, out _));
     }
+
+    [Fact]
+    public void A_pending_edit_takes_fn_lock_from_the_file_unless_it_changed_fn_lock_itself()
+    {
+        var baseline = new KeyboardSettings(FnLock: true, FnLockChannel1: true);
+        var file = baseline with { FnLock = false, FnLockChannel1 = false }; // the tray saved Fn+Esc
+
+        var otherEdit = baseline with { ShowLockKeyChanges = false };
+        var merged = KeyboardOps.AdoptFnLock(otherEdit, baseline, file);
+        Assert.False(merged.FnLock);
+        Assert.False(merged.FnLockChannel1);
+        Assert.False(merged.ShowLockKeyChanges); // the user's own edit stays
+
+        var fnEdit = baseline with { FnLock = false, FnLockChannel2 = true };
+        merged = KeyboardOps.AdoptFnLock(fnEdit, baseline, baseline with { FnLock = true, FnLockChannel1 = false });
+        Assert.False(merged.FnLock);           // changed by the user: kept
+        Assert.True(merged.FnLockChannel2);    // changed by the user: kept
+        Assert.False(merged.FnLockChannel1);   // untouched: from the file
+    }
 }

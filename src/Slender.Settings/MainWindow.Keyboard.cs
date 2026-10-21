@@ -33,10 +33,12 @@ public sealed partial class MainWindow
                 on => _config.Update(x => x with { Keyboard = x.Keyboard with { ShowLockKeyChanges = on } })));
 
         int? current = _status.Device(DeviceIds.Keyboard)?.Channel;
+        _channelChoices = new ComboBox[LogiKeyboard.ChannelCount];
         for (int i = 0; i < LogiKeyboard.ChannelCount; i++)
         {
             int channel = i;
             var choice = new ComboBox { MinWidth = 170 };
+            _channelChoices[i] = choice;
             foreach (string text in KeyboardOps.ChannelChoices)
             {
                 choice.Items.Add(text);
@@ -46,10 +48,42 @@ public sealed partial class MainWindow
             AutomationProperties.SetName(choice, $"Fn lock on Easy-Switch channel {channel + 1}");
             choice.SelectionChanged += (_, _) =>
             {
+                if (_syncingFn)
+                {
+                    return;
+                }
+
                 bool? value = KeyboardOps.FromChoiceIndex(choice.SelectedIndex);
                 _config.Update(x => x with { Keyboard = x.Keyboard.WithChannel(channel, value) });
             };
-            AddRow(KeyboardOps.ChannelTitle(channel, current), channel == 0 ? "Fn lock for each Easy-Switch channel. Applied when the keyboard connects." : null, choice);
+            AddRow(KeyboardOps.ChannelTitle(channel, current), channel == 0 ? "Fn lock for each Easy-Switch channel. Written to the keyboard when you change it; Fn+Esc updates the channel you are on." : null, choice);
+        }
+    }
+
+    /// <summary>Puts the keyboard's current Fn lock (saved by the tray after Fn+Esc) into the General page's controls without saving.</summary>
+    private void RefreshFnControls()
+    {
+        KeyboardSettings k = _config.Config.Keyboard;
+        _syncingFn = true;
+        try
+        {
+            if (_pageFnToggle is not null && _pageFnToggle.IsOn != k.FnLock)
+            {
+                _pageFnToggle.IsOn = k.FnLock;
+            }
+
+            for (int i = 0; _channelChoices is not null && i < _channelChoices.Length; i++)
+            {
+                int index = KeyboardOps.ChoiceIndex(k.FnLockChannels[i]);
+                if (_channelChoices[i].SelectedIndex != index)
+                {
+                    _channelChoices[i].SelectedIndex = index;
+                }
+            }
+        }
+        finally
+        {
+            _syncingFn = false;
         }
     }
 

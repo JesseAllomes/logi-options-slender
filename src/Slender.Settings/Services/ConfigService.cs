@@ -1,6 +1,7 @@
 using Microsoft.UI.Dispatching;
 using Slender.Engine;
 using Slender.Engine.Config;
+using Slender.Settings.Logic;
 
 namespace Slender.Settings.Services;
 
@@ -17,6 +18,7 @@ public sealed class ConfigService : IDisposable
     private readonly ConfigFileWatcher _watcher;
     private DispatcherQueueTimer? _timer;
     private bool _dirty;
+    private SlenderConfig? _base; // the config the pending local edit started from
 
     public ConfigService(JsonConfigStore store, DispatcherQueue queue)
     {
@@ -38,6 +40,11 @@ public sealed class ConfigService : IDisposable
         if (ReferenceEquals(next, Config))
         {
             return;
+        }
+
+        if (!_dirty)
+        {
+            _base = Config;
         }
 
         Config = next;
@@ -94,7 +101,17 @@ public sealed class ConfigService : IDisposable
     {
         if (_dirty)
         {
-            return; // an unsaved local edit wins; it is written within 300 ms
+            // An unsaved local edit wins; it is written within 300 ms. Fn lock values it did not touch come from the file (the tray saves
+            // Fn+Esc there), so the save never writes a stale Fn lock back to the keyboard.
+            KeyboardSettings merged = KeyboardOps.AdoptFnLock(Config.Keyboard, _base?.Keyboard ?? Config.Keyboard, config.Keyboard);
+            _base = config;
+            if (merged != Config.Keyboard)
+            {
+                Config = Config with { Keyboard = merged };
+                Changed?.Invoke();
+            }
+
+            return;
         }
 
         Config = config;

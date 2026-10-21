@@ -79,6 +79,8 @@ public sealed unsafe class RingController : IDisposable
     {
         if (_announcedOpen == open) return;
         _announcedOpen = open;
+        // While open the ring holds Esc and the arrow keys system-wide (RegisterHotKey); the line shows when they were taken and given back.
+        _log.Info(open ? "actions ring open: arrow keys and Esc held" : "actions ring closed: arrow keys and Esc released");
         try { OpenChanged?.Invoke(open); }
         catch (Exception ex) { _log.Error("ring open handler failed", ex); }
     }

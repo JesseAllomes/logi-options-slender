@@ -20,6 +20,9 @@ public sealed partial class MainWindow
 
     private ToggleSwitch? _smartShiftToggle;
     private ToggleSwitch? _fnLockToggle;
+    private ToggleSwitch? _pageFnToggle;     // General page
+    private ComboBox[]? _channelChoices;     // General page, per Easy-Switch channel
+    private bool _syncingFn;                 // a refresh is setting the Fn controls: not a user edit
     private readonly List<Rectangle> _notchBars = [];
 
     // ---- InfoBars at the top of the stage ----
@@ -107,7 +110,10 @@ public sealed partial class MainWindow
         }
         else
         {
-            _fnLockToggle = Toggle("F-keys first (Fn lock)", on => _config.Update(c => c with { Keyboard = c.Keyboard with { FnLock = on } }));
+            _fnLockToggle = Toggle("F-keys first (Fn lock)", on =>
+            {
+                if (!_syncingFn) _config.Update(c => c with { Keyboard = c.Keyboard with { FnLock = on } });
+            });
             BottomBarItems.Children.Add(LabelWith("F-keys first (Fn lock)", _fnLockToggle));
             BottomBarItems.Children.Add(LabelWith("Easy-Switch", EasySwitchChips()));
         }
@@ -197,9 +203,11 @@ public sealed partial class MainWindow
                 _smartShiftToggle.IsOn = c.Pointer.SmartShiftEnabled;
             }
 
-            if (_fnLockToggle is not null)
+            if (_fnLockToggle is not null && _fnLockToggle.IsOn != c.Keyboard.FnLock)
             {
-                _fnLockToggle.IsOn = c.Keyboard.FnLock;
+                _syncingFn = true;
+                try { _fnLockToggle.IsOn = c.Keyboard.FnLock; }
+                finally { _syncingFn = false; }
             }
 
             int lit = c.Haptics.Enabled ? HapticSettings.NotchFor(c.Haptics.EffectiveStrength) + 1 : 0;
