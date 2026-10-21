@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=159 -->
+<!-- drainclamp-build: state; schema=1; generation=161 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -109,8 +109,6 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-20T04:15:34+00:00 ee96b506 Squash Options+ button in Settings > General (OptionsPlusState: status read without admin; elevated squash script). 1517 tests
-- 2026-10-20T04:32:31+00:00 520f6eb1 4-agent read-only probe + web research: no hidden sensors; MX4 firmware 27.3.19 = newest (Options+ update had nothing to do); K860 unchanged; consumer K860 cannot use Bolt (Unifying/BT only); Bolt gives MX4 little. Ranked ideas in to-do
 - 2026-10-20T05:05:10+00:00 2a62253c m43: per-app main wheel speed + thumb flick built (1525 tests); force-log experiment: 0x19C0 fn2 constant 4859 = threshold readback, no pressure stream (docs/devices/feature-gaps.md)
 - 2026-10-20T05:17:10+00:00 7284bcc9 m41 haptics (Sonnet builder, 8fc0713/3d874a1) + m42 device events/hosts/wheel mode (Sonnet builder, 865111d) reviewed and merged with m43; wheel-mode haptic wired; Slender.Buzz shipped (AOT) in installer. 1592 tests. v1.1.34 published 16:17 Melbourne. Pending on device: name waveforms 0-14, confirm 0x1D4B/0x2111/0x2121/0x1815 decodes from tray log, 0x4220 sniff
 - 2026-10-20T05:24:58+00:00 9991854a Picker fix: width 480 + scrollable tab row (More/Default were clipped for mouse buttons, hiding Type text); Excel tab only for excel or an existing Excel action (PickerTabs). 1600 tests
@@ -129,4 +127,6 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 - 2026-10-21T04:06:32+00:00 c994bb7f m51 done: Ui.WheelSteps on both slider factories (PageSlider, ThumbCard), SliderWheel carry for hi-res wheels; 1926 tests; pushed
 - 2026-10-21T04:07:49+00:00 40c24404 m50 handed to one Sonnet builder in .worktrees/m50 (branch m50-haptics from 65e5238): levels 33/66/100, cycles picker, named pattern builder, 5 s idle restore, Test everywhere incl. Notifications/alerts
 - 2026-10-21T04:18:27+00:00 c73f716f m50 merged ff ed32cc2 + pushed: levels 33/66/100 (null=Normal 66), cycles picker, MY PATTERNS builder (HapticPattern, cue.Custom, scrub on delete), player writes only on level change + 5 s idle restore, Test on events/alerts/notify/patterns; 1955 tests; UI not seen on screen; not released. Note: null-strength cues now 66 not global feel
+- 2026-10-21T04:28:27+00:00 0ba3f036 1.1.39 released (Fn lock, window 1166x770, labels, slider wheel, haptics m50); config backed up as config.backup-20261021-before-1.1.39.json (calib 44/9/250/250). Then: grab values load exactly (sanity 1-10000 only, user: exact as calibration set them); 1956 tests; pushed, not released
+- 2026-10-21T05:15:37+00:00 38affb6f Window opened short because popover unfolds on the 2560x720 taskbar strip (work 672); now OtherScreen picks last spot/primary/roomiest fitting screen, saves X/Y on close, no animation across screens. Version: tray menu 'Check for updates (vX)', popover top right, rail bottom left. 1961 tests; pushed, not released; UI unseen
 <!-- /DC:LOG -->
