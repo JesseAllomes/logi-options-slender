@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=161 -->
+<!-- drainclamp-build: state; schema=1; generation=164 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -109,9 +109,6 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-20T05:05:10+00:00 2a62253c m43: per-app main wheel speed + thumb flick built (1525 tests); force-log experiment: 0x19C0 fn2 constant 4859 = threshold readback, no pressure stream (docs/devices/feature-gaps.md)
-- 2026-10-20T05:17:10+00:00 7284bcc9 m41 haptics (Sonnet builder, 8fc0713/3d874a1) + m42 device events/hosts/wheel mode (Sonnet builder, 865111d) reviewed and merged with m43; wheel-mode haptic wired; Slender.Buzz shipped (AOT) in installer. 1592 tests. v1.1.34 published 16:17 Melbourne. Pending on device: name waveforms 0-14, confirm 0x1D4B/0x2111/0x2121/0x1815 decodes from tray log, 0x4220 sniff
-- 2026-10-20T05:24:58+00:00 9991854a Picker fix: width 480 + scrollable tab row (More/Default were clipped for mouse buttons, hiding Type text); Excel tab only for excel or an existing Excel action (PickerTabs). 1600 tests
 - 2026-10-20T05:48:11+00:00 38f85cd2 Picker: PickerFlyoutPresenterStyle MaxWidth 380 -> 900, picker sizes to its tab row (no scrolling). User reported side-scrolling in 1.1.35
 - 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
 - 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
@@ -129,4 +126,7 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 - 2026-10-21T04:18:27+00:00 c73f716f m50 merged ff ed32cc2 + pushed: levels 33/66/100 (null=Normal 66), cycles picker, MY PATTERNS builder (HapticPattern, cue.Custom, scrub on delete), player writes only on level change + 5 s idle restore, Test on events/alerts/notify/patterns; 1955 tests; UI not seen on screen; not released. Note: null-strength cues now 66 not global feel
 - 2026-10-21T04:28:27+00:00 0ba3f036 1.1.39 released (Fn lock, window 1166x770, labels, slider wheel, haptics m50); config backed up as config.backup-20261021-before-1.1.39.json (calib 44/9/250/250). Then: grab values load exactly (sanity 1-10000 only, user: exact as calibration set them); 1956 tests; pushed, not released
 - 2026-10-21T05:15:37+00:00 38affb6f Window opened short because popover unfolds on the 2560x720 taskbar strip (work 672); now OtherScreen picks last spot/primary/roomiest fitting screen, saves X/Y on close, no animation across screens. Version: tray menu 'Check for updates (vX)', popover top right, rail bottom left. 1961 tests; pushed, not released; UI unseen
+- 2026-10-21T05:18:20+00:00 11f3dec0 1.1.40 released (version labels, screen choice for full window, exact calibration load); config backed up as config.backup-20261021-before-1.1.40.json
+- 2026-10-21T21:38:57+00:00 f744639c Strength glitch fixed: config save re-applied global feel 25 (ApplyMouseFeel) while player cached 100 -> later Strong buzzes played at 25. LogiMouse now caches real stored strength (_hapticNow, reset on session), SetHapticLevelAsync per-buzz (not the reconnect value), player compares against HapticStrengthNow. Strong=100 = 0x19B0 max. 1964 tests; pushed, not released
+- 2026-10-21T21:59:04+00:00 d0e471f3 Notification haptics never fired on Win11 26300: no EVENT_SYSTEM_ALERT, toast = ShellExperienceHost CoreWindow 'New notification' uncloaked (0x8018); client MSAA name only 'New notification' (app was always Unknown). Fix: second hook on UNCLOAKED (OBJID_WINDOW), MSAA BFS -> first STATICTEXT = app (ToastNames.AppFromParts). Verified live: tray reader returned 'Windows PowerShell'. 1966 tests; pushed, not released. 3CX appears after its first toast (3CX toasts only when unfocused, 30 s; m49 still the ringer path)
 <!-- /DC:LOG -->
