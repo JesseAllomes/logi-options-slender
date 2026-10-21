@@ -63,6 +63,23 @@ public sealed class ScrollSpeedConfigTests : IDisposable
     }
 
     [Fact]
+    public void Calibrated_grab_values_load_exactly_even_outside_the_calibration_limits()
+    {
+        var store = new JsonConfigStore(_dir);
+        store.Save(SlenderConfig.Default with { Pointer = new PointerSettings(GrabBeforePx: 44, GrabMovePx: 9) });
+        PointerSettings p = new JsonConfigStore(_dir).Load().Pointer;
+        Assert.Equal((44, 9), (p.GrabBeforePx, p.GrabMovePx));
+
+        File.WriteAllText(Path.Combine(_dir, "config.json"), """{"version":2,"profiles":[{"bindings":{}}],"pointer":{"grabBeforePx":12,"grabMovePx":700}}""");
+        p = new JsonConfigStore(_dir).Load().Pointer;
+        Assert.Equal((12, 700), (p.GrabBeforePx, p.GrabMovePx));
+
+        File.WriteAllText(Path.Combine(_dir, "config.json"), """{"version":2,"profiles":[{"bindings":{}}],"pointer":{"grabBeforePx":0,"grabMovePx":-3}}""");
+        p = new JsonConfigStore(_dir).Load().Pointer;
+        Assert.Equal((new PointerSettings().GrabBeforePx, new PointerSettings().GrabMovePx), (p.GrabBeforePx, p.GrabMovePx));
+    }
+
+    [Fact]
     public void Defaults_are_normal_speed()
     {
         Assert.Equal(100, new PointerSettings().SideScrollSpeed);

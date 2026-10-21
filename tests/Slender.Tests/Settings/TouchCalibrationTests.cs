@@ -54,7 +54,7 @@ public class TouchCalibrationTests
     }
 
     [Fact]
-    public void Grab_thresholds_round_trip_and_clamp()
+    public void Grab_thresholds_round_trip_exactly()
     {
         string dir = Path.Combine(Path.GetTempPath(), "slender-grab-" + Guid.NewGuid().ToString("N"));
         try
@@ -65,7 +65,7 @@ public class TouchCalibrationTests
             Assert.Equal((90, 15), (p.GrabBeforePx, p.GrabMovePx));
             File.WriteAllText(Path.Combine(dir, "config.json"), """{"version":2,"profiles":[{"bindings":{}}],"pointer":{"grabBeforePx":1,"grabMovePx":999}}""");
             p = store.Load().Pointer;
-            Assert.Equal((PointerSettings.GrabBeforeMin, PointerSettings.GrabMoveMax), (p.GrabBeforePx, p.GrabMovePx));
+            Assert.Equal((1, 999), (p.GrabBeforePx, p.GrabMovePx)); // what the file holds, not re-clamped on load
         }
         finally
         {

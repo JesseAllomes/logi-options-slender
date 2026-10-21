@@ -431,6 +431,9 @@ public sealed record PointerSettings(
     public const int SpeedMin = 25, SpeedMax = 400;
     public const int RestMinMs = 100, RestMaxMs = 1000, DoubleTapMinMs = 150, DoubleTapMaxMs = 600;
     public const int GrabBeforeMin = 30, GrabBeforeMax = 600, GrabMoveMin = 8, GrabMoveMax = 120;
+
+    /// <summary>Largest grab value a config file may hold; anything from 1 to this loads unchanged (calibration's own limits are above).</summary>
+    public const int GrabSanityMax = 10_000;
 }
 
 /// <summary>

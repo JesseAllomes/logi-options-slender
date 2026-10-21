@@ -182,8 +182,10 @@ public sealed class JsonConfigStore : IConfigStore
             Math.Clamp(p.SecondActionSpeed, PointerSettings.SpeedMin, PointerSettings.SpeedMax),
             Math.Clamp(p.TouchRestMs, PointerSettings.RestMinMs, PointerSettings.RestMaxMs),
             Math.Clamp(p.DoubleTapMs, PointerSettings.DoubleTapMinMs, PointerSettings.DoubleTapMaxMs),
-            Math.Clamp(p.GrabBeforePx, PointerSettings.GrabBeforeMin, PointerSettings.GrabBeforeMax),
-            Math.Clamp(p.GrabMovePx, PointerSettings.GrabMoveMin, PointerSettings.GrabMoveMax));
+            // Touch calibration values load exactly as the calibration saved them (user 2026-10-21): its limits are applied when it
+            // computes them, so a later change to those limits never rewrites a calibrated value. Only nonsense falls back.
+            p.GrabBeforePx is > 0 and <= PointerSettings.GrabSanityMax ? p.GrabBeforePx : new PointerSettings().GrabBeforePx,
+            p.GrabMovePx is > 0 and <= PointerSettings.GrabSanityMax ? p.GrabMovePx : new PointerSettings().GrabMovePx);
     }
 
     private static Dictionary<GestureDirection, ActionSpec> ParseSwipes(Dictionary<string, ActionSpec>? raw)
