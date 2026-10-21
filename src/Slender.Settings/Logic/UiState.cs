@@ -11,9 +11,12 @@ public sealed class UiState
     /// <summary>Default window height (DIPs); taller since 2026-10-20 (user asked: the card and pages need the room).</summary>
     public const int DefaultHeight = 900;
 
-    /// <summary>Smallest window (DIPs): the size the user set on 2026-10-21 and asked never to go below.</summary>
+    /// <summary>
+    /// Smallest window (DIPs). Width: the size the user set on 2026-10-21 and asked never to go below. Height: the old 640 plus
+    /// 2.5 app-rail icons (52 each), as the user asked on 2026-10-21.
+    /// </summary>
     public const int MinWidth = 1166;
-    public const int MinHeight = 869;
+    public const int MinHeight = 770;
 
     /// <summary>2 = the remembered height has had the taller default applied once (missing in older files, so 0).</summary>
     public int SizeVersion { get; set; }

@@ -459,6 +459,6 @@ public sealed class UiStateTests : IDisposable
         File.WriteAllText(path, """{ "Width": 200, "Height": 100, "SizeVersion": 2 }""");
         UiState small = UiState.Load(path);
         Assert.Equal(1166, small.Width);
-        Assert.Equal(869, small.Height);
+        Assert.Equal(770, small.Height);
     }
 }

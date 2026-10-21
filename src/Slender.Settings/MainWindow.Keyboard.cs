@@ -101,13 +101,18 @@ public sealed partial class MainWindow
         _kbList.Children.Add(heading);
 
         bool identifying = _config.Config.Keyboard.IdentifySpareKeys;
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        // The cards share the width (long names end in "..."), so Identify always fits beside them however narrow the window is.
+        var row = new Grid { ColumnSpacing = 8 };
         foreach (ControlInfo info in ControlCatalog.SpareKeyControls)
         {
             bool hit = identifying && _identified == info.Id;
             var panel = new StackPanel { Spacing = 1 };
-            panel.Children.Add(Ui.Text(info.Name, 11.5, Ui.Muted));
-            panel.Children.Add(Ui.Text(hit ? "You pressed this one" : PlainActionText(info), 13));
+            TextBlock name = Ui.Text(info.Name, 11.5, Ui.Muted);
+            TextBlock action = Ui.Text(hit ? "You pressed this one" : PlainActionText(info), 13);
+            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            action.TextTrimming = TextTrimming.CharacterEllipsis;
+            panel.Children.Add(name);
+            panel.Children.Add(action);
             var button = new Button
             {
                 Style = Ui.Res<Style>("PlainButtonStyle"),
@@ -116,7 +121,7 @@ public sealed partial class MainWindow
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(9, 4, 9, 4),
                 Height = LabelHeight,
-                MinWidth = 160,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
                 Background = hit ? Ui.MarkSoft : Ui.Brush("RailTransparent"),
                 BorderBrush = hit ? Ui.Mark : Ui.Brush("RuleBrush"),
                 Content = panel,
@@ -124,6 +129,9 @@ public sealed partial class MainWindow
             AutomationProperties.SetName(button, info.Name + ": " + PlainActionText(info));
             ControlInfo captured = info;
             button.Click += (_, _) => ShowPicker(button, captured);
+            ToolTipService.SetToolTip(button, info.Name + ": " + PlainActionText(info));
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(button, row.Children.Count);
             row.Children.Add(button);
         }
 
@@ -135,6 +143,8 @@ public sealed partial class MainWindow
         };
         ToolTipService.SetToolTip(identify, "Press a spare key on the keyboard to see which one it is. Needs the tray running.");
         identify.Click += (_, _) => ToggleIdentify();
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(identify, row.Children.Count);
         row.Children.Add(identify);
         _kbList.Children.Add(row);
     }
