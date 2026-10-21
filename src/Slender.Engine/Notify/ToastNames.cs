@@ -12,6 +12,26 @@ public static class ToastNames
     /// <summary>Window titles the toast host uses for itself; not an app name.</summary>
     private static readonly string[] HostTitles = ["New notification", "Notification", "Windows.UI.Core.CoreWindow"];
 
+    /// <summary>MSAA role of a text element (ROLE_SYSTEM_STATICTEXT).</summary>
+    public const int StaticTextRole = 0x29;
+
+    /// <summary>
+    /// The app from the toast's accessible tree, read breadth first (Windows 11 build 26300, checked 2026-10-22): client
+    /// "New notification" > pane > window "New notification from {app}, {title}, ..." > image, text "{app}", buttons, text lines.
+    /// The first text element is the app name in any display language; the window's own name is the fallback.
+    /// </summary>
+    public static string AppFromParts(string? clientName, IEnumerable<(int Role, string? Name)> parts)
+    {
+        foreach (var (role, name) in parts)
+        {
+            if (role != StaticTextRole || string.IsNullOrWhiteSpace(name)) continue;
+            string app = AppFromAccessibleName(name);
+            if (app != Unknown) return app;
+        }
+
+        return AppFromAccessibleName(clientName);
+    }
+
     public static string AppFromAccessibleName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return Unknown;

@@ -34,6 +34,25 @@ public sealed class NotifyHapticsTests : IDisposable
         Assert.DoesNotContain('\t', name);
     }
 
+    [Fact]
+    public void App_name_comes_from_the_first_text_in_the_toast_tree()
+    {
+        // As read live on Windows 11 build 26300 (2026-10-22): pane, window, image, app text, buttons, title and body texts.
+        (int, string?)[] parts =
+        [
+            (16, null), (9, "New notification from 3CX, Incoming call, John... 1 of 1"), (40, null), (ToastNames.StaticTextRole, "3CX"),
+            (43, "Settings for this notification"), (ToastNames.StaticTextRole, "Incoming call"),
+        ];
+        Assert.Equal("3CX", ToastNames.AppFromParts("New notification", parts));
+    }
+
+    [Fact]
+    public void Without_a_text_element_the_window_name_is_used()
+    {
+        Assert.Equal("Outlook", ToastNames.AppFromParts("Outlook" + Environment.NewLine + "New mail", [(9, "x"), (ToastNames.StaticTextRole, "  ")]));
+        Assert.Equal(ToastNames.Unknown, ToastNames.AppFromParts("New notification", []));
+    }
+
     // ---- rate limit ----
 
     [Fact]
