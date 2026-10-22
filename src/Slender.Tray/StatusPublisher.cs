@@ -187,11 +187,15 @@ public sealed class StatusPublisher : IDisposable
             _optionsChecked = now;
         }
 
-        return new SlenderStatus(
+        DeviceState[] all =
             [
                 MouseDeviceState(s) with { Presence = PresenceText(s.Devices, DeviceCatalog.MxMaster4) },
                 new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { BatteryEstimate = s.KeyboardConnected ? s.KeyboardBatteryEstimate : null, Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null, Presence = PresenceText(s.Devices, DeviceCatalog.ErgoK860) },
-            ],
+            ];
+        // With a registry list, a never-installed (Hidden) device is not in status.json at all; without one, both always are.
+        IReadOnlyList<DeviceState> devices = s.Devices is null ? all : all.Where(d => !IsHidden(s.Devices, d.Id)).ToArray();
+        return new SlenderStatus(
+            devices,
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,
             now,
@@ -199,6 +203,9 @@ public sealed class StatusPublisher : IDisposable
             s.AvailableVersion,
             s.UpdateReady);
     }
+
+    internal static bool IsHidden(IReadOnlyList<DeviceEntry> devices, string id) =>
+        devices.FirstOrDefault(d => d.Id == id)?.Presence is null or DevicePresence.Hidden;
 
     /// <summary>The registry's word for one device; null without a registry or for a never-installed (hidden) device.</summary>
     internal static string? PresenceText(IReadOnlyList<DeviceEntry>? devices, string id) =>

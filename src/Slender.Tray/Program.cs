@@ -167,6 +167,7 @@ static class Program
                 app.DevicesChanged();
             };
             app.DeviceList = () => registry.Devices;
+            app.ForgetDevice = registry.Forget;
             registry.Start();
         }
 

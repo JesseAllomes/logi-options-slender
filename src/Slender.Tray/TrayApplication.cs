@@ -42,7 +42,7 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
-    private readonly uint _updateCheckMessage, _updateApplyMessage;
+    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -105,6 +105,11 @@ public sealed class TrayApplication : IDisposable
         fixed (char* apply = UpdateMessages.ApplyName)
         {
             _updateApplyMessage = Win32.RegisterWindowMessageW(apply);
+        }
+
+        fixed (char* forget = DeviceMessages.ForgetName)
+        {
+            _forgetDeviceMessage = Win32.RegisterWindowMessageW(forget);
         }
 
         CreateWindow();
@@ -189,7 +194,21 @@ public sealed class TrayApplication : IDisposable
     public Func<IReadOnlyList<Slender.Engine.Devices.DeviceEntry>>? DeviceList { get; set; }
 
     /// <summary>The registry's list changed: republish status.json. Safe from any thread.</summary>
-    public void DevicesChanged() => Post(() => _status.Changed());
+    public void DevicesChanged() => Post(() =>
+    {
+        UpdateStatus(); // menu lines and tooltip follow the registry too
+        _status.Changed();
+    });
+
+    /// <summary>Forgets a device in the registry (set from Program); true when it was removed. Null without a registry.</summary>
+    public Func<string, bool>? ForgetDevice { get; set; }
+
+    private void OnForgetDevice(nint index)
+    {
+        if (ForgetDevice is not { } forget) return;
+        string? path = (_store as Slender.Engine.Config.JsonConfigStore)?.FilePath;
+        new DeviceForgetter(forget, path, () => _config, ApplyChange, _log).Forget(index is >= 0 and <= int.MaxValue ? (int)index : -1);
+    }
 
     /// <summary>Shows an update balloon. Safe from any thread.</summary>
     public void NotifyUpdate(UpdateNoticeKind kind, string text) => Post(() =>
@@ -371,6 +390,12 @@ public sealed class TrayApplication : IDisposable
         if (msg != 0 && msg == _updateApplyMessage)
         {
             _ = _updates?.ApplyAsync();
+            return true;
+        }
+
+        if (msg != 0 && msg == _forgetDeviceMessage)
+        {
+            OnForgetDevice(wParam);
             return true;
         }
 
@@ -566,8 +591,8 @@ public sealed class TrayApplication : IDisposable
                 Win32.AppendMenuW(menu, Win32.MF_SEPARATOR, 0, null);
             }
 
-            Append(menu, Win32.MF_GRAYED, 1, _statusText);
-            Append(menu, Win32.MF_GRAYED, 1, _keyboardText);
+            if (_statusText.Length > 0) Append(menu, Win32.MF_GRAYED, 1, _statusText);
+            if (_keyboardText.Length > 0) Append(menu, Win32.MF_GRAYED, 1, _keyboardText);
             Append(menu, _config.Haptics.Enabled ? Win32.MF_CHECKED : 0, CmdHaptics, "Haptics");
             Append(menu, _config.LaunchAtLogin ? Win32.MF_CHECKED : 0, CmdLaunch, "Launch at login");
             Append(menu, 0, CmdSettings, "Settings…");
@@ -1000,14 +1025,18 @@ public sealed class TrayApplication : IDisposable
     private void UpdateStatus()
     {
         string? mouseShort = ShortEstimate(_mouseEstimate), keyboardShort = ShortEstimate(_keyboardEstimate);
+        var list = DeviceList?.Invoke();
+        var mousePresence = PresenceOf(list, Slender.Engine.Devices.DeviceCatalog.MxMaster4);
+        var keyboardPresence = PresenceOf(list, Slender.Engine.Devices.DeviceCatalog.ErgoK860);
+        // A Hidden device has no line (empty text is skipped by ShowMenu).
         _statusText = _paused
             ? TrayText.Paused
-            : TrayText.Device("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort);
-        _keyboardText = TrayText.Device("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort);
+            : TrayText.Line("MX Master 4", mousePresence, _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort) ?? string.Empty;
+        _keyboardText = TrayText.Line("ERGO K860", keyboardPresence, _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort) ?? string.Empty;
         string tip = BatteryTip.Build(
         [
-            new TipDevice("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort),
-            new TipDevice("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort),
+            new TipDevice("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort, mousePresence),
+            new TipDevice("ERGO K860", _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort, keyboardPresence),
         ]);
         if (tip != _tip)
         {
@@ -1015,6 +1044,10 @@ public sealed class TrayApplication : IDisposable
             RefreshTip();
         }
     }
+
+    /// <summary>The registry's presence for a device; null without a registry list, Hidden when the list lacks it.</summary>
+    private static Slender.Engine.Devices.DevicePresence? PresenceOf(IReadOnlyList<Slender.Engine.Devices.DeviceEntry>? list, string id) =>
+        list is null ? null : list.FirstOrDefault(d => d.Id == id)?.Presence ?? Slender.Engine.Devices.DevicePresence.Hidden;
 
     private unsafe void RefreshTip()
     {

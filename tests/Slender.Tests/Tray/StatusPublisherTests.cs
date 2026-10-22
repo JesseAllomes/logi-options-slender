@@ -81,8 +81,19 @@ public sealed class StatusPublisherTests : IDisposable
         publisher.Changed();
 
         SlenderStatus status = Assert.Single(h.Written);
-        Assert.Equal("sleeping", status.Devices[0].Presence);
-        Assert.Null(status.Devices[1].Presence);
+        Assert.Equal("sleeping", Assert.Single(status.Devices).Presence);
+        Assert.Equal("mx-master-4", status.Devices[0].Id);
+    }
+
+    [Fact]
+    public void Without_a_registry_list_both_devices_are_listed()
+    {
+        var h = new Harness();
+        using StatusPublisher publisher = h.Create();
+
+        publisher.Changed();
+
+        Assert.Equal(["mx-master-4", "ergo-k860"], Assert.Single(h.Written).Devices.Select(d => d.Id));
     }
 
     [Fact]
