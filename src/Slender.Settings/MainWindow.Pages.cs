@@ -391,6 +391,10 @@ public sealed partial class MainWindow
 
         AddSection("ABOUT");
         BuildVersionRow();
+        var notAffiliated = Ui.Text("Slender is an independent project, not affiliated with or endorsed by Logitech or Yealink. Product names, logos and pictures of their devices are shown only to identify the devices Slender works with.", 12, Ui.Muted);
+        notAffiliated.TextWrapping = TextWrapping.Wrap;
+        notAffiliated.Margin = new Thickness(0, 10, 0, 0);
+        PagePanel.Children.Add(notAffiliated);
     }
 
     /// <summary>The version row: what the tray published about updates (status.json) and two buttons that ask the tray to act.</summary>

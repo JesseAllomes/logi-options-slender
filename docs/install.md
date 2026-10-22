@@ -2,6 +2,9 @@
 
 Slender installs per user, no admin rights, from one file: `SlenderSetup.exe`.
 
+Slender is an independent project, not affiliated with or endorsed by Logitech or Yealink. Product names, logos and pictures
+of their devices (shipped in `src/Slender.Settings/Assets/Devices`) are shown only to identify the devices Slender works with.
+
 ## Install
 
 1. Download `SlenderApp-win-Setup.exe` from the latest release at https://github.com/JesseAllomes/logi-options-slender/releases, or build it (needs the .NET 10 SDK and PowerShell 7): `.\scripts\Build-Setup.ps1` produces `artifacts\SlenderSetup.exe` and publishes it as a release (see Update).
