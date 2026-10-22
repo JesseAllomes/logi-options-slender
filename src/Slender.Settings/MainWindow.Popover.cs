@@ -95,7 +95,6 @@ public sealed partial class MainWindow
         Activated += OnPopoverActivated;
 
         _deferred = new DeferredWork(work => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => work()));
-        _deferred.Add("assets", () => _ = EnsureAssetsAsync().ContinueWith(_ => DispatcherQueue.TryEnqueue(UpdateDeviceRows), TaskScheduler.Default));
         _deferred.Add("icon", () =>
         {
             _iconsAllowed = true;
@@ -360,16 +359,7 @@ public sealed partial class MainWindow
 
     private FrameworkElement DeviceThumb(DeviceKind kind)
     {
-        string? file = FindThumb(ControlCatalog.DeviceId(kind));
-        if (file is null)
-        {
-            return new Grid
-            {
-                Height = 36,
-                Children = { new FontIcon { Glyph = kind == DeviceKind.Mouse ? "\uF962" : "\uF765", FontSize = 22, Foreground = Ui.Muted } },
-            };
-        }
-
+        string file = BuiltInPictures.For(kind).ThumbPath;
         var image = new Image { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
         if (kind == DeviceKind.Mouse)
         {
@@ -384,19 +374,6 @@ public sealed partial class MainWindow
         }
 
         return image;
-    }
-
-    private static string? FindThumb(string deviceId)
-    {
-        try
-        {
-            string dir = Path.Combine(SlenderPaths.AssetsDirectory, deviceId);
-            return Directory.Exists(dir) ? Directory.GetFiles(dir, "thumb.*").Concat(Directory.GetFiles(dir, "render.*")).FirstOrDefault() : null;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            return null;
-        }
     }
 
     /// <summary>"You're in Excel · N buttons changed". The icon is extracted after the first frame.</summary>
@@ -548,8 +525,6 @@ public sealed partial class MainWindow
             BuildInfoBars();
             AddAccelerators();
         }
-
-        await EnsureAssetsAsync();
 
         var from = new PxRect(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
         int margin = (int)Math.Round(12 * _scale);

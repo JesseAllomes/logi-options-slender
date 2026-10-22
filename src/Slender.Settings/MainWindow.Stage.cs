@@ -90,12 +90,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        CachedDevice? device = _devices.GetValueOrDefault(_kind);
-        if (device is null)
-        {
-            LayoutControlList(w, h);
-        }
-        else if (_kind == DeviceKind.Mouse)
+        CachedDevice device = BuiltInPictures.For(_kind);
+        if (_kind == DeviceKind.Mouse)
         {
             LayoutMouse(device, w, h);
         }
@@ -141,7 +137,7 @@ public sealed partial class MainWindow
         var leftSide = new List<(Hotspot Spot, Point Pos)>();
         foreach (Hotspot spot in layout.Hotspots)
         {
-            (double fx, double fy) = HotspotMapper.ToImageFraction(DeviceKind.Mouse, spot, layout, device.ImageWidth, device.ImageHeight);
+            (double fx, double fy) = HotspotMapper.ToImageFraction(spot);
             var pos = new Point(left + fx * imgW, top + fy * imgH);
             (spot.LabelSide < 0 ? leftSide : right).Add((spot, pos));
         }
@@ -283,7 +279,7 @@ public sealed partial class MainWindow
     {
         DeviceLayout layout = device.Layout;
         double aspect = (double)device.ImageWidth / device.ImageHeight;
-        const double ViewShare = 0.72; // like Options+, show the keyboard and only the top of the wrist rest
+        const double ViewShare = 0.66; // the keyboard body ends near 58% of the picture; keep a little wrist rest below it
         double listHeight = 150;
         double top = 96;
         double imgW = Math.Min(Math.Min(w - 48, 880), (h - top - 24 - listHeight) / (ViewShare / aspect));
@@ -304,10 +300,10 @@ public sealed partial class MainWindow
         };
         AutomationProperties.SetAccessibilityView(frame, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
         frame.Children.Add(_render);
-        // The picture is cut off like Options+ does; fade the cut into the window ground instead of a hard edge.
+        // The picture is cut off below the keys; fade the cut into the window ground instead of a hard edge.
         frame.Children.Add(new Rectangle
         {
-            Height = viewH * 0.4,
+            Height = viewH * 0.25,
             VerticalAlignment = VerticalAlignment.Bottom,
             Fill = new LinearGradientBrush
             {
@@ -326,7 +322,7 @@ public sealed partial class MainWindow
 
         foreach (Hotspot spot in layout.Hotspots)
         {
-            (double fx, double fy) = HotspotMapper.ToImageFraction(DeviceKind.Keyboard, spot, layout, device.ImageWidth, device.ImageHeight);
+            (double fx, double fy) = HotspotMapper.ToImageFraction(spot);
             var pos = new Point(left + fx * imgW, top + fy * imgH);
             var info = new ControlInfo(spot.ControlId, spot.Name, ControlCatalog.Find(_kind, spot.ControlId)?.NativeText ?? spot.Name);
             var item = new StageItem { Info = info, Position = pos };
@@ -448,63 +444,6 @@ public sealed partial class MainWindow
 
         _kbList.Children.Add(grid);
         AddSpareKeysRow();
-    }
-
-    // ---- no Options+ assets: a plain, designed list of controls ----
-
-    private void LayoutControlList(double w, double h)
-    {
-        ControlInfo[] controls = [.. ControlCatalog.For(_kind)];
-        bool twoColumns = controls.Length > 8;
-        double colWidth = 300;
-        double listWidth = twoColumns ? colWidth * 2 + 12 : 380;
-        double silhouetteW = _kind == DeviceKind.Mouse ? 150 : 0;
-        double total = listWidth + (silhouetteW > 0 ? silhouetteW + 56 : 0);
-        double left = Math.Max(32, (w - total) / 2);
-        double top = 124;
-
-        if (_kind == DeviceKind.Mouse)
-        {
-            var silhouette = new Microsoft.UI.Xaml.Shapes.Path
-            {
-                Data = (Geometry)Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(Geometry),
-                    "M50,4 C80,4 96,40 94,84 C92,130 80,156 50,156 C26,156 10,134 8,100 C6,60 22,4 50,4 Z"),
-                Fill = Ui.Paper3,
-                Stroke = Ui.Rule,
-                StrokeThickness = 1,
-                Stretch = Stretch.Uniform,
-                Width = silhouetteW,
-                Height = silhouetteW * 1.6,
-                Opacity = 0.9,
-                IsHitTestVisible = false,
-            };
-            Canvas.SetLeft(silhouette, left);
-            Canvas.SetTop(silhouette, top);
-            StageCanvas.Children.Add(silhouette);
-            _render = null;
-            left += silhouetteW + 56;
-        }
-
-        StageCanvas.Children.Add(MuteNote(left, top - 34));
-        for (int i = 0; i < controls.Length; i++)
-        {
-            int column = twoColumns ? i / 8 : 0;
-            int row = twoColumns ? i % 8 : i;
-            var item = new StageItem { Info = controls[i], LabelWidth = colWidth };
-            item.Label = MakeLabelButton(item, twoColumns ? colWidth : listWidth);
-            Canvas.SetLeft(item.Label, left + column * (colWidth + 12));
-            Canvas.SetTop(item.Label, top + row * (LabelHeight + 8));
-            StageCanvas.Children.Add(item.Label);
-            _items[controls[i].Id] = item;
-        }
-    }
-
-    private static FrameworkElement MuteNote(double left, double top)
-    {
-        var note = Ui.Text("Device pictures are not available here, so controls are listed.", 12, Ui.Muted);
-        Canvas.SetLeft(note, left);
-        Canvas.SetTop(note, top);
-        return note;
     }
 
     // ---- shared: label text, selection visuals ----

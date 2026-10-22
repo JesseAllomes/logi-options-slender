@@ -57,34 +57,10 @@ public static class ImageSize
 }
 
 /// <summary>
-/// Maps Options+ hotspot percentages onto the real image. The percentages are relative to the "origin" size in the metadata,
-/// not to the image file: the mouse picture is centred in its box; the keyboard markers are the top-left of a key, in the box top-left.
+/// Hotspot X and Y are plain percentages of the picture, so the position is the percentage as a fraction.
 /// </summary>
 public static class HotspotMapper
 {
     /// <summary>Position of the hotspot as a fraction (0..1) of the image width and height.</summary>
-    public static (double X, double Y) ToImageFraction(DeviceKind kind, Hotspot spot, DeviceLayout layout, int imageWidth, int imageHeight)
-    {
-        if (imageWidth <= 0 || imageHeight <= 0 || layout.Width <= 0 || layout.Height <= 0)
-        {
-            return (spot.X / 100, spot.Y / 100);
-        }
-
-        double px;
-        double py;
-        if (kind == DeviceKind.Mouse)
-        {
-            px = spot.X / 100 * layout.Width + (imageWidth - layout.Width) / 2.0;
-            py = spot.Y / 100 * layout.Height + (imageHeight - layout.Height) / 2.0;
-        }
-        else
-        {
-            // Marker = top-left corner of the key. Measured against the render: x is a share of the picture width and
-            // y a share of the origin height; +1.7% across and +5% down reach the key centre.
-            px = (spot.X + 1.7) / 100 * imageWidth;
-            py = (spot.Y + 5.0) / 100 * layout.Height;
-        }
-
-        return (Math.Clamp(px / imageWidth, 0, 1), Math.Clamp(py / imageHeight, 0, 1));
-    }
+    public static (double X, double Y) ToImageFraction(Hotspot spot) => (Math.Clamp(spot.X / 100, 0, 1), Math.Clamp(spot.Y / 100, 0, 1));
 }

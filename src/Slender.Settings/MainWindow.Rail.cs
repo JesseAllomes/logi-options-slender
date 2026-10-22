@@ -32,7 +32,6 @@ public sealed partial class MainWindow
 
         if (HeadsetListed())
         {
-            EnsureYealinkPictures();
             RailPanel.Children.Add(HeadsetTile());
             RailPanel.Children.Add(HeadsetTile(baseTile: true));
         }
@@ -77,32 +76,19 @@ public sealed partial class MainWindow
         bool offline = DevicePresenceView.Dimmed(_status.Status, id);
 
         var content = new StackPanel { Spacing = 5, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        CachedDevice? device = _devices.GetValueOrDefault(kind);
-        FrameworkElement thumb;
-        if (device is not null)
+        CachedDevice device = BuiltInPictures.For(kind);
+        var image = new Image { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
+        if (kind == DeviceKind.Mouse)
         {
-            var image = new Image { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
-            if (kind == DeviceKind.Mouse)
-            {
-                image.Height = 44;
-                image.Source = Ui.Bitmap(device.ThumbPath, decodePixelHeight: (int)Math.Ceiling(44 * _scale));
-            }
-            else
-            {
-                image.Width = 48;
-                image.Source = Ui.Bitmap(device.ThumbPath, decodePixelWidth: (int)Math.Ceiling(48 * _scale));
-            }
-
-            thumb = image;
+            image.Height = 44;
+            image.Source = Ui.Bitmap(device.ThumbPath, decodePixelHeight: (int)Math.Ceiling(44 * _scale));
         }
         else
         {
-            thumb = new Grid
-            {
-                Height = 44,
-                Children = { new FontIcon { Glyph = kind == DeviceKind.Mouse ? "" : "", FontSize = 26, Foreground = Ui.Muted } },
-            };
+            image.Width = 48;
+            image.Source = Ui.Bitmap(device.ThumbPath, decodePixelWidth: (int)Math.Ceiling(48 * _scale));
         }
+        FrameworkElement thumb = image;
 
         thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);

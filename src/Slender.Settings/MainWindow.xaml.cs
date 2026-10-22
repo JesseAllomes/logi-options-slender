@@ -43,9 +43,7 @@ public sealed partial class MainWindow : Window
     private readonly UiState _ui = UiState.Load(UiPath);
     private readonly ConfigService _config;
     private readonly StatusMonitor _status;
-    private readonly AssetCache _assets = new(AssetCache.DefaultDepotsRoot, SlenderPaths.AssetsDirectory, SlenderPaths.PictureBackupDirectory);
     private readonly IconService _icons;
-    private readonly Dictionary<DeviceKind, CachedDevice?> _devices = [];
     private readonly Dictionary<DeviceKind, ushort> _selected = [];
 
     private DeviceKind _kind;
@@ -64,7 +62,7 @@ public sealed partial class MainWindow : Window
 
         _config = new ConfigService(ConfigDirOverride is null ? new JsonConfigStore() : new JsonConfigStore(ConfigDirOverride), DispatcherQueue);
         _status = new StatusMonitor(DispatcherQueue, StatusFileOverride, light: popover);
-        _icons = new IconService(_assets.IconsDirectory);
+        _icons = new IconService(Path.Combine(SlenderPaths.AssetsDirectory, "icons"));
 
         _config.Changed += OnConfigChanged;
         Slender.Engine.Macros.MacroLabels.Resolver = id => MacroOps.Find(_config.Config, id)?.Name; // labels show a macro by name
@@ -84,25 +82,10 @@ public sealed partial class MainWindow : Window
         Shell.Loaded += async (_, _) => await InitializeAsync();
     }
 
-    private Task<bool>? _assetsTask;
-
-    /// <summary>Copies/loads the device renders once (off the UI thread). The popover defers it; the window awaits it.</summary>
-    private Task<bool> EnsureAssetsAsync() => _assetsTask ??= Task.Run(() =>
-    {
-        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
-        {
-            _devices[kind] = _assets.Ensure(kind);
-        }
-
-        return true;
-    });
-
     private ProfileView CurrentProfile => new(_config.Config, _app);
 
     private async Task InitializeAsync()
     {
-        // Copying the renders from Options+ happens off the UI thread, and only when they are not cached yet.
-        await EnsureAssetsAsync();
         PrepareFull();
         if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_SHOT") is { Length: > 0 } shot)
         {
