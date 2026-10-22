@@ -139,7 +139,7 @@ public sealed class JsonConfigStore : IConfigStore
                 : new KeyboardSettings(),
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
             Yealink = dto.Yealink is { } y
-                ? new YealinkSettings(y.Hook ?? new ActionSpec.None(), y.Reject ?? new ActionSpec.None(), y.TeamsButton ?? new ActionSpec.None(), y.MuteSync, y.LedWrites)
+                ? new YealinkSettings(y.Hook ?? new ActionSpec.None(), y.Reject ?? new ActionSpec.None(), y.TeamsButton ?? new ActionSpec.None(), y.MuteSync, y.LedWrites, y.VendorReads)
                 : new YealinkSettings(),
             Ring = ToRingAppearance(dto.Ring),
             MyShortcuts = ToMyShortcuts(dto.MyShortcuts),
@@ -355,6 +355,7 @@ public sealed class JsonConfigStore : IConfigStore
                 TeamsButton = config.Yealink.TeamsButton,
                 MuteSync = config.Yealink.MuteSync,
                 LedWrites = config.Yealink.LedWrites,
+                VendorReads = config.Yealink.VendorReads,
             },
             OnboardRemaps = config.OnboardRemaps.Count == 0 ? null : config.OnboardRemaps.Select(r => new OnboardRemapDto { Cid = r.Cid, Chord = r.Chord }).ToList(),
             MyShortcuts = config.MyShortcuts.Count == 0
@@ -528,6 +529,7 @@ public sealed class JsonConfigStore : IConfigStore
         public ActionSpec? TeamsButton { get; set; }
         public bool MuteSync { get; set; } = true;
         public bool LedWrites { get; set; }
+        public bool VendorReads { get; set; } = true;
     }
 
     internal sealed class PointerDto

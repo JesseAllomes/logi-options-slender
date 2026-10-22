@@ -34,12 +34,13 @@ public sealed class YealinkSettingsTests : IDisposable
         Assert.IsType<ActionSpec.None>(y.TeamsButton);
         Assert.True(y.MuteSync);
         Assert.False(y.LedWrites);
+        Assert.True(y.VendorReads);
     }
 
     [Fact]
     public void Settings_round_trip()
     {
-        var y = new YealinkSettings(new ActionSpec.Keys("Ctrl+Alt+H"), new ActionSpec.None(), new ActionSpec.Keys("Win+D"), MuteSync: false, LedWrites: true);
+        var y = new YealinkSettings(new ActionSpec.Keys("Ctrl+Alt+H"), new ActionSpec.None(), new ActionSpec.Keys("Win+D"), MuteSync: false, LedWrites: true, VendorReads: false);
         new JsonConfigStore(_dir).Save(SlenderConfig.Default with { Yealink = y });
         Assert.Equal(y, new JsonConfigStore(_dir).Load().Yealink);
     }

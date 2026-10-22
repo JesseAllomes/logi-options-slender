@@ -494,14 +494,16 @@ public sealed record KeyboardSettings(
 /// Yealink WH64 headset settings. Hook (answer/hang-up), Reject and the Teams button each run a Slender action; None (default)
 /// leaves the button to the phone app and Slender does nothing. MuteSync: the mute button toggles the Windows microphone and the
 /// headset mute light follows it. LedWrites (experimental, off): lets Slender write the headset's lights; nothing is ever written
-/// to the headset while it is off.
+/// to the headset while it is off. VendorReads (default on): lets Slender ask the base for its battery, signal and settings over
+/// the vendor channel; with it off that channel is never opened and no request is sent.
 /// </summary>
 public sealed record YealinkSettings(
     ActionSpec Hook,
     ActionSpec Reject,
     ActionSpec TeamsButton,
     bool MuteSync = true,
-    bool LedWrites = false)
+    bool LedWrites = false,
+    bool VendorReads = true)
 {
     public YealinkSettings() : this(new ActionSpec.None(), new ActionSpec.None(), new ActionSpec.None()) { }
 }
@@ -598,7 +600,27 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 
     /// <summary>"active", "sleeping" or "disconnected" from the device registry (m52); null from an older tray or for a never-installed device.</summary>
     public string? Presence { get; init; }
+
+    /// <summary>What the headset base reports over its vendor channel (m55); null for other devices, with the read switched off, or before the base has answered.</summary>
+    public HeadsetState? Headset { get; init; }
 }
+
+/// <summary>
+/// The Yealink base's own report (read-only). Every field is null until the base has said it. Signal is the DECT radio level the
+/// base reports (0 = none, 7 = full); InRange is false when the handset is not linked to the base. Settings is the read-only
+/// list, in the order USB Connect groups them.
+/// </summary>
+public sealed record HeadsetState(
+    bool? Registered,
+    int? BatteryPercent,
+    bool? Charging,
+    bool? Docked,
+    int? Signal,
+    bool? InRange,
+    IReadOnlyList<HeadsetSetting>? Settings = null);
+
+/// <summary>One base setting as text: its USB Connect group ("General", "Sound"...), plain label and current value.</summary>
+public sealed record HeadsetSetting(string Group, string Label, string Value);
 
 /// <summary>One Easy-Switch channel as the device reports it. Name is the host's friendly name, when the device stores one.</summary>
 public sealed record HostState(int Index, string? Name, bool Paired, bool Current);
@@ -639,6 +661,12 @@ public static class UpdateMessages
 public static class DeviceMessages
 {
     public const string ForgetName = "Slender.ForgetDevice";
+
+    /// <summary>
+    /// Settings asks the tray to read the headset base's settings again (m55): posted when the Headset page opens. The tray
+    /// reads at most once every few seconds and does nothing with the read switched off or Yealink USB Connect running.
+    /// </summary>
+    public const string HeadsetRefreshName = "Slender.HeadsetRefresh";
 }
 
 /// <summary>A ring-start reached the tray: when (local time) and which signal fired.</summary>
