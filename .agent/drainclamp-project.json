@@ -675,7 +675,7 @@
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 281,
+  "rev": 282,
   "review": {
     "advice": [],
     "config": {
@@ -13473,6 +13473,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-22T02:15:44+00:00"
+    },
+    {
+      "end": "2026-10-22T03:40:00+00:00",
+      "id": "s11",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-22T03:40:00+00:00"
     }
   ],
   "todos": [

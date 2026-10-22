@@ -1,6 +1,15 @@
-# Handoff (written 2026-10-21, resume in a fresh session)
+# Handoff (updated 2026-10-22, resume in a fresh session)
 
-State: main pushed, Slender 1.1.38 released, 1919 tests, -warnaserror clean, no worktrees open.
+State 2026-10-22: main 216e066 pushed, 2116 tests, -warnaserror clean, no worktrees open. Latest release v1.1.42 (another
+session: device registry m52/m53, history scrub m56). Released from this session: 1.1.39 (Fn lock no longer reset on
+start/connect + Fn+Esc live in popover/Settings, window min 1166x770, labels/tooltips, slider wheel m51, haptics redesign m50),
+1.1.40 (version labels, full window opens on a screen it fits, exact calibration load), 1.1.41 (strength glitch: real stored
+strength tracked; notification haptics on Win11 26300 via EVENT_OBJECT_UNCLOAKED + app from toast's first text).
+m49 3CX ringer built and merged (216e066), NOT released: release 1.1.43 waits on the user. Then the user sets it up
+(Haptics > 3CX RINGER > Set up, Edge Load unpacked) and one real call decides whether the headset (hid) signal works.
+Next queued by the other session: m54 Yealink module (touches the same Devices/Tray/Settings areas; merge carefully).
+
+Older state: Slender 1.1.38 released, 1919 tests.
 1.1.37 shipped macros (m44), Excel add-in (m37), notification haptics (m45), per-app DPI + battery estimate (m46),
 K860 disconnect fix (m47), K860 onboard remaps in the app (m48) and the gap fixes (Excel macro picker, add-in copy refresh,
 macro reference scrub, real DPI steps in Settings, onboard reset from the 0x1C00 status byte, Excel pipe worker lazy).
@@ -8,7 +17,7 @@ macro reference scrub, real DPI steps in Settings, onboard reset from the 0x1C00
 
 ## Waiting on the user
 
-- **3CX ringer (m49): go-ahead asked, not given.** Plan below.
+- **3CX ringer (m49): built and merged 216e066; release 1.1.43 and live setup + one real call pending.** Plan below (as built).
 - Device/UI checks of everything above (nothing new has been seen on screen or on the devices): remaps on one key first,
   per-app pointer speed, macro editor/recorder, battery lines, notification haptics (what name the first toasts show), Excel
   add-in (opt-in, Excel closed; first real run unproven).
