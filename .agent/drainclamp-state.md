@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=186 -->
+<!-- drainclamp-build: state; schema=1; generation=187 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -120,7 +120,6 @@ Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with th
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-21T01:35:27+00:00 51569bfa 1a337ea labels: ControlInfo.Description hover text on stage dots/labels/spare cards, spare keys -> Spare key 1-3 (Solaar names in tooltip), clearer Sensitivity/Pointer speed/Touch calibration/Excel/channel texts, bottom bar + popover tooltips; Haptics page labels deferred to haptics redesign (awaiting user: real intensity + 1-3 cycles, minimal strength writes); 1923 tests; pushed, not released
 - 2026-10-21T04:06:32+00:00 c994bb7f m51 done: Ui.WheelSteps on both slider factories (PageSlider, ThumbCard), SliderWheel carry for hi-res wheels; 1926 tests; pushed
 - 2026-10-21T04:07:49+00:00 40c24404 m50 handed to one Sonnet builder in .worktrees/m50 (branch m50-haptics from 65e5238): levels 33/66/100, cycles picker, named pattern builder, 5 s idle restore, Test everywhere incl. Notifications/alerts
 - 2026-10-21T04:18:27+00:00 c73f716f m50 merged ff ed32cc2 + pushed: levels 33/66/100 (null=Normal 66), cycles picker, MY PATTERNS builder (HapticPattern, cue.Custom, scrub on delete), player writes only on level change + 5 s idle restore, Test on events/alerts/notify/patterns; 1955 tests; UI not seen on screen; not released. Note: null-strength cues now 66 not global feel
@@ -140,4 +139,5 @@ Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with th
 - 2026-10-22T03:59:22+00:00 ac47d7ef m49 built + merged ff (68789cb,b5652cd,216e066) and pushed: MV3 extension (HID Ringer bit primary, call Notification fallback, start/stop only), RingerHost AOT one-shot native host, !ring protocol, RingerSession (cue loop until stop/click/90 s, other buzzes dropped), RingerInstaller (HKCU host key, previous value kept), Settings 3CX RINGER on Haptics page; 2116 tests; NOT released, nothing run live (needs Set up + Load unpacked + a real call)
 - 2026-10-22T04:01:19+00:00 898ad1d2 State updated: m49 row (built, open until live call), ARCH ringer line, handoff refreshed for 2026-10-22; release 1.1.43 waits on the user
 - 2026-10-22T04:06:49+00:00 ff38d20f Find button: WebAppShortcuts (pure, --app-url parse, 3CX match, origin via RingerOrigin) + Settings WebAppShortcutScan (IShellLinkW over Start menu/Startup/Desktop, on press only); live scan found the user's 3CX origin; 2125 tests. Releasing 1.1.43 (user: yes to Find before release)
+- 2026-10-22T04:09:35+00:00 5832d3ed 1.1.43 released (3CX ringer m49 + Find button); staged Slender.RingerHost.exe + EdgeRinger/extension; config backed up as config.backup-20261022-before-1.1.43.json. Next: user updates, Find, Set up, Edge Load unpacked, one real call
 <!-- /DC:LOG -->
