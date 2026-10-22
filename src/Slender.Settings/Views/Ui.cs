@@ -94,9 +94,28 @@ internal static class Ui
         return p;
     }
 
-    /// <summary>A decoded-at-display-size image from a file. decode sizes are in physical pixels.</summary>
+    private const int BitmapCacheLimit = 32;
+    private static readonly Dictionary<(string Path, bool ByWidth), (int Size, BitmapImage Image)> s_bitmaps = [];
+
+    /// <summary>
+    /// A decoded-at-display-size image from a file (decode sizes in physical pixels). The last decode of each file and axis is
+    /// kept, so a page rebuild reuses it instead of decoding again (that showed as a blank flash); a new size replaces it, so a
+    /// window resize never piles up copies. UI thread only.
+    /// </summary>
     public static BitmapImage Bitmap(string path, int decodePixelWidth = 0, int decodePixelHeight = 0)
     {
+        var key = (path, decodePixelWidth > 0);
+        int size = decodePixelWidth > 0 ? decodePixelWidth : decodePixelHeight;
+        if (s_bitmaps.TryGetValue(key, out var cached) && cached.Size == size)
+        {
+            return cached.Image;
+        }
+
+        if (s_bitmaps.Count >= BitmapCacheLimit && !s_bitmaps.ContainsKey(key))
+        {
+            s_bitmaps.Clear();
+        }
+
         var bmp = new BitmapImage();
         if (decodePixelWidth > 0)
         {
@@ -108,6 +127,7 @@ internal static class Ui
         }
 
         bmp.UriSource = new Uri(path);
+        s_bitmaps[key] = (size, bmp);
         return bmp;
     }
 
