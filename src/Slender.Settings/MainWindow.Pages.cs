@@ -19,10 +19,16 @@ public sealed partial class MainWindow
         PagePanel.Children.Clear();
         PagePanel.Spacing = 0;
         PagePanel.MaxWidth = 660;
-        if (_page != Page.Headset) _headsetAsked = false;
+        if (_page is not (Page.Headset or Page.Base)) _headsetAsked = false;
         if (_page == Page.Headset)
         {
             BuildHeadsetPage();
+            return;
+        }
+
+        if (_page == Page.Base)
+        {
+            BuildBasePage();
             return;
         }
 
@@ -34,6 +40,7 @@ public sealed partial class MainWindow
         bar.Items.Add(new SelectorBarItem { Text = "Haptics", Tag = Page.Haptics });
         bar.Items.Add(new SelectorBarItem { Text = "Actions Ring", Tag = Page.Ring });
         bar.Items.Add(new SelectorBarItem { Text = "General", Tag = Page.General });
+        bar.Items.Add(new SelectorBarItem { Text = "3CX", Tag = Page.ThreeCx });
         bar.SelectedItem = bar.Items.First(i => (Page)i.Tag == _page);
         bar.SelectionChanged += (s, _) =>
         {
@@ -55,6 +62,9 @@ public sealed partial class MainWindow
                 break;
             case Page.Ring:
                 BuildRingPage();
+                break;
+            case Page.ThreeCx:
+                BuildRingerSection();
                 break;
             default:
                 BuildGeneralPage();
@@ -324,7 +334,6 @@ public sealed partial class MainWindow
 
         BuildHapticEvents(c);
         BuildNotificationHaptics();
-        BuildRingerSection();
     }
 
     private void BuildGeneralPage()
@@ -410,13 +419,13 @@ public sealed partial class MainWindow
         Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
 
     /// <summary>Posts one of the registered update messages to the tray's hidden window. The tray does the update work.</summary>
-    private static void AskTray(string messageName, nint wParam = 0)
+    private static void AskTray(string messageName, nint wParam = 0, nint lParam = 0)
     {
         nint tray = Services.NativeMethods.FindWindowW(UpdateMessages.TrayWindowClass, null);
         uint message = Services.NativeMethods.RegisterWindowMessageW(messageName);
         if (tray != 0 && message != 0)
         {
-            Services.NativeMethods.PostMessageW(tray, message, wParam, 0);
+            Services.NativeMethods.PostMessageW(tray, message, wParam, lParam);
         }
     }
 

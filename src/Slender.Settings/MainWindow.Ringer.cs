@@ -10,7 +10,7 @@ using Slender.Settings.Views;
 namespace Slender.Settings;
 
 /// <summary>
-/// The Haptics page's 3CX ringer section (docs/3cx-ringer.md): the 3CX address, the ringer buzz, Set up / Remove, and what the Edge
+/// The 3CX page's ringer section (docs/3cx-ringer.md): the 3CX address, the ringer buzz, Set up / Remove, and what the Edge
 /// extension last told Slender. Nothing is written until the user presses Set up; the section only reads (one registry value, one file check).
 /// </summary>
 public sealed partial class MainWindow
