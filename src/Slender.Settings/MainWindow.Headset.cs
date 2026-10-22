@@ -95,6 +95,7 @@ public sealed partial class MainWindow
             AddHeadsetNote("The headset isn't connected. Your changes are saved and apply when it connects.");
         }
 
+        AddHeadsetPicture(_status.Device(DeviceIds.Headset)?.Headset, y);
         AddHeadsetStatus();
 
         AddSection("BUTTONS");
