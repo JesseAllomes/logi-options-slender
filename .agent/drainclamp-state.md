@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=189 -->
+<!-- drainclamp-build: state; schema=1; generation=190 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -49,6 +49,8 @@ Device states (user 2026-10-22) -> never installed = hidden; installed + active 
 Yealink WH64 headset (user 2026-10-22) -> built into Slender as a device module (USB 6993:B0AE); research, probes and raw captures stay in the private repo personal/yealink-headset-control and are scrubbed of device serials before anything lands here; never firmware; vendor channel (COL05 0xC8) allowlisted and read-only until mapped; stand down while YealinkUSBConnect runs; call control on the Yealink private telephony collection (COL02) so Teams keeps COL01
 Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-push) -> replace the Windows username with %localuser% throughout history; DrainClamp audit/map/verify files stay untracked and excluded for good
 Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with the headset mute LED kept in sync; hook, reject and Teams button each bindable to any Slender action, default leave to the phone app (Slender does nothing); 3CX/Teams keep call control; ring/off-hook LEDs wait for a call-state source (m49); LED output writes off by default until the live go-ahead test (agent default)
+
+Yealink base station control (user 2026-10-22) -> Slender gets full base control: ringer on/off and silence, ringtone choice (and custom ringtone upload if the base supports it), reboot, every base setting the SDK exposes, battery/dock, busylight; firmware update and factory reset stay out; reboot and ringtone upload sit behind a confirm and never run during a call; each new write is tested live only on user go-ahead
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->

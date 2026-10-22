@@ -664,6 +664,31 @@
           "docs/devices/yealink-wh64.md"
         ]
       }
+    ],
+    "m55": [
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Run yl_sdk_probe (Yealink npm SDK libyealinkusbsdk.dll, getters only + 3 s SetRing test; user go-ahead 2026-10-22, user must be at desk) and map 0xC8 frames, settings tree, ringer, battery/dock, HID working state (fixes e9 COL02 silence?)",
+        "id": "c1",
+        "note": "",
+        "targets": [
+          "../yealink-headset-control/tools/yl_sdk_probe.py",
+          "../yealink-headset-control/captures"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 15,
+        "goal": "Decide with user: bundle Yealink SDK DLL behind allowlist vs native reimplementation of mapped frames; then base settings, ringer and busylight in Slender",
+        "id": "c2",
+        "note": "",
+        "targets": [
+          "src/Slender.Yealink"
+        ]
+      }
     ]
   },
   "errors": [
@@ -749,9 +774,19 @@
       "milestone": "m39",
       "status": "open",
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
+    },
+    {
+      "at": "2026-10-22T04:43:40+00:00",
+      "cause": "",
+      "chunk": "c6",
+      "fix": "",
+      "id": "e9",
+      "milestone": "m54",
+      "status": "open",
+      "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 293,
+  "rev": 296,
   "review": {
     "advice": [],
     "config": {
