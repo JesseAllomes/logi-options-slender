@@ -40,4 +40,15 @@ public class RingerTextTests
         Assert.Contains("Load unpacked", RingerText.Steps);
         Assert.StartsWith("1.", RingerText.Steps);
     }
+
+    [Fact]
+    public void The_ring_button_pickers_list_off_then_the_mouse_buttons_and_map_both_ways()
+    {
+        Assert.Equal(["Off", "Middle click", "Forward", "Back"], RingerText.RingButtonChoices());
+        Assert.Equal<ushort>(0, RingerText.RingButtonAt(0));
+        Assert.Equal<ushort>(0, RingerText.RingButtonAt(-1));
+        Assert.Equal<ushort>(0, RingerText.RingButtonAt(9));
+        for (int i = 0; i < 4; i++) Assert.Equal(i, RingerText.RingButtonIndex(RingerText.RingButtonAt(i)));
+        Assert.Equal(0, RingerText.RingButtonIndex(0xC3)); // a stored id that is not a choice shows as Off
+    }
 }

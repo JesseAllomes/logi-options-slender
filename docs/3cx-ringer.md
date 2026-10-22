@@ -13,9 +13,29 @@ It is off until you set it up, and while it is not ringing nothing of it runs: n
 3. The host passes it to the running Slender tray over the local buzz pipe (`!ring start hid`, `!ring stop notification`, see `docs/buzz.md`) and exits.
 4. The tray plays the ringer cue until the ring ends. Ordinary buzzes are dropped while it rings, so nothing cuts it. A second start while ringing changes nothing.
 
+## Answer or reject with a mouse button
+
+In Settings, Haptics, "3CX RINGER", **Answer with** and **Reject with** each take Middle click, Forward, Back or Off (the default). Only those three, because Slender sees them through its mouse hook and can hold one back from its normal action. The mouse's other buttons are not offered.
+
+- While a call is ringing (the mouse is buzzing), a press of the chosen button is taken: it does not reach its normal binding or the app under the pointer, and its release goes with it. The ring ends and the extension clicks the 3CX web client's Answer or Decline control for that call.
+- When nothing is ringing the buttons do what they always do. A press of any other button still just ends the buzz.
+- It needs the ringer to be buzzing: haptic feedback and the Ringer buzz switch on. If the Ringer buzz is off there is no ring to take the button from.
+- If the extension finds no Answer or Decline control it tells Slender, which writes `3CX answer control not found on the page` (or reject) to its log. The 3CX web client can rename its controls; the finder tries aria-label, title, short button text, test id, id and class, and skips hidden or disabled buttons.
+
+How the command gets from Slender to the extension: the native host is still one-shot and Slender cannot call it, so the extension polls it.
+
+1. On a ring start with a ring button set, the tray opens a second local pipe, `Slender.RingCmd` (current user only, never a network port). Nothing is created for a ring when both pickers are Off.
+2. The extension, in the 3CX tab only and only while that tab's ring signal is on, asks the host `poll` once a second. Each poll starts the host for a moment; it reads one line from the pipe and answers `none` (keep polling), `answer`, `reject`, or `off` (no pipe: Slender is not listening, so the extension stops polling for this ring).
+3. A press puts `answer` or `reject` on the pipe. The next poll picks it up (within a second), the pipe closes, and the extension clicks the control, but only if the ring signal is still on in that tab. It reports found or not found back (`!ring result answer found`, see `docs/buzz.md`).
+4. The pipe also closes when the ring stops with no command waiting, or after 100 s. The extension's timer stops at the same points (and at 95 s). No process, port, pipe or timer exists between rings.
+
+A port kept open with `connectNative` was the alternative. It would give instant delivery, but it keeps a host process alive for the whole ring and the host would still have to poll the pipe itself, so a once-a-second poll is simpler and fails more safely.
+
+The extension version is now 1.1.0. After updating Slender, press **Set up** again and reload the extension in `edge://extensions` so Edge picks up the new files.
+
 ## Privacy
 
-No call data leaves the page. The extension never reads or sends caller names, numbers, titles or any page content. The only things it sends are "started", "stopped" and the signal name. It has one permission (`nativeMessaging`), runs only on the one address you give, and has no storage and no network access. Slender keeps the time and signal of the last ring start in `status.json` so Settings can show it; nothing else is recorded.
+No call data leaves the page. The extension never reads or sends caller names, numbers, titles or any page content. The only things it sends are "started", "stopped", the signal name, a poll, and whether the Answer/Decline click found its button. It reads only the labels of the page's buttons to find those two. It has one permission (`nativeMessaging`), runs only on the one address you give, and has no storage and no network access. Slender keeps the time and signal of the last ring start in `status.json` so Settings can show it; nothing else is recorded.
 
 ## Set up
 

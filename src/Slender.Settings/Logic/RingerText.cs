@@ -20,6 +20,23 @@ public static class RingerText
         return $"Last ring signal: {time} ({(source == "notification" ? "notification" : "headset")})";
     }
 
+    public const string RingButtonsHelp = "While a 3CX call is ringing, this mouse button answers or rejects it from any app. Off leaves the button alone. "
+        + "Outside a ringing call the button does what it always does. Needs the Ringer buzz on.";
+
+    /// <summary>"Off", then the mouse buttons that can answer or reject a call, named as on the Mouse page.</summary>
+    public static List<string> RingButtonChoices() =>
+        ["Off", .. RingButtons.Choices.Select(id => ControlCatalog.MouseControls.First(c => c.Id == id).Name)];
+
+    /// <summary>The picker row for a stored button id (0 or anything unknown = Off).</summary>
+    public static int RingButtonIndex(ushort id)
+    {
+        int at = RingButtons.Choices.ToList().IndexOf(id);
+        return at < 0 ? 0 : at + 1;
+    }
+
+    /// <summary>The button id for a picker row (0 = Off).</summary>
+    public static ushort RingButtonAt(int index) => index >= 1 && index <= RingButtons.Choices.Count ? RingButtons.Choices[index - 1] : (ushort)0;
+
     /// <summary>Why the address box cannot be used yet; null when it is a good address.</summary>
     public static string? AddressProblem(string? text)
     {

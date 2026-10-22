@@ -70,4 +70,5 @@ Use the full path to the exe you installed it at. `Shell` returns at once; the e
 ## Protocol
 
 One UTF-8 line ending in a newline. Settings' Test buttons use a second form, `!test pattern pulses spacingMs strength|-`,
-which plays that exact cue whatever the on/off switches say. Other lines starting with `!` are ignored.
+which plays that exact cue whatever the on/off switches say. The 3CX ringer (`docs/3cx-ringer.md`) writes `!ring start|stop hid|notification` and
+`!ring result answer|reject found|missing`. Other lines starting with `!` are ignored.

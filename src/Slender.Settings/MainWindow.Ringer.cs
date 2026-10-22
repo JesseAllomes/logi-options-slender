@@ -43,6 +43,26 @@ public sealed partial class MainWindow
         var cueRow = CueRow("Ringer buzz", "Plays again and again while the call rings. A saved pattern also sets the pause between rings.", Get, Set, Get().Enabled, on => Set(Get() with { Enabled = on }));
         AddRule(cueRow);
 
+        ComboBox RingButtonBox(string name, Func<ushort> get, Action<ushort> set)
+        {
+            var box = new ComboBox { Width = 170 };
+            AutomationProperties.SetName(box, name);
+            foreach (string choice in RingerText.RingButtonChoices()) box.Items.Add(choice);
+            box.SelectedIndex = RingerText.RingButtonIndex(get());
+            box.SelectionChanged += (_, _) =>
+            {
+                if (box.SelectedIndex < 0) return;
+                ushort id = RingerText.RingButtonAt(box.SelectedIndex);
+                if (id != get()) set(id);
+            };
+            return box;
+        }
+
+        AddRow("Answer with", RingerText.RingButtonsHelp,
+            RingButtonBox("Answer with", () => _config.Config.Haptics.RingAnswerButton, id => _config.Update(x => x with { Haptics = x.Haptics with { RingAnswerButton = id } })));
+        AddRow("Reject with", null,
+            RingButtonBox("Reject with", () => _config.Config.Haptics.RingRejectButton, id => _config.Update(x => x with { Haptics = x.Haptics with { RingRejectButton = id } })));
+
         var setUpButton = new Button { Content = "Set up", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = available };
         ToolTipService.SetToolTip(setUpButton, available ? "Prepares the Edge extension and links it to Slender. Nothing runs until you load the extension in Edge." : "This Slender install does not include the 3CX ringer.");
         var removeButton = new Button { Content = "Remove", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = setUp };
