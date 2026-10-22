@@ -84,8 +84,9 @@ public sealed class BuzzServer : IDisposable
     internal void Handle(string? line)
     {
         if (BuzzProtocol.Parse(line) is not { } request) return;
-        if (request.Ring is null && !_limiter.TryAcquire()) return; // a ring stop must never lose to the rate limit
+        if (request.Ring is null && request.RingResult is null && !_limiter.TryAcquire()) return; // a ring stop must never lose to the rate limit
         if (request.Ring is { } ring) _engine.SignalRing(ring);
+        else if (request.RingResult is { } result) _engine.NoteRingResult(result);
         else if (request.TestCue is { } test) _engine.PlayCue(test);
         else _engine.PlayAlert(request.Name);
     }

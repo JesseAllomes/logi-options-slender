@@ -40,7 +40,7 @@ public sealed class LowLevelMouseHook : IInputHook
 
     public event EventHandler<HookRingEventArgs>? RingInput;
 
-    public event EventHandler? AnyButtonPressed;
+    public event EventHandler<HookClickEventArgs>? AnyButtonPressed;
 
     public void SetClickWatch(bool on) => _clickWatch = on;
 
@@ -182,7 +182,7 @@ public sealed class LowLevelMouseHook : IInputHook
             {
                 var msg = (int)wParam;
                 if (_clickWatch && msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_RBUTTONDOWN or NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_XBUTTONDOWN)
-                    NoteClick(lParam);
+                    NoteClick(msg, lParam);
                 if (msg == NativeMethods.WM_MOUSEMOVE)
                 {
                     RecordMove(lParam);
@@ -250,11 +250,11 @@ public sealed class LowLevelMouseHook : IInputHook
     }
 
     /// <summary>Tells the click watch (the 3CX ringer) that the user pressed a button. O(1); the press itself is untouched.</summary>
-    private void NoteClick(nint lParam)
+    private void NoteClick(int msg, nint lParam)
     {
         var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
         if (IsInjected(data)) return;
-        try { AnyButtonPressed?.Invoke(this, EventArgs.Empty); }
+        try { AnyButtonPressed?.Invoke(this, new HookClickEventArgs(ToButton(msg, data.MouseData))); }
         catch (Exception ex) { try { _log.Error("click watch handler failed", ex); } catch { } }
     }
 

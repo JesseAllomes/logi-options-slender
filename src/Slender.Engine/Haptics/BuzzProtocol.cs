@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Pipes;
 using System.Text;
+using Slender.Engine.Ringer;
 
 namespace Slender.Engine;
 
@@ -11,12 +12,13 @@ public enum RingerSignalSource { Headset, Notification }
 public readonly record struct RingSignal(bool Start, RingerSignalSource Source);
 
 /// <summary>What one line on the buzz pipe asks for: a named alert (null = no name), a test of an explicit cue, or a ring signal.</summary>
-public sealed record BuzzRequest(string? Name, HapticCue? TestCue, RingSignal? Ring = null);
+public sealed record BuzzRequest(string? Name, HapticCue? TestCue, RingSignal? Ring = null, RingResult? RingResult = null);
 
 /// <summary>
 /// The local buzz pipe (<c>\\.\pipe\Slender.Buzz</c>, current user only, never a network port). A client writes one line: an
 /// alert name, or nothing. Settings' Test button writes "!test pattern pulses spacingMs strength|- [repeats repeatGapMs]" to hear a cue as shown.
-/// The 3CX ringer's native host writes "!ring start|stop hid|notification".
+/// The 3CX ringer's native host writes "!ring start|stop hid|notification", and "!ring result answer|reject found|missing" once the extension
+/// has tried to click the 3CX control.
 /// </summary>
 public static class BuzzProtocol
 {
@@ -48,9 +50,22 @@ public static class BuzzProtocol
     public static string RingLine(RingSignal signal) =>
         $"{RingPrefix}{(signal.Start ? "start" : "stop")} {(signal.Source == RingerSignalSource.Headset ? "hid" : "notification")}";
 
+    /// <summary>"!ring result answer found", "!ring result reject missing".</summary>
+    public static string RingResultLine(RingResult result) =>
+        $"{RingPrefix}result {(result.Command == RingCommand.Answer ? "answer" : "reject")} {(result.Found ? "found" : "missing")}";
+
     private static BuzzRequest? ParseRing(string rest)
     {
         var parts = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 3 && parts[0] == "result")
+        {
+            RingCommand command;
+            if (parts[1] == "answer") command = RingCommand.Answer;
+            else if (parts[1] == "reject") command = RingCommand.Reject;
+            else return null;
+            if (parts[2] is not ("found" or "missing")) return null;
+            return new BuzzRequest(null, null, null, new RingResult(command, parts[2] == "found"));
+        }
         if (parts.Length != 2) return null;
         bool start;
         if (parts[0] == "start") start = true;

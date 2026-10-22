@@ -21,6 +21,7 @@ internal sealed class RingerSession : IDisposable
     private IDisposable? _next, _cap; // queue thread only
     private int _round;               // queue thread only: bumped at every start and end, so stale timers do nothing
     private volatile bool _ringing;
+    private int _consumed;            // 1 once a ring button took this ring
     private volatile bool _disposed;
 
     /// <param name="cue">The ringer cue to play now (expanded and clamped), or null when haptics or the ringer are off.</param>
@@ -44,6 +45,17 @@ internal sealed class RingerSession : IDisposable
     /// <summary>A ring signal arrived (any thread, returns at once).</summary>
     public void Signal(bool start) => Post(() => { if (start) Begin(); else End(); });
 
+    /// <summary>
+    /// A ring button (answer or reject) was pressed: true for the first press of this ring, which ends it. False when nothing rings or
+    /// a press already took it. Any thread, returns at once.
+    /// </summary>
+    public bool TryConsume()
+    {
+        if (!_ringing || Interlocked.Exchange(ref _consumed, 1) != 0) return false;
+        Post(End);
+        return true;
+    }
+
     /// <summary>A mouse button went down (the hook thread; only called while the click watch is on).</summary>
     public void OnClick() => Post(End);
 
@@ -64,6 +76,7 @@ internal sealed class RingerSession : IDisposable
     {
         if (_ringing) return;
         if (_cue() is not { } cue) return;
+        Volatile.Write(ref _consumed, 0);
         _ringing = true;
         int round = ++_round;
         _watchClicks(true);

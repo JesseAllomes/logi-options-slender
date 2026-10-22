@@ -435,11 +435,39 @@ public sealed partial class SlenderEngine : IDisposable
                 session = _ringer;
             }
             session.Signal(signal.Start);
+            if (!signal.Start) _ringChannel?.Disarm();
+            else if (RingButtons.AnyOn(_config.Haptics) && RingerCue() is not null) RingChannel.Arm();
         }
         catch (Exception ex) { SafeLog("ring signal failed", ex); }
     }
 
-    private void OnAnyButton(object? sender, EventArgs e) => _ringer?.OnClick();
+    private IRingCommandChannel? _ringChannel;
+
+    /// <summary>Where answer/reject commands wait for the extension's poll; made at the first ring start with ring buttons set. Tests swap it.</summary>
+    internal IRingCommandChannel RingChannel
+    {
+        get => _ringChannel ??= new RingCommandServer();
+        set => _ringChannel = value;
+    }
+
+    /// <summary>The extension's report of an answer/reject click: a missing control is logged so the user can see why nothing happened.</summary>
+    public void NoteRingResult(RingResult result) =>
+        _log.Info(result.Found ? $"3CX {result.Command.ToString().ToLowerInvariant()} clicked" : $"3CX {result.Command.ToString().ToLowerInvariant()} control not found on the page");
+
+    private void OnAnyButton(object? sender, HookClickEventArgs e)
+    {
+        // A ring button's press is consumed by OnHookButton (which ends the ring); ending it here first would let that press through.
+        if (e.Button is { } b && _ringer?.IsRinging == true && RingButtons.Match(_config.Haptics, (ushort)b) is not null) return;
+        _ringer?.OnClick();
+    }
+
+    /// <summary>While a call rings, the answer/reject button is taken: true when this press was one (the caller swallows it). Hook thread.</summary>
+    private bool TryRingButton(ushort id)
+    {
+        if (RingButtons.Match(_config.Haptics, id) is not { } command || _ringer is not { } session || !session.TryConsume()) return false;
+        RingChannel.Offer(command);
+        return true;
+    }
 
     /// <summary>The ringer cue as the mouse will play it now; null when haptics are off or the cue is switched off.</summary>
     private HapticCue? RingerCue()
@@ -686,6 +714,11 @@ public sealed partial class SlenderEngine : IDisposable
         {
             var id = (ushort)e.Button;
             if (e.Pressed) ReleaseHoldSoon($"mouse {e.Button} pressed");
+            if (e.Pressed && TryRingButton(id))
+            {
+                e.Handled = true; // its release is swallowed with it
+                return;
+            }
             if (e.Pressed)
             {
                 var action = ResolveAction(id);
@@ -1403,6 +1436,7 @@ public sealed partial class SlenderEngine : IDisposable
         _hook.MouseMoved -= OnHookMove;
         _hook.AnyButtonPressed -= OnAnyButton;
         _ringer?.Dispose();
+        _ringChannel?.Dispose();
         AbortGesture();
         _foreground.Changed -= OnForegroundChanged;
         lock (_gate) { _foregroundDebounce?.Cancel(); _thumbRetry?.Cancel(); }

@@ -28,7 +28,7 @@ public interface IInputHook : IDisposable
     void SetRingCapture(bool on) { }
 
     /// <summary>Any mouse button went down (the user's own, not injected). Raised only while the click watch is on; the press is never swallowed.</summary>
-    event EventHandler? AnyButtonPressed { add { } remove { } }
+    event EventHandler<HookClickEventArgs>? AnyButtonPressed { add { } remove { } }
 
     /// <summary>Turns the any-button notice on or off. Off by default; the 3CX ringer holds it on only while a call rings.</summary>
     void SetClickWatch(bool on) { }
@@ -74,6 +74,12 @@ public enum HookButton : ushort
     Middle = Slender.Hidpp.ControlId.Middle,
     Back = Slender.Hidpp.ControlId.Back,
     Forward = Slender.Hidpp.ControlId.Forward,
+}
+
+/// <summary>A user mouse press seen by the click watch. Button is null for left and right.</summary>
+public sealed class HookClickEventArgs(HookButton? button) : EventArgs
+{
+    public HookButton? Button { get; } = button;
 }
 
 public sealed class HookButtonEventArgs(HookButton button, bool pressed) : EventArgs
@@ -321,12 +327,19 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// <summary>The 3CX web address (https origin, see RingerOrigin) the Edge extension runs on; null until the user sets the ringer up.</summary>
     public string? RingerOrigin { get; init; }
 
+    /// <summary>The mouse button (a hook button's control id, see RingButtons) that answers a ringing 3CX call; 0 = off.</summary>
+    public ushort RingAnswerButton { get; init; }
+
+    /// <summary>The mouse button that rejects a ringing 3CX call; 0 = off.</summary>
+    public ushort RingRejectButton { get; init; }
+
     /// <summary>Value equality including the cue, alert and pattern maps (a record compares dictionaries by reference otherwise).</summary>
     public bool Equals(HapticSettings? other) =>
         other is not null && Enabled == other.Enabled && Level == other.Level && OnButtonPress == other.OnButtonPress
         && OnActionsRing == other.OnActionsRing && Strength == other.Strength
         && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && SameMap(Patterns, other.Patterns) && Notify.Equals(other.Notify)
-        && Ringer == other.Ringer && RingerOrigin == other.RingerOrigin;
+        && Ringer == other.Ringer && RingerOrigin == other.RingerOrigin
+        && RingAnswerButton == other.RingAnswerButton && RingRejectButton == other.RingRejectButton;
 
     public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count, Patterns.Count);
 

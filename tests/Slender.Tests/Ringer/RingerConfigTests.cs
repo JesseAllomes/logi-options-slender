@@ -91,4 +91,27 @@ public sealed class RingerConfigTests : IDisposable
         Assert.Null(loaded.RingerOrigin);
         Assert.Equal(new HapticCue(true, 14, 6, 40, null, 1, 200), loaded.Ringer);
     }
+
+    [Fact]
+    public void Ring_buttons_default_to_off_and_round_trip()
+    {
+        Assert.Equal(0, Store().Load().Haptics.RingAnswerButton);
+        Store().Save(SlenderConfig.Default);
+        Assert.DoesNotContain("RingAnswerButton", File.ReadAllText(FilePath)); // off is not written
+
+        Store().Save(SlenderConfig.Default with { Haptics = new HapticSettings { RingAnswerButton = Slender.Hidpp.ControlId.Forward, RingRejectButton = Slender.Hidpp.ControlId.Back } });
+        var loaded = Store().Load().Haptics;
+        Assert.Equal(Slender.Hidpp.ControlId.Forward, loaded.RingAnswerButton);
+        Assert.Equal(Slender.Hidpp.ControlId.Back, loaded.RingRejectButton);
+    }
+
+    [Fact]
+    public void A_ring_button_that_is_not_a_choice_loads_as_off()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, """{"version":2,"haptics":{"ringAnswerButton":195,"ringRejectButton":99999}}""");
+        var loaded = Store().Load().Haptics;
+        Assert.Equal(0, loaded.RingAnswerButton);
+        Assert.Equal(0, loaded.RingRejectButton);
+    }
 }
