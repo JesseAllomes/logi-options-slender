@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Slender 3CX ringer",
+  "version": "1.0.0",
+  "description": "Tells Slender when a 3CX call starts and stops ringing. Sends no call details.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4RP4q5M5wg+eEokgh7MBcoghWwcuQRj+JN15DZf0r7Dl2+20sgPsn77zKFce5UIOjM7DCL8VphUNkvuKh4lGxbqOemRXozWVb3RqppDuMFlowaUySgO9LjtEv+2+/LhAv2KC9bBs6nOEvNb06/mw6IqhTuty0zug4QyqlrVnSwxhLY22wZjjot/bxGqYWhFFqVv61rzVHbuM3oBHazinvWo34CVZGfqxBZdznyUiUiJtz40vD1astYwT6reUbZLQ1IlLVAInbA4VGutAFVwuAKkiOgPM0yHevjKDWCVavATA8AXvDUXOZ+n/t6Uj92zd+EvlswB7fRv6mmnQuPTYiQIDAQAB",
+  "minimum_chrome_version": "111",
+  "permissions": ["nativeMessaging"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["__ORIGIN__/*"],
+      "js": ["main.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["__ORIGIN__/*"],
+      "js": ["relay.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 using Slender.Engine.Native;
 using Slender.Engine.Ring;
+using Slender.Engine.Ringer;
 using Slender.Hidpp;
 
 namespace Slender.Engine;
@@ -399,8 +400,54 @@ public sealed partial class SlenderEngine : IDisposable
     /// </summary>
     public void PlayHaptic(HapticEvent e)
     {
-        try { if (HapticCues.Effective(_config.Haptics, e) is { } cue) _player.Play(cue); }
+        try { if (!Ringing && HapticCues.Effective(_config.Haptics, e) is { } cue) _player.Play(cue); }
         catch (Exception ex) { SafeLog("haptic failed", ex); }
+    }
+
+    // ---- 3CX ringer (docs/3cx-ringer.md): nothing exists until the first ring signal arrives ----
+
+    private RingerSession? _ringer;
+
+    /// <summary>A call is ringing: ordinary buzzes are dropped so they never cut the ringer.</summary>
+    private bool Ringing => _ringer?.IsRinging == true;
+
+    /// <summary>Raised (any thread) when a ring-start arrives from the Edge extension, with the time and which signal fired. Settings shows the last one.</summary>
+    public event EventHandler<RingSignalEventArgs>? RingSignalReceived;
+
+    /// <summary>
+    /// A ring signal from the native host. Start rings the mouse until a stop, any button press or 90 s; a second start keeps the one ring.
+    /// Any thread, returns at once.
+    /// </summary>
+    public void SignalRing(RingSignal signal)
+    {
+        try
+        {
+            if (signal.Start) RingSignalReceived?.Invoke(this, new RingSignalEventArgs(DateTimeOffset.Now, signal.Source));
+            RingerSession session;
+            lock (_gate)
+            {
+                if (_disposed) return;
+                if (_ringer is null)
+                {
+                    _ringer = new RingerSession(_holdTimer, _queue, RingerCue, _player.Play, _player.Cancel, _hook.SetClickWatch, _log);
+                    _hook.AnyButtonPressed += OnAnyButton;
+                }
+                session = _ringer;
+            }
+            session.Signal(signal.Start);
+        }
+        catch (Exception ex) { SafeLog("ring signal failed", ex); }
+    }
+
+    private void OnAnyButton(object? sender, EventArgs e) => _ringer?.OnClick();
+
+    /// <summary>The ringer cue as the mouse will play it now; null when haptics are off or the cue is switched off.</summary>
+    private HapticCue? RingerCue()
+    {
+        var haptics = _config.Haptics;
+        if (!haptics.Enabled) return null;
+        var cue = HapticCues.Expand(haptics, haptics.Ringer.Clamped()).Clamped();
+        return cue.Enabled ? cue : null;
     }
 
     private readonly NotifyRateLimiter _notifyLimiter = new();
@@ -414,7 +461,7 @@ public sealed partial class SlenderEngine : IDisposable
         try
         {
             var haptics = _config.Haptics;
-            if (haptics.Enabled && haptics.Notify.Effective(app) is { } cue && _notifyLimiter.TryAcquire(app)) _player.Play(cue);
+            if (!Ringing && haptics.Enabled && haptics.Notify.Effective(app) is { } cue && _notifyLimiter.TryAcquire(app)) _player.Play(cue);
         }
         catch (Exception ex) { SafeLog("notification haptic failed", ex); }
     }
@@ -422,12 +469,12 @@ public sealed partial class SlenderEngine : IDisposable
     /// <summary>Buzzes a named alert (an unknown or empty name plays the Alert event's cue); nothing when haptics or that cue are off. Any thread.</summary>
     public void PlayAlert(string? name)
     {
-        try { if (HapticCues.EffectiveAlert(_config.Haptics, name) is { } cue) _player.Play(cue); }
+        try { if (!Ringing && HapticCues.EffectiveAlert(_config.Haptics, name) is { } cue) _player.Play(cue); }
         catch (Exception ex) { SafeLog("alert haptic failed", ex); }
     }
 
     /// <summary>Plays one cue as given, whatever the on/off switches say: Settings' Test button. Any thread.</summary>
-    public void PlayCue(HapticCue cue) => _player.Play(cue);
+    public void PlayCue(HapticCue cue) { if (!Ringing) _player.Play(cue); }
 
     // ---- tap / hold (engine queue) ----
 
@@ -1354,6 +1401,8 @@ public sealed partial class SlenderEngine : IDisposable
         _hook.ButtonChanged -= OnHookButton;
         _hook.VerticalWheel -= OnVerticalWheel;
         _hook.MouseMoved -= OnHookMove;
+        _hook.AnyButtonPressed -= OnAnyButton;
+        _ringer?.Dispose();
         AbortGesture();
         _foreground.Changed -= OnForegroundChanged;
         lock (_gate) { _foregroundDebounce?.Cancel(); _thumbRetry?.Cancel(); }

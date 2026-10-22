@@ -44,6 +44,21 @@ internal sealed class HapticPlayer : IDisposable
         catch (Exception ex) { SafeLog("haptic could not be queued", ex); }
     }
 
+    /// <summary>Stops what is left of the current cue (any thread, returns at once); the global strength is put back after the usual delay.</summary>
+    public void Cancel()
+    {
+        try { _queue.Post(CancelNow); }
+        catch (Exception ex) { SafeLog("haptic cancel could not be queued", ex); }
+    }
+
+    private void CancelNow()
+    {
+        if (_disposed) return;
+        CancelPending();
+        var seq = _seq;
+        if (_applied is not null) _next = _timer.Schedule(RestoreDelayMs, () => PostIfCurrent(seq, RestoreNow));
+    }
+
     private void Start(HapticCue cue)
     {
         if (_disposed) return;

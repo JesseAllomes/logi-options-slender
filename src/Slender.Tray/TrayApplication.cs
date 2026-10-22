@@ -52,6 +52,8 @@ public sealed class TrayApplication : IDisposable
     private BatteryStatus? _battery;
     private int? _dpi;
     private Slender.Hidpp.DpiCapabilities? _dpiCaps; // what the engine read from the sensor this connection
+    private DateTimeOffset? _lastRing;                // the last 3CX ring-start (docs/3cx-ringer.md), kept in status.json for Settings
+    private string? _lastRingSource;
     private MouseValues? _mouseValues;
     private string? _mouseFirmware, _keyboardFirmware; // kept across disconnects: firmware does not change while away
     private bool _keyboardConnected;
@@ -85,7 +87,7 @@ public sealed class TrayApplication : IDisposable
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
                 ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
-                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke()),
+                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke(), _lastRing, _lastRingSource),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -186,6 +188,17 @@ public sealed class TrayApplication : IDisposable
         _updates = updates;
         _status.Changed();
     }
+
+    /// <summary>
+    /// A 3CX ring-start arrived (<paramref name="source"/> "headset" or "notification"): kept for status.json. Pass publish false to seed the
+    /// value read from the previous run without a write. Safe from any thread.
+    /// </summary>
+    public void NoteRingSignal(DateTimeOffset at, string source, bool publish = true) => Post(() =>
+    {
+        _lastRing = at;
+        _lastRingSource = source;
+        if (publish) _status.Changed();
+    });
 
     /// <summary>The update state changed (found, downloaded). Safe from any thread.</summary>
     public void UpdateStateChanged() => Post(() => _status.Changed());

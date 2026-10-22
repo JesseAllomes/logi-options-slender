@@ -195,6 +195,20 @@ static class Program
         // Other programs (a Claude Code hook, a build script) and Settings' Test button buzz the mouse over a current-user pipe.
         using var buzz = new BuzzServer(engine, log);
         buzz.Start();
+        // 3CX ringer (docs/3cx-ringer.md): the Edge extension's native host sends ring start/stop over the buzz pipe. Remember the last
+        // start for Settings, and after an update refresh the host copy Edge runs (a stat when set up; nothing at all when not).
+        engine.RingSignalReceived += (_, e) => app.NoteRingSignal(e.At, e.Source == RingerSignalSource.Headset ? "headset" : "notification");
+        if (StatusJson.TryRead(Path.Combine(SyncPaths.StateDirectory, "status.json")) is { LastRingSignal: { } lastRing, LastRingSource: { } lastRingSource })
+            app.NoteRingSignal(lastRing, lastRingSource, publish: false);
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var refreshed = Slender.Engine.Ringer.RingerInstaller.CreateDefault().RefreshHostCopy();
+                if (refreshed != Slender.Engine.Ringer.RingerRefreshStatus.NotSetUp) log.Info("3cx ringer host copy: " + refreshed);
+            }
+            catch (Exception ex) { log.Info("3cx ringer host copy refresh failed: " + ex.Message); }
+        });
         // Notification haptics (m45): the WinEvent hook exists only while the setting is on (see NotifyListener).
         using var notify = new NotifyListener(engine, new SeenAppsStore(SyncPaths.StateDirectory, log), log);
         void ApplyNotify(SlenderConfig c) => app.PostToUi(() => notify.SetEnabled(c.Haptics.Enabled && c.Haptics.Notify.Enabled));

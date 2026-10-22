@@ -28,7 +28,9 @@ public sealed record StatusSnapshot(
     string? MouseBatteryEstimate = null,
     string? KeyboardBatteryEstimate = null,
     Slender.Hidpp.DpiCapabilities? MouseDpiCaps = null,
-    IReadOnlyList<DeviceEntry>? Devices = null);
+    IReadOnlyList<DeviceEntry>? Devices = null,
+    DateTimeOffset? LastRingSignal = null,
+    string? LastRingSource = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -201,7 +203,9 @@ public sealed class StatusPublisher : IDisposable
             now,
             s.CurrentVersion,
             s.AvailableVersion,
-            s.UpdateReady);
+            s.UpdateReady,
+            s.LastRingSignal,
+            s.LastRingSource);
     }
 
     internal static bool IsHidden(IReadOnlyList<DeviceEntry> devices, string id) =>

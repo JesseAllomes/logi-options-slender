@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Slender.RingerHost</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only BuzzProtocol (the pipe name, ring line and send) is used; NativeAOT trims the rest of the engine away. -->
+    <ProjectReference Include="..\..\src\Slender.Engine\Slender.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

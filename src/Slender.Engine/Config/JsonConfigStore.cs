@@ -126,6 +126,8 @@ public sealed class JsonConfigStore : IConfigStore
                 Alerts = ToAlerts(haptics.Alerts),
                 Patterns = ToPatterns(haptics.Patterns),
                 Notify = ToNotify(haptics.Notify),
+                Ringer = haptics.Ringer is { } ringer ? ToCue(ringer) : HapticCues.DefaultRinger,
+                RingerOrigin = Slender.Engine.Ringer.RingerOrigin.Normalize(haptics.RingerOrigin),
             },
             dto.LaunchAtLogin)
         {
@@ -302,6 +304,8 @@ public sealed class JsonConfigStore : IConfigStore
                 Alerts = config.Haptics.Alerts.Count == 0 ? null : config.Haptics.Alerts.ToDictionary(kv => kv.Key, kv => FromCue(kv.Value)),
                 Patterns = config.Haptics.Patterns.Count == 0 ? null : config.Haptics.Patterns.ToDictionary(kv => kv.Key, kv => FromPattern(kv.Value)),
                 Notify = FromNotify(config.Haptics.Notify),
+                Ringer = config.Haptics.Ringer == HapticCues.DefaultRinger ? null : FromCue(config.Haptics.Ringer),
+                RingerOrigin = config.Haptics.RingerOrigin,
             },
             Pointer = new PointerDto
             {
@@ -565,6 +569,8 @@ public sealed class JsonConfigStore : IConfigStore
         public Dictionary<string, HapticCueDto>? Alerts { get; set; }
         public Dictionary<string, HapticPatternDto>? Patterns { get; set; }
         public NotifyHapticsDto? Notify { get; set; }
+        public HapticCueDto? Ringer { get; set; }
+        public string? RingerOrigin { get; set; }
     }
 
     internal sealed class HapticCueDto

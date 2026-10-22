@@ -35,6 +35,8 @@
   <ItemGroup>
     <!-- Pure settings logic (no WinUI types) is compiled into the tests directly; the WinUI project itself is not referenced. -->
     <Compile Include="..\..\src\Slender.Settings\Logic\*.cs" Link="Settings\Logic\%(Filename)%(Extension)" />
+    <!-- The ringer host framing and validation, unit-tested here (the exe is a thin shell around it). -->
+    <Compile Include="..\..\tools\Slender.RingerHost\NativeMessage.cs" Link="RingerHost\NativeMessage.cs" />
   </ItemGroup>
 
   <ItemGroup>

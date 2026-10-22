@@ -19,6 +19,7 @@ public sealed class LowLevelMouseHook : IInputHook
     private readonly HookButtonPairing _pairing = new();
     private volatile bool _captureMoves;
     private volatile bool _ringCapture;
+    private volatile bool _clickWatch;
     private readonly RingButtonPairing _ringPairing = new(); // hook thread only: a swallowed press swallows its release
     private int _anchorX, _anchorY;
     private bool _disposed;
@@ -38,6 +39,10 @@ public sealed class LowLevelMouseHook : IInputHook
     public event EventHandler<HookMoveEventArgs>? MouseMoved;
 
     public event EventHandler<HookRingEventArgs>? RingInput;
+
+    public event EventHandler? AnyButtonPressed;
+
+    public void SetClickWatch(bool on) => _clickWatch = on;
 
     /// <summary>
     /// While on, left/right button presses and both wheels are swallowed and reported through <see cref="RingInput"/>
@@ -176,6 +181,8 @@ public sealed class LowLevelMouseHook : IInputHook
             if (nCode >= 0)
             {
                 var msg = (int)wParam;
+                if (_clickWatch && msg is NativeMethods.WM_LBUTTONDOWN or NativeMethods.WM_RBUTTONDOWN or NativeMethods.WM_MBUTTONDOWN or NativeMethods.WM_XBUTTONDOWN)
+                    NoteClick(lParam);
                 if (msg == NativeMethods.WM_MOUSEMOVE)
                 {
                     RecordMove(lParam);
@@ -242,6 +249,15 @@ public sealed class LowLevelMouseHook : IInputHook
         return NativeMethods.CallNextHookEx(0, nCode, wParam, lParam);
     }
 
+    /// <summary>Tells the click watch (the 3CX ringer) that the user pressed a button. O(1); the press itself is untouched.</summary>
+    private void NoteClick(nint lParam)
+    {
+        var data = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+        if (IsInjected(data)) return;
+        try { AnyButtonPressed?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { try { _log.Error("click watch handler failed", ex); } catch { } }
+    }
+
     /// <summary>Ring capture for left/right/wheel. Returns true to swallow.</summary>
     private bool RingMouse(int msg, NativeMethods.MSLLHOOKSTRUCT data)
     {
@@ -276,6 +292,8 @@ public sealed class LowLevelMouseHook : IInputHook
         ButtonChanged = null;
         MouseMoved = null;
         RingInput = null;
+        AnyButtonPressed = null;
+        _clickWatch = false;
         _captureMoves = false;
         _ringCapture = false;
         if (t is null) return;

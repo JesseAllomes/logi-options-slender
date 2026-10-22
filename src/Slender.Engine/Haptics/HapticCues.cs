@@ -118,6 +118,12 @@ public static class HapticCues
         return Effective(settings, HapticEvent.Alert);
     }
 
+    /// <summary>
+    /// The built-in ringer: the "Ringing" waveform twice, Strong, then a pause, like a desk phone. Repeats stay 1 because the ringer session
+    /// does the repeating; the cue's pause is the quiet time between rings.
+    /// </summary>
+    public static readonly HapticCue DefaultRinger = new(true, 14, 2, 250, StrongStrength, 1, 1500);
+
     /// <summary>Plain-language names for the Settings page.</summary>
     public static string EventLabel(HapticEvent e) => e switch
     {

@@ -4,18 +4,26 @@ using System.Text;
 
 namespace Slender.Engine;
 
-/// <summary>What one line on the buzz pipe asks for: a named alert (null = no name) or a test of an explicit cue.</summary>
-public sealed record BuzzRequest(string? Name, HapticCue? TestCue);
+/// <summary>Which signal told the ringer a call is ringing: the headset's ringer bit, or the 3CX page's notification.</summary>
+public enum RingerSignalSource { Headset, Notification }
+
+/// <summary>A call started ringing (Start) or stopped, as reported by the Edge extension through the native host.</summary>
+public readonly record struct RingSignal(bool Start, RingerSignalSource Source);
+
+/// <summary>What one line on the buzz pipe asks for: a named alert (null = no name), a test of an explicit cue, or a ring signal.</summary>
+public sealed record BuzzRequest(string? Name, HapticCue? TestCue, RingSignal? Ring = null);
 
 /// <summary>
 /// The local buzz pipe (<c>\\.\pipe\Slender.Buzz</c>, current user only, never a network port). A client writes one line: an
 /// alert name, or nothing. Settings' Test button writes "!test pattern pulses spacingMs strength|- [repeats repeatGapMs]" to hear a cue as shown.
+/// The 3CX ringer's native host writes "!ring start|stop hid|notification".
 /// </summary>
 public static class BuzzProtocol
 {
     public const string PipeName = "Slender.Buzz";
     public const int MaxLineChars = 64;
     private const string TestPrefix = "!test ";
+    private const string RingPrefix = "!ring ";
 
     /// <summary>Null when the line must be ignored (too long, or a malformed test line); any other text is an alert name.</summary>
     public static BuzzRequest? Parse(string? line)
@@ -23,6 +31,7 @@ public static class BuzzProtocol
         line = (line ?? string.Empty).Trim();
         if (line.Length > MaxLineChars) return null;
         if (line.StartsWith(TestPrefix, StringComparison.Ordinal)) return ParseTest(line[TestPrefix.Length..]);
+        if (line.StartsWith(RingPrefix, StringComparison.Ordinal)) return ParseRing(line[RingPrefix.Length..]);
         if (line.StartsWith('!')) return null;
         return new BuzzRequest(line.Length == 0 ? null : line, null);
     }
@@ -33,6 +42,25 @@ public static class BuzzProtocol
         string strength = cue.Strength is { } s ? s.ToString(CultureInfo.InvariantCulture) : "-";
         string line = $"{TestPrefix}{cue.Pattern} {cue.Pulses} {cue.SpacingMs} {strength}";
         return cue.Repeats > 1 ? $"{line} {cue.Repeats} {cue.RepeatGapMs}" : line;
+    }
+
+    /// <summary>"!ring start hid", "!ring stop notification": the 3CX ringer (docs/3cx-ringer.md).</summary>
+    public static string RingLine(RingSignal signal) =>
+        $"{RingPrefix}{(signal.Start ? "start" : "stop")} {(signal.Source == RingerSignalSource.Headset ? "hid" : "notification")}";
+
+    private static BuzzRequest? ParseRing(string rest)
+    {
+        var parts = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) return null;
+        bool start;
+        if (parts[0] == "start") start = true;
+        else if (parts[0] == "stop") start = false;
+        else return null;
+        RingerSignalSource source;
+        if (parts[1] == "hid") source = RingerSignalSource.Headset;
+        else if (parts[1] == "notification") source = RingerSignalSource.Notification;
+        else return null;
+        return new BuzzRequest(null, null, new RingSignal(start, source));
     }
 
     private static BuzzRequest? ParseTest(string rest)

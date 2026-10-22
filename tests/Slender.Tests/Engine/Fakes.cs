@@ -113,6 +113,13 @@ internal sealed class FakeHook : IInputHook
         VerticalWheel?.Invoke(this, a);
         return a;
     }
+    public bool ClickWatch;
+    public int ClickSubscribers;
+    private EventHandler? _anyButton;
+    public event EventHandler? AnyButtonPressed { add { _anyButton += value; ClickSubscribers++; } remove { _anyButton -= value; ClickSubscribers--; } }
+    public void SetClickWatch(bool on) => ClickWatch = on;
+    /// <summary>Presses a button like the real hook: reported only while the click watch is on.</summary>
+    public void Click() { if (ClickWatch) _anyButton?.Invoke(this, EventArgs.Empty); }
     public event EventHandler<HookButtonEventArgs>? ButtonChanged;
     public HookButtonEventArgs Button(HookButton button, bool pressed)
     {

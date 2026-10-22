@@ -27,6 +27,12 @@ public interface IInputHook : IDisposable
     /// <summary>While on, the Actions Ring owns the left/right buttons and the vertical wheel. Off by default.</summary>
     void SetRingCapture(bool on) { }
 
+    /// <summary>Any mouse button went down (the user's own, not injected). Raised only while the click watch is on; the press is never swallowed.</summary>
+    event EventHandler? AnyButtonPressed { add { } remove { } }
+
+    /// <summary>Turns the any-button notice on or off. Off by default; the 3CX ringer holds it on only while a call rings.</summary>
+    void SetClickWatch(bool on) { }
+
     /// <summary>
     /// How far (pixels, the larger axis) the pointer has been from where it is now at any point in the last
     /// <paramref name="windowMs"/> ms, from the user's own mouse moves. 0 when unknown.
@@ -309,11 +315,18 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// <summary>The user's named patterns (waveform, cycles, gap, repeats); a cue plays one by naming it in HapticCue.Custom. Names are case-insensitive.</summary>
     public IReadOnlyDictionary<string, HapticPattern> Patterns { get; init; } = new Dictionary<string, HapticPattern>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>What the mouse plays, over and over, while a 3CX call rings (docs/3cx-ringer.md). The cue's pause is the quiet time between rings.</summary>
+    public HapticCue Ringer { get; init; } = HapticCues.DefaultRinger;
+
+    /// <summary>The 3CX web address (https origin, see RingerOrigin) the Edge extension runs on; null until the user sets the ringer up.</summary>
+    public string? RingerOrigin { get; init; }
+
     /// <summary>Value equality including the cue, alert and pattern maps (a record compares dictionaries by reference otherwise).</summary>
     public bool Equals(HapticSettings? other) =>
         other is not null && Enabled == other.Enabled && Level == other.Level && OnButtonPress == other.OnButtonPress
         && OnActionsRing == other.OnActionsRing && Strength == other.Strength
-        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && SameMap(Patterns, other.Patterns) && Notify.Equals(other.Notify);
+        && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && SameMap(Patterns, other.Patterns) && Notify.Equals(other.Notify)
+        && Ringer == other.Ringer && RingerOrigin == other.RingerOrigin;
 
     public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count, Patterns.Count);
 
@@ -573,7 +586,9 @@ public sealed record SlenderStatus(
     DateTimeOffset UpdatedAt,
     string? CurrentVersion = null,
     string? AvailableVersion = null,
-    bool UpdateReady = false);
+    bool UpdateReady = false,
+    DateTimeOffset? LastRingSignal = null,
+    string? LastRingSource = null);
 
 /// <summary>
 /// How the settings app asks the tray to do update work: it posts these registered window messages (RegisterWindowMessage)
@@ -594,6 +609,13 @@ public static class UpdateMessages
 public static class DeviceMessages
 {
     public const string ForgetName = "Slender.ForgetDevice";
+}
+
+/// <summary>A ring-start reached the tray: when (local time) and which signal fired.</summary>
+public sealed class RingSignalEventArgs(DateTimeOffset at, RingerSignalSource source) : EventArgs
+{
+    public DateTimeOffset At { get; } = at;
+    public RingerSignalSource Source { get; } = source;
 }
 
 /// <summary>Well-known locations. Config roams (%APPDATA%); status, assets and logs stay local (%LOCALAPPDATA%).</summary>

@@ -10,6 +10,7 @@
   <Folder Name="/tools/">
     <Project Path="tools/Slender.Buzz/Slender.Buzz.csproj" />
     <Project Path="tools/Slender.Probe/Slender.Probe.csproj" />
+    <Project Path="tools/Slender.RingerHost/Slender.RingerHost.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Slender.Tests/Slender.Tests.csproj" />
