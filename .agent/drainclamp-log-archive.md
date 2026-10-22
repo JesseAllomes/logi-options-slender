@@ -73,3 +73,4 @@ resume uses `.agent/drainclamp-state.md` alone. This file is for forensics.
 - 2026-10-20T05:24:58+00:00 9991854a Picker fix: width 480 + scrollable tab row (More/Default were clipped for mouse buttons, hiding Type text); Excel tab only for excel or an existing Excel action (PickerTabs). 1600 tests
 - 2026-10-20T05:48:11+00:00 38f85cd2 Picker: PickerFlyoutPresenterStyle MaxWidth 380 -> 900, picker sizes to its tab row (no scrolling). User reported side-scrolling in 1.1.35
 - 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
+- 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
