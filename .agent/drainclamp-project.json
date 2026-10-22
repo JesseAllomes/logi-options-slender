@@ -761,6 +761,76 @@
           "docs/devices/yealink-wh64.md"
         ]
       }
+    ],
+    "m59": [
+      {
+        "done": true,
+        "done_at": "2026-10-22T22:02:46+00:00",
+        "est_min": 15,
+        "goal": "contract: YealinkSettingsCatalog in Engine (target, values/range, caution), HeadsetSetting Key/Raw, HeadsetState.WriteProblem, DeviceMessages.HeadsetSetName (done ae0ddd7)",
+        "id": "c1",
+        "note": "ae0ddd7 contract on main; 196 Yealink/headset tests pass",
+        "targets": [
+          "src/Slender.Engine/Devices/YealinkSettingsCatalog.cs",
+          "src/Slender.Engine/Contracts/EngineContracts.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-22T22:13:04+00:00",
+        "est_min": 25,
+        "goal": "tray side: EnvSet 0x04/0x23 builder (catalog keys + RawFor values only), session write+read-back, module SetSetting with call/caution guard, tray HeadsetSet message, tests",
+        "id": "c2",
+        "note": "3812481 tray: BuildEnvSet allowlist, session write+read-back, module SetSetting guards, HeadsetSet message",
+        "targets": [
+          "src/Slender.Yealink/VendorCodec.cs",
+          "src/Slender.Yealink/YealinkVendorSession.cs",
+          "src/Slender.Yealink/YealinkModule.cs",
+          "src/Slender.Tray/TrayApplication.cs",
+          "tests/Slender.Tests/Yealink"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-22T22:13:04+00:00",
+        "est_min": 25,
+        "goal": "settings side: Headset and Base rail tiles/pages with picture thumbs, no card, scale-2 pictures, editable setting controls by target, caution confirm, 3CX fifth tab",
+        "id": "c3",
+        "note": "ce79e05 settings: Headset/Base tiles+pages, controls, 3CX tab; 0b-fallback to small pictures",
+        "targets": [
+          "src/Slender.Settings/MainWindow.xaml.cs",
+          "src/Slender.Settings/MainWindow.Rail.cs",
+          "src/Slender.Settings/MainWindow.Pages.cs",
+          "src/Slender.Settings/MainWindow.Headset.cs",
+          "src/Slender.Settings/MainWindow.HeadsetStage.cs",
+          "src/Slender.Settings/MainWindow.Ringer.cs",
+          "src/Slender.Settings/Logic/HeadsetView.cs",
+          "src/Slender.Settings/Logic/YealinkPictures.cs",
+          "tests/Slender.Tests/Settings"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 20,
+        "goal": "merge both, build -warnaserror, full tests, Gate 6 review (memory + Excel priorities), release",
+        "id": "c4",
+        "note": "",
+        "targets": [
+          "Slender.slnx"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 10,
+        "goal": "live check with user go-ahead: one safe write (sidetone 3->4->3) through Settings, pages and pictures look right",
+        "id": "c5",
+        "note": "",
+        "targets": [
+          "src/Slender.Settings"
+        ]
+      }
     ]
   },
   "errors": [
@@ -858,7 +928,7 @@
       "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 306,
+  "rev": 314,
   "review": {
     "advice": [],
     "config": {
@@ -13684,6 +13754,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-22T06:32:58+00:00"
+    },
+    {
+      "end": "2026-10-22T22:13:04+00:00",
+      "id": "s15",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-22T22:02:46+00:00"
     }
   ],
   "todos": [

@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=199 -->
+<!-- drainclamp-build: state; schema=1; generation=201 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -55,6 +55,8 @@ Yealink base station control (user 2026-10-22) -> Slender gets full base control
 Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, user-chosen mouse buttons answer or reject it from any app through the Edge extension clicking 3CX's own buttons; no base virtual-key route for now
 
 Custom ringtone (user 2026-10-22) -> the base must play the user's own sound, not the earpiece; route via Slender playing the WAV to the WH64 with base settings (headset ring off, Audio Play when Docked = Speaker); firmware modification and the screensaver file push stay off limits (never firmware); WH64 has no ringtone upload in any Yealink build
+Headset pages (user 2026-10-23; supersedes the Headset/Base switch on one page) -> headset and base are two rail tiles and two pages like mouse and keyboard, each with its own picture, status and settings (split by what the setting acts on, per the research table); pictures sit straight on the page with no card behind them, at the largest scale USB Connect ships, and the rail tiles use the pictures; base settings are adjustable from Slender (EnvSet 0x04 short key / 0x23 long key, both confirmed live 2026-10-22): only catalogued keys and listed values or ranges, read back after every write, free-text keys stay read-only; voice language (restarts the base) and platform (mode switch) ask first and are refused during a call
+3CX tab (user 2026-10-23) -> every 3CX setting (address, ringer buzz, answer/reject buttons, set up/remove, status) moves to a fifth Settings tab "3CX" after General; Haptics keeps no 3CX section
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -118,6 +120,7 @@ Custom ringtone (user 2026-10-22) -> the base must play the user's own sound, no
 | m55 | Yealink vendor channel: capture rig in the private research repo (USBPcap/USB Connect installs need go-ahead), battery, dock and link read-only first, then allowlisted settings | src/Slender.Yealink;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m54 |
 | m57 | 3CX ring buttons (built 03e5a99, released 1.1.45; live check open): while a 3CX call rings, chosen mouse buttons answer or reject it from any app (Edge extension clicks 3CX Answer/Decline; Slender to extension channel); buttons keep their normal action otherwise; Settings pickers | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m49 |
 | m58 | Custom ringtone from the base: NOT POSSIBLE on this WH64 (base log 2026-10-22: PC audio is not played by the base while docked; base fw DES-encrypted, no public key, no homebrew exists). Was: when 3CX rings, Slender plays the user's WAV to the WH64 with the headset's own ring off and Audio Play when Docked = Speaker, so the base speaker plays it; stops on answer/reject/stop; live tests: does this base have the setting, does the speaker play USB audio when docked/undocked | src/Slender.Yealink;src/Slender.Engine;src/Slender.Settings;tests | done | m57;m55 |
+| m59 | Headset and Base split + adjustable base settings + 3CX tab: catalog moves to Engine with target/kind/range/caution; EnvSet allowlisted (catalog keys + listed values only, read back); Settings->tray Slender.HeadsetSet (wParam catalog index, lParam value index); two rail tiles/pages with the pictures (no card, scale 2); 3CX as fifth tab; live write test only with go-ahead | src/Slender.Engine/Contracts;src/Slender.Engine/Devices;src/Slender.Yealink;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m55 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
