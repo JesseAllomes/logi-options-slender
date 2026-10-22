@@ -313,11 +313,17 @@ public sealed partial class MainWindow
     private void UpdateDeviceRows()
     {
         _popRows.Children.Clear();
-        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
+        if (VisibleKinds().Count == 0)
         {
-            DeviceState? state = _status.Device(ControlCatalog.DeviceId(kind));
+            _popRows.Children.Add(Ui.Text("No devices yet", 12, Ui.Muted));
+        }
+
+        foreach (DeviceKind kind in VisibleKinds())
+        {
+            string id = ControlCatalog.DeviceId(kind);
+            DeviceState? state = _status.Device(id);
             bool trayDown = _status.Status is null;
-            bool offline = state is not { Connected: true };
+            bool offline = DevicePresenceView.Dimmed(_status.Status, id);
 
             var row = new Grid { ColumnSpacing = 12, Padding = new Thickness(10, 8, 12, 8), CornerRadius = new CornerRadius(8), Background = Ui.Brush("Paper2Brush") };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
@@ -330,18 +336,17 @@ public sealed partial class MainWindow
 
             var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 1 };
             text.Children.Add(Ui.Text(ControlCatalog.DeviceName(kind), 14, Ui.Ink, Ui.Heading));
-            string sub = trayDown ? "Slender isn't running" : state is null ? "Not seen yet" : state.Connected ? "Connected" : "Not connected";
-            text.Children.Add(Ui.Text(sub, 12, Ui.Muted));
+            text.Children.Add(Ui.Text(DevicePresenceView.Subtitle(_status.Status, id), 12, Ui.Muted));
             Grid.SetColumn(text, 1);
             row.Children.Add(text);
 
-            FrameworkElement battery = BatteryText(state, offline || trayDown);
+            FrameworkElement battery = BatteryText(_status.Status, state, id, offline || trayDown);
             battery.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(battery, 2);
             row.Children.Add(battery);
 
             string batteryName = state?.BatteryPercent is { } p ? $", battery {p} percent" : string.Empty;
-            AutomationProperties.SetName(row, ControlCatalog.DeviceName(kind) + batteryName + (offline ? ", not connected" : string.Empty));
+            AutomationProperties.SetName(row, ControlCatalog.DeviceName(kind) + batteryName + DevicePresenceView.AccessibleSuffix(_status.Status, id));
             _popRows.Children.Add(row);
         }
 

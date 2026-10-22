@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Slender.Engine;
+using Slender.Engine.Devices;
 using Slender.Settings.Logic;
 using Slender.Settings.Services;
 using Slender.Settings.Views;
@@ -23,20 +24,44 @@ public sealed partial class MainWindow
     {
         RailPanel.Children.Clear();
         RailVersion.Text = "v" + OwnVersion;
-        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
+        List<DeviceKind> visible = VisibleKinds();
+        foreach (DeviceKind kind in visible)
         {
             RailPanel.Children.Add(DeviceTile(kind));
+        }
+
+        if (visible.Count == 0)
+        {
+            RailPanel.Children.Add(Ui.Text("No devices yet", 11.5, Ui.Muted));
         }
 
         RailPanel.Children.Add(new Border { Height = 1, Background = Ui.Rule, Margin = new Thickness(8, 6, 8, 6) });
         RailPanel.Children.Add(GearTile());
     }
 
+    /// <summary>The devices to show: a registry-aware tray leaves never-installed ones out.</summary>
+    private List<DeviceKind> VisibleKinds() =>
+        new[] { DeviceKind.Mouse, DeviceKind.Keyboard }.Where(k => DevicePresenceView.Visible(_status.Status, ControlCatalog.DeviceId(k))).ToList();
+
+    /// <summary>Moves the selection to the first visible device when the selected one is hidden. True when it changed.</summary>
+    private bool EnsureVisibleKind()
+    {
+        List<DeviceKind> visible = VisibleKinds();
+        if (visible.Count == 0 || visible.Contains(_kind))
+        {
+            return false;
+        }
+
+        _kind = visible[0];
+        return true;
+    }
+
     private Button DeviceTile(DeviceKind kind)
     {
         bool selected = _kind == kind && _page == Page.Device;
         DeviceState? state = _status.Device(ControlCatalog.DeviceId(kind));
-        bool offline = _status.Status is null || state is not { Connected: true };
+        string id = ControlCatalog.DeviceId(kind);
+        bool offline = DevicePresenceView.Dimmed(_status.Status, id);
 
         var content = new StackPanel { Spacing = 5, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         CachedDevice? device = _devices.GetValueOrDefault(kind);
@@ -68,7 +93,7 @@ public sealed partial class MainWindow
 
         thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);
-        content.Children.Add(BatteryText(state, offline));
+        content.Children.Add(BatteryText(_status.Status, state, id, offline));
 
         var button = new Button
         {
@@ -83,18 +108,37 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
         };
         string battery = state?.BatteryPercent is { } p ? $", battery {p} percent" : string.Empty;
-        AutomationProperties.SetName(button, ControlCatalog.DeviceName(kind) + battery + (offline ? ", not connected" : string.Empty));
+        AutomationProperties.SetName(button, ControlCatalog.DeviceName(kind) + battery + DevicePresenceView.AccessibleSuffix(_status.Status, id));
         ToolTipService.SetToolTip(button, ControlCatalog.DeviceName(kind) + (!offline && state?.BatteryEstimate is { Length: > 0 } estimate && state.Charging is false ? " · " + estimate : string.Empty));
         button.Click += (_, _) => SelectDevice(kind);
+        if (DevicePresenceView.Removable(_status.Status, id))
+        {
+            var remove = new MenuFlyoutItem { Text = "Remove device", Icon = new FontIcon { Glyph = "\ue74d" } };
+            remove.Click += async (_, _) => await ConfirmRemoveDeviceAsync(kind);
+            button.ContextFlyout = new MenuFlyout { Items = { remove } };
+            button.KeyDown += async (_, e) =>
+            {
+                if (e.Key == VirtualKey.Delete)
+                {
+                    e.Handled = true;
+                    await ConfirmRemoveDeviceAsync(kind);
+                }
+            };
+        }
+
         return button;
     }
 
-    private static FrameworkElement BatteryText(DeviceState? state, bool offline)
+    private static FrameworkElement BatteryText(SlenderStatus? status, DeviceState? state, string id, bool offline)
     {
-        string text = state is null ? "—" : offline ? "Off" : state.BatteryPercent is { } p ? $"{p}%" : state.BatteryText ?? "—";
-        bool low = state is { Connected: true, BatteryPercent: < 20, Charging: false };
+        string? word = DevicePresenceView.BatteryWord(status, id);
+        string text = state is null ? "—"
+            : offline ? word ?? "Off"
+            : state.BatteryPercent is { } p ? $"{p}%" : word ?? state.BatteryText ?? "—";
+        bool shown = !offline && state is not null && (state.Connected || word is not null);
+        bool low = shown && state is { BatteryPercent: < 20, Charging: false };
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, HorizontalAlignment = HorizontalAlignment.Center };
-        if (state is { Connected: true, Charging: true })
+        if (shown && state is { Charging: true })
         {
             row.Children.Add(Ui.Glyph("", 10, Ui.Live));
         }
@@ -395,5 +439,34 @@ public sealed partial class MainWindow
 
         _config.Update(c => ProfileOps.RemoveApp(c, process!));
         RebuildAll();
+    }
+
+    private async Task ConfirmRemoveDeviceAsync(DeviceKind kind)
+    {
+        string name = ControlCatalog.DeviceName(kind);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = $"Remove {name}?",
+            Content = "Slender forgets this device and its settings here. A backup of your settings is kept. Windows Bluetooth pairing is not changed.",
+            PrimaryButtonText = "Remove",
+            CloseButtonText = "Keep",
+            DefaultButton = ContentDialogButton.Close,
+            RequestedTheme = ElementTheme.Dark,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        string id = ControlCatalog.DeviceId(kind);
+        for (int i = 0; i < DeviceCatalog.All.Count; i++)
+        {
+            if (DeviceCatalog.All[i].Id == id)
+            {
+                AskTray(DeviceMessages.ForgetName, i);
+                return;
+            }
+        }
     }
 }

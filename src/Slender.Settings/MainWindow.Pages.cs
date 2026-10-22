@@ -403,13 +403,13 @@ public sealed partial class MainWindow
         Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0";
 
     /// <summary>Posts one of the registered update messages to the tray's hidden window. The tray does the update work.</summary>
-    private static void AskTray(string messageName)
+    private static void AskTray(string messageName, nint wParam = 0)
     {
         nint tray = Services.NativeMethods.FindWindowW(UpdateMessages.TrayWindowClass, null);
         uint message = Services.NativeMethods.RegisterWindowMessageW(messageName);
         if (tray != 0 && message != 0)
         {
-            Services.NativeMethods.PostMessageW(tray, message, 0, 0);
+            Services.NativeMethods.PostMessageW(tray, message, wParam, 0);
         }
     }
 

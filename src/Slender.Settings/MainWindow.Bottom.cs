@@ -74,17 +74,18 @@ public sealed partial class MainWindow
         _infoTray.IsOpen = trayDown;
         _infoOptions.IsOpen = _status.OptionsPlusRunning;
 
-        bool notConnected = !trayDown && state is not { Connected: true };
-        _infoDevice.IsOpen = notConnected;
-        if (notConnected)
+        string deviceId = ControlCatalog.DeviceId(_kind);
+        var info = trayDown || !DevicePresenceView.Visible(_status.Status, deviceId)
+            ? null
+            : DevicePresenceView.InfoBar(_status.Status, deviceId, deviceName, _kind == DeviceKind.Mouse);
+        _infoDevice.IsOpen = info is not null;
+        if (info is { } text)
         {
-            _infoDevice.Title = $"{deviceName} isn't connected";
-            _infoDevice.Message = _kind == DeviceKind.Mouse
-                ? "Turn it on or check Bluetooth. Your changes are saved and apply when it connects."
-                : "Slender doesn't control this keyboard yet. Your changes are saved for when it does.";
+            _infoDevice.Title = text.Title;
+            _infoDevice.Message = text.Message;
         }
 
-        bool low = !trayDown && state is { Connected: true, BatteryPercent: < 20, Charging: false };
+        bool low = !trayDown && !DevicePresenceView.Dimmed(_status.Status, deviceId) && state is { BatteryPercent: < 20, Charging: false };
         _infoBattery.IsOpen = low;
         if (low && state?.BatteryPercent is { } percent)
         {
