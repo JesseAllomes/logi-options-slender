@@ -30,7 +30,8 @@ public sealed record StatusSnapshot(
     Slender.Hidpp.DpiCapabilities? MouseDpiCaps = null,
     IReadOnlyList<DeviceEntry>? Devices = null,
     DateTimeOffset? LastRingSignal = null,
-    string? LastRingSource = null);
+    string? LastRingSource = null,
+    Slender.Engine.HeadsetState? Headset = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -199,8 +200,8 @@ public sealed class StatusPublisher : IDisposable
         // The headset has no battery or older-tray form: it is listed only with a registry list, and only once it has been seen.
         if (s.Devices is not null && !IsHidden(s.Devices, DeviceCatalog.YealinkWh64))
         {
-            devices = [.. devices, new DeviceState(DeviceCatalog.YealinkWh64, "Yealink WH64", PresenceText(s.Devices, DeviceCatalog.YealinkWh64) == "active", null, false)
-                { Presence = PresenceText(s.Devices, DeviceCatalog.YealinkWh64) }];
+            devices = [.. devices, new DeviceState(DeviceCatalog.YealinkWh64, "Yealink WH64", PresenceText(s.Devices, DeviceCatalog.YealinkWh64) == "active", s.Headset?.BatteryPercent, s.Headset?.Charging ?? false)
+                { Presence = PresenceText(s.Devices, DeviceCatalog.YealinkWh64), Headset = s.Headset }];
         }
 
         return new SlenderStatus(

@@ -162,6 +162,7 @@ static class Program
         {
             LedWritesEnabled = config.Yealink.LedWrites,
             MuteSync = config.Yealink.MuteSync,
+            VendorReadsEnabled = config.Yealink.VendorReads,
         };
         // Button presses run their bound action on the thread pool, never on the module's read thread.
         using var yealinkRouter = yealinkModule is null ? null
@@ -173,6 +174,10 @@ static class Program
             registry.Register(yealinkModule!);
             app.HeadsetMicMuted = yealinkModule!.GetMicMuted;
             app.ToggleHeadsetMic = yealinkModule.ToggleMicMute;
+            // Battery, signal and the base's settings reach status.json and the tray menu; Settings' Headset page asks for a re-read.
+            app.HeadsetInfo = yealinkModule.GetHeadset;
+            app.RefreshHeadset = () => _ = Task.Run(yealinkModule.RefreshSettings);
+            yealinkModule.HeadsetChanged += app.DevicesChanged;
             registry.Changed += (_, _) =>
             {
                 log.Info("devices: " + string.Join(", ", registry.Devices.Select(d => $"{d.Id}={d.Presence}" + (d.Faulted ? " (faulted)" : ""))));
@@ -260,7 +265,7 @@ static class Program
             keys.ApplyConfig(changed);
             // Reopens the headset link only if a flag changed while it is open; off the UI thread because opening touches HID.
             if (yealinkModule is not null)
-                _ = Task.Run(() => { var y = engine.Config.Yealink; yealinkModule.ApplySettings(y.LedWrites, y.MuteSync); });
+                _ = Task.Run(() => { var y = engine.Config.Yealink; yealinkModule.ApplySettings(y.LedWrites, y.MuteSync, y.VendorReads); });
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);

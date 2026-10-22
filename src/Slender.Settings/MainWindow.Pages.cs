@@ -19,6 +19,7 @@ public sealed partial class MainWindow
         PagePanel.Children.Clear();
         PagePanel.Spacing = 0;
         PagePanel.MaxWidth = 660;
+        if (_page != Page.Headset) _headsetAsked = false;
         if (_page == Page.Headset)
         {
             BuildHeadsetPage();

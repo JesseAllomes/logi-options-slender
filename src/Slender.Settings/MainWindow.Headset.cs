@@ -26,7 +26,7 @@ public sealed partial class MainWindow
         var content = new StackPanel { Spacing = 5, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         var thumb = new Grid { Height = 44, Opacity = offline ? 0.5 : 1, Children = { new FontIcon { Glyph = HeadsetGlyph, FontSize = 26, Foreground = Ui.Muted } } };
         content.Children.Add(thumb);
-        content.Children.Add(Ui.Text(DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset) ?? "On", 11.5, Ui.Muted));
+        content.Children.Add(Ui.Text(DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset) ?? (_status.Device(DeviceIds.Headset)?.BatteryPercent is { } pct ? $"{pct}%" : "On"), 11.5, Ui.Muted));
 
         var button = new Button
         {
@@ -95,16 +95,55 @@ public sealed partial class MainWindow
             AddHeadsetNote("The headset isn't connected. Your changes are saved and apply when it connects.");
         }
 
+        AddHeadsetStatus();
+
         AddSection("BUTTONS");
         AddHeadsetButtonRow("Hook button", "The answer and end-call button. Runs on both pick up and hang up.", y.Hook, (s, a) => s with { Hook = a });
         AddHeadsetButtonRow("Reject button", null, y.Reject, (s, a) => s with { Reject = a });
         AddHeadsetButtonRow("Teams button", null, y.TeamsButton, (s, a) => s with { TeamsButton = a });
+
+        AddSection("BASE STATUS");
+        AddRow("Read headset status", "Lets Slender read the battery, signal and settings from the base. Read only: nothing is changed on the base. Off stops it from sending the base anything.",
+            PageToggle("Read headset status", y.VendorReads, on => _config.Update(x => x with { Yealink = x.Yealink with { VendorReads = on } })));
 
         AddSection("MUTE AND LIGHTS");
         AddRow("Mute syncs Windows microphone", "The mute button mutes the Windows microphone, and the headset's mute light follows it.",
             PageToggle("Mute syncs Windows microphone", y.MuteSync, on => _config.Update(x => x with { Yealink = x.Yealink with { MuteSync = on } })));
         AddRow("Headset lights", "Experimental. Lets Slender switch the headset's mute light. Off until it is tested on your headset; nothing is written to the headset while it is off.",
             PageToggle("Headset lights", y.LedWrites, on => _config.Update(x => x with { Yealink = x.Yealink with { LedWrites = on } })));
+    }
+
+    private bool _headsetAsked;
+
+    /// <summary>
+    /// What the base says (battery, charging, docked, signal, range) and, read-only, its own settings grouped as USB Connect does.
+    /// Opening the page asks the tray for a fresh read, once per visit; the tray limits how often it really reads.
+    /// </summary>
+    private void AddHeadsetStatus()
+    {
+        if (!_headsetAsked)
+        {
+            _headsetAsked = true;
+            AskTray(DeviceMessages.HeadsetRefreshName);
+        }
+
+        HeadsetState? h = _status.Status?.Devices.FirstOrDefault(d => d.Id == DeviceIds.Headset)?.Headset;
+        var rows = HeadsetView.StatusRows(h);
+        if (rows.Count > 0)
+        {
+            AddSection("HEADSET");
+            foreach (var (label, value) in rows) AddRow(label, null, Ui.Text(value, 13, Ui.Ink));
+        }
+
+        var groups = HeadsetView.Groups(h);
+        if (groups.Count == 0) return;
+        AddSection("BASE SETTINGS");
+        AddHeadsetNote("What the base is set to now. Change these in Yealink USB Connect; Slender only reads them.");
+        foreach (var (group, items) in groups)
+        {
+            AddSection(group.ToUpperInvariant());
+            foreach (var item in items) AddRow(item.Label, null, Ui.Text(item.Value, 13, Ui.Ink));
+        }
     }
 
     private void AddHeadsetNote(string text)

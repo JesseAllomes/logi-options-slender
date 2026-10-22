@@ -42,7 +42,7 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
-    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage;
+    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -88,7 +88,7 @@ public sealed class TrayApplication : IDisposable
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
                 ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
-                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke(), _lastRing, _lastRingSource),
+                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke(), _lastRing, _lastRingSource, HeadsetInfo?.Invoke()),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -113,6 +113,11 @@ public sealed class TrayApplication : IDisposable
         fixed (char* forget = DeviceMessages.ForgetName)
         {
             _forgetDeviceMessage = Win32.RegisterWindowMessageW(forget);
+        }
+
+        fixed (char* refresh = DeviceMessages.HeadsetRefreshName)
+        {
+            _headsetRefreshMessage = Win32.RegisterWindowMessageW(refresh);
         }
 
         CreateWindow();
@@ -218,6 +223,12 @@ public sealed class TrayApplication : IDisposable
     public Func<bool?>? HeadsetMicMuted { get; set; }
 
     public Func<bool?>? ToggleHeadsetMic { get; set; }
+
+    /// <summary>What the headset base reported (battery, signal, settings); set from Program. Null without the headset module or before it answered.</summary>
+    public Func<Slender.Engine.HeadsetState?>? HeadsetInfo { get; set; }
+
+    /// <summary>Settings' Headset page opened: read the base again (the module limits how often). Set from Program.</summary>
+    public Action? RefreshHeadset { get; set; }
 
     /// <summary>Forgets a device in the registry (set from Program); true when it was removed. Null without a registry.</summary>
     public Func<string, bool>? ForgetDevice { get; set; }
@@ -412,6 +423,12 @@ public sealed class TrayApplication : IDisposable
             return true;
         }
 
+        if (msg != 0 && msg == _headsetRefreshMessage)
+        {
+            RefreshHeadset?.Invoke();
+            return true;
+        }
+
         if (msg != 0 && msg == _forgetDeviceMessage)
         {
             OnForgetDevice(wParam);
@@ -601,6 +618,7 @@ public sealed class TrayApplication : IDisposable
         nint sub = Win32.CreatePopupMenu();
         if (sub == 0) return;
         Append(sub, Win32.MF_GRAYED, 1, _headsetText);
+        if (TrayText.Headset(HeadsetInfo?.Invoke()) is { } detail) Append(sub, Win32.MF_GRAYED, 1, detail);
         bool present = PresenceOf(DeviceList?.Invoke(), Slender.Engine.Devices.DeviceCatalog.YealinkWh64) is Slender.Engine.Devices.DevicePresence.Active or Slender.Engine.Devices.DevicePresence.Sleeping;
         bool muted = HeadsetMicMuted?.Invoke() == true;
         Append(sub, (muted ? Win32.MF_CHECKED : 0) | (present && ToggleHeadsetMic is not null ? 0 : Win32.MF_GRAYED), CmdHeadsetMute, "Mute microphone");

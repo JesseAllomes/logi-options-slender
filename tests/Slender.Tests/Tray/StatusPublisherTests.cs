@@ -121,6 +121,27 @@ public sealed class StatusPublisherTests : IDisposable
     }
 
     [Fact]
+    public void The_headset_report_is_published_and_survives_the_json_round_trip()
+    {
+        var h = new Harness();
+        var report = new HeadsetState(true, 72, false, false, 5, true, [new HeadsetSetting("General", "Wireless range", "Long (150 m)")]);
+        h.Snapshot = h.Snapshot with
+        {
+            Devices = [new Slender.Engine.Devices.DeviceEntry("yealink-wh64", "Yealink WH64", Slender.Engine.Devices.DevicePresence.Active, false, null)],
+            Headset = report,
+        };
+        using StatusPublisher publisher = h.Create();
+        publisher.Changed();
+
+        DeviceState written = Assert.Single(h.Written[^1].Devices, d => d.Id == "yealink-wh64");
+        Assert.Equal(72, written.BatteryPercent);
+        SlenderStatus back = Slender.Engine.Config.StatusJson.Parse(Slender.Engine.Config.StatusJson.Serialize(h.Written[^1]))!;
+        HeadsetState read = Assert.Single(back.Devices, d => d.Id == "yealink-wh64").Headset!;
+        Assert.Equal(72, read.BatteryPercent);
+        Assert.Equal("Long (150 m)", Assert.Single(read.Settings!).Value);
+    }
+
+    [Fact]
     public void Without_a_registry_list_both_devices_are_listed()
     {
         var h = new Harness();

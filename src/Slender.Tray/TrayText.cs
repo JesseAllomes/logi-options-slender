@@ -7,6 +7,17 @@ public static class TrayText
 {
     public const string Paused = "Paused — Logi Options+ is running";
 
+    /// <summary>The headset submenu's detail line from the base's report: battery and charging, docked, out of range. Null when the base has said none of it.</summary>
+    public static string? Headset(Slender.Engine.HeadsetState? h)
+    {
+        if (h is null || h.Registered == false) return null;
+        var parts = new List<string>(3);
+        if (h.BatteryPercent is { } p) parts.Add(h.Charging == true ? $"Battery {p}% charging" : $"Battery {p}%");
+        if (h.Docked is { } docked) parts.Add(docked ? "Docked" : "Off the base");
+        if (h.InRange == false) parts.Add("Out of range");
+        return parts.Count == 0 ? null : string.Join(" · ", parts);
+    }
+
     public static string Device(string name, bool connected, int? percent, bool charging, string? estimateShort = null) =>
         !connected
             ? $"{name} — not connected"
