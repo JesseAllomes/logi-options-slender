@@ -7,6 +7,8 @@ namespace Slender.Yealink;
 /// stopped it holds nothing: no link, threads, handles or buffers. While started it has one link (one read thread) and nothing
 /// else; no polling. If Yealink's own USB Connect app is running at Start or Wake it opens nothing, so the two never fight over
 /// the device.
+/// MuteSync: the headset's mute press toggles the Windows default microphone, and the mute LED (when LED writes are on) follows
+/// the Windows mute, including changes made elsewhere. The microphone object and its notification exist only while a link is open.
 /// Events are raised on the read thread and must return quickly. LedWritesEnabled and MuteSync are read at Start.
 /// </summary>
 public sealed class YealinkModule : IDeviceModule
@@ -16,11 +18,14 @@ public sealed class YealinkModule : IDeviceModule
     private readonly IYealinkTransport _transport;
     private readonly Action<string> _log;
     private readonly Func<bool> _standDown;
+    private readonly Func<IMicMute> _micFactory;
     private readonly object _gate = new();
     private readonly object _ledLock = new();
 
     private bool _started;
     private bool _ledsOn;
+    private bool _syncOn;
+    private volatile IMicMute? _mic;
     private volatile IYealinkLink? _link;
     private YealinkInputDecoder? _decoder;
     private YealinkLedBuilder? _led;
@@ -28,8 +33,10 @@ public sealed class YealinkModule : IDeviceModule
     private bool _ledSent;
 
     /// <param name="standDown">True when another app owns the headset. Default: YealinkUSBConnect is running.</param>
-    public YealinkModule(IYealinkTransport transport, Action<string> log, Func<bool>? standDown = null)
+    /// <param name="micFactory">Creates the Windows microphone mute when MuteSync needs it. Default: the Core Audio default capture device.</param>
+    public YealinkModule(IYealinkTransport transport, Action<string> log, Func<bool>? standDown = null, Func<IMicMute>? micFactory = null)
     {
+        _micFactory = micFactory ?? (() => new Windows.WindowsMicMute());
         _transport = transport;
         _log = log;
         _standDown = standDown ?? IsYealinkConnectRunning;
@@ -39,6 +46,9 @@ public sealed class YealinkModule : IDeviceModule
 
     /// <summary>When false (default) no output report is ever written to the headset.</summary>
     public bool LedWritesEnabled { get; set; }
+
+    /// <summary>When true (default false) MutePressed toggles the Windows microphone and the mute LED follows it.</summary>
+    public bool MuteSync { get; set; }
 
     public event Action<bool>? HookChanged;
     public event Action? MutePressed;
@@ -56,6 +66,7 @@ public sealed class YealinkModule : IDeviceModule
             if (_started) return;
             _started = true;
             _ledsOn = LedWritesEnabled;
+            _syncOn = MuteSync;
             TryOpen();
         }
     }
@@ -103,6 +114,7 @@ public sealed class YealinkModule : IDeviceModule
             if (_ledsOn && _led == null) _log("Yealink: no mute LED on the telephony report; LED writes off");
             _link = link;
             link.Start();
+            if (_syncOn) StartMuteSync();
         }
         catch (Exception ex)
         {
@@ -111,13 +123,43 @@ public sealed class YealinkModule : IDeviceModule
         }
     }
 
+    private void StartMuteSync()
+    {
+        IMicMute? mic = null;
+        try
+        {
+            mic = _micFactory();
+            mic.Subscribe(SetMuteLed);
+            _mic = mic;
+            SetMuteLed(mic.GetMute());
+        }
+        catch (Exception ex)
+        {
+            _log($"Yealink: microphone mute sync unavailable: {ex.Message}");
+            _mic = null;
+            DisposeMic(mic);
+        }
+    }
+
+    private void DisposeMic(IMicMute? mic)
+    {
+        try { mic?.Dispose(); }
+        catch (Exception ex) { _log($"Yealink: microphone release failed: {ex.Message}"); }
+    }
+
     private void Close()
     {
+        // Stop the Windows notification first so nothing calls into a closing link; the mic is released after the read thread has joined.
+        var mic = _mic;
+        _mic = null;
+        try { mic?.Unsubscribe(); }
+        catch (Exception ex) { _log($"Yealink: microphone unsubscribe failed: {ex.Message}"); }
         var link = _link;
         _link = null;
         _sink = null;
         try { link?.Dispose(); }
         catch (Exception ex) { _log($"Yealink: close failed: {ex.Message}"); }
+        DisposeMic(mic);
         _decoder = null;
         lock (_ledLock) { _led = null; _ledSent = false; }
     }
@@ -135,6 +177,7 @@ public sealed class YealinkModule : IDeviceModule
     {
         try
         {
+            if (kind == YealinkEventKind.MutePressed) ToggleWindowsMute();
             switch (kind)
             {
                 case YealinkEventKind.HookChanged: HookChanged?.Invoke(value); break;
@@ -145,6 +188,19 @@ public sealed class YealinkModule : IDeviceModule
             }
         }
         catch (Exception ex) { _log($"Yealink: {kind} handler failed: {ex.Message}"); }
+    }
+
+    private void ToggleWindowsMute()
+    {
+        var mic = _mic;
+        if (mic == null) return;
+        try
+        {
+            bool muted = !mic.GetMute();
+            mic.SetMute(muted);
+            SetMuteLed(muted);
+        }
+        catch (Exception ex) { _log($"Yealink: microphone toggle failed: {ex.Message}"); }
     }
 
     /// <summary>Sets the headset's mute LED. No-op unless LED writes are enabled and the link is open; repeated values are not rewritten.</summary>
