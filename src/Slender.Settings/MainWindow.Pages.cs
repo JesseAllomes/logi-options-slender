@@ -19,6 +19,11 @@ public sealed partial class MainWindow
         PagePanel.Children.Clear();
         PagePanel.Spacing = 0;
         PagePanel.MaxWidth = 660;
+        if (_page == Page.Headset)
+        {
+            BuildHeadsetPage();
+            return;
+        }
 
         PagePanel.Children.Add(Ui.Text("Settings", 24, Ui.Ink, Ui.Heading));
         ((TextBlock)PagePanel.Children[0]).Margin = new Thickness(0, 0, 0, 14);

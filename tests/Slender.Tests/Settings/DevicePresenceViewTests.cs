@@ -22,6 +22,18 @@ public sealed class DevicePresenceViewTests
     }
 
     [Fact]
+    public void Headset_is_shown_only_when_a_registry_aware_tray_lists_it()
+    {
+        const string Headset = DeviceIds.Headset;
+        Assert.True(DevicePresenceView.Listed(Status(Dev(Mouse, true, "active"), Dev(Headset, true, "active")), Headset));
+        Assert.True(DevicePresenceView.Listed(Status(Dev(Mouse, true, "active"), Dev(Headset, false, "disconnected")), Headset));
+        Assert.False(DevicePresenceView.Listed(Status(Dev(Mouse, true, "active")), Headset));
+        Assert.False(DevicePresenceView.Listed(Status(Dev(Mouse, true, null), Dev(Headset, true, null)), Headset)); // older tray
+        Assert.False(DevicePresenceView.Listed(null, Headset));
+        Assert.True(DevicePresenceView.Removable(Status(Dev(Mouse, true, "active"), Dev(Headset, false, "disconnected")), Headset));
+    }
+
+    [Fact]
     public void Legacy_tray_lists_both_and_both_are_visible()
     {
         SlenderStatus s = Status(Dev(Mouse, true, null), Dev(Kb, false, null));

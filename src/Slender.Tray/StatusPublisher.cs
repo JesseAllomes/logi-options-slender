@@ -196,6 +196,13 @@ public sealed class StatusPublisher : IDisposable
             ];
         // With a registry list, a never-installed (Hidden) device is not in status.json at all; without one, both always are.
         IReadOnlyList<DeviceState> devices = s.Devices is null ? all : all.Where(d => !IsHidden(s.Devices, d.Id)).ToArray();
+        // The headset has no battery or older-tray form: it is listed only with a registry list, and only once it has been seen.
+        if (s.Devices is not null && !IsHidden(s.Devices, DeviceCatalog.YealinkWh64))
+        {
+            devices = [.. devices, new DeviceState(DeviceCatalog.YealinkWh64, "Yealink WH64", PresenceText(s.Devices, DeviceCatalog.YealinkWh64) == "active", null, false)
+                { Presence = PresenceText(s.Devices, DeviceCatalog.YealinkWh64) }];
+        }
+
         return new SlenderStatus(
             devices,
             _optionsValue || s.PausedForOptionsPlus,

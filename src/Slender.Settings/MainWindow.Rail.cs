@@ -30,7 +30,12 @@ public sealed partial class MainWindow
             RailPanel.Children.Add(DeviceTile(kind));
         }
 
-        if (visible.Count == 0)
+        if (HeadsetListed())
+        {
+            RailPanel.Children.Add(HeadsetTile());
+        }
+
+        if (visible.Count == 0 && !HeadsetListed())
         {
             RailPanel.Children.Add(Ui.Text("No devices yet", 11.5, Ui.Muted));
         }
@@ -46,6 +51,12 @@ public sealed partial class MainWindow
     /// <summary>Moves the selection to the first visible device when the selected one is hidden. True when it changed.</summary>
     private bool EnsureVisibleKind()
     {
+        if (_page == Page.Headset && !HeadsetListed())
+        {
+            _page = Page.Device; // the headset was removed or never listed by this tray
+            return true;
+        }
+
         List<DeviceKind> visible = VisibleKinds();
         if (visible.Count == 0 || visible.Contains(_kind))
         {
@@ -149,7 +160,7 @@ public sealed partial class MainWindow
 
     private Button GearTile()
     {
-        bool selected = _page != Page.Device;
+        bool selected = _page is not (Page.Device or Page.Headset);
         var button = new Button
         {
             Style = Ui.Res<Style>("PlainButtonStyle"),
@@ -164,7 +175,7 @@ public sealed partial class MainWindow
         };
         AutomationProperties.SetName(button, "Point and scroll, haptics, actions ring and general settings");
         ToolTipService.SetToolTip(button, "Point & scroll, Haptics, Actions Ring, General");
-        button.Click += (_, _) => OpenPage(_page == Page.Device ? Page.Pointer : _page);
+        button.Click += (_, _) => OpenPage(_page is Page.Device or Page.Headset ? Page.Pointer : _page);
         return button;
     }
 
@@ -441,14 +452,16 @@ public sealed partial class MainWindow
         RebuildAll();
     }
 
-    private async Task ConfirmRemoveDeviceAsync(DeviceKind kind)
+    private Task ConfirmRemoveDeviceAsync(DeviceKind kind) =>
+        ConfirmRemoveDeviceAsync(ControlCatalog.DeviceId(kind), ControlCatalog.DeviceName(kind), "Windows Bluetooth pairing is not changed.");
+
+    private async Task ConfirmRemoveDeviceAsync(string id, string name, string tail)
     {
-        string name = ControlCatalog.DeviceName(kind);
         var dialog = new ContentDialog
         {
             XamlRoot = Root.XamlRoot,
             Title = $"Remove {name}?",
-            Content = "Slender forgets this device and its settings here. A backup of your settings is kept. Windows Bluetooth pairing is not changed.",
+            Content = "Slender forgets this device and its settings here. A backup of your settings is kept. " + tail,
             PrimaryButtonText = "Remove",
             CloseButtonText = "Keep",
             DefaultButton = ContentDialogButton.Close,
@@ -459,7 +472,6 @@ public sealed partial class MainWindow
             return;
         }
 
-        string id = ControlCatalog.DeviceId(kind);
         for (int i = 0; i < DeviceCatalog.All.Count; i++)
         {
             if (DeviceCatalog.All[i].Id == id)

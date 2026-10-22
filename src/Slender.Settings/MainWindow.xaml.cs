@@ -28,6 +28,7 @@ public sealed partial class MainWindow : Window
         Haptics,
         Ring,
         General,
+        Headset,
     }
 
     /// <summary>Test hook: SLENDER_CONFIG_DIR redirects config.json and window state to another folder.</summary>
@@ -456,6 +457,11 @@ public sealed partial class MainWindow : Window
         }
 
         BuildRail();
+        if (_page == Page.Headset)
+        {
+            BuildPage(); // its connected / disconnected note follows the tray
+        }
+
         UpdateInfoBars();
         UpdateStageDim();
         string versionRow = UpdateText.Version(_status.Status, string.Empty) + _status.TrayRunning;

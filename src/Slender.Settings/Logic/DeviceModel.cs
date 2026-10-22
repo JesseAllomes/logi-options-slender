@@ -14,6 +14,7 @@ public static class DeviceIds
 {
     public const string Mouse = "mx-master-4";
     public const string Keyboard = "ergo-k860";
+    public const string Headset = "yealink-wh64";
     public const string MouseModel = "2b042";
     public const string KeyboardModel = "6b359";
 

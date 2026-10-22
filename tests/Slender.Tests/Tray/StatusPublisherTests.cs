@@ -85,6 +85,41 @@ public sealed class StatusPublisherTests : IDisposable
         Assert.Equal("mx-master-4", status.Devices[0].Id);
     }
 
+    private static IReadOnlyList<DeviceState> HeadsetStatus(Slender.Engine.Devices.DevicePresence? headset)
+    {
+        var h = new Harness();
+        if (headset is { } p)
+        {
+            h.Snapshot = h.Snapshot with
+            {
+                Devices =
+                [
+                    new Slender.Engine.Devices.DeviceEntry("mx-master-4", "MX Master 4", Slender.Engine.Devices.DevicePresence.Active, false, null),
+                    new Slender.Engine.Devices.DeviceEntry("ergo-k860", "ERGO K860", Slender.Engine.Devices.DevicePresence.Hidden, false, null),
+                    new Slender.Engine.Devices.DeviceEntry("yealink-wh64", "Yealink WH64", p, false, null),
+                ],
+            };
+        }
+
+        using StatusPublisher publisher = h.Create();
+        publisher.Changed();
+        return Assert.Single(h.Written).Devices;
+    }
+
+    [Fact]
+    public void Headset_is_listed_once_seen_and_never_without_a_registry_list()
+    {
+        Assert.DoesNotContain(HeadsetStatus(null), d => d.Id == "yealink-wh64");
+        Assert.DoesNotContain(HeadsetStatus(Slender.Engine.Devices.DevicePresence.Hidden), d => d.Id == "yealink-wh64");
+
+        DeviceState gone = Assert.Single(HeadsetStatus(Slender.Engine.Devices.DevicePresence.Disconnected), d => d.Id == "yealink-wh64");
+        Assert.Equal("disconnected", gone.Presence);
+        Assert.False(gone.Connected);
+
+        DeviceState here = Assert.Single(HeadsetStatus(Slender.Engine.Devices.DevicePresence.Active), d => d.Id == "yealink-wh64");
+        Assert.True(here.Connected);
+    }
+
     [Fact]
     public void Without_a_registry_list_both_devices_are_listed()
     {

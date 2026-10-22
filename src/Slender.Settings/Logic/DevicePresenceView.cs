@@ -19,6 +19,12 @@ public static class DevicePresenceView
     /// <summary>False only for a device a registry-aware tray left out of the list (never installed).</summary>
     public static bool Visible(SlenderStatus? status, string id) => !RegistryAware(status) || status!.Devices.Any(d => d.Id == id);
 
+    /// <summary>
+    /// True only when a registry-aware tray lists the device. For a device that has no older-tray form (the headset): an older
+    /// tray, which lists every device it knows, never shows it.
+    /// </summary>
+    public static bool Listed(SlenderStatus? status, string id) => RegistryAware(status) && status!.Devices.Any(d => d.Id == id);
+
     private static string? Presence(SlenderStatus? status, string id) =>
         RegistryAware(status) ? status!.Devices.FirstOrDefault(d => d.Id == id)?.Presence : null;
 

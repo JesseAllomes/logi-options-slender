@@ -313,7 +313,7 @@ public sealed partial class MainWindow
     private void UpdateDeviceRows()
     {
         _popRows.Children.Clear();
-        if (VisibleKinds().Count == 0)
+        if (VisibleKinds().Count == 0 && !HeadsetListed())
         {
             _popRows.Children.Add(Ui.Text("No devices yet", 12, Ui.Muted));
         }
@@ -348,6 +348,11 @@ public sealed partial class MainWindow
             string batteryName = state?.BatteryPercent is { } p ? $", battery {p} percent" : string.Empty;
             AutomationProperties.SetName(row, ControlCatalog.DeviceName(kind) + batteryName + DevicePresenceView.AccessibleSuffix(_status.Status, id));
             _popRows.Children.Add(row);
+        }
+
+        if (HeadsetListed())
+        {
+            _popRows.Children.Add(HeadsetPopRow());
         }
 
         FitPopover();
