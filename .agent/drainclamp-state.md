@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=187 -->
+<!-- drainclamp-build: state; schema=1; generation=188 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -120,7 +120,6 @@ Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with th
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-21T04:06:32+00:00 c994bb7f m51 done: Ui.WheelSteps on both slider factories (PageSlider, ThumbCard), SliderWheel carry for hi-res wheels; 1926 tests; pushed
 - 2026-10-21T04:07:49+00:00 40c24404 m50 handed to one Sonnet builder in .worktrees/m50 (branch m50-haptics from 65e5238): levels 33/66/100, cycles picker, named pattern builder, 5 s idle restore, Test everywhere incl. Notifications/alerts
 - 2026-10-21T04:18:27+00:00 c73f716f m50 merged ff ed32cc2 + pushed: levels 33/66/100 (null=Normal 66), cycles picker, MY PATTERNS builder (HapticPattern, cue.Custom, scrub on delete), player writes only on level change + 5 s idle restore, Test on events/alerts/notify/patterns; 1955 tests; UI not seen on screen; not released. Note: null-strength cues now 66 not global feel
 - 2026-10-21T04:28:27+00:00 0ba3f036 1.1.39 released (Fn lock, window 1166x770, labels, slider wheel, haptics m50); config backed up as config.backup-20261021-before-1.1.39.json (calib 44/9/250/250). Then: grab values load exactly (sanity 1-10000 only, user: exact as calibration set them); 1956 tests; pushed, not released
@@ -140,4 +139,5 @@ Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with th
 - 2026-10-22T04:01:19+00:00 898ad1d2 State updated: m49 row (built, open until live call), ARCH ringer line, handoff refreshed for 2026-10-22; release 1.1.43 waits on the user
 - 2026-10-22T04:06:49+00:00 ff38d20f Find button: WebAppShortcuts (pure, --app-url parse, 3CX match, origin via RingerOrigin) + Settings WebAppShortcutScan (IShellLinkW over Start menu/Startup/Desktop, on press only); live scan found the user's 3CX origin; 2125 tests. Releasing 1.1.43 (user: yes to Find before release)
 - 2026-10-22T04:09:35+00:00 5832d3ed 1.1.43 released (3CX ringer m49 + Find button); staged Slender.RingerHost.exe + EdgeRinger/extension; config backed up as config.backup-20261022-before-1.1.43.json. Next: user updates, Find, Set up, Edge Load unpacked, one real call
+- 2026-10-22T04:31:03+00:00 06d266a3 m54 c1-c5 merged ff 63f2c82 + pushed: Slender.Yealink (COL02/COL04 HidP decode, allowlisted LED builder off by default, Core Audio mic mute sync, stand-down for USB Connect), YealinkSettings + router + tray submenu + Settings headset page; 2181 tests; hardware and UI unseen; releasing 1.1.44 for c6 live check
 <!-- /DC:LOG -->

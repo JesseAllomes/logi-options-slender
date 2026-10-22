@@ -591,12 +591,12 @@
     ],
     "m54": [
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T04:18:00+00:00",
         "est_min": 25,
         "goal": "Slender.Yealink library: catalog entry, HidP caps parser, COL02/COL04 input decode to events, COL02 LED output builder behind an allowlist; tests",
         "id": "c1",
-        "note": "",
+        "note": "wt-m54 ec26ccd: catalog yealink-wh64, caps from HidP_SetUsages, edge decoder, allowlisted LED builder",
         "targets": [
           "src/Slender.Yealink",
           "src/Slender.Engine/Devices/DeviceCatalog.cs",
@@ -604,36 +604,36 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T04:18:00+00:00",
         "est_min": 25,
         "goal": "Windows HID transport (shared open COL02+COL04 by usage page, read thread only while started) and YealinkModule IDeviceModule; stand down while YealinkUSBConnect runs; fake-transport tests",
         "id": "c2",
-        "note": "",
+        "note": "wt-m54 cd7f584: WindowsYealinkTransport (COL02/COL04 only, thread per link, joined on Stop), YealinkModule, stand-down on YealinkUSBConnect",
         "targets": [
           "src/Slender.Yealink",
           "tests/Slender.Tests"
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T04:18:01+00:00",
         "est_min": 25,
         "goal": "Core Audio default-mic mute (AOT GeneratedComInterface) + MuteSync: button toggles Windows mic, LED follows Windows mute, notify registered only while started; tests",
         "id": "c3",
-        "note": "",
+        "note": "wt-m54 b4a0824: Core Audio IMicMute (GeneratedComInterface), MuteSync, LED follows Windows mute; 2166 tests; unmerged on purpose: catalog entry would ship a module-less headset if main released before c4; nothing run on hardware, AOT publish untried",
         "targets": [
           "src/Slender.Yealink",
           "tests/Slender.Tests"
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T04:30:34+00:00",
         "est_min": 25,
         "goal": "After m49 merges: YealinkSettings config (hook/reject/Teams bindings default None, mute sync on, LED writes off), source-gen JSON, tray wiring + action dispatch + status.json + tray submenu",
         "id": "c4",
-        "note": "",
+        "note": "20463fc: YealinkSettings (Hook/Reject/Teams None, MuteSync on, LedWrites off), YealinkRouter on thread pool, ApplySettings reopen on flag change, tray submenu Mute microphone",
         "targets": [
           "src/Slender.Engine/Contracts/EngineContracts.cs",
           "src/Slender.Engine/Config",
@@ -642,12 +642,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T04:30:36+00:00",
         "est_min": 25,
         "goal": "Settings headset page (stage, binding rows via picker, toggles) + docs/devices/yealink-wh64.md scrubbed of serials",
         "id": "c5",
-        "note": "",
+        "note": "63f2c82: Settings Page.Headset, rail tile, popover row, status.json headset entry, docs/devices/yealink-wh64.md; merged ff + pushed; 2181 tests; UI and hardware unseen",
         "targets": [
           "src/Slender.Settings",
           "docs/devices/yealink-wh64.md"
@@ -751,7 +751,7 @@
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 288,
+  "rev": 293,
   "review": {
     "advice": [],
     "config": {
@@ -13556,6 +13556,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-22T03:40:00+00:00"
+    },
+    {
+      "end": "2026-10-22T04:30:36+00:00",
+      "id": "s12",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-22T04:18:00+00:00"
     }
   ],
   "todos": [
