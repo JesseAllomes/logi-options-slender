@@ -690,12 +690,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T05:52:02+00:00",
         "est_min": 25,
         "goal": "Static map Rc8If command names to 0xC8 cmd ids from the SDK DLL (offline disassembly)",
         "id": "c3",
-        "note": "",
+        "note": "rc8-commands.md (research 68af7ae): 309/399 Rc8If mapped; EnvGet 0x206/EnvSet 0x207, Mini/Large variants, RCC cmd-0x249 = C8 frame byte; dangerous rows flagged",
         "targets": [
           "../yealink-headset-control"
         ]
@@ -830,7 +830,7 @@
       "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 301,
+  "rev": 302,
   "review": {
     "advice": [],
     "config": {
@@ -13644,7 +13644,7 @@
       "start": "2026-10-22T04:18:00+00:00"
     },
     {
-      "end": "2026-10-22T05:27:49+00:00",
+      "end": "2026-10-22T05:52:02+00:00",
       "id": "s13",
       "note": "",
       "source": "auto",

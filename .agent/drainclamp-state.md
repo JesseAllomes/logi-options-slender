@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=192 -->
+<!-- drainclamp-build: state; schema=1; generation=194 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -114,7 +114,7 @@ Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, u
 | m53 | device UI from the status device list: tray menu, popover, rail and Settings show present devices, grey disconnected ones with Remove device (forget Slender settings only), hide never-installed ones | src/Slender.Settings;src/Slender.Tray/TrayApplication.cs;tests/Slender.Tests | done | m52 |
 | m54 | Yealink WH64 module (src/Slender.Yealink): presence by USB, COL02 hook/mute/reject, mute synced with the Windows mic, call LEDs, Teams button (COL04 0x9B) bindable; tray submenu and Settings page; live output writes only with go-ahead | src/Slender.Yealink;src/Slender.Engine/Devices;src/Slender.Settings;src/Slender.Tray;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m52;m53 |
 | m55 | Yealink vendor channel: capture rig in the private research repo (USBPcap/USB Connect installs need go-ahead), battery, dock and link read-only first, then allowlisted settings | src/Slender.Yealink;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m54 |
-| m57 | 3CX ring buttons: while a 3CX call rings, chosen mouse buttons answer or reject it from any app (Edge extension clicks 3CX Answer/Decline; Slender to extension channel); buttons keep their normal action otherwise; Settings pickers | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m49 |
+| m57 | 3CX ring buttons (built 03e5a99, released 1.1.45; live check open): while a 3CX call rings, chosen mouse buttons answer or reject it from any app (Edge extension clicks 3CX Answer/Decline; Slender to extension channel); buttons keep their normal action otherwise; Settings pickers | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m49 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -125,7 +125,6 @@ Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, u
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-21T04:18:27+00:00 c73f716f m50 merged ff ed32cc2 + pushed: levels 33/66/100 (null=Normal 66), cycles picker, MY PATTERNS builder (HapticPattern, cue.Custom, scrub on delete), player writes only on level change + 5 s idle restore, Test on events/alerts/notify/patterns; 1955 tests; UI not seen on screen; not released. Note: null-strength cues now 66 not global feel
 - 2026-10-21T04:28:27+00:00 0ba3f036 1.1.39 released (Fn lock, window 1166x770, labels, slider wheel, haptics m50); config backed up as config.backup-20261021-before-1.1.39.json (calib 44/9/250/250). Then: grab values load exactly (sanity 1-10000 only, user: exact as calibration set them); 1956 tests; pushed, not released
 - 2026-10-21T05:15:37+00:00 38affb6f Window opened short because popover unfolds on the 2560x720 taskbar strip (work 672); now OtherScreen picks last spot/primary/roomiest fitting screen, saves X/Y on close, no animation across screens. Version: tray menu 'Check for updates (vX)', popover top right, rail bottom left. 1961 tests; pushed, not released; UI unseen
 - 2026-10-21T05:18:20+00:00 11f3dec0 1.1.40 released (version labels, screen choice for full window, exact calibration load); config backed up as config.backup-20261021-before-1.1.40.json
@@ -145,4 +144,5 @@ Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, u
 - 2026-10-22T04:09:35+00:00 5832d3ed 1.1.43 released (3CX ringer m49 + Find button); staged Slender.RingerHost.exe + EdgeRinger/extension; config backed up as config.backup-20261022-before-1.1.43.json. Next: user updates, Find, Set up, Edge Load unpacked, one real call
 - 2026-10-22T04:31:03+00:00 06d266a3 m54 c1-c5 merged ff 63f2c82 + pushed: Slender.Yealink (COL02/COL04 HidP decode, allowlisted LED builder off by default, Core Audio mic mute sync, stand-down for USB Connect), YealinkSettings + router + tray submenu + Settings headset page; 2181 tests; hardware and UI unseen; releasing 1.1.44 for c6 live check
 - 2026-10-22T04:33:20+00:00 cad31652 1.1.44 released (m54 Yealink headset module); config backed up as config.backup-20261022-before-1.1.44.json. Next c6: user updates, opens headset page, presses hook/mute/reject/Teams while agent reads the tray log; LED write test only on go-ahead
+- 2026-10-22T05:52:02+00:00 349d510e 1.1.45 released (m57 3CX ring buttons: Middle/Back/Forward answer or reject while a 3CX call rings, extension 1.1.0 polls a per-ring pipe); config backed up as config.backup-20261022-before-1.1.45.json; live check open
 <!-- /DC:LOG -->
