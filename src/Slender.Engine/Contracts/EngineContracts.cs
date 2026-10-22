@@ -586,6 +586,16 @@ public static class UpdateMessages
     public const string ApplyName = "Slender.UpdateApply";
 }
 
+/// <summary>
+/// Remove device (m53): Settings posts this registered message to the tray window (class <see cref="UpdateMessages.TrayWindowClass"/>)
+/// with wParam = the device's index in DeviceCatalog.All. The tray forgets the device only while it is Disconnected, backs up the
+/// config, then resets that device's Slender settings; Windows pairing is never touched. No reply: status.json drops the device.
+/// </summary>
+public static class DeviceMessages
+{
+    public const string ForgetName = "Slender.ForgetDevice";
+}
+
 /// <summary>Well-known locations. Config roams (%APPDATA%); status, assets and logs stay local (%LOCALAPPDATA%).</summary>
 public static class SlenderPaths
 {
