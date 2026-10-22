@@ -734,12 +734,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T06:32:58+00:00",
         "est_min": 25,
         "goal": "Slender vendor channel, reads only: COL05 0xC8 framing/reassembly, Hello, EnvGet short/long, DECT status events (battery, signal, docked), allowlisted command ids; headset status + read-only settings on the Headset page and tray; COL01 read-only input fallback for mute/hook/reject (fixes e9). No EnvSet yet",
         "id": "c7",
-        "note": "",
+        "note": "Vendor reads (Hello, GetVersion, GetDect 0x79, EnvGet 0x03/0x22; allowlist refuses all else), DECT status events, COL01 read-only input for mute/hook/reject (e9), Headset page status + settings list; released 1.1.46; live check open",
         "targets": [
           "src/Slender.Yealink",
           "src/Slender.Settings",
@@ -748,12 +748,12 @@
         ]
       },
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T06:32:59+00:00",
         "est_min": 25,
         "goal": "Headset/base pictures like the mouse and keyboard pages: copy WH64 base + headset (mono/dual/TS by headset model) PNGs at runtime from the local Yealink USB Connect install (never committed), backup copy like device-pictures, refresh button; Slender-authored hotspot layout for base touch keys/LEDs and headset buttons with callouts showing bindings and status; fallback drawing when USB Connect is absent",
         "id": "c8",
-        "note": "",
+        "note": "Headset/base pictures copied once (all views) from local USB Connect into Slender's cache + backup, own hotspot layout; released 1.1.46",
         "targets": [
           "src/Slender.Settings",
           "src/Slender.Engine/Contracts",
@@ -858,7 +858,7 @@
       "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 304,
+  "rev": 306,
   "review": {
     "advice": [],
     "config": {
@@ -13677,6 +13677,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-22T05:27:49+00:00"
+    },
+    {
+      "end": "2026-10-22T06:32:59+00:00",
+      "id": "s14",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-22T06:32:58+00:00"
     }
   ],
   "todos": [

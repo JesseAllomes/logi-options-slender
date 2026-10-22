@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=194 -->
+<!-- drainclamp-build: state; schema=1; generation=195 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -125,7 +125,6 @@ Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, u
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-21T04:28:27+00:00 0ba3f036 1.1.39 released (Fn lock, window 1166x770, labels, slider wheel, haptics m50); config backed up as config.backup-20261021-before-1.1.39.json (calib 44/9/250/250). Then: grab values load exactly (sanity 1-10000 only, user: exact as calibration set them); 1956 tests; pushed, not released
 - 2026-10-21T05:15:37+00:00 38affb6f Window opened short because popover unfolds on the 2560x720 taskbar strip (work 672); now OtherScreen picks last spot/primary/roomiest fitting screen, saves X/Y on close, no animation across screens. Version: tray menu 'Check for updates (vX)', popover top right, rail bottom left. 1961 tests; pushed, not released; UI unseen
 - 2026-10-21T05:18:20+00:00 11f3dec0 1.1.40 released (version labels, screen choice for full window, exact calibration load); config backed up as config.backup-20261021-before-1.1.40.json
 - 2026-10-21T21:38:57+00:00 f744639c Strength glitch fixed: config save re-applied global feel 25 (ApplyMouseFeel) while player cached 100 -> later Strong buzzes played at 25. LogiMouse now caches real stored strength (_hapticNow, reset on session), SetHapticLevelAsync per-buzz (not the reconnect value), player compares against HapticStrengthNow. Strong=100 = 0x19B0 max. 1964 tests; pushed, not released
@@ -145,4 +144,5 @@ Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, u
 - 2026-10-22T04:31:03+00:00 06d266a3 m54 c1-c5 merged ff 63f2c82 + pushed: Slender.Yealink (COL02/COL04 HidP decode, allowlisted LED builder off by default, Core Audio mic mute sync, stand-down for USB Connect), YealinkSettings + router + tray submenu + Settings headset page; 2181 tests; hardware and UI unseen; releasing 1.1.44 for c6 live check
 - 2026-10-22T04:33:20+00:00 cad31652 1.1.44 released (m54 Yealink headset module); config backed up as config.backup-20261022-before-1.1.44.json. Next c6: user updates, opens headset page, presses hook/mute/reject/Teams while agent reads the tray log; LED write test only on go-ahead
 - 2026-10-22T05:52:02+00:00 349d510e 1.1.45 released (m57 3CX ring buttons: Middle/Back/Forward answer or reject while a 3CX call rings, extension 1.1.0 polls a per-ring pipe); config backed up as config.backup-20261022-before-1.1.45.json; live check open
+- 2026-10-22T06:33:00+00:00 03c5f1bd 1.1.46 released (m55 c7/c8: Yealink vendor reads, COL01 mute fix, headset status/settings and picture page; research maps 395/399 RC8 commands incl. EnvSet wire format); config backed up as config.backup-20261022-before-1.1.46.json; live checks tomorrow
 <!-- /DC:LOG -->
