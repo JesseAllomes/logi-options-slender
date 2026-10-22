@@ -34,8 +34,9 @@ public sealed class YealinkInputDecoder
     private readonly Sheet?[] _lastSheet = new Sheet?[3];
     private bool _hookState, _teamsPressed;
 
-    public YealinkInputDecoder(ICollectionCaps? telephony, ICollectionCaps? standard = null, Func<long>? clock = null)
+    public YealinkInputDecoder(ICollectionCaps? telephony, ICollectionCaps? standard = null, Func<long>? clock = null, bool hookState = false)
     {
+        _hookState = hookState;
         _telephony = new Sheet(telephony);
         _standard = new Sheet(standard);
         _clock = clock ?? (static () => Environment.TickCount64);

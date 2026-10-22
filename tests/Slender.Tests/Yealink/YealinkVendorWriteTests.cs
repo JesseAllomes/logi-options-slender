@@ -244,10 +244,12 @@ public class YealinkVendorWriteSessionTests
         Answer(); // hello
         _s.Expire();
         Assert.Equal("The base did not take the change to Keypad tone.", _s.WriteProblem);
+        Assert.True(_s.IsRunning); // reads the setting once more
+        Assert.Equal(3, _sent.Count);
+        _s.Expire();
         Assert.False(_s.IsRunning);
-        Assert.Equal(2, _sent.Count);
         _s.Expire(); // nothing running: nothing happens
-        Assert.Equal(2, _sent.Count);
+        Assert.Equal(3, _sent.Count);
     }
 
     [Fact]
@@ -260,6 +262,8 @@ public class YealinkVendorWriteSessionTests
         Assert.Equal(0x03, _sent[^1][4]);
         _s.Expire();
         Assert.NotNull(_s.WriteProblem);
+        Assert.Equal(0x03, _sent[^1][4]); // one more read
+        _s.Expire();
         Assert.False(_s.IsRunning);
     }
 
@@ -568,14 +572,133 @@ public class YealinkVendorPendingAndFailureTests
         Answer(); // hello
         int before = _changes;
         _s.Expire();
+        _s.Expire(); // the read that follows gets no answer either
         Assert.True(_changes > before);
         Assert.NotNull(_s.WriteProblem);
+        Assert.False(_s.IsRunning);
 
         _s.Set(Keypad, "1");
         Assert.Null(_s.WriteProblem); // cleared as the new attempt starts
         before = _changes;
         _s.Expire();
+        _s.Expire();
         Assert.True(_changes > before);
         Assert.NotNull(_s.WriteProblem);
+    }
+}
+
+/// <summary>r69: a failed write reads the setting once more; a fresh full read drops an old "did not take" message.</summary>
+public class YealinkVendorVerifyAfterFailureTests
+{
+    private readonly List<byte[]> _sent = [];
+    private readonly YealinkVendorSession _s;
+    private readonly Dictionary<string, string?> _device = new() { ["sidetone.level"] = "2", ["keypad_tone.enable"] = "0", ["voice_announcements.enable"] = "0" };
+
+    private static readonly int Sidetone = YealinkSettingsCatalog.IndexOf("sidetone.level");
+
+    public YealinkVendorVerifyAfterFailureTests()
+    {
+        _s = new YealinkVendorSession(r => { _sent.Add(r.ToArray()); return true; }, _ => { });
+    }
+
+    private static string Ascii(byte[] b, int at, int len) => Encoding.ASCII.GetString(b, at, len).TrimEnd('\0');
+
+    private void Reply(byte[] message)
+    {
+        foreach (var f in VendorVectors.Fragment(VendorFrame.StreamCommand, message)) _s.OnReport(f);
+    }
+
+    private void Answer()
+    {
+        var req = _sent[^1];
+        switch (req[4])
+        {
+            case 0x00: Reply(VendorVectors.HelloReply()); break;
+            case 0x01: Reply(VendorVectors.SimpleReply(0x01)); break;
+            case 0x79: Reply(VendorVectors.Dect(true, 7, 100, 2, true, true)); break;
+            case 0x03:
+            {
+                string key = Ascii(req, 10, 16);
+                Reply(VendorVectors.EnvShort(key, _device.GetValueOrDefault(key)));
+                break;
+            }
+            case 0x22:
+            {
+                string key = Ascii(req, 10, req[6]);
+                Reply(VendorVectors.EnvLong(key, _device.GetValueOrDefault(key) ?? ""));
+                break;
+            }
+        }
+    }
+
+    private void AnswerAll()
+    {
+        for (int guard = 0; _s.IsRunning && guard < 200; guard++) Answer();
+    }
+
+    private void StartUnansweredWrite()
+    {
+        _s.Begin(VendorRead.Status);
+        AnswerAll();
+        _sent.Clear();
+        _s.Set(Sidetone, "4");
+        Assert.Equal(0x04, _sent.Single()[4]);
+        _s.Expire(); // no answer to the EnvSet
+    }
+
+    [Fact]
+    public void An_unanswered_set_is_followed_by_a_read_and_a_matching_answer_clears_the_problem()
+    {
+        StartUnansweredWrite();
+        Assert.Equal([(byte)0x04, 0x03], _sent.Select(r => r[4]));
+        Assert.Equal("sidetone.level", Ascii(_sent[^1], 10, 16));
+        Assert.True(_s.IsRunning);
+
+        _device["sidetone.level"] = "4"; // the base did take it
+        Answer();
+
+        Assert.Null(_s.WriteProblem);
+        Assert.False(_s.IsRunning);
+        Assert.Contains(_s.Settings, s => s is { Key: "sidetone.level", Raw: "4" });
+    }
+
+    [Fact]
+    public void A_verify_that_shows_the_old_value_keeps_the_problem_and_sends_nothing_more()
+    {
+        StartUnansweredWrite();
+        int sent = _sent.Count;
+
+        Answer(); // still "2"
+
+        Assert.NotNull(_s.WriteProblem);
+        Assert.False(_s.IsRunning);
+        Assert.Contains(_s.Settings, s => s is { Key: "sidetone.level", Raw: "2" });
+        Assert.Equal(sent, _sent.Count);
+    }
+
+    [Fact]
+    public void A_verify_that_times_out_finishes_and_sends_nothing_more()
+    {
+        StartUnansweredWrite();
+        _s.Expire(); // no answer to the verify
+
+        Assert.False(_s.IsRunning);
+        Assert.NotNull(_s.WriteProblem);
+        Assert.Equal(1, _sent.Count(r => r[4] == 0x04));
+        Assert.Equal(1, _sent.Count(r => r[4] == 0x03));
+        _s.Expire();
+        Assert.Equal(2, _sent.Count);
+    }
+
+    [Fact]
+    public void A_fresh_full_read_clears_an_old_write_problem()
+    {
+        _s.Begin(VendorRead.Status);
+        AnswerAll();
+        _s.Set(Sidetone, "99"); // the catalog refuses it
+        Assert.NotNull(_s.WriteProblem);
+
+        _s.Begin(VendorRead.All);
+        Assert.Null(_s.WriteProblem);
     }
 }

@@ -38,7 +38,7 @@ public sealed class YealinkVendorSession : IDisposable
     private long _deadline;
     private bool _running, _helloDone, _disposed, _dirty;
     private int _step, _end, _silent;
-    private bool _writing;
+    private bool _writing, _verifying;
     private int _writeStage, _writeIndex = -1;
     private string? _writeRaw, _writeProblem;
     private HeadsetStatus _status;
@@ -93,6 +93,7 @@ public sealed class YealinkVendorSession : IDisposable
         lock (_gate)
         {
             if (_running || _disposed) return false;
+            if (what == VendorRead.All) SetProblem(null);
             _running = true;
             _silent = 0;
             _step = _helloDone ? StepDect : StepHello;
@@ -150,6 +151,7 @@ public sealed class YealinkVendorSession : IDisposable
         SetProblem(null);
         _running = true;
         _writing = true;
+        _verifying = false;
         _writeIndex = index;
         _writeRaw = raw;
         _writeStage = _helloDone ? WriteSet : WriteHello;
@@ -163,12 +165,20 @@ public sealed class YealinkVendorSession : IDisposable
         _dirty = true;
     }
 
-    private void FailWrite(string why)
+    private void FailWrite(string why, bool unanswered = false)
     {
         var def = YealinkSettingsCatalog.All[_writeIndex];
         _log($"Yealink: write of {def.Key}={_writeRaw} failed: {why}");
         SetProblem($"The base did not take the change to {def.Label}.");
         _dirty = true;
+        if (unanswered && !_verifying && _writeStage != WriteHello)
+        {
+            // The base went quiet: it may have taken the change, so read the setting once more.
+            _verifying = true;
+            _writeStage = WriteRead;
+            SendWrite();
+            return;
+        }
         Finish();
     }
 
@@ -215,6 +225,7 @@ public sealed class YealinkVendorSession : IDisposable
                 break;
             case WriteRead when command is (byte)VendorCommand.EnvGet or (byte)VendorCommand.EnvGetLong && mine:
                 if (key != null && value == _writeRaw) { SetProblem(null); Finish(); }
+                else if (_verifying) Finish();
                 else FailWrite($"read back {value ?? "nothing"}");
                 break;
         }
@@ -340,7 +351,7 @@ public sealed class YealinkVendorSession : IDisposable
         if (!_running) return;
         if (_writing)
         {
-            FailWrite("no answer");
+            FailWrite("no answer", unanswered: true);
             return;
         }
         _silent++;
@@ -359,6 +370,7 @@ public sealed class YealinkVendorSession : IDisposable
     {
         _running = false;
         _writing = false;
+        _verifying = false;
         _timer?.Dispose();
         _timer = null;
         if (_disposed) return;

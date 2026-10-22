@@ -101,6 +101,7 @@ public sealed class YealinkModule : IDeviceModule
         {
             _started = false;
             Close();
+            _offHook = false;
         }
     }
 
@@ -264,7 +265,7 @@ public sealed class YealinkModule : IDeviceModule
                 return;
             }
 
-            _decoder = new YealinkInputDecoder(link.Telephony, link.Standard);
+            _decoder = new YealinkInputDecoder(link.Telephony, link.Standard, hookState: _offHook);
             _sink = Raise;
             _led = _ledsOn && link.Telephony is { } caps ? YealinkLedBuilder.TryCreate(caps) : null;
             if (_ledsOn && _led == null) _log("Yealink: no mute LED on the telephony report; LED writes off");
@@ -323,7 +324,6 @@ public sealed class YealinkModule : IDeviceModule
         _sink = null;
         var vendor = _vendor;
         _vendor = null;
-        _offHook = false;
         _refusal = null;
         try { link?.Dispose(); }
         catch (Exception ex) { _log($"Yealink: close failed: {ex.Message}"); }

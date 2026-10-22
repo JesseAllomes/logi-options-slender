@@ -475,3 +475,62 @@ public class YealinkVendorCautionTests
         Assert.Null(m.GetHeadset()!.WriteProblem);
     }
 }
+
+/// <summary>r68: a reopened link keeps the hook state already known, so a call in progress still blocks a restart setting.</summary>
+public class YealinkReopenDuringCallTests
+{
+    private readonly FakeTransport _transport = new();
+    private readonly Dictionary<string, string> _env = new() { ["wireless.range"] = "2", ["keypad_tone.enable"] = "1" };
+
+    private static readonly int Language = Slender.Engine.Devices.YealinkSettingsCatalog.IndexOf("language.prompt");
+
+    private YealinkModule Make()
+    {
+        _transport.VendorReply = r => VendorVectors.ReplyFor(r, _env);
+        return new YealinkModule(_transport, _ => { }, () => false, tick: () => 1_000_000) { VendorReadsEnabled = true };
+    }
+
+    private static int Sets(FakeLink link) => link.VendorWrites.Count(r => r[4] is 0x04 or 0x23);
+
+    [Fact]
+    public void A_reopen_during_a_call_still_refuses_a_restart_setting_and_the_call_end_is_seen()
+    {
+        var m = Make();
+        m.Start();
+        var first = _transport.Link!;
+        first.Feed(YealinkCollection.Telephony, 4, 0x01, 0); // off hook
+
+        m.ApplySettings(!m.LedWritesEnabled, m.MuteSync); // forces Close + TryOpen
+        var link = _transport.Link!;
+        Assert.NotSame(first, link);
+
+        int before = Sets(link);
+        m.SetSetting(Language, 1);
+        Assert.Equal(before, Sets(link));
+        Assert.Contains("Finish the call", m.GetHeadset()!.WriteProblem);
+
+        var hooks = new List<bool>();
+        m.HookChanged += hooks.Add;
+        link.Feed(YealinkCollection.Telephony, 4, 0x08, 0); // hooked again
+        Assert.Equal([false], hooks);
+
+        m.SetSetting(Language, 1);
+        Assert.Equal(before + 1, Sets(link));
+    }
+
+    [Fact]
+    public void Stop_then_start_forgets_the_call()
+    {
+        var m = Make();
+        m.Start();
+        _transport.Link!.Feed(YealinkCollection.Telephony, 4, 0x01, 0); // off hook
+
+        m.Stop();
+        m.Start();
+        var link = _transport.Link!;
+        int before = Sets(link);
+        m.SetSetting(Language, 1);
+        Assert.Equal(before + 1, Sets(link));
+        Assert.Null(m.GetHeadset()!.WriteProblem);
+    }
+}
