@@ -1,5 +1,5 @@
 # DrainClamp resume capsule
-Done: m1, m2, m3, m4, m5, m8, m9, m10, m11, m12, m13, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32, m33, m34, m35, m36, m38, m39, m40, m41, m42, m43, m44, m37, m45, m46, m47, m48, m50, m51
+Done: m56, m1, m2, m3, m4, m5, m8, m9, m10, m11, m12, m13, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32, m33, m34, m35, m36, m38, m39, m40, m41, m42, m43, m44, m37, m45, m46, m47, m48, m50, m51
 In progress: none
-Next: m56: scrub username from public repo (do first): 1 backup bundle --all to session scratchpad; 2 git rm --cached .agent/audit.json .agent/audit.md .agent/map.tsv .agent/verify-records.json (already in .git/info/exclude) and commit; 3 rewrite all refs (main, wt-mem, 35 tags) replacing the Windows username ($env:USERNAME, any case) with %localuser% in every blob - git filter-repo not installed: pip install --user git-filter-repo then --replace-text, else filter-branch --tree-filter; commit messages and author fields already clean; 4 verify git grep -i <username> over git rev-list --all is empty and the build + tests pass; 5 force-push main and tags (--force --tags), wt-mem stays local; 6 tell user old SHAs stay reachable on GitHub until GC (GitHub Support can purge cached views) and that release tags now point at rewritten commits; no AI trailers
-Generation: 172
+Next: m14: sign-in: user creates personal MS app registration, slender.sync.json, live sync test
+Generation: 174

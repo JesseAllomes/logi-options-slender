@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=172 -->
+<!-- drainclamp-build: state; schema=1; generation=174 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -52,7 +52,7 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 <!-- DC:ROADMAP -->
 | id | goal | files | status | deps |
 |---|---|---|---|---|
-| m56 | scrub username from public repo (do first): 1 backup bundle --all to session scratchpad; 2 git rm --cached .agent/audit.json .agent/audit.md .agent/map.tsv .agent/verify-records.json (already in .git/info/exclude) and commit; 3 rewrite all refs (main, wt-mem, 35 tags) replacing the Windows username ($env:USERNAME, any case) with %localuser% in every blob - git filter-repo not installed: pip install --user git-filter-repo then --replace-text, else filter-branch --tree-filter; commit messages and author fields already clean; 4 verify git grep -i <username> over git rev-list --all is empty and the build + tests pass; 5 force-push main and tags (--force --tags), wt-mem stays local; 6 tell user old SHAs stay reachable on GitHub until GC (GitHub Support can purge cached views) and that release tags now point at rewritten commits; no AI trailers | .agent;.git/info/exclude | pending | |
+| m56 | scrub username from public repo: audit/map/verify cache untracked and git-excluded; all refs rewritten with %localuser% (filter-repo), 0 hits over rev-list --all, build + 1966 tests pass, main and 35 tags force-pushed; backup bundle in session scratchpad | .agent;.git/info/exclude | done | |
 | m1 | protocol + baseline notes | docs/protocol.md;docs/baseline.md | done | |
 | m2 | Options+ trim and Excel repair scripts | scripts/Trim-OptionsPlus.ps1;scripts/Repair-ExcelAddins.ps1;docs/switch-over.md | done | m1 |
 | m3 | HID++ core + probe | src/Slender.Hidpp;tools/Slender.Probe | done | m1 |
@@ -118,7 +118,6 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-20T08:03:22+00:00 df41d376 DECISIONS compacted 46 -> 21 lines (merged, superseded ones folded in); originals in .agent/drainclamp-decisions-archive.md
 - 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
 - 2026-10-20T09:57:25+00:00 8cb78553 Released 1.1.37: macros, Excel add-in, notification haptics, per-app DPI, battery estimate, K860 disconnect fix, onboard remaps, gap fixes; 1916 tests; device/UI checks and memory measurement pending
 - 2026-10-20T21:42:58+00:00 8eb4d25f 1.1.38 released (cue repeats for a ringer). 3CX ringer researched (web client drives the Yealink via WebHID; call notification only when unfocused, 30 s auto-close); m49 planned, awaiting go-ahead. Handoff rewritten for a fresh session
@@ -138,4 +137,5 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 - 2026-10-21T22:37:41+00:00 d78a709b 1.1.41 released (strength glitch fix, notification haptics on uncloak + app name from toast text); config backed up as config.backup-20261022-before-1.1.41.json. Waiting: user decides on m49 3CX plugin
 - 2026-10-22T01:51:42+00:00 7fb79a0b Planned device modules (in-process, presence-gated, greyed when disconnected) and the Yealink WH64 headset module: m52-m55; research in personal/yealink-headset-control
 - 2026-10-22T01:54:35+00:00 0507a6b0 Username found in tracked .agent audit/map/verify files on origin since first commit; user approved scrub to %localuser% with history rewrite + force-push (m56, do first), then m52
+- 2026-10-22T02:00:21+00:00 85e71a4b m56 done: history rewritten (username -> %localuser%), audit cache untracked + excluded, force-pushed main and tags; old SHAs remain on GitHub until GC
 <!-- /DC:LOG -->
