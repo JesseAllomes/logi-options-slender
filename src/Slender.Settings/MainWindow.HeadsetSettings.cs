@@ -18,6 +18,7 @@ public sealed partial class MainWindow
     private bool _dropDownOpen, _sliderHeld, _settingRebuildPending;
     private (int Index, long Value)? _settingPending;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settingTimer;
+    private readonly Dictionary<int, (string Raw, DateTimeOffset At)> _sentSettings = [];
 
     private bool SettingBusy => _dropDownOpen || _sliderHeld || _settingTimer?.IsRunning == true;
 
@@ -50,17 +51,39 @@ public sealed partial class MainWindow
         foreach (var (group, items) in groups)
         {
             AddSection(group.ToUpperInvariant());
-            foreach (HeadsetSettingItem item in items)
+            foreach (HeadsetSettingItem reported in items)
             {
+                HeadsetSettingItem item = Shown(reported, h);
                 string? help = item.Def.Caution switch
                 {
                     YealinkCaution.Restarts => "The base restarts about 20 seconds after this change.",
                     YealinkCaution.ModeSwitch => "Switches the base between Teams and UC behaviour.",
+                    YealinkCaution.HearingProtection => "Hearing protection. Slender asks before changing it.",
                     _ => null,
                 };
                 AddRow(item.Def.Label, help, item.Adjustable ? HeadsetSettingControl(item, why is null) : Ui.Text(item.Text, 13, Ui.Ink));
             }
         }
+    }
+
+    private void RememberSent(int index, long value)
+    {
+        if (YealinkSettingsCatalog.All[index].RawFor(value) is { } raw) _sentSettings[index] = (raw, DateTimeOffset.Now);
+    }
+
+    /// <summary>Shows a value just sent until the base confirms it, refuses it (a newer write problem) or 6 s pass.</summary>
+    private HeadsetSettingItem Shown(HeadsetSettingItem item, HeadsetState? h)
+    {
+        if (!_sentSettings.TryGetValue(item.CatalogIndex, out var sent)) return item;
+        bool settled = item.Raw == sent.Raw
+            || (h?.WriteProblem is not null && _status.Status?.UpdatedAt > sent.At)
+            || DateTimeOffset.Now - sent.At > TimeSpan.FromSeconds(6);
+        if (settled)
+        {
+            _sentSettings.Remove(item.CatalogIndex);
+            return item;
+        }
+        return item with { Raw = sent.Raw, Text = item.Def.Text(sent.Raw) };
     }
 
     private FrameworkElement HeadsetSettingControl(HeadsetSettingItem item, bool enabled)
@@ -89,7 +112,11 @@ public sealed partial class MainWindow
 
         if (HeadsetView.IsOnOff(def))
         {
-            ToggleSwitch toggle = PageToggle(def.Label, item.Raw == "1", on => AskTray(DeviceMessages.HeadsetSetName, item.CatalogIndex, on ? 1 : 0));
+            ToggleSwitch toggle = PageToggle(def.Label, item.Raw == "1", on =>
+            {
+                RememberSent(item.CatalogIndex, on ? 1 : 0);
+                AskTray(DeviceMessages.HeadsetSetName, item.CatalogIndex, on ? 1 : 0);
+            });
             toggle.IsEnabled = enabled;
             return toggle;
         }
@@ -132,6 +159,7 @@ public sealed partial class MainWindow
             }
 
             current = chosen;
+            RememberSent(item.CatalogIndex, chosen);
             AskTray(DeviceMessages.HeadsetSetName, item.CatalogIndex, chosen);
         };
         return combo;
@@ -144,9 +172,12 @@ public sealed partial class MainWindow
             Title = $"Change {def.Label.ToLowerInvariant()}",
             Content = new TextBlock
             {
-                Text = def.Caution == YealinkCaution.Restarts
-                    ? $"The base restarts about 20 seconds after this change. Set it to {to}?"
-                    : $"This switches the base between Teams and UC behaviour. Set it to {to}?",
+                Text = def.Caution switch
+                {
+                    YealinkCaution.Restarts => $"The base restarts about 20 seconds after this change. Set it to {to}?",
+                    YealinkCaution.HearingProtection => $"This changes the headset's hearing protection. Set it to {to}?",
+                    _ => $"This switches the base between Teams and UC behaviour. Set it to {to}?",
+                },
                 TextWrapping = TextWrapping.Wrap,
             },
             PrimaryButtonText = "Change",
@@ -209,6 +240,7 @@ public sealed partial class MainWindow
         if (_settingPending is { } p)
         {
             _settingPending = null;
+            RememberSent(p.Index, p.Value);
             AskTray(DeviceMessages.HeadsetSetName, p.Index, (nint)p.Value);
         }
     }

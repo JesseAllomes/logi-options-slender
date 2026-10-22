@@ -122,6 +122,7 @@ public sealed class YealinkModule : IDeviceModule
     /// </summary>
     public void RefreshSettings()
     {
+        if (_refusal != null) { _refusal = null; OnVendorChanged(); }
         long now = _tick();
         lock (_gate)
         {
@@ -161,7 +162,7 @@ public sealed class YealinkModule : IDeviceModule
             else if (_started && !_vendorOn) problem = "Turn on Read headset status to change base settings.";
             else if (_standDown()) problem = $"Close {YealinkConnectProcess} to change base settings.";
             else if ((vendor = _vendor) == null || _link == null) problem = "The headset base is not connected.";
-            else if (def.Caution != YealinkCaution.None && _offHook) problem = $"Finish the call before changing {def.Label}.";
+            else if (def.Caution is YealinkCaution.Restarts or YealinkCaution.ModeSwitch && _offHook) problem = $"Finish the call before changing {def.Label}.";
         }
 
         if (problem != null)
@@ -172,7 +173,14 @@ public sealed class YealinkModule : IDeviceModule
             return;
         }
         _refusal = null;
-        try { vendor!.Set(catalogIndex, raw!); }
+        try
+        {
+            if (!vendor!.Set(catalogIndex, raw!))
+            {
+                _refusal = "The headset base is not connected.";
+                OnVendorChanged();
+            }
+        }
         catch (Exception ex) { _log($"Yealink: setting change failed: {ex.Message}"); }
     }
 
@@ -361,7 +369,7 @@ public sealed class YealinkModule : IDeviceModule
             if (kind == YealinkEventKind.MutePressed) ToggleWindowsMute();
             switch (kind)
             {
-                case YealinkEventKind.HookChanged: _offHook = value; HookChanged?.Invoke(value); break;
+                case YealinkEventKind.HookChanged: _offHook = value; if (!value && _refusal != null) { _refusal = null; OnVendorChanged(); } HookChanged?.Invoke(value); break;
                 case YealinkEventKind.MutePressed: MutePressed?.Invoke(); break;
                 case YealinkEventKind.FlashPressed: FlashPressed?.Invoke(); break;
                 case YealinkEventKind.RejectPressed: RejectPressed?.Invoke(); break;

@@ -7,7 +7,7 @@ public enum YealinkTarget
     Base,
 }
 
-/// <summary>What changing a setting does beyond the setting itself. Anything but None asks the user first and is refused during a call.</summary>
+/// <summary>What changing a setting does beyond the setting itself. Anything but None asks the user first; Restarts and ModeSwitch are also refused during a call.</summary>
 public enum YealinkCaution
 {
     None,
@@ -17,6 +17,9 @@ public enum YealinkCaution
 
     /// <summary>The base switches between Teams and UC behaviour (platform).</summary>
     ModeSwitch,
+
+    /// <summary>Changes the headset's hearing protection (anti-startle, daily noise limit). Asks first; allowed during a call.</summary>
+    HearingProtection,
 }
 
 /// <summary>
@@ -112,9 +115,9 @@ public static class YealinkSettingsCatalog
         new("language.prompt", H, Sound, "Voice guidance language", ["0", "English", "2", "Deutsch", "3", "Français", "4", "Español"], Caution: YealinkCaution.Restarts),
         new("sidetone.level", H, Sound, "Sidetone level", Min: 1, Max: 15),
         new("spectrum_call.mode", H, Sound, "Call equalizer", ["0", "Normal", "1", "Bass", "2", "Treble"]),
-        new("soundguard.anti_startle.type", H, Sound, "Anti-startle", ["0", "Basic PeakStop protection", "1", "Australian G616"]),
-        new("soundguard.daily_noise_exposure", H, Sound, "Daily noise limit", ["0", "No limit", "1", "80 dBA", "2", "85 dBA"]),
-        new("soundguard.daily_noise_exposure.time", H, Sound, "Daily noise limit time", ["2", "2 hours", "4", "4 hours", "6", "6 hours", "8", "8 hours"]),
+        new("soundguard.anti_startle.type", H, Sound, "Anti-startle", ["0", "Basic PeakStop protection", "1", "Australian G616"], Caution: YealinkCaution.HearingProtection),
+        new("soundguard.daily_noise_exposure", H, Sound, "Daily noise limit", ["0", "No limit", "1", "80 dBA", "2", "85 dBA"], Caution: YealinkCaution.HearingProtection),
+        new("soundguard.daily_noise_exposure.time", H, Sound, "Daily noise limit time", ["2", "2 hours", "4", "4 hours", "6", "6 hours", "8", "8 hours"], Caution: YealinkCaution.HearingProtection),
 
         new("usb_ringtone.enable", H, PcSoftphone, "Headset ringtone", OnOff),
         new("voice.ringtone.usb_ring_volume", B, PcSoftphone, "Base ringtone volume", Min: 0, Max: 15),

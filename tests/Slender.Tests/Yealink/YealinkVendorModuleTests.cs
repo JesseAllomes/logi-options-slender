@@ -400,3 +400,78 @@ public class YealinkStandardDecoderTests
         Assert.Equal([(YealinkEventKind.HookChanged, true), (YealinkEventKind.HookChanged, false)], e);
     }
 }
+
+/// <summary>Hearing-protection cautions (r59) and when a refusal is dropped (r63).</summary>
+public class YealinkVendorCautionTests
+{
+    private readonly FakeTransport _transport = new();
+    private readonly Dictionary<string, string> _env = new() { ["wireless.range"] = "2", ["keypad_tone.enable"] = "1" };
+
+    private static readonly int Noise = Slender.Engine.Devices.YealinkSettingsCatalog.IndexOf("soundguard.daily_noise_exposure");
+    private static readonly int Language = Slender.Engine.Devices.YealinkSettingsCatalog.IndexOf("language.prompt");
+    private static readonly int Platform = Slender.Engine.Devices.YealinkSettingsCatalog.IndexOf("platform.mode");
+
+    private YealinkModule Make()
+    {
+        _transport.VendorReply = r => VendorVectors.ReplyFor(r, _env);
+        return new YealinkModule(_transport, _ => { }, () => false, tick: () => 1_000_000) { VendorReadsEnabled = true };
+    }
+
+    private static int Sets(FakeLink link) => link.VendorWrites.Count(r => r[4] is 0x04 or 0x23);
+
+    [Fact]
+    public void The_three_soundguard_settings_carry_the_hearing_protection_caution()
+    {
+        foreach (var key in new[] { "soundguard.anti_startle.type", "soundguard.daily_noise_exposure", "soundguard.daily_noise_exposure.time" })
+        {
+            var def = Slender.Engine.Devices.YealinkSettingsCatalog.All[Slender.Engine.Devices.YealinkSettingsCatalog.IndexOf(key)];
+            Assert.Equal(Slender.Engine.Devices.YealinkCaution.HearingProtection, def.Caution);
+        }
+    }
+
+    [Fact]
+    public void Hearing_protection_is_allowed_off_hook_but_a_restart_setting_is_still_refused()
+    {
+        var m = Make();
+        m.Start();
+        var link = _transport.Link!;
+        link.Feed(YealinkCollection.Telephony, 4, 0x01, 0); // off hook
+        int before = Sets(link);
+
+        m.SetSetting(Noise, 1);
+        Assert.Equal(before + 1, Sets(link));
+        Assert.Null(m.GetHeadset()!.WriteProblem);
+
+        m.SetSetting(Language, 1);
+        Assert.Equal(before + 1, Sets(link));
+        Assert.Contains("call", m.GetHeadset()!.WriteProblem);
+    }
+
+    [Fact]
+    public void A_refusal_is_dropped_when_the_call_ends()
+    {
+        var m = Make();
+        m.Start();
+        var link = _transport.Link!;
+        link.Feed(YealinkCollection.Telephony, 4, 0x01, 0); // off hook
+        m.SetSetting(Platform, 1);
+        Assert.Contains("call", m.GetHeadset()!.WriteProblem);
+
+        link.Feed(YealinkCollection.Telephony, 4, 0x08, 0); // hooked again
+        Assert.Null(m.GetHeadset()!.WriteProblem);
+    }
+
+    [Fact]
+    public void A_refusal_is_dropped_when_the_settings_page_is_opened()
+    {
+        var m = Make();
+        m.Start();
+        var link = _transport.Link!;
+        link.Feed(YealinkCollection.Telephony, 4, 0x01, 0); // off hook
+        m.SetSetting(Platform, 1);
+        Assert.NotNull(m.GetHeadset()!.WriteProblem);
+
+        m.RefreshSettings();
+        Assert.Null(m.GetHeadset()!.WriteProblem);
+    }
+}

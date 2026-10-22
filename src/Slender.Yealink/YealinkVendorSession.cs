@@ -16,7 +16,7 @@ public enum VendorRead { Status, All }
 /// passes it sends nothing and holds no thread: the base pushes battery and signal on its own and the read loop feeds them in.
 /// A timeout skips that setting; a silent Hello or three timeouts in a row end the pass.
 /// <see cref="Set"/> changes one catalogued setting: EnvSet, then an EnvGet of the same key to read it back, by the same one-at-a-time
-/// rule and timer. A write asked for during a pass waits for it; only the latest waiting one is kept.
+/// rule and timer. A write asked for during a pass waits for it; one waiting write per setting is kept (the latest for that setting).
 /// </summary>
 public sealed class YealinkVendorSession : IDisposable
 {
@@ -31,6 +31,7 @@ public sealed class YealinkVendorSession : IDisposable
     private readonly VendorDecoder _decoder = new();
     private readonly byte[] _frame = new byte[VendorFrame.Length];
     private readonly string?[] _values = new string?[YealinkSettingsCatalog.All.Count];
+    private readonly string?[] _pending = new string?[YealinkSettingsCatalog.All.Count];
     private readonly object _gate = new();
 
     private Timer? _timer;
@@ -38,8 +39,8 @@ public sealed class YealinkVendorSession : IDisposable
     private bool _running, _helloDone, _disposed, _dirty;
     private int _step, _end, _silent;
     private bool _writing;
-    private int _writeStage, _writeIndex = -1, _pendingIndex = -1;
-    private string? _writeRaw, _pendingRaw, _writeProblem;
+    private int _writeStage, _writeIndex = -1;
+    private string? _writeRaw, _writeProblem;
     private HeadsetStatus _status;
     private IReadOnlyList<HeadsetSetting>? _settings;
 
@@ -103,7 +104,7 @@ public sealed class YealinkVendorSession : IDisposable
 
     /// <summary>
     /// Sets one catalogued setting to raw, then reads it back. Starts at once when idle (handshake first if never done); during a
-    /// pass or another write it waits, and only the latest waiting write is kept. False (nothing sent) for a bad index or after Dispose;
+    /// pass or another write it waits; one waiting write per setting is kept (the latest for that setting). False (nothing sent) for a bad index or after Dispose;
     /// a value the catalog refuses, or a base that does not take it, shows in <see cref="WriteProblem"/>.
     /// </summary>
     public bool Set(int catalogIndex, string raw)
@@ -113,8 +114,7 @@ public sealed class YealinkVendorSession : IDisposable
             if (_disposed || catalogIndex < 0 || catalogIndex >= _values.Length) return false;
             if (_running)
             {
-                _pendingIndex = catalogIndex;
-                _pendingRaw = raw;
+                _pending[catalogIndex] = raw;
             }
             else StartWrite(catalogIndex, raw);
         }
@@ -128,7 +128,7 @@ public sealed class YealinkVendorSession : IDisposable
         {
             _disposed = true;
             _running = false;
-            _pendingIndex = -1;
+            Array.Clear(_pending);
             _timer?.Dispose();
             _timer = null;
         }
@@ -147,6 +147,7 @@ public sealed class YealinkVendorSession : IDisposable
 
     private void StartWrite(int index, string raw)
     {
+        SetProblem(null);
         _running = true;
         _writing = true;
         _writeIndex = index;
@@ -167,6 +168,7 @@ public sealed class YealinkVendorSession : IDisposable
         var def = YealinkSettingsCatalog.All[_writeIndex];
         _log($"Yealink: write of {def.Key}={_writeRaw} failed: {why}");
         SetProblem($"The base did not take the change to {def.Label}.");
+        _dirty = true;
         Finish();
     }
 
@@ -359,11 +361,13 @@ public sealed class YealinkVendorSession : IDisposable
         _writing = false;
         _timer?.Dispose();
         _timer = null;
-        if (_pendingIndex < 0 || _disposed) return;
-        int index = _pendingIndex;
-        string raw = _pendingRaw!;
-        _pendingIndex = -1;
-        _pendingRaw = null;
-        StartWrite(index, raw);
+        if (_disposed) return;
+        for (int i = 0; i < _pending.Length; i++)
+        {
+            if (_pending[i] is not { } raw) continue;
+            _pending[i] = null;
+            StartWrite(i, raw);
+            return;
+        }
     }
 }

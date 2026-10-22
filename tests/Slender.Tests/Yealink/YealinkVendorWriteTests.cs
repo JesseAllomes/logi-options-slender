@@ -284,7 +284,7 @@ public class YealinkVendorWriteSessionTests
     }
 
     [Fact]
-    public void Only_the_latest_waiting_write_runs()
+    public void Every_waiting_setting_is_written_after_the_pass()
     {
         _s.Begin(VendorRead.Status);
         Answer();
@@ -293,10 +293,10 @@ public class YealinkVendorWriteSessionTests
         _s.Set(Sidetone, "9");
         AnswerAll();
 
-        Assert.Equal("0", _device["keypad_tone.enable"]);
-        Assert.Equal("0", _device["voice_announcements.enable"]);
+        Assert.Equal("1", _device["keypad_tone.enable"]);
+        Assert.Equal("1", _device["voice_announcements.enable"]);
         Assert.Equal("9", _device["sidetone.level"]);
-        Assert.Single(_sent, r => r[4] is 0x04 or 0x23);
+        Assert.Equal(3, _sent.Count(r => r[4] is 0x04 or 0x23));
     }
 
     [Fact]
@@ -460,5 +460,122 @@ public class YealinkVendorWriteModuleTests
         m.SetSetting(Platform, 1);
         Assert.Equal(2, Writes(link));
         Assert.Equal("UC", _env["platform.mode"]);
+    }
+}
+
+/// <summary>Waiting writes are kept per setting (r58); a failed write always republishes and a new attempt clears the old warning (r60).</summary>
+public class YealinkVendorPendingAndFailureTests
+{
+    private readonly List<byte[]> _sent = [];
+    private readonly YealinkVendorSession _s;
+    private readonly Dictionary<string, string?> _device = new() { ["sidetone.level"] = "2", ["keypad_tone.enable"] = "0", ["voice_announcements.enable"] = "0" };
+    private int _changes;
+
+    private static readonly int Sidetone = YealinkSettingsCatalog.IndexOf("sidetone.level");
+    private static readonly int Keypad = YealinkSettingsCatalog.IndexOf("keypad_tone.enable");
+    private static readonly int Announce = YealinkSettingsCatalog.IndexOf("voice_announcements.enable");
+
+    public YealinkVendorPendingAndFailureTests()
+    {
+        _s = new YealinkVendorSession(r => { _sent.Add(r.ToArray()); return true; }, _ => { });
+        _s.Changed += () => _changes++;
+    }
+
+    private static string Ascii(byte[] b, int at, int len) => Encoding.ASCII.GetString(b, at, len).TrimEnd('\0');
+
+    private void Reply(byte[] message)
+    {
+        foreach (var f in VendorVectors.Fragment(VendorFrame.StreamCommand, message)) _s.OnReport(f);
+    }
+
+    private void Answer()
+    {
+        var req = _sent[^1];
+        switch (req[4])
+        {
+            case 0x00: Reply(VendorVectors.HelloReply()); break;
+            case 0x01: Reply(VendorVectors.SimpleReply(0x01)); break;
+            case 0x79: Reply(VendorVectors.Dect(true, 7, 100, 2, true, true)); break;
+            case 0x03:
+            {
+                string key = Ascii(req, 10, 16);
+                Reply(VendorVectors.EnvShort(key, _device.GetValueOrDefault(key)));
+                break;
+            }
+            case 0x22:
+            {
+                string key = Ascii(req, 10, req[6]);
+                Reply(VendorVectors.EnvLong(key, _device.GetValueOrDefault(key) ?? ""));
+                break;
+            }
+            case 0x04:
+            {
+                string key = Ascii(req, 10, 16), value = Ascii(req, 26, 38);
+                _device[key] = value;
+                Reply(VendorVectors.EnvShort(key, value, 0x04));
+                break;
+            }
+            case 0x23:
+            {
+                string key = Ascii(req, 10, req[6]), value = Ascii(req, 10 + req[6], req[8]);
+                _device[key] = value;
+                Reply(VendorVectors.EnvLong(key, value, 0x23));
+                break;
+            }
+        }
+    }
+
+    private void AnswerAll()
+    {
+        for (int guard = 0; _s.IsRunning && guard < 200; guard++) Answer();
+    }
+
+    [Fact]
+    public void Writes_to_different_settings_during_a_pass_are_all_sent()
+    {
+        _s.Begin(VendorRead.Status);
+        Answer(); // hello
+        _s.Set(Keypad, "1");
+        _s.Set(Announce, "1");
+        AnswerAll();
+
+        var sets = _sent.Where(r => r[4] is 0x04 or 0x23).ToList();
+        Assert.Equal(2, sets.Count);
+        Assert.Contains(sets, r => Ascii(r, 10, r[6]) == "keypad_tone.enable");
+        Assert.Contains(sets, r => Ascii(r, 10, r[6]) == "voice_announcements.enable");
+        Assert.Equal("1", _device["keypad_tone.enable"]);
+        Assert.Equal("1", _device["voice_announcements.enable"]);
+    }
+
+    [Fact]
+    public void Two_writes_to_the_same_setting_during_a_pass_send_only_the_latest()
+    {
+        _s.Begin(VendorRead.Status);
+        Answer(); // hello
+        _s.Set(Sidetone, "4");
+        _s.Set(Sidetone, "5");
+        AnswerAll();
+
+        var set = Assert.Single(_sent, r => r[4] is 0x04 or 0x23);
+        Assert.Equal("5", Ascii(set, 26, 38));
+        Assert.Equal("5", _device["sidetone.level"]);
+    }
+
+    [Fact]
+    public void The_same_failure_twice_raises_changed_each_time_and_a_new_attempt_clears_the_warning()
+    {
+        _s.Set(Keypad, "1");
+        Answer(); // hello
+        int before = _changes;
+        _s.Expire();
+        Assert.True(_changes > before);
+        Assert.NotNull(_s.WriteProblem);
+
+        _s.Set(Keypad, "1");
+        Assert.Null(_s.WriteProblem); // cleared as the new attempt starts
+        before = _changes;
+        _s.Expire();
+        Assert.True(_changes > before);
+        Assert.NotNull(_s.WriteProblem);
     }
 }
