@@ -4,7 +4,7 @@ using System.Text;
 namespace Slender.Engine.Native;
 
 /// <summary>Win32 P/Invoke surface (no unsafe code, no packages).</summary>
-internal static class NativeMethods
+internal static partial class NativeMethods
 {
     public const int WH_MOUSE_LL = 14;
     public const int WM_MOUSEMOVE = 0x0200;
@@ -201,4 +201,59 @@ internal static class NativeMethods
         var sb = new StringBuilder(256);
         return GetClassName(hwnd, sb, sb.Capacity) > 0 ? sb.ToString() : "";
     }
+
+    // ---- HID interface arrival/removal (WindowsHidPresence) ----
+
+    public const uint DIGCF_PRESENT = 0x02;
+    public const uint DIGCF_DEVICEINTERFACE = 0x10;
+    public const uint CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE = 0;
+    public const uint CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL = 0;
+    public const uint CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL = 1;
+
+    public static readonly Guid GUID_DEVINTERFACE_HID = new("4D1E55B2-F16F-11CF-88CB-001111000030");
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SP_DEVICE_INTERFACE_DATA
+    {
+        public uint cbSize;
+        public Guid InterfaceClassGuid;
+        public uint Flags;
+        public nuint Reserved;
+    }
+
+    /// <summary>CM_NOTIFY_FILTER with the DeviceInterface arm of its union (ClassGuid at offset 32, size 416).</summary>
+    [StructLayout(LayoutKind.Explicit, Size = 416)]
+    public struct CM_NOTIFY_FILTER
+    {
+        [FieldOffset(0)] public uint cbSize;
+        [FieldOffset(4)] public uint Flags;
+        [FieldOffset(8)] public uint FilterType;
+        [FieldOffset(12)] public uint Reserved;
+        [FieldOffset(16)] public Guid ClassGuid;
+    }
+
+    [LibraryImport("cfgmgr32.dll")]
+    public static unsafe partial uint CM_Register_Notification(CM_NOTIFY_FILTER* filter, nint context,
+        delegate* unmanaged<nint, nint, uint, nint, uint, uint> callback, out nint notifyContext);
+
+    [LibraryImport("cfgmgr32.dll")]
+    public static partial uint CM_Unregister_Notification(nint notifyContext);
+
+    [LibraryImport("setupapi.dll", EntryPoint = "SetupDiGetClassDevsW", SetLastError = true)]
+    public static partial nint SetupDiGetClassDevs(ref Guid classGuid, nint enumerator, nint hwndParent, uint flags);
+
+    [LibraryImport("setupapi.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetupDiDestroyDeviceInfoList(nint deviceInfoSet);
+
+    [LibraryImport("setupapi.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetupDiEnumDeviceInterfaces(nint deviceInfoSet, nint deviceInfoData,
+        ref Guid interfaceClassGuid, uint memberIndex, ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData);
+
+    [LibraryImport("setupapi.dll", EntryPoint = "SetupDiGetDeviceInterfaceDetailW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetupDiGetDeviceInterfaceDetail(nint deviceInfoSet,
+        ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData, nint detailData, uint detailDataSize,
+        out uint requiredSize, nint deviceInfoData);
 }

@@ -207,8 +207,49 @@ public abstract class LogiDeviceBase : IDisposable
 
             var wait = established ? _options.BackoffInitial : backoff;
             backoff = established ? _options.BackoffInitial : TimeSpan.FromTicks(Math.Min(backoff.Ticks * 2, _options.BackoffMax.Ticks));
-            try { await Task.Delay(wait, ct).ConfigureAwait(false); }
+            try
+            {
+                if (await WaitBackoffAsync(wait, ct).ConfigureAwait(false)) backoff = _options.BackoffInitial;
+            }
             catch (OperationCanceledException) { break; }
+        }
+    }
+
+    private readonly object _wakeLock = new();
+    private TaskCompletionSource? _wakeWaiter;
+
+    /// <summary>
+    /// Ends the connect loop's backoff wait now and resets backoff, for a caller that knows the device's HID interfaces just
+    /// arrived. No-op while connected or before start (the loop is not waiting then). Thread-safe.
+    /// </summary>
+    public void Wake()
+    {
+        TaskCompletionSource? w;
+        lock (_wakeLock) { w = _wakeWaiter; _wakeWaiter = null; }
+        w?.TrySetResult();
+    }
+
+    /// <summary>Waits out the backoff; returns true when <see cref="Wake"/> ended it early. Throws on cancellation.</summary>
+    private async Task<bool> WaitBackoffAsync(TimeSpan wait, CancellationToken ct)
+    {
+        var waiter = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_wakeLock) _wakeWaiter = waiter;
+        using var delayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var delay = Task.Delay(wait, delayCts.Token);
+        try
+        {
+            var first = await Task.WhenAny(delay, waiter.Task).ConfigureAwait(false);
+            if (first == waiter.Task)
+            {
+                delayCts.Cancel();
+                return true;
+            }
+            await delay.ConfigureAwait(false);
+            return false;
+        }
+        finally
+        {
+            lock (_wakeLock) { if (ReferenceEquals(_wakeWaiter, waiter)) _wakeWaiter = null; }
         }
     }
 
