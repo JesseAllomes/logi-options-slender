@@ -588,6 +588,82 @@
           "tests/Slender.Tests/Settings"
         ]
       }
+    ],
+    "m54": [
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Slender.Yealink library: catalog entry, HidP caps parser, COL02/COL04 input decode to events, COL02 LED output builder behind an allowlist; tests",
+        "id": "c1",
+        "note": "",
+        "targets": [
+          "src/Slender.Yealink",
+          "src/Slender.Engine/Devices/DeviceCatalog.cs",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Windows HID transport (shared open COL02+COL04 by usage page, read thread only while started) and YealinkModule IDeviceModule; stand down while YealinkUSBConnect runs; fake-transport tests",
+        "id": "c2",
+        "note": "",
+        "targets": [
+          "src/Slender.Yealink",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Core Audio default-mic mute (AOT GeneratedComInterface) + MuteSync: button toggles Windows mic, LED follows Windows mute, notify registered only while started; tests",
+        "id": "c3",
+        "note": "",
+        "targets": [
+          "src/Slender.Yealink",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "After m49 merges: YealinkSettings config (hook/reject/Teams bindings default None, mute sync on, LED writes off), source-gen JSON, tray wiring + action dispatch + status.json + tray submenu",
+        "id": "c4",
+        "note": "",
+        "targets": [
+          "src/Slender.Engine/Contracts/EngineContracts.cs",
+          "src/Slender.Engine/Config",
+          "src/Slender.Tray",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Settings headset page (stage, binding rows via picker, toggles) + docs/devices/yealink-wh64.md scrubbed of serials",
+        "id": "c5",
+        "note": "",
+        "targets": [
+          "src/Slender.Settings",
+          "docs/devices/yealink-wh64.md"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 20,
+        "goal": "Live check with user: read-only button presses logged, then LED write test with go-ahead; release",
+        "id": "c6",
+        "note": "",
+        "targets": [
+          "docs/devices/yealink-wh64.md"
+        ]
+      }
     ]
   },
   "errors": [
@@ -675,7 +751,7 @@
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 282,
+  "rev": 288,
   "review": {
     "advice": [],
     "config": {
