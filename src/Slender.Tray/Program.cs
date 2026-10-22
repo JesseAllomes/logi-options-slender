@@ -177,6 +177,7 @@ static class Program
             // Battery, signal and the base's settings reach status.json and the tray menu; Settings' Headset page asks for a re-read.
             app.HeadsetInfo = yealinkModule.GetHeadset;
             app.RefreshHeadset = () => _ = Task.Run(yealinkModule.RefreshSettings);
+            app.SetHeadsetSetting = (index, value) => _ = Task.Run(() => yealinkModule.SetSetting(index, value));
             yealinkModule.HeadsetChanged += app.DevicesChanged;
             registry.Changed += (_, _) =>
             {

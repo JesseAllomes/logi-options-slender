@@ -42,7 +42,7 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
-    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage;
+    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -118,6 +118,11 @@ public sealed class TrayApplication : IDisposable
         fixed (char* refresh = DeviceMessages.HeadsetRefreshName)
         {
             _headsetRefreshMessage = Win32.RegisterWindowMessageW(refresh);
+        }
+
+        fixed (char* set = DeviceMessages.HeadsetSetName)
+        {
+            _headsetSetMessage = Win32.RegisterWindowMessageW(set);
         }
 
         CreateWindow();
@@ -229,6 +234,9 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Settings' Headset page opened: read the base again (the module limits how often). Set from Program.</summary>
     public Action? RefreshHeadset { get; set; }
+
+    /// <summary>Settings asks to change a base setting: catalog index and value (DeviceMessages.HeadsetSetName); set from Program. Null without the headset module.</summary>
+    public Action<int, long>? SetHeadsetSetting { get; set; }
 
     /// <summary>Forgets a device in the registry (set from Program); true when it was removed. Null without a registry.</summary>
     public Func<string, bool>? ForgetDevice { get; set; }
@@ -426,6 +434,12 @@ public sealed class TrayApplication : IDisposable
         if (msg != 0 && msg == _headsetRefreshMessage)
         {
             RefreshHeadset?.Invoke();
+            return true;
+        }
+
+        if (msg != 0 && msg == _headsetSetMessage)
+        {
+            SetHeadsetSetting?.Invoke((int)wParam, (long)lParam);
             return true;
         }
 

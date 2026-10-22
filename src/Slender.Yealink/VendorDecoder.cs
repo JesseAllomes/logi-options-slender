@@ -6,7 +6,7 @@ namespace Slender.Yealink;
 public readonly record struct HeadsetStatus(bool? Registered, int? BatteryPercent, bool? Charging, bool? Docked, int? Signal, bool? InRange, string? Model = null);
 
 /// <summary>
-/// Reads the base's messages: command replies (Hello, version, EnvGet short and long, GetDect) and the unsolicited DECT channel
+/// Reads the base's messages: command replies (Hello, version, EnvGet and EnvSet short and long, GetDect) and the unsolicited DECT channel
 /// 0x0D of the notification stream (battery, signal). Every other notification channel, the debug log above all, is ignored on its
 /// first byte. Replies raise <see cref="Reply"/>; a changed headset status raises <see cref="StatusChanged"/>. Nothing is
 /// allocated for a notification; a reply allocates its key and value strings.
@@ -64,7 +64,7 @@ public sealed class VendorDecoder
         byte cmd = m[0];
         switch ((VendorCommand)cmd)
         {
-            case VendorCommand.EnvGet when m.Length >= 6:
+            case VendorCommand.EnvGet or VendorCommand.EnvSet when m.Length >= 6:
                 if (m[1] == 0) Reply?.Invoke(cmd, null, null);
                 else
                 {
@@ -73,7 +73,7 @@ public sealed class VendorDecoder
                     Reply?.Invoke(cmd, Ascii(name), Ascii(value));
                 }
                 break;
-            case VendorCommand.EnvGetLong when m.Length >= 6:
+            case VendorCommand.EnvGetLong or VendorCommand.EnvSetLong when m.Length >= 6:
                 int nl = m[2] | m[3] << 8, vl = m[4] | m[5] << 8;
                 if (6 + nl + vl > m.Length) return;
                 Reply?.Invoke(cmd, Ascii(m.Slice(6, nl)), Ascii(m.Slice(6 + nl, vl)));

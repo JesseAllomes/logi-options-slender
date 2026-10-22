@@ -15,12 +15,15 @@ public enum VendorRead { Status, All }
 /// allowlisted requests are ever built (<see cref="VendorRequests"/>). A one-shot timer exists only while a pass runs. Between
 /// passes it sends nothing and holds no thread: the base pushes battery and signal on its own and the read loop feeds them in.
 /// A timeout skips that setting; a silent Hello or three timeouts in a row end the pass.
+/// <see cref="Set"/> changes one catalogued setting: EnvSet, then an EnvGet of the same key to read it back, by the same one-at-a-time
+/// rule and timer. A write asked for during a pass waits for it; only the latest waiting one is kept.
 /// </summary>
 public sealed class YealinkVendorSession : IDisposable
 {
     public const int TimeoutMs = 1500;
     private const int MaxSilent = 3;
     private const int StepHello = 0, StepVersion = 1, StepDect = 2, StepSettings = 3;
+    private const int WriteHello = 0, WriteSet = 1, WriteRead = 2;
 
     private readonly VendorWriter _write;
     private readonly Action<string> _log;
@@ -32,8 +35,11 @@ public sealed class YealinkVendorSession : IDisposable
 
     private Timer? _timer;
     private long _deadline;
-    private bool _running, _helloDone, _disposed;
+    private bool _running, _helloDone, _disposed, _dirty;
     private int _step, _end, _silent;
+    private bool _writing;
+    private int _writeStage, _writeIndex = -1, _pendingIndex = -1;
+    private string? _writeRaw, _pendingRaw, _writeProblem;
     private HeadsetStatus _status;
     private IReadOnlyList<HeadsetSetting>? _settings;
 
@@ -51,6 +57,9 @@ public sealed class YealinkVendorSession : IDisposable
     public bool IsRunning { get { lock (_gate) return _running; } }
 
     public HeadsetStatus Status { get { lock (_gate) return _status; } }
+
+    /// <summary>Plain words for the last write the base did not take; null once one reads back correctly.</summary>
+    public string? WriteProblem { get { lock (_gate) return _writeProblem; } }
 
     /// <summary>The settings read so far, in catalog order; empty until the first answers.</summary>
     public IReadOnlyList<HeadsetSetting> Settings
@@ -92,14 +101,120 @@ public sealed class YealinkVendorSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sets one catalogued setting to raw, then reads it back. Starts at once when idle (handshake first if never done); during a
+    /// pass or another write it waits, and only the latest waiting write is kept. False (nothing sent) for a bad index or after Dispose;
+    /// a value the catalog refuses, or a base that does not take it, shows in <see cref="WriteProblem"/>.
+    /// </summary>
+    public bool Set(int catalogIndex, string raw)
+    {
+        lock (_gate)
+        {
+            if (_disposed || catalogIndex < 0 || catalogIndex >= _values.Length) return false;
+            if (_running)
+            {
+                _pendingIndex = catalogIndex;
+                _pendingRaw = raw;
+            }
+            else StartWrite(catalogIndex, raw);
+        }
+        Notify();
+        return true;
+    }
+
     public void Dispose()
     {
         lock (_gate)
         {
             _disposed = true;
             _running = false;
+            _pendingIndex = -1;
             _timer?.Dispose();
             _timer = null;
+        }
+    }
+
+    private void Notify()
+    {
+        bool raise;
+        lock (_gate)
+        {
+            raise = _dirty;
+            _dirty = false;
+        }
+        if (raise) Changed?.Invoke();
+    }
+
+    private void StartWrite(int index, string raw)
+    {
+        _running = true;
+        _writing = true;
+        _writeIndex = index;
+        _writeRaw = raw;
+        _writeStage = _helloDone ? WriteSet : WriteHello;
+        SendWrite();
+    }
+
+    private void SetProblem(string? problem)
+    {
+        if (_writeProblem == problem) return;
+        _writeProblem = problem;
+        _dirty = true;
+    }
+
+    private void FailWrite(string why)
+    {
+        var def = YealinkSettingsCatalog.All[_writeIndex];
+        _log($"Yealink: write of {def.Key}={_writeRaw} failed: {why}");
+        SetProblem($"The base did not take the change to {def.Label}.");
+        Finish();
+    }
+
+    private void SendWrite()
+    {
+        var def = YealinkSettingsCatalog.All[_writeIndex];
+        int stage = _writeStage;
+        try
+        {
+            int length = stage switch
+            {
+                WriteHello => VendorRequests.Build(VendorCommand.Hello, _frame),
+                WriteSet => VendorRequests.BuildEnvSet(def, _writeRaw!, _frame),
+                _ => VendorRequests.BuildEnvGet(def.Key, _frame),
+            };
+            if (!_write(_frame.AsSpan(0, length)))
+            {
+                FailWrite("vendor channel is not writable");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            FailWrite(ex.Message);
+            return;
+        }
+        if (_running && _writeStage == stage) Arm();
+    }
+
+    private void OnWriteReply(byte command, string? key, string? value)
+    {
+        var def = YealinkSettingsCatalog.All[_writeIndex];
+        bool mine = key == null || key == def.Key;
+        switch (_writeStage)
+        {
+            case WriteHello when command == (byte)VendorCommand.Hello:
+                _writeStage = WriteSet;
+                SendWrite();
+                break;
+            case WriteSet when command is (byte)VendorCommand.EnvSet or (byte)VendorCommand.EnvSetLong && mine:
+                _log($"Yealink: set {def.Key}={_writeRaw}");
+                _writeStage = WriteRead;
+                SendWrite();
+                break;
+            case WriteRead when command is (byte)VendorCommand.EnvGet or (byte)VendorCommand.EnvGetLong && mine:
+                if (key != null && value == _writeRaw) { SetProblem(null); Finish(); }
+                else FailWrite($"read back {value ?? "nothing"}");
+                break;
         }
     }
 
@@ -111,32 +226,36 @@ public sealed class YealinkVendorSession : IDisposable
 
     private void OnReply(byte command, string? key, string? value)
     {
-        bool changed = false;
         lock (_gate)
         {
             if (command == (byte)VendorCommand.Hello) _helloDone = true;
-            if (key != null && YealinkSettingsCatalog.IndexOf(key) is var i and >= 0 && _values[i] != value)
+            if (command is (byte)VendorCommand.EnvSet or (byte)VendorCommand.EnvSetLong)
+            {
+                // An echo of the write, not a reading: the read-back sets the value.
+            }
+            else if (key != null && YealinkSettingsCatalog.IndexOf(key) is var i and >= 0 && _values[i] != value)
             {
                 _values[i] = value;
                 _settings = null;
-                changed = true;
+                _dirty = true;
             }
-            else if (key == null && command is (byte)VendorCommand.EnvGet or (byte)VendorCommand.EnvGetLong && _running && InFlightIs(command) && InFlightSetting() is var s and >= 0 && _values[s] != null)
+            else if (key == null && !_writing && command is (byte)VendorCommand.EnvGet or (byte)VendorCommand.EnvGetLong && _running && InFlightIs(command) && InFlightSetting() is var s and >= 0 && _values[s] != null)
             {
                 // The base answered an empty value: the setting is not set on this firmware.
                 _values[s] = null;
                 _settings = null;
-                changed = true;
+                _dirty = true;
             }
 
-            if (_running && Matches(command, key))
+            if (_running && _writing) OnWriteReply(command, key, value);
+            else if (_running && Matches(command, key))
             {
                 _silent = 0;
                 _step++;
                 SendNext();
             }
         }
-        if (changed) Changed?.Invoke();
+        Notify();
     }
 
     /// <summary>The request in flight, from the step: its command byte.</summary>
@@ -202,32 +321,49 @@ public sealed class YealinkVendorSession : IDisposable
     {
         lock (_gate)
         {
-            if (_running && Environment.TickCount64 >= _deadline) Expire();
+            if (_running && Environment.TickCount64 >= _deadline) ExpireLocked();
         }
+        Notify();
     }
 
     /// <summary>The request in flight got no answer in time (also called directly by tests).</summary>
     internal void Expire()
     {
-        lock (_gate)
-        {
-            if (!_running) return;
-            _silent++;
-            if (_step == StepHello || _silent >= MaxSilent)
-            {
-                _log(_step == StepHello ? "Yealink: the base did not answer; vendor read stopped" : "Yealink: the base stopped answering; vendor read stopped");
-                Finish();
-                return;
-            }
-            _step++;
-            SendNext();
-        }
+        lock (_gate) ExpireLocked();
+        Notify();
     }
 
+    private void ExpireLocked()
+    {
+        if (!_running) return;
+        if (_writing)
+        {
+            FailWrite("no answer");
+            return;
+        }
+        _silent++;
+        if (_step == StepHello || _silent >= MaxSilent)
+        {
+            _log(_step == StepHello ? "Yealink: the base did not answer; vendor read stopped" : "Yealink: the base stopped answering; vendor read stopped");
+            Finish();
+            return;
+        }
+        _step++;
+        SendNext();
+    }
+
+    /// <summary>Ends the pass or write, and starts the write that waited, if any.</summary>
     private void Finish()
     {
         _running = false;
+        _writing = false;
         _timer?.Dispose();
         _timer = null;
+        if (_pendingIndex < 0 || _disposed) return;
+        int index = _pendingIndex;
+        string raw = _pendingRaw!;
+        _pendingIndex = -1;
+        _pendingRaw = null;
+        StartWrite(index, raw);
     }
 }

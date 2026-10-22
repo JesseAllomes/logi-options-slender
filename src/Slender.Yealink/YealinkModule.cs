@@ -10,7 +10,8 @@ namespace Slender.Yealink;
 /// the device.
 /// VendorReads (default on): the vendor channel is opened and the base is asked for its battery, signal and settings at Start,
 /// on Wake and when Settings asks (<see cref="RefreshSettings"/>, at most every few seconds); between those the base pushes
-/// battery and signal on its own. With it off the channel is never opened and nothing is sent. Only allowlisted read requests exist.
+/// battery and signal on its own. With it off the channel is never opened and nothing is sent. Only allowlisted requests exist: the
+/// reads, and (<see cref="SetSetting"/>) a write of a catalogued, editable setting to a value the catalog lists.
 /// Mute, hook and reject also arrive on the standard telephony collection, which is read (never written) beside the private one.
 /// MuteSync: the headset's mute press toggles the Windows default microphone, and the mute LED (when LED writes are on) follows
 /// the Windows mute, including changes made elsewhere. The microphone object and its notification exist only while a link is open.
@@ -37,6 +38,8 @@ public sealed class YealinkModule : IDeviceModule
     private bool _vendorOn;
     private long _lastRefresh;
     private volatile YealinkVendorSession? _vendor;
+    private volatile bool _offHook;
+    private volatile string? _refusal;
     private volatile IMicMute? _mic;
     private volatile IYealinkLink? _link;
     private YealinkInputDecoder? _decoder;
@@ -128,15 +131,49 @@ public sealed class YealinkModule : IDeviceModule
         }
     }
 
-    /// <summary>The base's own report for status.json and the tray menu; null while vendor reads are off or the base has not answered.</summary>
+    /// <summary>The base's own report for status.json and the tray menu; null while vendor reads are off or the base has not answered (a refused setting change still shows its problem).</summary>
     public HeadsetState? GetHeadset()
     {
         var vendor = _vendor;
-        if (vendor == null) return null;
+        if (vendor == null) return _refusal is { } why ? new HeadsetState(null, null, null, null, null, null, WriteProblem: why) : null;
         var s = vendor.Status;
         var settings = vendor.Settings;
-        if (s == default && settings.Count == 0) return null;
-        return new HeadsetState(s.Registered, s.BatteryPercent, s.Charging, s.Docked, s.Signal, s.InRange, settings.Count > 0 ? settings : null, s.Model);
+        var problem = _refusal ?? vendor.WriteProblem;
+        if (s == default && settings.Count == 0 && problem == null) return null;
+        return new HeadsetState(s.Registered, s.BatteryPercent, s.Charging, s.Docked, s.Signal, s.InRange, settings.Count > 0 ? settings : null, s.Model, problem);
+    }
+
+    /// <summary>
+    /// Settings asked to change a base setting (catalog index and the value as <see cref="YealinkSettingDef.RawFor"/> takes it).
+    /// Refused, with the reason in <see cref="HeadsetState.WriteProblem"/> and nothing sent, for a value the catalog does not allow,
+    /// with vendor reads off, while another app owns the headset, without a vendor channel, or for a setting that restarts the
+    /// base or switches its mode during a call. Otherwise written and read back by the session.
+    /// </summary>
+    public void SetSetting(int catalogIndex, long value)
+    {
+        string? problem = null;
+        YealinkVendorSession? vendor = null;
+        string? raw = null;
+        YealinkSettingDef? def = catalogIndex >= 0 && catalogIndex < YealinkSettingsCatalog.All.Count ? YealinkSettingsCatalog.All[catalogIndex] : null;
+        lock (_gate)
+        {
+            if (def == null || (raw = def.RawFor(value)) == null) problem = "That setting cannot be changed to that value.";
+            else if (_started && !_vendorOn) problem = "Turn on Read headset status to change base settings.";
+            else if (_standDown()) problem = $"Close {YealinkConnectProcess} to change base settings.";
+            else if ((vendor = _vendor) == null || _link == null) problem = "The headset base is not connected.";
+            else if (def.Caution != YealinkCaution.None && _offHook) problem = $"Finish the call before changing {def.Label}.";
+        }
+
+        if (problem != null)
+        {
+            _log($"Yealink: refused {def?.Key ?? "setting " + catalogIndex}={raw ?? value.ToString()}: {problem}");
+            _refusal = problem;
+            OnVendorChanged();
+            return;
+        }
+        _refusal = null;
+        try { vendor!.Set(catalogIndex, raw!); }
+        catch (Exception ex) { _log($"Yealink: setting change failed: {ex.Message}"); }
     }
 
     private void BeginVendor(VendorRead what, bool checkStandDown)
@@ -278,6 +315,8 @@ public sealed class YealinkModule : IDeviceModule
         _sink = null;
         var vendor = _vendor;
         _vendor = null;
+        _offHook = false;
+        _refusal = null;
         try { link?.Dispose(); }
         catch (Exception ex) { _log($"Yealink: close failed: {ex.Message}"); }
         if (vendor != null)
@@ -322,7 +361,7 @@ public sealed class YealinkModule : IDeviceModule
             if (kind == YealinkEventKind.MutePressed) ToggleWindowsMute();
             switch (kind)
             {
-                case YealinkEventKind.HookChanged: HookChanged?.Invoke(value); break;
+                case YealinkEventKind.HookChanged: _offHook = value; HookChanged?.Invoke(value); break;
                 case YealinkEventKind.MutePressed: MutePressed?.Invoke(); break;
                 case YealinkEventKind.FlashPressed: FlashPressed?.Invoke(); break;
                 case YealinkEventKind.RejectPressed: RejectPressed?.Invoke(); break;

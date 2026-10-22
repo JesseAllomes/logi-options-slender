@@ -42,21 +42,21 @@ internal static class VendorVectors
 
     public static byte[] SimpleReply(byte cmd) => [cmd, 0, 0, 0, 0, 0];
 
-    public static byte[] EnvShort(string key, string? value)
+    public static byte[] EnvShort(string key, string? value, byte cmd = 0x03)
     {
         var m = new byte[60];
-        m[0] = 0x03;
-        if (value == null) return [0x03, 0, 0, 0, 0, 0];
+        m[0] = cmd;
+        if (value == null) return [cmd, 0, 0, 0, 0, 0];
         m[1] = 0x36;
         Encoding.ASCII.GetBytes(key, m.AsSpan(6, 16));
         Encoding.ASCII.GetBytes(value, m.AsSpan(22));
         return m;
     }
 
-    public static byte[] EnvLong(string key, string value)
+    public static byte[] EnvLong(string key, string value, byte cmd = 0x22)
     {
         var m = new byte[6 + key.Length + value.Length];
-        m[0] = 0x22;
+        m[0] = cmd;
         m[1] = (byte)(key.Length + 1);
         m[2] = (byte)key.Length;
         m[4] = (byte)value.Length;

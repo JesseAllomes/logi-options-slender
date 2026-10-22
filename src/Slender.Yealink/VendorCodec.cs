@@ -1,11 +1,13 @@
 using System.Text;
+using Slender.Engine.Devices;
 
 namespace Slender.Yealink;
 
 /// <summary>
-/// The only commands this code can put on the vendor channel (report 0xC8). Every one is a read or a handshake; nothing that
-/// sets, resets, flashes, runs a shell, moves files, powers off or updates firmware has an id here, and
-/// <see cref="VendorRequests.Build"/> refuses every other byte.
+/// The only commands this code can put on the vendor channel (report 0xC8). All but the two EnvSets are reads or a handshake;
+/// nothing that resets, flashes, runs a shell, moves files, powers off or updates firmware has an id here, and
+/// <see cref="VendorRequests.Build"/> refuses every other byte, the EnvSets included: those are built only by
+/// <see cref="VendorRequests.BuildEnvSet"/>, for a catalogued, editable setting and a value the catalog lists.
 /// </summary>
 public enum VendorCommand : byte
 {
@@ -14,8 +16,12 @@ public enum VendorCommand : byte
     GetVersion = 0x01,
     /// <summary>Read one setting whose key is at most 16 characters.</summary>
     EnvGet = 0x03,
+    /// <summary>Write one setting whose key is at most 16 characters (only through <see cref="VendorRequests.BuildEnvSet"/>).</summary>
+    EnvSet = 0x04,
     /// <summary>Read one setting whose key is longer than 16 characters.</summary>
     EnvGetLong = 0x22,
+    /// <summary>Write one setting whose key is longer than 16 characters (only through <see cref="VendorRequests.BuildEnvSet"/>).</summary>
+    EnvSetLong = 0x23,
     /// <summary>Handset status: registered, signal, battery, docked, alive.</summary>
     GetDect = 0x79,
 }
@@ -42,12 +48,13 @@ public static class VendorFrame
 /// <summary>
 /// Builds the requests, and nothing else. The allowlist is the <see cref="VendorCommand"/> enum: any other command byte throws.
 /// Layouts follow the SDK's own Hello, GetVersion and EnvGet frames; the long EnvGet and GetDect requests are inferred from the
-/// replies (see docs/devices/yealink-wh64.md).
+/// replies, and both EnvSets were confirmed on a live base (see docs/devices/yealink-wh64.md).
 /// </summary>
 public static class VendorRequests
 {
     public const string HelloText = "hello RC8-MCU device!";
 
+    /// <summary>The commands <see cref="Build(byte, ReadOnlySpan{char}, Span{byte})"/> builds: reads and the handshake. The EnvSets are not among them.</summary>
     public static bool IsAllowed(byte commandId) =>
         commandId is (byte)VendorCommand.Hello or (byte)VendorCommand.GetVersion or (byte)VendorCommand.EnvGet
             or (byte)VendorCommand.EnvGetLong or (byte)VendorCommand.GetDect;
@@ -96,6 +103,59 @@ public static class VendorRequests
 
         frame[2] = (byte)body;
         return VendorFrame.Length;
+    }
+
+    /// <summary>The longest value the short EnvSet carries.</summary>
+    public const int MaxShortValue = 36;
+
+    /// <summary>
+    /// Writes the request that sets a catalogued setting to raw: EnvSet for a key up to 16 characters, EnvSetLong beyond. The only
+    /// way to build a set. Throws ArgumentException unless def is in the catalog, can be set and raw is one of its listed choices or
+    /// a whole number within its range; the message must fit one chunk.
+    /// </summary>
+    public static int BuildEnvSet(YealinkSettingDef def, string raw, Span<byte> frame)
+    {
+        if (frame.Length < VendorFrame.Length) throw new ArgumentException("Frame buffer is shorter than a vendor report.", nameof(frame));
+        int index = YealinkSettingsCatalog.IndexOf(def.Key);
+        if (index < 0 || !ReferenceEquals(YealinkSettingsCatalog.All[index], def))
+            throw new ArgumentException("Not a catalogued setting.", nameof(def));
+        if (!def.CanSet) throw new ArgumentException("This setting is read-only.", nameof(def));
+        if (!IsValidRaw(def, raw)) throw new ArgumentException("Not a value this setting can take.", nameof(raw));
+        CheckKey(def.Key, VendorFrame.MaxChunk - 8);
+
+        frame.Clear();
+        frame[0] = VendorFrame.ReportId;
+        frame[1] = VendorFrame.Single;
+        int body;
+        if (def.Key.Length <= VendorFrame.ShortKey)
+        {
+            if (raw.Length > MaxShortValue) throw new ArgumentException("Value too long.", nameof(raw));
+            body = 6 + 0x36;
+            frame[4] = (byte)VendorCommand.EnvSet;
+            frame[5] = 0x36;
+            Encoding.ASCII.GetBytes(def.Key, frame[10..]);
+            Encoding.ASCII.GetBytes(raw, frame[(10 + VendorFrame.ShortKey)..]);
+        }
+        else
+        {
+            int plen = def.Key.Length + raw.Length + 1;
+            body = 6 + plen;
+            if (body > VendorFrame.MaxChunk) throw new ArgumentException("The setting does not fit one report.", nameof(raw));
+            frame[4] = (byte)VendorCommand.EnvSetLong;
+            frame[5] = (byte)plen;
+            frame[6] = (byte)def.Key.Length;
+            frame[8] = (byte)raw.Length;
+            Encoding.ASCII.GetBytes(def.Key, frame[10..]);
+            Encoding.ASCII.GetBytes(raw, frame[(10 + def.Key.Length)..]);
+        }
+        frame[2] = (byte)body;
+        return VendorFrame.Length;
+    }
+
+    private static bool IsValidRaw(YealinkSettingDef def, string raw)
+    {
+        if (def.IsChoice) return def.ChoiceIndex(raw) >= 0;
+        return long.TryParse(raw, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out long n) && def.RawFor(n) == raw;
     }
 
     /// <summary>The EnvGet for a key: the short form up to 16 characters, the long one beyond.</summary>
