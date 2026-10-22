@@ -136,7 +136,7 @@ public sealed class YealinkModule : IDeviceModule
         var s = vendor.Status;
         var settings = vendor.Settings;
         if (s == default && settings.Count == 0) return null;
-        return new HeadsetState(s.Registered, s.BatteryPercent, s.Charging, s.Docked, s.Signal, s.InRange, settings.Count > 0 ? settings : null);
+        return new HeadsetState(s.Registered, s.BatteryPercent, s.Charging, s.Docked, s.Signal, s.InRange, settings.Count > 0 ? settings : null, s.Model);
     }
 
     private void BeginVendor(VendorRead what, bool checkStandDown)

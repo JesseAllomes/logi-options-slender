@@ -3,7 +3,7 @@ using System.Text;
 namespace Slender.Yealink;
 
 /// <summary>What the base has said about the headset. Null = not said yet. Signal 0 to 7 as the base reports it.</summary>
-public readonly record struct HeadsetStatus(bool? Registered, int? BatteryPercent, bool? Charging, bool? Docked, int? Signal, bool? InRange);
+public readonly record struct HeadsetStatus(bool? Registered, int? BatteryPercent, bool? Charging, bool? Docked, int? Signal, bool? InRange, string? Model = null);
 
 /// <summary>
 /// Reads the base's messages: command replies (Hello, version, EnvGet short and long, GetDect) and the unsolicited DECT channel
@@ -24,6 +24,7 @@ public sealed class VendorDecoder
     private const byte Handset = 1;
     private const int HandsetBlock = 131;
     private const int HandsetUsed = 7;
+    private const int ModelOffset = 44, ModelLength = 32;
 
     private HeadsetStatus _status;
 
@@ -97,7 +98,8 @@ public sealed class VendorDecoder
             Set(new HeadsetStatus(false, null, null, null, null, null));
             return;
         }
-        Set(new HeadsetStatus(true, hs[3] <= 100 ? hs[3] : null, hs[4] == BatteryCharging, hs[5] != 0, hs[2], hs[6] != 0));
+        string? model = hs.Length >= ModelOffset + ModelLength ? Ascii(hs.Slice(ModelOffset, ModelLength)) : _status.Model;
+        Set(new HeadsetStatus(true, hs[3] <= 100 ? hs[3] : null, hs[4] == BatteryCharging, hs[5] != 0, hs[2], hs[6] != 0, model));
     }
 
     private void Set(HeadsetStatus next)

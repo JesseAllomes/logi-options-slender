@@ -52,6 +52,16 @@ public sealed class AssetCache
     public CachedDevice? Ensure(DeviceKind kind)
     {
         (string deviceId, string modelId, string imageKey, string metaKey) = SpecFor(kind);
+        return EnsureFrom(deviceId, dir => Copy(kind, deviceId, modelId, imageKey, metaKey, dir));
+    }
+
+    /// <summary>
+    /// The same cache, backup and restore rules for any device whose pictures come from somewhere else (the Yealink headset's
+    /// come from the user's own USB Connect install). copy fills the folder it is given and returns the device, or null when its
+    /// source is absent.
+    /// </summary>
+    public CachedDevice? EnsureFrom(string deviceId, Func<string, CachedDevice?> copy)
+    {
         string dir = Path.Combine(_assetsDirectory, deviceId);
 
         CachedDevice? cached = TryLoad(deviceId, dir);
@@ -79,7 +89,7 @@ public sealed class AssetCache
 
         try
         {
-            CachedDevice? copied = Copy(kind, deviceId, modelId, imageKey, metaKey, dir);
+            CachedDevice? copied = copy(dir);
             if (copied is not null)
             {
                 Backup(deviceId, dir);
@@ -100,6 +110,12 @@ public sealed class AssetCache
     public (CachedDevice? Device, bool Refreshed) Refresh(DeviceKind kind)
     {
         (string deviceId, string modelId, string imageKey, string metaKey) = SpecFor(kind);
+        return RefreshFrom(deviceId, dir => Copy(kind, deviceId, modelId, imageKey, metaKey, dir));
+    }
+
+    /// <summary>Refresh for a device with its own source (see <see cref="EnsureFrom"/>): copy into staging, then replace, else keep what there is.</summary>
+    public (CachedDevice? Device, bool Refreshed) RefreshFrom(string deviceId, Func<string, CachedDevice?> copy)
+    {
         string dir = Path.Combine(_assetsDirectory, deviceId);
         string staging = dir + ".new";
         try
@@ -109,9 +125,9 @@ public sealed class AssetCache
                 Directory.Delete(staging, recursive: true);
             }
 
-            if (Copy(kind, deviceId, modelId, imageKey, metaKey, staging) is null)
+            if (copy(staging) is null)
             {
-                return (Ensure(kind), false);
+                return (EnsureFrom(deviceId, copy), false);
             }
 
             if (Directory.Exists(dir))
@@ -136,7 +152,7 @@ public sealed class AssetCache
             {
             }
 
-            return (Ensure(kind), false);
+            return (EnsureFrom(deviceId, copy), false);
         }
     }
 
@@ -237,16 +253,25 @@ public sealed class AssetCache
             return null;
         }
 
+        return WriteCopy(deviceId, dir, imagePath, thumbPath, parsed.Value.Width, parsed.Value.Height, parsed.Value.Hotspots);
+    }
+
+    /// <summary>
+    /// Copies the two picture files into dir as render.* and thumb.* and writes layout.json last (its presence means the copy is
+    /// complete). Shared by every source of pictures.
+    /// </summary>
+    internal static CachedDevice WriteCopy(string deviceId, string dir, string imagePath, string thumbPath, int width, int height, IReadOnlyList<Hotspot> hotspots)
+    {
         Directory.CreateDirectory(dir);
-        string imageName = "render" + Path.GetExtension(imageSrc);
-        string thumbName = string.Equals(thumbSrc, imageSrc, StringComparison.OrdinalIgnoreCase) ? imageName : "thumb" + Path.GetExtension(thumbSrc);
+        string imageName = "render" + Path.GetExtension(imagePath);
+        string thumbName = string.Equals(thumbPath, imagePath, StringComparison.OrdinalIgnoreCase) ? imageName : "thumb" + Path.GetExtension(thumbPath);
         File.Copy(imagePath, Path.Combine(dir, imageName), overwrite: true);
         if (thumbName != imageName)
         {
             File.Copy(thumbPath, Path.Combine(dir, thumbName), overwrite: true);
         }
 
-        var layout = new DeviceLayout(imageName, thumbName, parsed.Value.Width, parsed.Value.Height, parsed.Value.Hotspots);
+        var layout = new DeviceLayout(imageName, thumbName, width, height, hotspots);
         var stored = new StoredLayout
         {
             Image = layout.ImageFile,
@@ -256,7 +281,6 @@ public sealed class AssetCache
             Hotspots = [.. layout.Hotspots],
         };
 
-        // layout.json is written last: its presence means the copy is complete.
         string layoutPath = Path.Combine(dir, LayoutFileName);
         string temp = layoutPath + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(stored, JsonOptions));

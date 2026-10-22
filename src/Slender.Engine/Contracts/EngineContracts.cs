@@ -608,7 +608,7 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 /// <summary>
 /// The Yealink base's own report (read-only). Every field is null until the base has said it. Signal is the DECT radio level the
 /// base reports (0 = none, 7 = full); InRange is false when the handset is not linked to the base. Settings is the read-only
-/// list, in the order USB Connect groups them.
+/// list, in the order USB Connect groups them. Model is the handset's own name ("Yealink WH64" ...), used to pick its picture.
 /// </summary>
 public sealed record HeadsetState(
     bool? Registered,
@@ -617,7 +617,8 @@ public sealed record HeadsetState(
     bool? Docked,
     int? Signal,
     bool? InRange,
-    IReadOnlyList<HeadsetSetting>? Settings = null);
+    IReadOnlyList<HeadsetSetting>? Settings = null,
+    string? Model = null);
 
 /// <summary>One base setting as text: its USB Connect group ("General", "Sound"...), plain label and current value.</summary>
 public sealed record HeadsetSetting(string Group, string Label, string Value);
