@@ -6,13 +6,29 @@ Remove device when it is not connected.
 
 ## What it opens
 
-Only two of the base's HID collections, both shared with other programs:
+Four of the base's HID collections, all shared with other programs:
 
 - the telephony collection (the private copy Slender can read): hook, mute, flash and reject
 - the Teams button collection
+- the standard telephony collection, input only: on this base mute, hook and reject arrive here (input report 2). Slender never
+  writes to it, because Teams and the 3CX web client own its outputs. If both copies ever report the same press, it counts once.
+- the vendor command collection, only while Read headset status is on (see below)
 
-The collection Teams and the 3CX web client use for call control, and the vendor command collection, are never opened. Nothing
-is written to the headset's firmware or settings, ever; no feature or command report is sent.
+The remaining collection is never opened. Nothing is written to the headset's firmware or settings, ever.
+
+## What it reads from the base
+
+With Read headset status on (the default; `VendorReads` in config), Slender asks the base, over its vendor channel, for the
+headset's battery, charging, docked, signal and in/out of range, and for the base's own settings. The Headset page shows them and
+the tray's Yealink WH64 submenu shows battery and docked. After a short handshake (hello, version) the base's own handset
+status is read, then one setting at a time (about fifty small exchanges). It reads at start, when the headset is plugged in, and
+when the Headset page is opened (at most every few seconds). In between, the base pushes battery and signal itself and
+Slender only listens. The settings list is read-only: change them in Yealink USB Connect.
+
+What Slender can send is a fixed list of five read requests: hello, version, handset status, and the two forms of "read one
+setting". Any other command is refused in code, so nothing that sets a value, resets, flashes, runs a shell, moves files, powers
+off or updates firmware can be built, whatever the page or config says. With Read headset status off the vendor collection is
+never opened and nothing is sent.
 
 ## What each button does
 
@@ -38,7 +54,7 @@ mute, off-hook, ring and hold lights on the telephony output report are ever add
 ## Stands down for Yealink USB Connect
 
 If Yealink USB Connect is running when Slender starts or the headset is plugged in, Slender opens nothing, so the two never
-compete for the device. Close Yealink USB Connect and replug the headset (or restart Slender) to hand the headset back.
+compete for the device. It also sends no read request while USB Connect is running. Close Yealink USB Connect and replug the headset (or restart Slender) to hand the headset back.
 
 ## Memory and activity
 
