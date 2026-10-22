@@ -12,7 +12,7 @@ namespace Slender.Settings;
 
 /// <summary>
 /// Yealink WH64 (m54, split in m59): two rail tiles (headset, base), a popover row and two pages. Shown only when a registry-aware
-/// tray lists the headset (present, or installed and disconnected). The tiles use the cached Yealink pictures, else a plain glyph.
+/// tray lists the headset (present, or installed and disconnected). The tiles use the shipped pictures.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -22,22 +22,6 @@ public sealed partial class MainWindow
 
     private bool HeadsetListed() => DevicePresenceView.Listed(_status.Status, DeviceIds.Headset);
 
-    private YealinkView HeadsetPictureView()
-    {
-        HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
-        return YealinkPictures.ChooseHeadset(h?.Model, HeadsetSettingRaw(h, "platform.mode"));
-    }
-
-    /// <summary>Copies the pictures once, the first time the rail lists the headset. The rail redraws when they are ready.</summary>
-    private void EnsureYealinkPictures()
-    {
-        YealinkView view = HeadsetPictureView();
-        if (!_yealinkViews.ContainsKey(view))
-        {
-            LoadYealinkView(view);
-        }
-    }
-
     private Button HeadsetTile(bool baseTile = false)
     {
         Page page = baseTile ? Page.Base : Page.Headset;
@@ -45,21 +29,14 @@ public sealed partial class MainWindow
         bool selected = _page == page;
         bool offline = DevicePresenceView.Dimmed(_status.Status, DeviceIds.Headset);
         var content = new StackPanel { Spacing = 5, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        FrameworkElement thumb;
-        if (_yealinkViews.GetValueOrDefault(baseTile ? YealinkView.Base : HeadsetPictureView()) is { } device)
+        CachedDevice device = baseTile ? BuiltInPictures.Base : BuiltInPictures.Headset;
+        var thumb = new Image
         {
-            thumb = new Image
-            {
-                Height = 44,
-                Stretch = Stretch.Uniform,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Source = Ui.Bitmap(device.ThumbPath, decodePixelHeight: (int)Math.Ceiling(44 * _scale)),
-            };
-        }
-        else
-        {
-            thumb = new Grid { Height = 44, Children = { new FontIcon { Glyph = HeadsetGlyph, FontSize = 26, Foreground = Ui.Muted } } };
-        }
+            Height = 44,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Source = Ui.Bitmap(device.ThumbPath, decodePixelHeight: (int)Math.Ceiling(44 * _scale)),
+        };
 
         thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);
@@ -146,7 +123,7 @@ public sealed partial class MainWindow
         YealinkSettings y = _config.Config.Yealink;
         HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
         AddHeadsetHeader(BaseName);
-        AddHeadsetPicture(h, y, YealinkView.Base);
+        AddHeadsetPicture(h, y, BuiltInPictures.Base);
 
         AddSection("CONNECTION");
         AddRow("Talk to the base", "Lets Slender read the battery, signal and settings from the base, and change the settings on the headset and base pages. Off stops Slender sending the base anything.",
@@ -161,7 +138,7 @@ public sealed partial class MainWindow
         YealinkSettings y = _config.Config.Yealink;
         HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
         AddHeadsetHeader(HeadsetName);
-        AddHeadsetPicture(h, y, HeadsetPictureView());
+        AddHeadsetPicture(h, y, BuiltInPictures.Headset);
 
         var rows = HeadsetView.StatusRows(h);
         if (rows.Count > 0)

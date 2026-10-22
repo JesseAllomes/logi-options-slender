@@ -13,85 +13,21 @@ namespace Slender.Settings;
 
 /// <summary>
 /// The Headset page's picture (m55): the WH64 or its base with callouts, in the same visual language as the mouse page (copper dot,
-/// leader line, label). The pictures are the user's own, copied from their Yealink USB Connect install into the same cache the
-/// mouse and keyboard pictures use; the callout positions are ours (YealinkPictures). Without USB Connect a plain drawing is shown.
+/// leader line, label). The pictures ship with Slender (BuiltInPictures); the callout positions are measured on them.
 /// </summary>
 public sealed partial class MainWindow
 {
     private const double HsStageWidth = 660, HsStageHeight = 440, HsPicture = 400, HsLabelWidth = 150, HsLabelHeight = 44;
 
-    private readonly Dictionary<YealinkView, CachedDevice?> _yealinkViews = [];
-    private readonly HashSet<YealinkView> _yealinkLoading = [];
-
     /// <summary>A base setting as the base stores it, by env key (the list the tray published), or null.</summary>
     private static string? HeadsetSettingRaw(HeadsetState? h, string key) => h?.Settings?.FirstOrDefault(s => s.Key == key)?.Raw;
 
-    private void AddHeadsetPicture(HeadsetState? h, YealinkSettings y, YealinkView view)
+    private void AddHeadsetPicture(HeadsetState? h, YealinkSettings y, CachedDevice device)
     {
         PagePanel.Children.Add(new Border { Height = 12 });
-        if (!_yealinkViews.TryGetValue(view, out CachedDevice? device))
-        {
-            LoadYealinkView(view);
-        }
-
         var stage = new Canvas { Width = HsStageWidth, Height = HsStageHeight, HorizontalAlignment = HorizontalAlignment.Left };
-        if (device is not null)
-        {
-            LayoutHeadsetPicture(stage, device, view, h, y);
-        }
-        else
-        {
-            LayoutHeadsetFallback(stage, view, h, y);
-        }
-
+        LayoutHeadsetPicture(stage, device, h, y);
         PagePanel.Children.Add(stage);
-
-        if (device is null && _yealinkViews.ContainsKey(view))
-        {
-            AddHeadsetNote("The pictures come from Yealink USB Connect on this PC. It isn't installed here, so a plain drawing is shown.");
-        }
-    }
-
-    private static string? FindYealinkDrawable() =>
-        YealinkPictures.FindInstall(InstalledPrograms.Entries(), Directory.Exists);
-
-    /// <summary>
-    /// Copies the picture off the UI thread the first time it is needed, then redraws the page. Every other view is copied
-    /// too, so Slender keeps all of them and USB Connect can be uninstalled afterwards. A miss is remembered so it is not retried.
-    /// </summary>
-    private void LoadYealinkView(YealinkView view)
-    {
-        if (!_yealinkLoading.Add(view))
-        {
-            return;
-        }
-
-        _ = Task.Run(() =>
-            {
-                string? drawable = FindYealinkDrawable();
-                var found = new Dictionary<YealinkView, CachedDevice?>();
-                foreach (YealinkView each in new[] { view }.Concat(Enum.GetValues<YealinkView>()).Distinct())
-                {
-                    found[each] = _assets.EnsureFrom(YealinkPictures.DeviceId(each), dir => YealinkPictures.Copy(each, drawable, dir))
-                        ?? _assets.EnsureFrom(YealinkPictures.LegacyDeviceId(each), _ => null);
-                }
-
-                return found;
-            })
-            .ContinueWith(t => DispatcherQueue.TryEnqueue(() =>
-            {
-                _yealinkLoading.Remove(view);
-                foreach (YealinkView each in Enum.GetValues<YealinkView>())
-                {
-                    _yealinkViews[each] = t.IsCompletedSuccessfully ? t.Result.GetValueOrDefault(each) : null;
-                }
-
-                BuildRail();
-                if (_page is Page.Headset or Page.Base)
-                {
-                    RebuildHeadsetPage();
-                }
-            }), TaskScheduler.Default);
     }
 
     /// <summary>What a callout says, and the action when clicking it should open a picker (the two buttons Slender can run an action for).</summary>
@@ -128,7 +64,7 @@ public sealed partial class MainWindow
         return $"{p}%{state}";
     }
 
-    private void LayoutHeadsetPicture(Canvas stage, CachedDevice device, YealinkView view, HeadsetState? h, YealinkSettings y)
+    private void LayoutHeadsetPicture(Canvas stage, CachedDevice device, HeadsetState? h, YealinkSettings y)
     {
         double left = (HsStageWidth - HsPicture) / 2, top = 20;
         var image = new Image
@@ -232,59 +168,5 @@ public sealed partial class MainWindow
             Canvas.SetTop(label, ys[i] - HsLabelHeight / 2);
             labels.Add(label);
         }
-    }
-
-    /// <summary>No USB Connect pictures: a plain headset or base drawing in the middle, the callouts as two columns without leader lines.</summary>
-    private void LayoutHeadsetFallback(Canvas stage, YealinkView view, HeadsetState? h, YealinkSettings y)
-    {
-        double cx = HsStageWidth / 2, cy = HsStageHeight / 2;
-        Brush line = Ui.Muted;
-        if (view == YealinkView.Base)
-        {
-            AddShape(stage, new Rectangle { Width = 170, Height = 44, RadiusX = 8, RadiusY = 8, Fill = Ui.Paper3, Stroke = line, StrokeThickness = 2 }, cx - 85, cy + 20);
-            AddShape(stage, new Rectangle { Width = 56, Height = 120, RadiusX = 10, RadiusY = 10, Fill = Ui.Paper3, Stroke = line, StrokeThickness = 2 }, cx - 28, cy - 90);
-        }
-        else
-        {
-            var figure = new PathFigure { StartPoint = new Point(cx - 62, cy + 10) };
-            figure.Segments.Add(new ArcSegment { Point = new Point(cx + 62, cy + 10), Size = new Size(62, 95), SweepDirection = SweepDirection.Clockwise });
-            var arc = new Microsoft.UI.Xaml.Shapes.Path
-            {
-                Data = new PathGeometry { Figures = { figure } },
-                Stroke = line,
-                StrokeThickness = 8,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-            };
-            AddShape(stage, arc, 0, 0);
-            AddShape(stage, new Rectangle { Width = 40, Height = 70, RadiusX = 14, RadiusY = 14, Fill = Ui.Paper3, Stroke = line, StrokeThickness = 2 }, cx - 82, cy - 5);
-            AddShape(stage, new Rectangle { Width = 40, Height = 70, RadiusX = 14, RadiusY = 14, Fill = Ui.Paper3, Stroke = line, StrokeThickness = 2 }, cx + 42, cy - 5);
-        }
-
-        var spots = YealinkPictures.Hotspots(view);
-        for (int side = -1; side <= 1; side += 2)
-        {
-            var column = spots.Where(s => s.LabelSide == side || (side > 0 && s.LabelSide == 0)).ToList();
-            for (int i = 0; i < column.Count; i++)
-            {
-                var (value, _, _) = HeadsetCallout(column[i].Slot, h, y);
-                var content = new StackPanel { Spacing = 1 };
-                content.Children.Add(Ui.Text(column[i].Name, 11.5, Ui.Muted));
-                content.Children.Add(Ui.Text(value, 13, Ui.Ink));
-                var label = new Border { Width = HsLabelWidth, Height = HsLabelHeight, Padding = new Thickness(9, 4, 9, 4), Child = content };
-                AutomationProperties.SetName(label, $"{column[i].Name}: {value}");
-                Canvas.SetLeft(label, side < 0 ? 0 : HsStageWidth - HsLabelWidth);
-                Canvas.SetTop(label, 20 + i * (HsLabelHeight + 12));
-                stage.Children.Add(label);
-            }
-        }
-    }
-
-    private static void AddShape(Canvas stage, UIElement shape, double x, double y)
-    {
-        shape.IsHitTestVisible = false;
-        Canvas.SetLeft(shape, x);
-        Canvas.SetTop(shape, y);
-        stage.Children.Add(shape);
     }
 }

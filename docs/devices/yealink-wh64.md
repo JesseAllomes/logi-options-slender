@@ -69,10 +69,8 @@ Windows microphone or Headset lights while the headset is connected reopens its 
 
 The Headset page shows the headset (mono or dual, Teams edition when the base's Platform setting is Teams) or the base, with a
 callout for each control and light: the call or Teams button, busylight, boom arm mute and battery on the headset, and the touch
-keys and lights on the base. Slender does not ship these pictures. It copies them from your own Yealink USB Connect install
-(found through its uninstall entry) into its own picture folder, with a backup, the same way it keeps the mouse and keyboard
-pictures. Refresh pictures takes a new copy; without USB Connect, Slender keeps the pictures it has, or draws a plain outline.
-The callout positions are Slender's own.
+keys and lights on the base. The pictures ship with Slender in `src/Slender.Settings/Assets/Devices` (`wh64-headset.webp`, `wh64-base.webp`), with the
+callout positions measured on them.
 
 ## Remove device
 

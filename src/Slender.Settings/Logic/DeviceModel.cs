@@ -9,14 +9,12 @@ public enum DeviceKind
     Keyboard,
 }
 
-/// <summary>Well-known device identifiers. Ids match SlenderStatus.Devices[].Id; model ids are Options+ model ids.</summary>
+/// <summary>Well-known device identifiers. Ids match SlenderStatus.Devices[].Id.</summary>
 public static class DeviceIds
 {
     public const string Mouse = "mx-master-4";
     public const string Keyboard = "ergo-k860";
     public const string Headset = "yealink-wh64";
-    public const string MouseModel = "2b042";
-    public const string KeyboardModel = "6b359";
 
     /// <summary>The thumb wheel is not a HID++ control id; Slender stores its binding under this pseudo id.</summary>
     public const ushort ThumbWheelPseudoId = 0xF150;
@@ -52,10 +50,13 @@ public sealed record ControlInfo(ushort Id, string Name, string NativeText, stri
 /// <summary>A copper hotspot on a device render. X and Y are percent of the image; LabelSide -1 = left, 1 = right.</summary>
 public sealed record Hotspot(ushort ControlId, string Name, string Slot, double X, double Y, int LabelSide);
 
-/// <summary>Parsed Options+ image layout for one device image.</summary>
+/// <summary>Image layout for one device picture: its pixel size and hotspots.</summary>
 public sealed record DeviceLayout(string ImageFile, string ThumbFile, int Width, int Height, IReadOnlyList<Hotspot> Hotspots);
 
-/// <summary>Static knowledge about the two supported devices. Used with or without Options+ assets.</summary>
+/// <summary>A device picture that ships with Slender, with its hotspots.</summary>
+public sealed record CachedDevice(string DeviceId, string ImagePath, string ThumbPath, DeviceLayout Layout, int ImageWidth, int ImageHeight);
+
+/// <summary>Static knowledge about the two supported devices.</summary>
 public static class ControlCatalog
 {
     public static IReadOnlyList<ControlInfo> MouseControls { get; } =

@@ -380,10 +380,6 @@ public sealed partial class MainWindow
         open.Click += (_, _) => OpenFolder(SlenderPaths.ConfigDirectory);
         AddRow("Settings file", "config.json. Slender saves every change here as you make it.", open);
 
-        var refresh = new Button { Content = "Refresh pictures", Style = Ui.Res<Style>("QuietButtonStyle") };
-        refresh.Click += async (_, _) => await RefreshDevicePicturesAsync(refresh);
-        AddRow("Mouse and keyboard pictures", "Slender keeps its own copy, with a backup. Refresh takes a new copy from Logi Options+ if it is installed, and keeps the pictures you have otherwise.", refresh);
-
         var import = new Button { Content = "Import…", Style = Ui.Res<Style>("QuietButtonStyle") };
         import.Click += async (_, _) => await ImportFromOptionsPlusAsync();
         AddRow("Import from Options+", "Copies your Logi Options+ buttons and settings into Slender. You see a preview first, and the current settings are backed up.", import);
@@ -626,24 +622,5 @@ public sealed partial class MainWindow
         {
             Services.CrashLog.Write(e);
         }
-    }
-
-    /// <summary>Replaces each device's pictures only with a complete fresh copy from Options+; otherwise keeps them and says so.</summary>
-    private async Task RefreshDevicePicturesAsync(Button button)
-    {
-        button.IsEnabled = false;
-        bool all = true;
-        foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
-        {
-            (CachedDevice? device, bool refreshed) = await Task.Run(() => _assets.Refresh(kind));
-            _devices[kind] = device;
-            all &= refreshed;
-        }
-
-        button.IsEnabled = true;
-        button.Content = all ? "Pictures refreshed" : _assets.OptionsPlusPresent
-            ? "Couldn't refresh, kept your pictures"
-            : "Options+ isn't on this PC, kept your pictures";
-        RebuildAll();
     }
 }

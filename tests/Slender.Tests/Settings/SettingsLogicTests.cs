@@ -332,35 +332,9 @@ public sealed class ImageGeometryTests
     }
 
     [Fact]
-    public void Mouse_hotspots_are_offset_by_the_centred_crop()
+    public void Hotspots_are_plain_percentages_of_the_picture()
     {
-        var layout = new DeviceLayout("r", "t", 636, 1024, []);
-        var spot = new Hotspot(1, "x", "s", 50, 50, 1);
-
-        (double x, double y) = HotspotMapper.ToImageFraction(DeviceKind.Mouse, spot, layout, 656, 1024);
-
-        Assert.Equal((318 + 10) / 656.0, x, 6);
-        Assert.Equal(0.5, y, 6);
-    }
-
-    [Fact]
-    public void Keyboard_hotspots_aim_at_the_key_centre()
-    {
-        var layout = new DeviceLayout("r", "t", 1872, 728, []);
-        var spot = new Hotspot(1, "x", "s", 7.5, 4.6, -1);
-
-        (double x, double y) = HotspotMapper.ToImageFraction(DeviceKind.Keyboard, spot, layout, 1810, 960);
-
-        Assert.Equal((7.5 + 1.7) / 100, x, 6);
-        Assert.Equal(9.6 / 100 * 728 / 960, y, 6);
-    }
-
-    [Fact]
-    public void Mapping_falls_back_to_plain_percent_without_image_size()
-    {
-        var layout = new DeviceLayout("r", "t", 0, 0, []);
-
-        (double x, double y) = HotspotMapper.ToImageFraction(DeviceKind.Mouse, new Hotspot(1, "x", "s", 25, 75, 1), layout, 0, 0);
+        (double x, double y) = HotspotMapper.ToImageFraction(new Hotspot(1, "x", "s", 25, 75, 1));
 
         Assert.Equal(0.25, x);
         Assert.Equal(0.75, y);

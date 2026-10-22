@@ -14,18 +14,13 @@ Slender.Settings.exe ◀──watches── %LOCALAPPDATA%\Slender\status.json �
 - **Launching.** Tray menu "Settings…" runs `SettingsLauncher`: if the named event `Local\Slender.Settings.Show` exists, it is signalled and the open window comes to the front; otherwise `Slender.Settings.exe` next to the tray is started (in a dev tree, the Settings project output is found as a fallback). Settings is single-instance through the mutex `Local\Slender.Settings`. Ship both apps in one folder.
 - **Window state** (size, last device, last app) is kept in `%LOCALAPPDATA%\Slender\settings-ui.json`, not in config.json.
 
-## Assets: nothing from Logitech is committed
+## Assets: the device pictures ship with Slender
 
-On first run (and whenever a file is missing) `AssetCache` copies from the local Options+ cache, `C:\ProgramData\LogiOptionsPlus\depots\<n>\<folder>\manifest.json`, the newest folder whose `devices[].modelId` matches:
+The pictures are in `src/Slender.Settings/Assets/Devices` and copy beside the app: `mx-master-4.webp`, `ergo-k860.webp`, `wh64-headset.webp` and `wh64-base.webp`. `BuiltInPictures` declares each picture's pixel size and its hotspots. Nothing is copied from Logi Options+ or Yealink USB Connect, and there is no picture cache or refresh.
 
-| Device | Model | Render | Hotspots |
-|---|---|---|---|
-| MX Master 4 | `2b042` | `device_buttons_image` (side_core.webp), thumbnail from `device_image` | `core_metadata.json`, image key `device_buttons_image` |
-| ERGO K860 | `6b359` | `device_keys_image` (front.webp) | `metadata.json`, image key `device_keys_image` |
+Hotspot X and Y are plain percentages of the picture file. A test checks that each declared size matches the file.
 
-They land in `%LOCALAPPDATA%\Slender\assets\<device-id>\` as `render.*`, `thumb.*` and a normalized `layout.json`. "Refresh pictures" on the General page re-copies them. If Options+ is not installed, the stage shows a vector silhouette and a plain list of controls.
-
-Slot to control id: `SLOT_NAME_MIDDLE_BUTTON` 0x0052, `MODESHIFT` 0x00C4, `FORWARD` 0x0056, `BACK` 0x0053, `GESTURE` 0x00C3, `ASSIGNMENT_NAME_SHOW_RADIAL_MENU` 0x01A0, `THUMBWHEEL` pseudo id 0xF150. K860 slots end in `_c<decimal CID>`. Hotspot percentages are relative to the metadata "origin" size, not the image file: the mouse picture is centred in its box; the keyboard markers are the top-left of a key (`HotspotMapper`).
+Slot to control id (Options+ import): `SLOT_NAME_MIDDLE_BUTTON` 0x0052, `MODESHIFT` 0x00C4, `FORWARD` 0x0056, `BACK` 0x0053, `GESTURE` 0x00C3, `ASSIGNMENT_NAME_SHOW_RADIAL_MENU` 0x01A0, `THUMBWHEEL` pseudo id 0xF150. K860 slots end in `_c<decimal CID>`.
 
 App icons are extracted at 256 px (`IShellItemImageFactory`) from `Profile.ExePath` or the running process, or, for Store apps, the largest package logo, and cached as PNG in `assets\icons`.
 
