@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Slender.Engine;
 using Slender.Engine.Config;
+using Slender.Engine.Devices;
 using Slender.Engine.Ring;
 using Slender.Tray.Ring;
 using Slender.Hidpp;
@@ -148,6 +149,27 @@ static class Program
         var watchdog = new MemoryWatchdog(MemoryWatchdog.ReadCurrentPrivateBytes, log.Info);
         using var app = new TrayApplication(store, mouse, startup, foreground: foreground, log: log, keyboard: keyboard, guard: guard,
             watchdog: watchdog, statusPath: Path.Combine(SyncPaths.StateDirectory, "status.json"));
+        // Device registry (m52): Windows pushes HID arrival/removal, each device module runs only while its device is around, and
+        // status.json says which devices are active, sleeping or disconnected. The Logi modules wrap the existing HID++ loops
+        // unchanged; an arrival only cuts their reconnect wait short. Disposed before the app, the presence source after it.
+        using IDevicePresenceSource? presence = noDevices ? null : new WindowsHidPresence();
+        using var registry = presence is null ? null
+            : new DeviceRegistry(DeviceCatalog.All, presence, new KnownDeviceStore(SyncPaths.StateDirectory, log), log);
+        using var mouseModule = registry is null ? null : new LogiDeviceModule(DeviceCatalog.MxMaster4, mouse, registry.ReportLink);
+        using var keyboardModule = registry is null ? null : new LogiDeviceModule(DeviceCatalog.ErgoK860, keyboard, registry.ReportLink);
+        if (registry is not null)
+        {
+            registry.Register(mouseModule!);
+            registry.Register(keyboardModule!);
+            registry.Changed += (_, _) =>
+            {
+                log.Info("devices: " + string.Join(", ", registry.Devices.Select(d => $"{d.Id}={d.Presence}" + (d.Faulted ? " (faulted)" : ""))));
+                app.DevicesChanged();
+            };
+            app.DeviceList = () => registry.Devices;
+            registry.Start();
+        }
+
         // Settings sync (OneDrive app folder). Inert until the user has set up sign-in and signed in; never blocks the tray.
         SyncSettings syncSettings = SyncSettings.LoadDefault();
         using var sync = new BackgroundSync(SyncServiceFactory.Create(), log);

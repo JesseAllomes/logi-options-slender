@@ -1,5 +1,6 @@
 using Slender.Engine;
 using Slender.Engine.Config;
+using Slender.Engine.Devices;
 
 namespace Slender.Tray;
 
@@ -26,7 +27,8 @@ public sealed record StatusSnapshot(
     IReadOnlyList<HostState>? KeyboardHosts = null,
     string? MouseBatteryEstimate = null,
     string? KeyboardBatteryEstimate = null,
-    Slender.Hidpp.DpiCapabilities? MouseDpiCaps = null);
+    Slender.Hidpp.DpiCapabilities? MouseDpiCaps = null,
+    IReadOnlyList<DeviceEntry>? Devices = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -187,8 +189,8 @@ public sealed class StatusPublisher : IDisposable
 
         return new SlenderStatus(
             [
-                MouseDeviceState(s),
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { BatteryEstimate = s.KeyboardConnected ? s.KeyboardBatteryEstimate : null, Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null },
+                MouseDeviceState(s) with { Presence = PresenceText(s.Devices, DeviceCatalog.MxMaster4) },
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { BatteryEstimate = s.KeyboardConnected ? s.KeyboardBatteryEstimate : null, Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null, Presence = PresenceText(s.Devices, DeviceCatalog.ErgoK860) },
             ],
             _optionsValue || s.PausedForOptionsPlus,
             s.ForegroundApp,
@@ -197,6 +199,16 @@ public sealed class StatusPublisher : IDisposable
             s.AvailableVersion,
             s.UpdateReady);
     }
+
+    /// <summary>The registry's word for one device; null without a registry or for a never-installed (hidden) device.</summary>
+    internal static string? PresenceText(IReadOnlyList<DeviceEntry>? devices, string id) =>
+        devices?.FirstOrDefault(d => d.Id == id)?.Presence switch
+        {
+            DevicePresence.Active => "active",
+            DevicePresence.Sleeping => "sleeping",
+            DevicePresence.Disconnected => "disconnected",
+            _ => null,
+        };
 
     private static bool DefaultOptionsPlusRunning()
     {

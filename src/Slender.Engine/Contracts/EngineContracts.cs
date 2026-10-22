@@ -552,6 +552,9 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 
     /// <summary>Easy-Switch channels read from 0x1814/0x1815 (display only); null when not read or unsupported.</summary>
     public IReadOnlyList<HostState>? Hosts { get; init; }
+
+    /// <summary>"active", "sleeping" or "disconnected" from the device registry (m52); null from an older tray or for a never-installed device.</summary>
+    public string? Presence { get; init; }
 }
 
 /// <summary>One Easy-Switch channel as the device reports it. Name is the host's friendly name, when the device stores one.</summary>

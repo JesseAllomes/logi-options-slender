@@ -65,6 +65,38 @@ public sealed class StatusPublisherTests : IDisposable
     }
 
     [Fact]
+    public void Device_presence_comes_from_the_registry_list()
+    {
+        var h = new Harness();
+        h.Snapshot = h.Snapshot with
+        {
+            Devices =
+            [
+                new Slender.Engine.Devices.DeviceEntry("mx-master-4", "MX Master 4", Slender.Engine.Devices.DevicePresence.Sleeping, false, null),
+                new Slender.Engine.Devices.DeviceEntry("ergo-k860", "ERGO K860", Slender.Engine.Devices.DevicePresence.Hidden, false, null),
+            ],
+        };
+        using StatusPublisher publisher = h.Create();
+
+        publisher.Changed();
+
+        SlenderStatus status = Assert.Single(h.Written);
+        Assert.Equal("sleeping", status.Devices[0].Presence);
+        Assert.Null(status.Devices[1].Presence);
+    }
+
+    [Fact]
+    public void Device_presence_is_null_without_a_registry()
+    {
+        var h = new Harness();
+        using StatusPublisher publisher = h.Create();
+
+        publisher.Changed();
+
+        Assert.All(Assert.Single(h.Written).Devices, d => Assert.Null(d.Presence));
+    }
+
+    [Fact]
     public void Mouse_feel_values_are_hidden_when_the_mouse_is_disconnected()
     {
         var h = new Harness();

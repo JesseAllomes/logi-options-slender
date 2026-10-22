@@ -337,6 +337,23 @@ public sealed class DeviceRegistryTests : IDisposable
     }
 
     [Fact]
+    public void KnownListedDeviceAfterLongOff_SleepsAtStartInsteadOfFlashingDisconnected()
+    {
+        var r1 = Make();
+        _presence.Set(BleKey);
+        r1.ReportLink("ble", true);
+        r1.Dispose();
+
+        _time.Advance(TimeSpan.FromHours(12)); // computer off overnight; Windows still lists the Bluetooth interfaces
+        var r2 = new DeviceRegistry([Usb, Ble], _presence, new KnownDeviceStore(_dir), _log, _time);
+        _made.Add(r2);
+        r2.Start();
+        Assert.Equal(DevicePresence.Sleeping, P(r2, "ble"));
+        r2.ReportLink("ble", true);
+        Assert.Equal(DevicePresence.Active, P(r2, "ble"));
+    }
+
+    [Fact]
     public void ChangedRaisedOutsideLockOnChange()
     {
         var r = Make();

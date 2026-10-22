@@ -72,6 +72,11 @@ public sealed class DeviceRegistry : IDisposable
         try { _presence.Start(); }
         catch (Exception e) { _log.Error("device presence start failed", e); }
         Refresh();
+        // A known device Windows lists at start gets its sleep grace from now: its module needs a moment to connect, and the last
+        // seen time may be from before the computer was off, which would flash it Disconnected on every boot.
+        var start = _time.GetUtcNow();
+        foreach (var s in _slots)
+            if (s.Known && s.LastAlive < start && _snapshot.Any(s.Device.Matches)) s.LastAlive = start;
         Evaluate(presenceChanged: false);
     });
 

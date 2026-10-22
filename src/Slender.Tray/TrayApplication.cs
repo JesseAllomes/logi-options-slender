@@ -85,7 +85,7 @@ public sealed class TrayApplication : IDisposable
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
                 ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
-                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps),
+                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke()),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -184,6 +184,12 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>The update state changed (found, downloaded). Safe from any thread.</summary>
     public void UpdateStateChanged() => Post(() => _status.Changed());
+
+    /// <summary>The device registry's list (m52), read for each status.json write; null when there is no registry.</summary>
+    public Func<IReadOnlyList<Slender.Engine.Devices.DeviceEntry>>? DeviceList { get; set; }
+
+    /// <summary>The registry's list changed: republish status.json. Safe from any thread.</summary>
+    public void DevicesChanged() => Post(() => _status.Changed());
 
     /// <summary>Shows an update balloon. Safe from any thread.</summary>
     public void NotifyUpdate(UpdateNoticeKind kind, string text) => Post(() =>
