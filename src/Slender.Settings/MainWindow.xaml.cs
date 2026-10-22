@@ -382,6 +382,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        EnsureVisibleKind();
         BuildRail();
         BuildStrip();
         ApplyPageVisibility();
@@ -445,6 +446,12 @@ public sealed partial class MainWindow : Window
 
         if (!_ready)
         {
+            return;
+        }
+
+        if (EnsureVisibleKind())
+        {
+            RebuildAll(); // the selected device was removed or hidden
             return;
         }
 

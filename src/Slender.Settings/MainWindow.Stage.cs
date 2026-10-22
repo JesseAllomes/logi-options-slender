@@ -630,7 +630,8 @@ public sealed partial class MainWindow
     private void UpdateStageDim()
     {
         DeviceState? state = _status.Device(ControlCatalog.DeviceId(_kind));
-        bool offline = _status.Status is not null && state is not { Connected: true };
+        string id = ControlCatalog.DeviceId(_kind);
+        bool offline = _status.Status is not null && (DevicePresenceView.Dimmed(_status.Status, id) || !DevicePresenceView.Visible(_status.Status, id));
         if (_render is not null)
         {
             _render.Opacity = offline ? 0.5 : 1;
