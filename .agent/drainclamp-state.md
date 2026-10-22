@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=195 -->
+<!-- drainclamp-build: state; schema=1; generation=197 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -53,6 +53,8 @@ Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with th
 Yealink base station control (user 2026-10-22) -> Slender gets full base control: ringer on/off and silence, ringtone choice (and custom ringtone upload if the base supports it), reboot, every base setting the SDK exposes, battery/dock, busylight; firmware update and factory reset stay out; reboot and ringtone upload sit behind a confirm and never run during a call; each new write is tested live only on user go-ahead
 
 Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, user-chosen mouse buttons answer or reject it from any app through the Edge extension clicking 3CX's own buttons; no base virtual-key route for now
+
+Custom ringtone (user 2026-10-22) -> the base must play the user's own sound, not the earpiece; route via Slender playing the WAV to the WH64 with base settings (headset ring off, Audio Play when Docked = Speaker); firmware modification and the screensaver file push stay off limits (never firmware); WH64 has no ringtone upload in any Yealink build
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -115,6 +117,7 @@ Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, u
 | m54 | Yealink WH64 module (src/Slender.Yealink): presence by USB, COL02 hook/mute/reject, mute synced with the Windows mic, call LEDs, Teams button (COL04 0x9B) bindable; tray submenu and Settings page; live output writes only with go-ahead | src/Slender.Yealink;src/Slender.Engine/Devices;src/Slender.Settings;src/Slender.Tray;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m52;m53 |
 | m55 | Yealink vendor channel: capture rig in the private research repo (USBPcap/USB Connect installs need go-ahead), battery, dock and link read-only first, then allowlisted settings | src/Slender.Yealink;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m54 |
 | m57 | 3CX ring buttons (built 03e5a99, released 1.1.45; live check open): while a 3CX call rings, chosen mouse buttons answer or reject it from any app (Edge extension clicks 3CX Answer/Decline; Slender to extension channel); buttons keep their normal action otherwise; Settings pickers | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m49 |
+| m58 | Custom ringtone from the base: when 3CX rings, Slender plays the user's WAV to the WH64 with the headset's own ring off and Audio Play when Docked = Speaker, so the base speaker plays it; stops on answer/reject/stop; live tests: does this base have the setting, does the speaker play USB audio when docked/undocked | src/Slender.Yealink;src/Slender.Engine;src/Slender.Settings;tests | pending | m57;m55 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
