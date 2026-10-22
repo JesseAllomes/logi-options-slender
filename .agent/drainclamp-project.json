@@ -732,6 +732,34 @@
         "targets": [
           "../yealink-headset-control"
         ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Slender vendor channel, reads only: COL05 0xC8 framing/reassembly, Hello, EnvGet short/long, DECT status events (battery, signal, docked), allowlisted command ids; headset status + read-only settings on the Headset page and tray; COL01 read-only input fallback for mute/hook/reject (fixes e9). No EnvSet yet",
+        "id": "c7",
+        "note": "",
+        "targets": [
+          "src/Slender.Yealink",
+          "src/Slender.Settings",
+          "src/Slender.Tray",
+          "tests/Slender.Tests/Yealink"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Headset/base pictures like the mouse and keyboard pages: copy WH64 base + headset (mono/dual/TS by headset model) PNGs at runtime from the local Yealink USB Connect install (never committed), backup copy like device-pictures, refresh button; Slender-authored hotspot layout for base touch keys/LEDs and headset buttons with callouts showing bindings and status; fallback drawing when USB Connect is absent",
+        "id": "c8",
+        "note": "",
+        "targets": [
+          "src/Slender.Settings",
+          "src/Slender.Engine/Contracts",
+          "src/Slender.Yealink",
+          "docs/devices/yealink-wh64.md"
+        ]
       }
     ]
   },
@@ -830,7 +858,7 @@
       "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 302,
+  "rev": 304,
   "review": {
     "advice": [],
     "config": {
