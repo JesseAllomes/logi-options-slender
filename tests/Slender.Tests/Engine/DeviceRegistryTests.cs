@@ -390,7 +390,7 @@ public sealed class DeviceRegistryTests : IDisposable
     [Fact]
     public void CatalogHasBothDevices()
     {
-        Assert.Equal([DeviceCatalog.MxMaster4, DeviceCatalog.ErgoK860], DeviceCatalog.All.Select(d => d.Id));
+        Assert.Equal([DeviceCatalog.MxMaster4, DeviceCatalog.ErgoK860, DeviceCatalog.YealinkWh64], DeviceCatalog.All.Select(d => d.Id));
         Assert.True(DeviceCatalog.All[0].Matches(new HidDeviceKey(0x046D, 0xB042)));
         Assert.False(DeviceCatalog.All[0].Matches(new HidDeviceKey(0x046D, 0xB359)));
     }

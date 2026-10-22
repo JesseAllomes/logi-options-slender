@@ -44,6 +44,7 @@
     <ProjectReference Include="..\..\src\Slender.Hidpp\Slender.Hidpp.csproj" />
     <ProjectReference Include="..\..\src\Slender.Engine\Slender.Engine.csproj" />
     <ProjectReference Include="..\..\src\Slender.Sync\Slender.Sync.csproj" />
+    <ProjectReference Include="..\..\src\Slender.Yealink\Slender.Yealink.csproj" />
 </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@
     <Project Path="src/Slender.Settings/Slender.Settings.csproj" />
     <Project Path="src/Slender.Sync/Slender.Sync.csproj" />
     <Project Path="src/Slender.Tray/Slender.Tray.csproj" />
+    <Project Path="src/Slender.Yealink/Slender.Yealink.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/Slender.Buzz/Slender.Buzz.csproj" />
