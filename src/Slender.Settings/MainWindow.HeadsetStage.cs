@@ -22,7 +22,6 @@ public sealed partial class MainWindow
 
     private readonly Dictionary<YealinkView, CachedDevice?> _yealinkViews = [];
     private readonly HashSet<YealinkView> _yealinkLoading = [];
-    private string? _yealinkRefreshText;
 
     /// <summary>A base setting as the base stores it, by env key (the list the tray published), or null.</summary>
     private static string? HeadsetSettingRaw(HeadsetState? h, string key) => h?.Settings?.FirstOrDefault(s => s.Key == key)?.Raw;
@@ -47,9 +46,6 @@ public sealed partial class MainWindow
 
         PagePanel.Children.Add(stage);
 
-        var refresh = new Button { Content = _yealinkRefreshText ?? "Refresh pictures", Style = Ui.Res<Style>("QuietButtonStyle"), Margin = new Thickness(0, 4, 0, 0) };
-        refresh.Click += async (_, _) => await RefreshYealinkPicturesAsync(refresh, view);
-        PagePanel.Children.Add(refresh);
         if (device is null && _yealinkViews.ContainsKey(view))
         {
             AddHeadsetNote("The pictures come from Yealink USB Connect on this PC. It isn't installed here, so a plain drawing is shown.");
@@ -96,26 +92,6 @@ public sealed partial class MainWindow
                     RebuildHeadsetPage();
                 }
             }), TaskScheduler.Default);
-    }
-
-    /// <summary>Takes a fresh copy of every view from USB Connect; keeps what there is when it is not installed.</summary>
-    private async Task RefreshYealinkPicturesAsync(Button button, YealinkView shown)
-    {
-        button.IsEnabled = false;
-        string? drawable = await Task.Run(FindYealinkDrawable);
-        bool all = true;
-        foreach (YealinkView view in new[] { shown }.Concat(Enum.GetValues<YealinkView>()).Distinct())
-        {
-            (CachedDevice? device, bool refreshed) = await Task.Run(() => _assets.RefreshFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, drawable, dir)));
-            _yealinkViews[view] = device;
-            all &= refreshed;
-        }
-
-        _yealinkRefreshText = all ? "Pictures refreshed" : drawable is null
-            ? "USB Connect isn't on this PC, kept your pictures"
-            : "Couldn't refresh, kept your pictures";
-        BuildRail();
-        BuildPage();
     }
 
     /// <summary>What a callout says, and the action when clicking it should open a picker (the two buttons Slender can run an action for).</summary>
