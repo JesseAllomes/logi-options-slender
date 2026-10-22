@@ -1,4 +1,5 @@
 using Slender.Engine;
+using Slender.Engine.Devices;
 
 namespace Slender.Yealink;
 
@@ -26,7 +27,7 @@ public sealed class YealinkVendorSession : IDisposable
     private readonly VendorReassembler _reassembler = new();
     private readonly VendorDecoder _decoder = new();
     private readonly byte[] _frame = new byte[VendorFrame.Length];
-    private readonly string?[] _values = new string?[VendorSettingsCatalog.All.Count];
+    private readonly string?[] _values = new string?[YealinkSettingsCatalog.All.Count];
     private readonly object _gate = new();
 
     private Timer? _timer;
@@ -63,8 +64,8 @@ public sealed class YealinkVendorSession : IDisposable
                 for (int i = 0; i < _values.Length; i++)
                     if (_values[i] is { } raw)
                     {
-                        var def = VendorSettingsCatalog.All[i];
-                        list.Add(new HeadsetSetting(def.Group, def.Label, def.Text(raw)));
+                        var def = YealinkSettingsCatalog.All[i];
+                        list.Add(new HeadsetSetting(def.Group, def.Label, def.Text(raw), def.Key, raw));
                     }
                 return _settings = list;
             }
@@ -114,7 +115,7 @@ public sealed class YealinkVendorSession : IDisposable
         lock (_gate)
         {
             if (command == (byte)VendorCommand.Hello) _helloDone = true;
-            if (key != null && VendorSettingsCatalog.IndexOf(key) is var i and >= 0 && _values[i] != value)
+            if (key != null && YealinkSettingsCatalog.IndexOf(key) is var i and >= 0 && _values[i] != value)
             {
                 _values[i] = value;
                 _settings = null;
@@ -144,7 +145,7 @@ public sealed class YealinkVendorSession : IDisposable
         StepHello => (byte)VendorCommand.Hello,
         StepVersion => (byte)VendorCommand.GetVersion,
         StepDect => (byte)VendorCommand.GetDect,
-        _ => VendorSettingsCatalog.All[_step - StepSettings].Key.Length <= VendorFrame.ShortKey ? (byte)VendorCommand.EnvGet : (byte)VendorCommand.EnvGetLong,
+        _ => YealinkSettingsCatalog.All[_step - StepSettings].Key.Length <= VendorFrame.ShortKey ? (byte)VendorCommand.EnvGet : (byte)VendorCommand.EnvGetLong,
     };
 
     private bool InFlightIs(byte command) => _step < _end && InFlightCommand() == command;
@@ -156,7 +157,7 @@ public sealed class YealinkVendorSession : IDisposable
     {
         if (!InFlightIs(command)) return false;
         int s = InFlightSetting();
-        return s < 0 || key == null || key == VendorSettingsCatalog.All[s].Key;
+        return s < 0 || key == null || key == YealinkSettingsCatalog.All[s].Key;
     }
 
     private void SendNext()
@@ -169,7 +170,7 @@ public sealed class YealinkVendorSession : IDisposable
             {
                 int s = InFlightSetting();
                 length = s >= 0
-                    ? VendorRequests.BuildEnvGet(VendorSettingsCatalog.All[s].Key, _frame)
+                    ? VendorRequests.BuildEnvGet(YealinkSettingsCatalog.All[s].Key, _frame)
                     : VendorRequests.Build((VendorCommand)InFlightCommand(), _frame);
                 if (!_write(_frame.AsSpan(0, length)))
                 {

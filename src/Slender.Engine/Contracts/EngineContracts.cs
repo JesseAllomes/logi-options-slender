@@ -609,6 +609,7 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 /// The Yealink base's own report (read-only). Every field is null until the base has said it. Signal is the DECT radio level the
 /// base reports (0 = none, 7 = full); InRange is false when the handset is not linked to the base. Settings is the read-only
 /// list, in the order USB Connect groups them. Model is the handset's own name ("Yealink WH64" ...), used to pick its picture.
+/// WriteProblem is the last setting change the tray refused or the base did not take, in plain words; null once one succeeds.
 /// </summary>
 public sealed record HeadsetState(
     bool? Registered,
@@ -618,10 +619,14 @@ public sealed record HeadsetState(
     int? Signal,
     bool? InRange,
     IReadOnlyList<HeadsetSetting>? Settings = null,
-    string? Model = null);
+    string? Model = null,
+    string? WriteProblem = null);
 
-/// <summary>One base setting as text: its USB Connect group ("General", "Sound"...), plain label and current value.</summary>
-public sealed record HeadsetSetting(string Group, string Label, string Value);
+/// <summary>
+/// One base setting: its USB Connect group ("General", "Sound"...), plain label and current value as text. Key is the env key
+/// (Devices.YealinkSettingsCatalog) and Raw the value as the base stores it; both null from a tray older than m59.
+/// </summary>
+public sealed record HeadsetSetting(string Group, string Label, string Value, string? Key = null, string? Raw = null);
 
 /// <summary>One Easy-Switch channel as the device reports it. Name is the host's friendly name, when the device stores one.</summary>
 public sealed record HostState(int Index, string? Name, bool Paired, bool Current);
@@ -668,6 +673,13 @@ public static class DeviceMessages
     /// reads at most once every few seconds and does nothing with the read switched off or Yealink USB Connect running.
     /// </summary>
     public const string HeadsetRefreshName = "Slender.HeadsetRefresh";
+
+    /// <summary>
+    /// Settings asks the tray to change one base setting (m59): wParam = index in Devices.YealinkSettingsCatalog.All, lParam = the
+    /// value as YealinkSettingDef.RawFor takes it (choice index, or the number for a range). The tray checks both against its own
+    /// catalog, writes, reads the setting back and publishes it; a refusal or failure shows as HeadsetState.WriteProblem.
+    /// </summary>
+    public const string HeadsetSetName = "Slender.HeadsetSet";
 }
 
 /// <summary>A ring-start reached the tray: when (local time) and which signal fired.</summary>

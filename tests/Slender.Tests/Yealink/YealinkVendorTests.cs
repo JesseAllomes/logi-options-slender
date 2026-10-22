@@ -1,5 +1,6 @@
 using System.Text;
 using Slender.Yealink;
+using Slender.Engine.Devices;
 
 namespace Slender.Tests.Yealink;
 
@@ -474,37 +475,37 @@ public class YealinkVendorDecoderTests
     }
 }
 
-public class YealinkVendorSettingsCatalogTests
+public class YealinkYealinkSettingsCatalogTests
 {
     [Fact]
     public void Keys_are_unique_and_every_label_and_group_is_filled()
     {
-        Assert.Equal(VendorSettingsCatalog.All.Count, VendorSettingsCatalog.All.Select(d => d.Key).Distinct().Count());
-        Assert.All(VendorSettingsCatalog.All, d =>
+        Assert.Equal(YealinkSettingsCatalog.All.Count, YealinkSettingsCatalog.All.Select(d => d.Key).Distinct().Count());
+        Assert.All(YealinkSettingsCatalog.All, d =>
         {
             Assert.False(string.IsNullOrWhiteSpace(d.Label));
             Assert.False(string.IsNullOrWhiteSpace(d.Group));
             Assert.True(d.Values is null || d.Values.Length % 2 == 0);
         });
-        Assert.Equal(["General", "Sound", "PC Softphone", "Desk Phone", "Calling", "Busylight"], VendorSettingsCatalog.All.Select(d => d.Group).Distinct());
+        Assert.Equal(["General", "Sound", "PC Softphone", "Desk Phone", "Calling", "Busylight"], YealinkSettingsCatalog.All.Select(d => d.Group).Distinct());
     }
 
     [Fact]
     public void Values_map_to_text_and_unknown_ones_stay_raw()
     {
-        var range = VendorSettingsCatalog.All[VendorSettingsCatalog.IndexOf("wireless.range")];
+        var range = YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("wireless.range")];
         Assert.Equal("Long (150 m)", range.Text("1"));
         Assert.Equal("9", range.Text("9"));
-        Assert.Equal("Off", VendorSettingsCatalog.All[VendorSettingsCatalog.IndexOf("keypad_tone.enable")].Text("0"));
-        Assert.Equal("3", VendorSettingsCatalog.All[VendorSettingsCatalog.IndexOf("sidetone.level")].Text("3"));
-        Assert.Equal(-1, VendorSettingsCatalog.IndexOf("no.such.key"));
+        Assert.Equal("Off", YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("keypad_tone.enable")].Text("0"));
+        Assert.Equal("3", YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("sidetone.level")].Text("3"));
+        Assert.Equal(-1, YealinkSettingsCatalog.IndexOf("no.such.key"));
     }
 
     [Fact]
     public void No_catalog_key_is_longer_than_a_request_can_carry()
     {
         var frame = new byte[64];
-        Assert.All(VendorSettingsCatalog.All, d => VendorRequests.BuildEnvGet(d.Key, frame));
+        Assert.All(YealinkSettingsCatalog.All, d => VendorRequests.BuildEnvGet(d.Key, frame));
     }
 }
 
@@ -596,7 +597,7 @@ public class YealinkVendorSessionTests
         Assert.False(_s.IsRunning);
         var labels = _sent.Select(Label).ToList();
         Assert.Equal(["cmd00", "cmd01", "cmd79"], labels.Take(3));
-        Assert.Equal(VendorSettingsCatalog.All.Select(d => d.Key), labels.Skip(3));
+        Assert.Equal(YealinkSettingsCatalog.All.Select(d => d.Key), labels.Skip(3));
         Assert.All(_sent, r => Assert.True(VendorRequests.IsAllowed(r[4])));
         Assert.All(_sent, r => Assert.Equal(VendorFrame.Length, r.Length));
     }
@@ -612,10 +613,10 @@ public class YealinkVendorSessionTests
         Assert.Equal(new HeadsetStatus(true, 100, true, true, 7, true), _s.Status);
         var settings = _s.Settings;
         Assert.Equal(4, settings.Count);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("General", "Wireless range", "Long (150 m)"), settings);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("Calling", "Call priority", "New call"), settings);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("Calling", "Auto answer when undocked", "Off"), settings);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("Sound", "Voice guidance language", "English"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("General", "Wireless range", "Long (150 m)", "wireless.range", "1"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Calling", "Call priority", "New call", "call.priority", "2"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Calling", "Auto answer when undocked", "Off", "auto_answer.enable", "0"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Sound", "Voice guidance language", "English", "language.prompt", "0"), settings);
         Assert.Equal(new[] { "Calling", "Calling", "General", "Sound" }, settings.Select(s => s.Group).Order());
         Assert.True(changes >= 5);
     }
@@ -687,7 +688,7 @@ public class YealinkVendorSessionTests
         Assert.Equal(4, _sent.Count);
         _s.Expire();                  // first key: no answer
         Assert.Equal(5, _sent.Count);
-        Assert.Equal(VendorSettingsCatalog.All[1].Key, Label(_sent[^1]));
+        Assert.Equal(YealinkSettingsCatalog.All[1].Key, Label(_sent[^1]));
         Answer();
         Assert.Equal(6, _sent.Count);
     }
