@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     private YealinkView HeadsetPictureView()
     {
         HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
-        return YealinkPictures.ChooseHeadset(h?.Model, HeadsetSettingValue(h, "Platform"));
+        return YealinkPictures.ChooseHeadset(h?.Model, HeadsetSettingRaw(h, "platform.mode"));
     }
 
     /// <summary>Copies the pictures once, the first time the rail lists the headset. The rail redraws when they are ready.</summary>
@@ -63,8 +63,8 @@ public sealed partial class MainWindow
 
         thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);
-        string caption = DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset)
-            ?? (baseTile ? "Base" : _status.Device(DeviceIds.Headset)?.BatteryPercent is { } pct ? $"{pct}%" : "On");
+        string caption = baseTile ? (offline ? "Off" : "On")
+            : DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset) ?? (_status.Device(DeviceIds.Headset)?.BatteryPercent is { } pct ? $"{pct}%" : "On");
         content.Children.Add(Ui.Text(caption, 11.5, Ui.Muted));
 
         var button = new Button
@@ -148,9 +148,9 @@ public sealed partial class MainWindow
         AddHeadsetHeader(BaseName);
         AddHeadsetPicture(h, y, YealinkView.Base);
 
-        AddSection("BASE STATUS");
-        AddRow("Read headset status", "Lets Slender talk to the base: read the battery, signal and settings, and change the settings on these pages. Off stops it from sending the base anything.",
-            PageToggle("Read headset status", y.VendorReads, on => _config.Update(x => x with { Yealink = x.Yealink with { VendorReads = on } })));
+        AddSection("CONNECTION");
+        AddRow("Talk to the base", "Lets Slender read the battery, signal and settings from the base, and change the settings on the headset and base pages. Off stops Slender sending the base anything.",
+            PageToggle("Talk to the base", y.VendorReads, on => _config.Update(x => x with { Yealink = x.Yealink with { VendorReads = on } })));
 
         AddHeadsetSettings(h, y, YealinkTarget.Base);
     }
@@ -166,12 +166,12 @@ public sealed partial class MainWindow
         var rows = HeadsetView.StatusRows(h);
         if (rows.Count > 0)
         {
-            AddSection("HEADSET");
+            AddSection("STATUS");
             foreach (var (label, value) in rows) AddRow(label, null, Ui.Text(value, 13, Ui.Ink));
         }
 
         AddSection("BUTTONS");
-        AddHeadsetButtonRow("Hook button", "The answer and end-call button. Runs on both pick up and hang up.", y.Hook, (s, a) => s with { Hook = a });
+        AddHeadsetButtonRow("Call button", "Answers and ends calls. Runs on both pick up and hang up.", y.Hook, (s, a) => s with { Hook = a });
         AddHeadsetButtonRow("Reject button", null, y.Reject, (s, a) => s with { Reject = a });
         AddHeadsetButtonRow("Teams button", null, y.TeamsButton, (s, a) => s with { TeamsButton = a });
 

@@ -159,7 +159,7 @@ public sealed class YealinkModule : IDeviceModule
         lock (_gate)
         {
             if (def == null || (raw = def.RawFor(value)) == null) problem = "That setting cannot be changed to that value.";
-            else if (_started && !_vendorOn) problem = "Turn on Read headset status to change base settings.";
+            else if (_started && !_vendorOn) problem = "Turn on Talk to the base (on the base page) to change these settings.";
             else if (_standDown()) problem = $"Close {YealinkConnectProcess} to change base settings.";
             else if ((vendor = _vendor) == null || _link == null) problem = "The headset base is not connected.";
             else if (def.Caution is YealinkCaution.Restarts or YealinkCaution.ModeSwitch && _offHook) problem = $"Finish the call before changing {def.Label}.";

@@ -125,7 +125,7 @@ public class YealinkVendorModuleTests
         Assert.True(h.InRange);
         Assert.True(h.Registered);
         Assert.Equal(2, h.Settings!.Count);
-        Assert.Contains(h.Settings, s => s is { Group: "General", Label: "Wireless range", Value: "Medium (30 m)" });
+        Assert.Contains(h.Settings, s => s is { Group: "Radio", Label: "Wireless range", Value: "Medium (30 m)" });
         Assert.Contains(h.Settings, s => s is { Group: "Sound", Label: "Keypad tone", Value: "On" });
         Assert.True(changed > 0);
     }

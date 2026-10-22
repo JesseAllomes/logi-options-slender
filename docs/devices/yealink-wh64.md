@@ -12,23 +12,26 @@ Four of the base's HID collections, all shared with other programs:
 - the Teams button collection
 - the standard telephony collection, input only: on this base mute, hook and reject arrive here (input report 2). Slender never
   writes to it, because Teams and the 3CX web client own its outputs. If both copies ever report the same press, it counts once.
-- the vendor command collection, only while Read headset status is on (see below)
+- the vendor command collection, only while Talk to the base is on (see below)
 
 The remaining collection is never opened. Nothing is written to the headset's firmware or settings, ever.
 
 ## What it reads from the base
 
-With Read headset status on (the default; `VendorReads` in config), Slender asks the base, over its vendor channel, for the
-headset's battery, charging, docked, signal and in/out of range, and for the base's own settings. The Headset page shows them and
+With Talk to the base on (the default; `VendorReads` in config; on the WH64 base page), Slender asks the base, over its vendor channel, for the
+headset's battery, charging, docked, signal and in/out of range, and for the base's own settings. The headset and base pages show them (each setting on the page for what it acts on) and
 the tray's Yealink WH64 submenu shows battery and docked. After a short handshake (hello, version) the base's own handset
 status is read, then one setting at a time (about fifty small exchanges). It reads at start, when the headset is plugged in, and
 when the Headset page is opened (at most every few seconds). In between, the base pushes battery and signal itself and
-Slender only listens. The settings list is read-only: change them in Yealink USB Connect.
+Slender only listens. Settings Slender knows (src/Slender.Engine/Devices/YealinkSettingsCatalog.cs) can be changed from those
+pages: only a listed value or a number in range, written with EnvSet (0x04 short key, 0x23 long key, both confirmed live on
+2026-10-22) and read back; free-text settings stay read-only. Voice prompt language (restarts the base) and softphone platform
+ask first and are refused during a call; the hearing-protection settings ask first.
 
-What Slender can send is a fixed list of five read requests: hello, version, handset status, and the two forms of "read one
-setting". Any other command is refused in code, so nothing that sets a value, resets, flashes, runs a shell, moves files, powers
-off or updates firmware can be built, whatever the page or config says. With Read headset status off the vendor collection is
-never opened and nothing is sent.
+What Slender can send is a fixed list: hello, version, handset status, the two forms of "read one setting", and the two forms of
+"set one setting", which are built only for a catalogued, editable setting and a value the catalog lists. Any other command is
+refused in code, so nothing that resets, flashes, runs a shell, moves files, powers off or updates firmware can be built,
+whatever the page or config says. With Talk to the base off the vendor collection is never opened and nothing is sent.
 
 ## What each button does
 

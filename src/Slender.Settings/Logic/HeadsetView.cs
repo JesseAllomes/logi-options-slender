@@ -48,7 +48,7 @@ public static class HeadsetView
             if (def.Target != target) continue;
             HeadsetSetting? reported = list.FirstOrDefault(s => s.Key == def.Key)
                 ?? list.FirstOrDefault(s => s.Key is null && s.Group == def.Group && s.Label == def.Label);
-            if (reported is null) continue;
+            if (reported is null || Hidden(def, list)) continue;
             var item = new HeadsetSettingItem(def, i, reported.Key is null ? null : reported.Raw, reported.Value);
             int at = groups.FindIndex(g => g.Group == def.Group);
             if (at < 0) groups.Add((def.Group, [item]));
@@ -56,6 +56,14 @@ public static class HeadsetView
         }
 
         return [.. groups.Select(g => (g.Group, (IReadOnlyList<HeadsetSettingItem>)g.Items))];
+    }
+
+    /// <summary>True when the setting depends on another one (ShowWhen) whose reported value is not one it needs; shown when that value is unknown.</summary>
+    public static bool Hidden(YealinkSettingDef def, IReadOnlyList<HeadsetSetting> list)
+    {
+        if (def.ShowWhenKey is not { } key || def.ShowWhenRaws is not { } raws) return false;
+        string? raw = list.FirstOrDefault(s => s.Key == key)?.Raw;
+        return raw is not null && !raws.Contains(raw);
     }
 
     /// <summary>A choice of exactly Off and On (raw "0" and "1"): shown as a switch instead of a list.</summary>

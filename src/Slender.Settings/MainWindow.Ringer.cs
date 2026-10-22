@@ -58,10 +58,10 @@ public sealed partial class MainWindow
             return box;
         }
 
-        AddRow("Answer with", RingerText.RingButtonsHelp,
-            RingButtonBox("Answer with", () => _config.Config.Haptics.RingAnswerButton, id => _config.Update(x => x with { Haptics = x.Haptics with { RingAnswerButton = id } })));
-        AddRow("Reject with", null,
-            RingButtonBox("Reject with", () => _config.Config.Haptics.RingRejectButton, id => _config.Update(x => x with { Haptics = x.Haptics with { RingRejectButton = id } })));
+        AddRow("Answer with mouse button", RingerText.RingButtonsHelp,
+            RingButtonBox("Answer with mouse button", () => _config.Config.Haptics.RingAnswerButton, id => _config.Update(x => x with { Haptics = x.Haptics with { RingAnswerButton = id } })));
+        AddRow("Reject with mouse button", null,
+            RingButtonBox("Reject with mouse button", () => _config.Config.Haptics.RingRejectButton, id => _config.Update(x => x with { Haptics = x.Haptics with { RingRejectButton = id } })));
 
         var setUpButton = new Button { Content = "Set up", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = available };
         ToolTipService.SetToolTip(setUpButton, available ? "Prepares the Edge extension and links it to Slender. Nothing runs until you load the extension in Edge." : "This Slender install does not include the 3CX ringer.");

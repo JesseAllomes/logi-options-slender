@@ -487,7 +487,16 @@ public class YealinkYealinkSettingsCatalogTests
             Assert.False(string.IsNullOrWhiteSpace(d.Group));
             Assert.True(d.Values is null || d.Values.Length % 2 == 0);
         });
-        Assert.Equal(["General", "Sound", "PC Softphone", "Desk Phone", "Calling", "Busylight"], YealinkSettingsCatalog.All.Select(d => d.Group).Distinct());
+        Assert.Equal(["Sound", "Prompts and mute reminder", "Ringing", "Calls", "Busylight", "Hearing protection", "Bluetooth and sleep"],
+            YealinkSettingsCatalog.All.Where(d => d.Target == YealinkTarget.Headset).Select(d => d.Group).Distinct());
+        Assert.Equal(["Base ringer", "Calls", "Radio", "Shared headsets", "Plug-in busylight"],
+            YealinkSettingsCatalog.All.Where(d => d.Target == YealinkTarget.Base).Select(d => d.Group).Distinct());
+        foreach (YealinkTarget page in Enum.GetValues<YealinkTarget>())
+        {
+            var labels = YealinkSettingsCatalog.All.Where(d => d.Target == page).Select(d => d.Label).ToList();
+            Assert.Equal(labels.Count, labels.Distinct().Count());
+        }
+        Assert.All(YealinkSettingsCatalog.All.Where(d => d.ShowWhenKey is not null), d => Assert.True(YealinkSettingsCatalog.IndexOf(d.ShowWhenKey) >= 0));
     }
 
     [Fact]
@@ -613,11 +622,11 @@ public class YealinkVendorSessionTests
         Assert.Equal(new HeadsetStatus(true, 100, true, true, 7, true), _s.Status);
         var settings = _s.Settings;
         Assert.Equal(4, settings.Count);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("General", "Wireless range", "Long (150 m)", "wireless.range", "1"), settings);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("Calling", "Call priority", "New call", "call.priority", "2"), settings);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("Calling", "Auto answer when undocked", "Off", "auto_answer.enable", "0"), settings);
-        Assert.Contains(new Slender.Engine.HeadsetSetting("Sound", "Voice guidance language", "English", "language.prompt", "0"), settings);
-        Assert.Equal(new[] { "Calling", "Calling", "General", "Sound" }, settings.Select(s => s.Group).Order());
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Radio", "Wireless range", "Long (150 m)", "wireless.range", "1"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Calls", "When a second call comes in", "Switch to the new call", "call.priority", "2"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Calls", "Answer when lifted from the base", "Off", "auto_answer.enable", "0"), settings);
+        Assert.Contains(new Slender.Engine.HeadsetSetting("Prompts and mute reminder", "Voice prompt language", "English", "language.prompt", "0"), settings);
+        Assert.Equal(new[] { "Calls", "Calls", "Prompts and mute reminder", "Radio" }, settings.Select(s => s.Group).Order());
         Assert.True(changes >= 5);
     }
 
@@ -676,7 +685,7 @@ public class YealinkVendorSessionTests
         int sent = _sent.Count;
         Reply(VendorVectors.EnvLong("auto_answer.enable", "1")); // first key in flight is bluetooth
         Assert.Equal(sent, _sent.Count);
-        Assert.Contains(_s.Settings, s => s.Label == "Auto answer when undocked" && s.Value == "On");
+        Assert.Contains(_s.Settings, s => s.Label == "Answer when lifted from the base" && s.Value == "On");
     }
 
     [Fact]

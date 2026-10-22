@@ -144,7 +144,7 @@ public sealed partial class MainWindow
 
         void Edit(Func<PointerSettings, PointerSettings> f) => _config.Update(x => x with { Pointer = f(x.Pointer) });
 
-        Slider threshold = PageSlider("Sensitivity", PointerMapping.ThresholdMin, PointerMapping.ThresholdMax, 1, c.Pointer.SmartShiftThreshold,
+        Slider threshold = PageSlider("SmartShift sensitivity", PointerMapping.ThresholdMin, PointerMapping.ThresholdMax, 1, c.Pointer.SmartShiftThreshold,
             v => Edit(p => p with { SmartShiftThreshold = PointerMapping.ClampThreshold(v) }), v => $"{PointerMapping.ClampThreshold(v)}", out TextBlock thresholdText);
         threshold.IsEnabled = c.Pointer.SmartShiftEnabled;
         thresholdText.Opacity = c.Pointer.SmartShiftEnabled ? 1 : 0.5;
@@ -156,7 +156,7 @@ public sealed partial class MainWindow
                 thresholdText.Opacity = on ? 1 : 0.5;
                 Edit(p => p with { SmartShiftEnabled = on });
             }));
-        AddRow("Sensitivity", "How fast you have to spin the wheel before SmartShift lets it free-spin. Lower switches sooner.", WithReadout(threshold, thresholdText));
+        AddRow("SmartShift sensitivity", "How fast you have to spin the wheel before SmartShift lets it free-spin. Lower switches sooner.", WithReadout(threshold, thresholdText));
 
         AddRow("Smooth scrolling", "Smoother scrolling in browsers and Office; older apps still scroll per notch",
             PageToggle("Smooth scrolling", c.Pointer.SmoothScroll, on => Edit(p => p with { SmoothScroll = on })));
@@ -382,7 +382,7 @@ public sealed partial class MainWindow
 
         var refresh = new Button { Content = "Refresh pictures", Style = Ui.Res<Style>("QuietButtonStyle") };
         refresh.Click += async (_, _) => await RefreshDevicePicturesAsync(refresh);
-        AddRow("Device pictures", "Slender keeps its own copy, with a backup. Refresh takes a new copy from Logi Options+ if it is installed, and keeps the pictures you have otherwise.", refresh);
+        AddRow("Mouse and keyboard pictures", "Slender keeps its own copy, with a backup. Refresh takes a new copy from Logi Options+ if it is installed, and keeps the pictures you have otherwise.", refresh);
 
         var import = new Button { Content = "Import…", Style = Ui.Res<Style>("QuietButtonStyle") };
         import.Click += async (_, _) => await ImportFromOptionsPlusAsync();

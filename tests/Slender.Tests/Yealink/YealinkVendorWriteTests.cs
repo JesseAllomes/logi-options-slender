@@ -416,7 +416,7 @@ public class YealinkVendorWriteModuleTests
         m.HeadsetChanged += () => changed++;
         m.SetSetting(Keypad, 1);
         Assert.Empty(_transport.Link!.VendorWrites);
-        Assert.Contains("Read headset status", m.GetHeadset()!.WriteProblem);
+        Assert.Contains("Talk to the base", m.GetHeadset()!.WriteProblem);
         Assert.Equal(1, changed);
     }
 

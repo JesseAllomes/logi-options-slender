@@ -24,8 +24,8 @@ public sealed partial class MainWindow
     private readonly HashSet<YealinkView> _yealinkLoading = [];
     private string? _yealinkRefreshText;
 
-    /// <summary>The value of a base setting by its label (the list the tray published), or null.</summary>
-    private static string? HeadsetSettingValue(HeadsetState? h, string label) => h?.Settings?.FirstOrDefault(s => s.Label == label)?.Value;
+    /// <summary>A base setting as the base stores it, by env key (the list the tray published), or null.</summary>
+    private static string? HeadsetSettingRaw(HeadsetState? h, string key) => h?.Settings?.FirstOrDefault(s => s.Key == key)?.Raw;
 
     private void AddHeadsetPicture(HeadsetState? h, YealinkSettings y, YealinkView view)
     {
@@ -124,13 +124,22 @@ public sealed partial class MainWindow
         YealinkSlots.CallButton => (HeadsetActionText(y.Hook), s => s.Hook, (s, a) => s with { Hook = a }),
         YealinkSlots.TeamsButton => (HeadsetActionText(y.TeamsButton), s => s.TeamsButton, (s, a) => s with { TeamsButton = a }),
         YealinkSlots.Battery => (BatteryCallout(h), null, null),
-        YealinkSlots.Busylight => (HeadsetSettingValue(h, "Busylight") is { } light ? light : "Shows call status", null, null),
+        YealinkSlots.Busylight => (BusylightCallout(h), null, null),
         YealinkSlots.BoomMute => (y.MuteSync ? "Syncs Windows microphone" : "Headset only", null, null),
         YealinkSlots.ChargeLight => (h?.Charging switch { true => "Charging", false => h.Docked == true ? "Docked" : "Not charging", _ => "Charging light" }, null, null),
         YealinkSlots.MuteLight => ("Shows mute", null, null),
         YealinkSlots.CallLight => ("Shows calls", null, null),
         _ => ("Touch key", null, null),
     };
+
+    private static string BusylightCallout(HeadsetState? h) =>
+        (HeadsetSettingRaw(h, "busylight_built_in.manual_enable"), HeadsetSettingRaw(h, "busylight_built_in.sync_enable")) switch
+        {
+            ("1", _) => "On (busy)",
+            (_, "1") => "Shows calls",
+            ("0", "0") => "Off",
+            _ => "Shows call status",
+        };
 
     private static string BatteryCallout(HeadsetState? h)
     {

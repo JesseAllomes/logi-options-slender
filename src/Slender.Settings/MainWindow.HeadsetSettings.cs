@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     private void AddHeadsetSettings(HeadsetState? h, YealinkSettings y, YealinkTarget target)
     {
         var groups = HeadsetView.Groups(h, target);
-        string? why = !y.VendorReads ? "Turn on Read headset status on the base page to see and change these."
+        string? why = !y.VendorReads ? "Turn on Talk to the base on the base page to see and change these."
             : _status.Status is null || !_status.TrayRunning ? "Slender isn't running, so these can't be changed."
             : DevicePresenceView.Dimmed(_status.Status, DeviceIds.Headset) || _status.Device(DeviceIds.Headset)?.Presence == DevicePresenceView.Sleeping ? "The headset isn't connected, so these can't be changed."
             : null;
@@ -54,13 +54,14 @@ public sealed partial class MainWindow
             foreach (HeadsetSettingItem reported in items)
             {
                 HeadsetSettingItem item = Shown(reported, h);
-                string? help = item.Def.Caution switch
+                string? caution = item.Def.Caution switch
                 {
                     YealinkCaution.Restarts => "The base restarts about 20 seconds after this change.",
                     YealinkCaution.ModeSwitch => "Switches the base between Teams and UC behaviour.",
                     YealinkCaution.HearingProtection => "Hearing protection. Slender asks before changing it.",
                     _ => null,
                 };
+                string? help = item.Def.Help is { } h1 && caution is not null ? h1 + " " + caution : item.Def.Help ?? caution;
                 AddRow(item.Def.Label, help, item.Adjustable ? HeadsetSettingControl(item, why is null) : Ui.Text(item.Text, 13, Ui.Ink));
             }
         }
