@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=164 -->
+<!-- drainclamp-build: state; schema=1; generation=168 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -43,6 +43,9 @@ Next build (user 2026-10-20) -> macros with adjustable pauses (research first), 
 Haptics redesign (user 2026-10-21; supersedes Light/Normal/Strong = 1/2/3 pulses) -> Light/Normal/Strong are real strength 33/66/100 (Strong = device max); every row gets a 1x/2x/3x cycles picker; a pattern builder (replaces the per-event Advanced expander) saves named patterns (buzz, cycles, gap, repeats, pause) that appear in every Pattern list and carry their own length; stored strength written only when a buzz needs a different level, overall Haptic feel restored after 5 s idle; everything has a Test button
 Settings sliders (user 2026-10-21) -> every slider moves with the mouse wheel while hovered (one step per notch)
 Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 640); Fn lock is the keyboard's: Fn+Esc shows at once in the popover and Settings and is never written back on start/connect
+Device modules (user 2026-10-22; supersedes downloadable/out-of-process modules, rejected for RAM and stability) -> every device is an in-process module compiled into the tray; it starts only while its device is present (active or sleeping) and stops when it disconnects; no threads, handles, timers or buffers while stopped; a module fault disables that module only (logged), never the tray; new devices ship with normal Slender updates; stable and memory-cheap is the bar
+Device states (user 2026-10-22) -> never installed = hidden; installed + active or sleeping = present (shown normally); installed + disconnected = greyed with Remove device; Remove = forget that device's Slender settings only, Windows pairing untouched (agent default, not objected); Bluetooth link down > 30 min or switched to another host = disconnected, waking returns it to present (agent default)
+Yealink WH64 headset (user 2026-10-22) -> built into Slender as a device module (USB 6993:B0AE); research, probes and raw captures stay in the private repo personal/yealink-headset-control and are scrubbed of device serials before anything lands here; never firmware; vendor channel (COL05 0xC8) allowlisted and read-only until mapped; stand down while YealinkUSBConnect runs; call control on the Yealink private telephony collection (COL02) so Teams keeps COL01
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -99,6 +102,10 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 | m49 | 3CX ringer: Edge extension on the 3CX web client (wraps WebHID sendReport Ringer usage, Notification fallback) -> one-shot native messaging host -> buzz pipe; tray ringer cue until ring stop, click/key or cap, not cut by other buzzes; PBX hostname written locally only (plan in .agent/handoff-next-build.md; awaiting user go-ahead) | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m45 |
 | m50 | haptics redesign: strength levels 33/66/100, cycles picker per row, named pattern builder replacing Advanced, minimal strength writes with idle restore, Test everywhere (Haptics + Notifications pages) | src/Slender.Engine;src/Slender.Settings;tests | done | m45 |
 | m51 | mouse wheel adjusts every Settings slider while hovered | src/Slender.Settings | done | m48 |
+| m52 | device registry: one HID arrival/removal notification (no polling), supported-device catalog, known-device store, present/disconnected/hidden states, IDeviceModule start/stop with per-module fault boundary; MX Master 4 and K860 registered as modules around LogiMouse/LogiKeyboard with no behaviour change, their connect retry woken by arrival | src/Slender.Engine/Devices;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Hidpp/LogiDeviceBase.cs;src/Slender.Tray/Program.cs;src/Slender.Tray/TrayApplication.cs;src/Slender.Tray/StatusPublisher.cs;tests/Slender.Tests | pending | |
+| m53 | device UI from the status device list: tray menu, popover, rail and Settings show present devices, grey disconnected ones with Remove device (forget Slender settings only), hide never-installed ones | src/Slender.Settings;src/Slender.Tray/TrayApplication.cs;tests/Slender.Tests | pending | m52 |
+| m54 | Yealink WH64 module (src/Slender.Yealink): presence by USB, COL02 hook/mute/reject, mute synced with the Windows mic, call LEDs, Teams button (COL04 0x9B) bindable; tray submenu and Settings page; live output writes only with go-ahead | src/Slender.Yealink;src/Slender.Engine/Devices;src/Slender.Settings;src/Slender.Tray;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m52;m53 |
+| m55 | Yealink vendor channel: capture rig in the private research repo (USBPcap/USB Connect installs need go-ahead), battery, dock and link read-only first, then allowlisted settings | src/Slender.Yealink;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m54 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -109,8 +116,6 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-20T05:48:11+00:00 38f85cd2 Picker: PickerFlyoutPresenterStyle MaxWidth 380 -> 900, picker sizes to its tab row (no scrolling). User reported side-scrolling in 1.1.35
-- 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
 - 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
 - 2026-10-20T08:03:22+00:00 df41d376 DECISIONS compacted 46 -> 21 lines (merged, superseded ones folded in); originals in .agent/drainclamp-decisions-archive.md
 - 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
@@ -129,4 +134,6 @@ Settings window (user 2026-10-21) -> minimum 1166 x 770 DIPs (supersedes 1040 x 
 - 2026-10-21T05:18:20+00:00 11f3dec0 1.1.40 released (version labels, screen choice for full window, exact calibration load); config backed up as config.backup-20261021-before-1.1.40.json
 - 2026-10-21T21:38:57+00:00 f744639c Strength glitch fixed: config save re-applied global feel 25 (ApplyMouseFeel) while player cached 100 -> later Strong buzzes played at 25. LogiMouse now caches real stored strength (_hapticNow, reset on session), SetHapticLevelAsync per-buzz (not the reconnect value), player compares against HapticStrengthNow. Strong=100 = 0x19B0 max. 1964 tests; pushed, not released
 - 2026-10-21T21:59:04+00:00 d0e471f3 Notification haptics never fired on Win11 26300: no EVENT_SYSTEM_ALERT, toast = ShellExperienceHost CoreWindow 'New notification' uncloaked (0x8018); client MSAA name only 'New notification' (app was always Unknown). Fix: second hook on UNCLOAKED (OBJID_WINDOW), MSAA BFS -> first STATICTEXT = app (ToastNames.AppFromParts). Verified live: tray reader returned 'Windows PowerShell'. 1966 tests; pushed, not released. 3CX appears after its first toast (3CX toasts only when unfocused, 30 s; m49 still the ringer path)
+- 2026-10-21T22:37:41+00:00 d78a709b 1.1.41 released (strength glitch fix, notification haptics on uncloak + app name from toast text); config backed up as config.backup-20261022-before-1.1.41.json. Waiting: user decides on m49 3CX plugin
+- 2026-10-22T01:51:42+00:00 7fb79a0b Planned device modules (in-process, presence-gated, greyed when disconnected) and the Yealink WH64 headset module: m52-m55; research in personal/yealink-headset-control
 <!-- /DC:LOG -->
