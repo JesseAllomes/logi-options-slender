@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=198 -->
+<!-- drainclamp-build: state; schema=1; generation=199 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -128,7 +128,6 @@ Custom ringtone (user 2026-10-22) -> the base must play the user's own sound, no
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-21T05:15:37+00:00 38affb6f Window opened short because popover unfolds on the 2560x720 taskbar strip (work 672); now OtherScreen picks last spot/primary/roomiest fitting screen, saves X/Y on close, no animation across screens. Version: tray menu 'Check for updates (vX)', popover top right, rail bottom left. 1961 tests; pushed, not released; UI unseen
 - 2026-10-21T05:18:20+00:00 11f3dec0 1.1.40 released (version labels, screen choice for full window, exact calibration load); config backed up as config.backup-20261021-before-1.1.40.json
 - 2026-10-21T21:38:57+00:00 f744639c Strength glitch fixed: config save re-applied global feel 25 (ApplyMouseFeel) while player cached 100 -> later Strong buzzes played at 25. LogiMouse now caches real stored strength (_hapticNow, reset on session), SetHapticLevelAsync per-buzz (not the reconnect value), player compares against HapticStrengthNow. Strong=100 = 0x19B0 max. 1964 tests; pushed, not released
 - 2026-10-21T21:59:04+00:00 d0e471f3 Notification haptics never fired on Win11 26300: no EVENT_SYSTEM_ALERT, toast = ShellExperienceHost CoreWindow 'New notification' uncloaked (0x8018); client MSAA name only 'New notification' (app was always Unknown). Fix: second hook on UNCLOAKED (OBJID_WINDOW), MSAA BFS -> first STATICTEXT = app (ToastNames.AppFromParts). Verified live: tray reader returned 'Windows PowerShell'. 1966 tests; pushed, not released. 3CX appears after its first toast (3CX toasts only when unfocused, 30 s; m49 still the ringer path)
@@ -148,4 +147,5 @@ Custom ringtone (user 2026-10-22) -> the base must play the user's own sound, no
 - 2026-10-22T04:33:20+00:00 cad31652 1.1.44 released (m54 Yealink headset module); config backed up as config.backup-20261022-before-1.1.44.json. Next c6: user updates, opens headset page, presses hook/mute/reject/Teams while agent reads the tray log; LED write test only on go-ahead
 - 2026-10-22T05:52:02+00:00 349d510e 1.1.45 released (m57 3CX ring buttons: Middle/Back/Forward answer or reject while a 3CX call rings, extension 1.1.0 polls a per-ring pipe); config backed up as config.backup-20261022-before-1.1.45.json; live check open
 - 2026-10-22T06:33:00+00:00 03c5f1bd 1.1.46 released (m55 c7/c8: Yealink vendor reads, COL01 mute fix, headset status/settings and picture page; research maps 395/399 RC8 commands incl. EnvSet wire format); config backed up as config.backup-20261022-before-1.1.46.json; live checks tomorrow
+- 2026-10-22T08:25:21+00:00 8f3468e3 Custom base ringtone fully investigated and ruled out: headset rings extracted (TONE_INCOMING*.mp3, 8kHz mono); base rings (Ring1-8) sit in DES-encrypted base fw (no key); base MCU command table has NO file commands (File* are Linux-only stubs, verified via recovered wire-byte map validated on 13/15 known cmds); no file-write path; flashing blocked (encrypted + never-firmware). Only custom-ring route left is Slender playing a WAV in the earpiece. Research in personal/yealink-headset-control: rc8-wire-map.md, ring-extraction.md, firmware-*.md
 <!-- /DC:LOG -->
