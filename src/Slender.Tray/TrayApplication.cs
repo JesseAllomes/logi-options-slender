@@ -17,7 +17,7 @@ public sealed class TrayApplication : IDisposable
 {
     private const uint WM_TRAY = Win32.WM_APP + 1, WM_POST = Win32.WM_APP + 2;
     private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4, TimerLockKeys = 5;
-    private const uint CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8;
+    private const uint CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8, CmdHeadsetMute = 9;
     private const string WindowClass = UpdateMessages.TrayWindowClass;
 
     private static readonly uint BatteryIntervalMs = (uint)TimeSpan.FromMinutes(5).TotalMilliseconds;
@@ -66,6 +66,7 @@ public sealed class TrayApplication : IDisposable
     private bool _disposed;
     private string _statusText = string.Empty;
     private string _keyboardText = string.Empty;
+    private string _headsetText = string.Empty;
     private UpdateCoordinator? _updates;
     private bool _readyBalloonShown;
     private readonly LockKeyIndicatorState _lockKeys = new();
@@ -212,6 +213,11 @@ public sealed class TrayApplication : IDisposable
         UpdateStatus(); // menu lines and tooltip follow the registry too
         _status.Changed();
     });
+
+    /// <summary>Headset microphone mute for the tray menu (set from Program): reads the Windows mute (null = unknown) and toggles it.</summary>
+    public Func<bool?>? HeadsetMicMuted { get; set; }
+
+    public Func<bool?>? ToggleHeadsetMic { get; set; }
 
     /// <summary>Forgets a device in the registry (set from Program); true when it was removed. Null without a registry.</summary>
     public Func<string, bool>? ForgetDevice { get; set; }
@@ -588,6 +594,22 @@ public sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>The headset's submenu (status line and "Mute microphone"); nothing while the headset was never installed here.</summary>
+    private unsafe void AppendHeadset(nint menu)
+    {
+        if (_headsetText.Length == 0) return;
+        nint sub = Win32.CreatePopupMenu();
+        if (sub == 0) return;
+        Append(sub, Win32.MF_GRAYED, 1, _headsetText);
+        bool present = PresenceOf(DeviceList?.Invoke(), Slender.Engine.Devices.DeviceCatalog.YealinkWh64) is Slender.Engine.Devices.DevicePresence.Active or Slender.Engine.Devices.DevicePresence.Sleeping;
+        bool muted = HeadsetMicMuted?.Invoke() == true;
+        Append(sub, (muted ? Win32.MF_CHECKED : 0) | (present && ToggleHeadsetMic is not null ? 0 : Win32.MF_GRAYED), CmdHeadsetMute, "Mute microphone");
+        fixed (char* p = "Yealink WH64")
+        {
+            Win32.AppendMenuW(menu, Win32.MF_STRING | Win32.MF_POPUP, (nuint)sub, p);
+        }
+    }
+
     private unsafe void ShowMenu()
     {
         nint menu = Win32.CreatePopupMenu();
@@ -606,6 +628,7 @@ public sealed class TrayApplication : IDisposable
 
             if (_statusText.Length > 0) Append(menu, Win32.MF_GRAYED, 1, _statusText);
             if (_keyboardText.Length > 0) Append(menu, Win32.MF_GRAYED, 1, _keyboardText);
+            AppendHeadset(menu);
             Append(menu, _config.Haptics.Enabled ? Win32.MF_CHECKED : 0, CmdHaptics, "Haptics");
             Append(menu, _config.LaunchAtLogin ? Win32.MF_CHECKED : 0, CmdLaunch, "Launch at login");
             Append(menu, 0, CmdSettings, "Settings…");
@@ -625,6 +648,9 @@ public sealed class TrayApplication : IDisposable
                     break;
                 case CmdLaunch:
                     OnLaunchClicked(!_config.LaunchAtLogin);
+                    break;
+                case CmdHeadsetMute:
+                    ToggleHeadsetMic?.Invoke();
                     break;
                 case CmdSettings:
                     OpenSettings(popover: false);
@@ -1046,6 +1072,8 @@ public sealed class TrayApplication : IDisposable
             ? TrayText.Paused
             : TrayText.Line("MX Master 4", mousePresence, _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort) ?? string.Empty;
         _keyboardText = TrayText.Line("ERGO K860", keyboardPresence, _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort) ?? string.Empty;
+        var headsetPresence = PresenceOf(list, Slender.Engine.Devices.DeviceCatalog.YealinkWh64);
+        _headsetText = TrayText.Line("Yealink WH64", headsetPresence, headsetPresence == Slender.Engine.Devices.DevicePresence.Active, null, false) ?? string.Empty;
         string tip = BatteryTip.Build(
         [
             new TipDevice("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort, mousePresence),

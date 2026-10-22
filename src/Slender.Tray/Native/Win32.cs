@@ -11,7 +11,7 @@ internal static unsafe class Win32
     public const uint NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4, NIF_INFO = 0x10;
     public const uint NIIF_INFO = 1, NIIF_WARNING = 2;
     public const uint NIN_BALLOONUSERCLICK = 0x405, WM_CLOSE = 0x0010;
-    public const uint MF_STRING = 0, MF_GRAYED = 1, MF_CHECKED = 8, MF_SEPARATOR = 0x800;
+    public const uint MF_STRING = 0, MF_GRAYED = 1, MF_CHECKED = 8, MF_POPUP = 0x10, MF_SEPARATOR = 0x800;
     public const uint TPM_RIGHTBUTTON = 2, TPM_BOTTOMALIGN = 0x20, TPM_RETURNCMD = 0x100;
     public const uint IMAGE_ICON = 1, LR_DEFAULTCOLOR = 0;
     public const int SM_CXSMICON = 49, SM_CYSMICON = 50;

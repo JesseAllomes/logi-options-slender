@@ -157,10 +157,22 @@ static class Program
             : new DeviceRegistry(DeviceCatalog.All, presence, new KnownDeviceStore(SyncPaths.StateDirectory, log), log);
         using var mouseModule = registry is null ? null : new LogiDeviceModule(DeviceCatalog.MxMaster4, mouse, registry.ReportLink);
         using var keyboardModule = registry is null ? null : new LogiDeviceModule(DeviceCatalog.ErgoK860, keyboard, registry.ReportLink);
+        // Yealink WH64 headset (m54): in-process, opened only while the headset is present; with --no-devices there is no registry and none exists.
+        var yealinkModule = registry is null ? null : new Slender.Yealink.YealinkModule(new Slender.Yealink.Windows.WindowsYealinkTransport(), log.Info)
+        {
+            LedWritesEnabled = config.Yealink.LedWrites,
+            MuteSync = config.Yealink.MuteSync,
+        };
+        // Button presses run their bound action on the thread pool, never on the module's read thread.
+        using var yealinkRouter = yealinkModule is null ? null
+            : new Slender.Yealink.YealinkRouter(yealinkModule, executor, () => engine.Config.Yealink, a => ThreadPool.QueueUserWorkItem(_ => a()), log.Info);
         if (registry is not null)
         {
             registry.Register(mouseModule!);
             registry.Register(keyboardModule!);
+            registry.Register(yealinkModule!);
+            app.HeadsetMicMuted = yealinkModule!.GetMicMuted;
+            app.ToggleHeadsetMic = yealinkModule.ToggleMicMute;
             registry.Changed += (_, _) =>
             {
                 log.Info("devices: " + string.Join(", ", registry.Devices.Select(d => $"{d.Id}={d.Presence}" + (d.Faulted ? " (faulted)" : ""))));
@@ -246,6 +258,9 @@ static class Program
             engine.ApplyConfig(changed);
             ApplyNotify(changed);
             keys.ApplyConfig(changed);
+            // Reopens the headset link only if a flag changed while it is open; off the UI thread because opening touches HID.
+            if (yealinkModule is not null)
+                _ = Task.Run(() => { var y = engine.Config.Yealink; yealinkModule.ApplySettings(y.LedWrites, y.MuteSync); });
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);

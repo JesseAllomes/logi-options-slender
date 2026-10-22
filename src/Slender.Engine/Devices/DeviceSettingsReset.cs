@@ -38,6 +38,8 @@ public static class DeviceSettingsReset
                     BatteryAlerts = config.BatteryAlerts with { KeyboardThresholdPercent = d.BatteryAlerts.KeyboardThresholdPercent },
                     Profiles = Reset(config.Profiles, p => p with { KeyBindings = new Dictionary<ushort, ActionSpec>() }),
                 };
+            case DeviceCatalog.YealinkWh64:
+                return config with { Yealink = d.Yealink };
             default:
                 return config;
         }

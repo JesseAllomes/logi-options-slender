@@ -136,6 +136,9 @@ public sealed class JsonConfigStore : IConfigStore
                 ? new KeyboardSettings(k.FnLock, (byte)(k.DisabledKeys & 0x1F), k.ShowLockKeyChanges, k.FnLockChannel1, k.FnLockChannel2, k.FnLockChannel3, k.IdentifySpareKeys)
                 : new KeyboardSettings(),
             BatteryAlerts = ToBatteryAlerts(dto.BatteryAlerts),
+            Yealink = dto.Yealink is { } y
+                ? new YealinkSettings(y.Hook ?? new ActionSpec.None(), y.Reject ?? new ActionSpec.None(), y.TeamsButton ?? new ActionSpec.None(), y.MuteSync, y.LedWrites)
+                : new YealinkSettings(),
             Ring = ToRingAppearance(dto.Ring),
             MyShortcuts = ToMyShortcuts(dto.MyShortcuts),
             OnboardRemaps = OnboardRemapKeys.Sanitize(dto.OnboardRemaps?.Where(r => r is { Cid: > 0 and <= ushort.MaxValue, Chord: not null }).Select(r => new OnboardRemap((ushort)r.Cid, r.Chord!))),
@@ -341,6 +344,14 @@ public sealed class JsonConfigStore : IConfigStore
                 MouseThresholdPercent = config.BatteryAlerts.MouseThresholdPercent,
                 KeyboardThresholdPercent = config.BatteryAlerts.KeyboardThresholdPercent,
             },
+            Yealink = new YealinkDto
+            {
+                Hook = config.Yealink.Hook,
+                Reject = config.Yealink.Reject,
+                TeamsButton = config.Yealink.TeamsButton,
+                MuteSync = config.Yealink.MuteSync,
+                LedWrites = config.Yealink.LedWrites,
+            },
             OnboardRemaps = config.OnboardRemaps.Count == 0 ? null : config.OnboardRemaps.Select(r => new OnboardRemapDto { Cid = r.Cid, Chord = r.Chord }).ToList(),
             MyShortcuts = config.MyShortcuts.Count == 0
                 ? null
@@ -451,6 +462,7 @@ public sealed class JsonConfigStore : IConfigStore
         public PointerDto? Pointer { get; set; }
         public KeyboardDto? Keyboard { get; set; }
         public BatteryAlertsDto? BatteryAlerts { get; set; }
+        public YealinkDto? Yealink { get; set; }
         public RingDto? Ring { get; set; }
         public List<CustomShortcutDto>? MyShortcuts { get; set; }
         public List<OnboardRemapDto>? OnboardRemaps { get; set; }
@@ -503,6 +515,15 @@ public sealed class JsonConfigStore : IConfigStore
         public bool Enabled { get; set; } = true;
         public int MouseThresholdPercent { get; set; } = 15;
         public int KeyboardThresholdPercent { get; set; } = 10;
+    }
+
+    internal sealed class YealinkDto
+    {
+        public ActionSpec? Hook { get; set; }
+        public ActionSpec? Reject { get; set; }
+        public ActionSpec? TeamsButton { get; set; }
+        public bool MuteSync { get; set; } = true;
+        public bool LedWrites { get; set; }
     }
 
     internal sealed class PointerDto

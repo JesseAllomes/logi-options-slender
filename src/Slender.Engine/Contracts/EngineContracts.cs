@@ -477,6 +477,22 @@ public sealed record KeyboardSettings(
     };
 }
 
+/// <summary>
+/// Yealink WH64 headset settings. Hook (answer/hang-up), Reject and the Teams button each run a Slender action; None (default)
+/// leaves the button to the phone app and Slender does nothing. MuteSync: the mute button toggles the Windows microphone and the
+/// headset mute light follows it. LedWrites (experimental, off): lets Slender write the headset's lights; nothing is ever written
+/// to the headset while it is off.
+/// </summary>
+public sealed record YealinkSettings(
+    ActionSpec Hook,
+    ActionSpec Reject,
+    ActionSpec TeamsButton,
+    bool MuteSync = true,
+    bool LedWrites = false)
+{
+    public YealinkSettings() : this(new ActionSpec.None(), new ActionSpec.None(), new ActionSpec.None()) { }
+}
+
 /// <summary>Low-battery notification: once per discharge when a device drops to the threshold while not charging; re-armed by charging or rising above it.</summary>
 public sealed record BatteryAlertSettings(bool Enabled = true, int MouseThresholdPercent = 15, int KeyboardThresholdPercent = 10);
 
@@ -499,6 +515,7 @@ public sealed record SlenderConfig(
     public PointerSettings Pointer { get; init; } = new();
     public KeyboardSettings Keyboard { get; init; } = new();
     public BatteryAlertSettings BatteryAlerts { get; init; } = new();
+    public YealinkSettings Yealink { get; init; } = new();
     public RingAppearance Ring { get; init; } = new();
 
     /// <summary>The macro library: <see cref="ActionSpec.Macro"/> refers to an entry by id.</summary>

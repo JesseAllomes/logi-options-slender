@@ -91,6 +91,51 @@ public sealed class YealinkModule : IDeviceModule
         }
     }
 
+    /// <summary>
+    /// Sets both flags and, if they differ from what the running link was opened with, reopens it so they take effect now
+    /// (Stop and Start under the module's own lock, so serial with the registry's calls). Nothing happens while stopped.
+    /// </summary>
+    public void ApplySettings(bool ledWrites, bool muteSync)
+    {
+        lock (_gate)
+        {
+            LedWritesEnabled = ledWrites;
+            MuteSync = muteSync;
+            if (!_started || (_ledsOn == ledWrites && _syncOn == muteSync)) return;
+            Close();
+            _ledsOn = ledWrites;
+            _syncOn = muteSync;
+            TryOpen();
+        }
+    }
+
+    /// <summary>The Windows default microphone's mute for the tray menu; null when it cannot be read. Uses the open link's microphone, else a short-lived one.</summary>
+    public bool? GetMicMuted()
+    {
+        try { return WithMic(m => m.GetMute()); }
+        catch (Exception ex) { _log($"Yealink: microphone read failed: {ex.Message}"); return null; }
+    }
+
+    /// <summary>Toggles the Windows microphone mute (the tray's "Mute microphone"); the headset light follows when it is on. Returns the new state, null on failure.</summary>
+    public bool? ToggleMicMute()
+    {
+        try
+        {
+            bool muted = WithMic(m => { bool next = !m.GetMute(); m.SetMute(next); return next; });
+            SetMuteLed(muted);
+            return muted;
+        }
+        catch (Exception ex) { _log($"Yealink: microphone toggle failed: {ex.Message}"); return null; }
+    }
+
+    private T WithMic<T>(Func<IMicMute, T> use)
+    {
+        if (_mic is { } open) return use(open);
+        var temp = _micFactory();
+        try { return use(temp); }
+        finally { DisposeMic(temp); }
+    }
+
     private void TryOpen()
     {
         try
