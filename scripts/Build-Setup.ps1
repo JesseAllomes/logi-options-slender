@@ -99,7 +99,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "RingerHost publish failed ($LASTEXITCODE)." }
     $RingerExt = Join-Path $RepoRoot 'tools\Slender.EdgeRinger\extension'
     New-Item -ItemType Directory -Force -Path (Join-Path $Staging 'EdgeRinger\extension') | Out-Null
-    foreach ($f in 'manifest.json', 'background.js', 'relay.js', 'main.js') {
+    foreach ($f in 'manifest.json', 'background.js', 'relay.js', 'controls.js', 'main.js') {
         Copy-Item -LiteralPath (Join-Path $RingerExt $f) -Destination (Join-Path $Staging "EdgeRinger\extension\$f") -Force
     }
     # Slender Excel add-in (opt-in from Settings; docs/excel-addin.md): one packed 64-bit .xll, staged as ExcelAddin\. Nothing registers it
