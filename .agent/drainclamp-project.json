@@ -561,6 +561,33 @@
           "src/Slender.Engine/Contracts/EngineContracts.cs"
         ]
       }
+    ],
+    "m53": [
+      {
+        "done": true,
+        "done_at": "2026-10-22T02:28:20+00:00",
+        "est_min": 25,
+        "goal": "tray: hide hidden devices in status/menu/tooltip, asleep/disconnected text, ForgetDevice message -> registry.Forget + config backup + DeviceSettingsReset",
+        "id": "c1",
+        "note": "status/menu/tooltip hide hidden, asleep/disconnected text, ForgetDevice -> registry.Forget + config backup (5 kept) + DeviceSettingsReset",
+        "targets": [
+          "src/Slender.Tray",
+          "src/Slender.Engine/Devices",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-22T02:28:22+00:00",
+        "est_min": 25,
+        "goal": "Settings: presence-aware rail/popover/stage/infobars, Remove device menu + confirm dialog posting ForgetDevice",
+        "id": "c2",
+        "note": "DevicePresenceView; rail/popover/stage/infobar by presence; Remove device menu, Delete key, confirm dialog",
+        "targets": [
+          "src/Slender.Settings",
+          "tests/Slender.Tests/Settings"
+        ]
+      }
     ]
   },
   "errors": [
@@ -648,7 +675,7 @@
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 277,
+  "rev": 281,
   "review": {
     "advice": [],
     "config": {
@@ -13441,7 +13468,7 @@
       "start": "2026-10-19T03:09:51+00:00"
     },
     {
-      "end": "2026-10-22T02:15:44+00:00",
+      "end": "2026-10-22T02:28:22+00:00",
       "id": "s10",
       "note": "",
       "source": "auto",
