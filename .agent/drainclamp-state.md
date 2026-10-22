@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=190 -->
+<!-- drainclamp-build: state; schema=1; generation=192 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -51,6 +51,8 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 Yealink WH64 buttons (user 2026-10-22) -> mute button = Windows mic mute with the headset mute LED kept in sync; hook, reject and Teams button each bindable to any Slender action, default leave to the phone app (Slender does nothing); 3CX/Teams keep call control; ring/off-hook LEDs wait for a call-state source (m49); LED output writes off by default until the live go-ahead test (agent default)
 
 Yealink base station control (user 2026-10-22) -> Slender gets full base control: ringer on/off and silence, ringtone choice (and custom ringtone upload if the base supports it), reboot, every base setting the SDK exposes, battery/dock, busylight; firmware update and factory reset stay out; reboot and ringtone upload sit behind a confirm and never run during a call; each new write is tested live only on user go-ahead
+
+Ring-time answer/reject (user 2026-10-22) -> 3CX only: while a 3CX call rings, user-chosen mouse buttons answer or reject it from any app through the Edge extension clicking 3CX's own buttons; no base virtual-key route for now
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -112,6 +114,7 @@ Yealink base station control (user 2026-10-22) -> Slender gets full base control
 | m53 | device UI from the status device list: tray menu, popover, rail and Settings show present devices, grey disconnected ones with Remove device (forget Slender settings only), hide never-installed ones | src/Slender.Settings;src/Slender.Tray/TrayApplication.cs;tests/Slender.Tests | done | m52 |
 | m54 | Yealink WH64 module (src/Slender.Yealink): presence by USB, COL02 hook/mute/reject, mute synced with the Windows mic, call LEDs, Teams button (COL04 0x9B) bindable; tray submenu and Settings page; live output writes only with go-ahead | src/Slender.Yealink;src/Slender.Engine/Devices;src/Slender.Settings;src/Slender.Tray;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m52;m53 |
 | m55 | Yealink vendor channel: capture rig in the private research repo (USBPcap/USB Connect installs need go-ahead), battery, dock and link read-only first, then allowlisted settings | src/Slender.Yealink;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m54 |
+| m57 | 3CX ring buttons: while a 3CX call rings, chosen mouse buttons answer or reject it from any app (Edge extension clicks 3CX Answer/Decline; Slender to extension channel); buttons keep their normal action otherwise; Settings pickers | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m49 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->

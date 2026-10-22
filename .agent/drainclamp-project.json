@@ -667,12 +667,12 @@
     ],
     "m55": [
       {
-        "done": false,
-        "done_at": null,
+        "done": true,
+        "done_at": "2026-10-22T05:27:49+00:00",
         "est_min": 25,
         "goal": "Run yl_sdk_probe (Yealink npm SDK libyealinkusbsdk.dll, getters only + 3 s SetRing test; user go-ahead 2026-10-22, user must be at desk) and map 0xC8 frames, settings tree, ringer, battery/dock, HID working state (fixes e9 COL02 silence?)",
         "id": "c1",
-        "note": "",
+        "note": "SDK probe ran (research f689c47): ring on/off works via 0xC8 cmd 0x3C; features reboot/reset/busylight/settings/time; battery+ringtone not via SDK; GetSettings NULL (no WH64 defs); HID mode YL_HID; 399 Rc8If command names listed in docs/sdk-probe-findings.md",
         "targets": [
           "../yealink-headset-control/tools/yl_sdk_probe.py",
           "../yealink-headset-control/captures"
@@ -687,6 +687,50 @@
         "note": "",
         "targets": [
           "src/Slender.Yealink"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Static map Rc8If command names to 0xC8 cmd ids from the SDK DLL (offline disassembly)",
+        "id": "c3",
+        "note": "",
+        "targets": [
+          "../yealink-headset-control"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Raw read sweep on the base: every WH64-relevant Get command (DECT status, headset battery, dock, signal, sleep, voice process, mute mode, env/config keys, HID mode); reads only",
+        "id": "c4",
+        "note": "",
+        "targets": [
+          "../yealink-headset-control"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "Settings map: install Yealink USB Connect (needs go-ahead), capture each setting change, map EnvSet keys and allowed values for base and headset",
+        "id": "c5",
+        "note": "",
+        "targets": [
+          "../yealink-headset-control"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 25,
+        "goal": "HID mode test: switch STD_HID/YL_HID and check COL02/COL01 button reports (fixes e9)",
+        "id": "c6",
+        "note": "",
+        "targets": [
+          "../yealink-headset-control"
         ]
       }
     ]
@@ -786,7 +830,7 @@
       "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 296,
+  "rev": 301,
   "review": {
     "advice": [],
     "config": {
@@ -13598,6 +13642,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-22T04:18:00+00:00"
+    },
+    {
+      "end": "2026-10-22T05:27:49+00:00",
+      "id": "s13",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-22T05:27:49+00:00"
     }
   ],
   "todos": [
