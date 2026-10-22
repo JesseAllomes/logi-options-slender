@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using Slender.Engine;
+using Slender.Engine.Ringer;
 using Slender.RingerHost;
 
 namespace Slender.Tests.Ringer;
@@ -90,5 +91,48 @@ public class NativeMessageTests
         string line = BuzzProtocol.RingLine(signal);
         Assert.True(line.Length <= BuzzProtocol.MaxLineChars);
         Assert.Equal(signal, BuzzProtocol.Parse(line)!.Ring);
+    }
+
+    private static byte[] Body(string json) => NativeMessage.ReadFrame(Framed(json))!;
+
+    [Theory]
+    [InlineData("""{"event":"poll"}""", true)]
+    [InlineData("""{ "event" : "poll" }""", true)]
+    [InlineData("""{"event":"poll","source":"hid"}""", false)]
+    [InlineData("""{"event":"ring-start"}""", false)]
+    [InlineData("""{"event":true}""", false)]
+    [InlineData("""{"event":"poll","event":"poll"}""", false)]
+    [InlineData("not json", false)]
+    public void Only_a_bare_poll_is_a_poll(string json, bool expected) => Assert.Equal(expected, NativeMessage.IsPoll(Body(json)));
+
+    [Theory]
+    [InlineData("""{"event":"ring-result","command":"answer","found":true}""", RingCommand.Answer, true)]
+    [InlineData("""{"event":"ring-result","command":"reject","found":false}""", RingCommand.Reject, false)]
+    [InlineData("""{"found":true,"command":"answer","event":"ring-result"}""", RingCommand.Answer, true)]
+    public void A_good_result_report_is_read(string json, RingCommand command, bool found) =>
+        Assert.Equal(new RingResult(command, found), NativeMessage.ParseResult(Body(json)));
+
+    [Theory]
+    [InlineData("""{"event":"ring-result","command":"answer"}""")]
+    [InlineData("""{"event":"ring-result","command":"hangup","found":true}""")]
+    [InlineData("""{"event":"ring-result","command":"answer","found":"yes"}""")]
+    [InlineData("""{"event":"ring-result","command":"answer","found":true,"title":"Caller"}""")]
+    [InlineData("""{"event":"ring-start","command":"answer","found":true}""")]
+    [InlineData("""{"event":"ring-result","command":"answer","found":1}""")]
+    public void Any_other_result_report_is_refused(string json)
+    {
+        Assert.Null(NativeMessage.ParseResult(Body(json)));
+        Assert.Null(NativeMessage.Parse(Body(json))); // and a result is never taken for a ring signal
+    }
+
+    [Fact]
+    public void A_poll_reply_carries_the_state()
+    {
+        var output = new MemoryStream();
+        NativeMessage.WriteReply(output, true, "answer");
+        string expected = """{"ok":true,"state":"answer"}""";
+        byte[] bytes = output.ToArray();
+        Assert.Equal((uint)expected.Length, BinaryPrimitives.ReadUInt32LittleEndian(bytes));
+        Assert.Equal(expected, Encoding.UTF8.GetString(bytes, 4, bytes.Length - 4));
     }
 }

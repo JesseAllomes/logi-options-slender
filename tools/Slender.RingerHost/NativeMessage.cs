@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
+using System.Text;
 using System.Text.Json;
 using Slender.Engine;
+using Slender.Engine.Ringer;
 
 namespace Slender.RingerHost;
 
@@ -61,10 +63,55 @@ public static class NativeMessage
         catch (JsonException) { return null; }
     }
 
-    /// <summary>Writes {"ok":true} or {"ok":false}, framed.</summary>
-    public static void WriteReply(Stream output, bool ok)
+    /// <summary>True for {"event":"poll"} and nothing else: the extension asks whether a ring button was pressed.</summary>
+    public static bool IsPoll(ReadOnlySpan<byte> json) =>
+        ReadFields(json) is { Count: 1 } f && f.TryGetValue("event", out var ev) && ev as string == "poll";
+
+    /// <summary>
+    /// The report in {"event":"ring-result","command":"answer"|"reject","found":true|false}: whether the extension found the 3CX control and
+    /// clicked it. Null for anything else, including extra properties.
+    /// </summary>
+    public static RingResult? ParseResult(ReadOnlySpan<byte> json)
     {
-        byte[] body = ok ? "{\"ok\":true}"u8.ToArray() : "{\"ok\":false}"u8.ToArray();
+        if (ReadFields(json) is not { Count: 3 } f
+            || f.GetValueOrDefault("event") as string != "ring-result"
+            || f.GetValueOrDefault("found") is not bool found) return null;
+        return (f.GetValueOrDefault("command") as string) switch
+        {
+            "answer" => new RingResult(RingCommand.Answer, found),
+            "reject" => new RingResult(RingCommand.Reject, found),
+            _ => null,
+        };
+    }
+
+    /// <summary>A flat object of text and true/false values; null for bad JSON, any other value type or a repeated name.</summary>
+    private static Dictionary<string, object>? ReadFields(ReadOnlySpan<byte> json)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = 4 });
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return null;
+            var fields = new Dictionary<string, object>();
+            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                string name = reader.GetString()!;
+                if (!reader.Read()) return null;
+                object value;
+                if (reader.TokenType == JsonTokenType.String) value = reader.GetString()!;
+                else if (reader.TokenType is JsonTokenType.True or JsonTokenType.False) value = reader.GetBoolean();
+                else return null;
+                if (!fields.TryAdd(name, value)) return null;
+            }
+            return reader.TokenType != JsonTokenType.EndObject || reader.Read() ? null : fields;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    /// <summary>Writes {"ok":true} or {"ok":false}, framed; a poll's answer adds "state" (none, answer, reject or off).</summary>
+    public static void WriteReply(Stream output, bool ok, string? state = null)
+    {
+        byte[] body = state is not null ? Encoding.UTF8.GetBytes($"{{\"ok\":{(ok ? "true" : "false")},\"state\":\"{state}\"}}")
+            : ok ? "{\"ok\":true}"u8.ToArray() : "{\"ok\":false}"u8.ToArray();
         Span<byte> header = stackalloc byte[4];
         BinaryPrimitives.WriteUInt32LittleEndian(header, (uint)body.Length);
         output.Write(header);
