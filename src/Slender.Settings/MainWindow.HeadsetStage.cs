@@ -74,7 +74,10 @@ public sealed partial class MainWindow
     private static string? FindYealinkDrawable() =>
         YealinkPictures.FindInstall(InstalledPrograms.Entries(), Directory.Exists);
 
-    /// <summary>Copies the picture off the UI thread the first time it is needed, then redraws the page. A miss is remembered so it is not retried.</summary>
+    /// <summary>
+    /// Copies the picture off the UI thread the first time it is needed, then redraws the page. Every other view is copied
+    /// too, so Slender keeps all of them and USB Connect can be uninstalled afterwards. A miss is remembered so it is not retried.
+    /// </summary>
     private void LoadYealinkView(YealinkView view)
     {
         if (!_yealinkLoading.Add(view))
@@ -83,7 +86,17 @@ public sealed partial class MainWindow
         }
 
         double scale = _scale;
-        _ = Task.Run(() => _assets.EnsureFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, FindYealinkDrawable(), scale, dir)))
+        _ = Task.Run(() =>
+            {
+                string? drawable = FindYealinkDrawable();
+                CachedDevice? shown = _assets.EnsureFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, drawable, scale, dir));
+                foreach (YealinkView other in Enum.GetValues<YealinkView>().Where(v => v != view))
+                {
+                    _assets.EnsureFrom(YealinkPictures.DeviceId(other), dir => YealinkPictures.Copy(other, drawable, scale, dir));
+                }
+
+                return shown;
+            })
             .ContinueWith(t => DispatcherQueue.TryEnqueue(() =>
             {
                 _yealinkLoading.Remove(view);
@@ -95,14 +108,14 @@ public sealed partial class MainWindow
             }), TaskScheduler.Default);
     }
 
-    /// <summary>Takes a fresh copy from USB Connect for the shown headset picture and the base; keeps what there is when it is not installed.</summary>
+    /// <summary>Takes a fresh copy of every view from USB Connect; keeps what there is when it is not installed.</summary>
     private async Task RefreshYealinkPicturesAsync(Button button, YealinkView shown)
     {
         button.IsEnabled = false;
         double scale = _scale;
         string? drawable = await Task.Run(FindYealinkDrawable);
         bool all = true;
-        foreach (YealinkView view in new[] { shown, YealinkView.Base }.Distinct())
+        foreach (YealinkView view in new[] { shown }.Concat(Enum.GetValues<YealinkView>()).Distinct())
         {
             (CachedDevice? device, bool refreshed) = await Task.Run(() => _assets.RefreshFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, drawable, scale, dir)));
             _yealinkViews[view] = device;
