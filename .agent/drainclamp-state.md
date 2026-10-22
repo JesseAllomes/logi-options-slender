@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=174 -->
+<!-- drainclamp-build: state; schema=1; generation=176 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -104,7 +104,7 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 | m49 | 3CX ringer: Edge extension on the 3CX web client (wraps WebHID sendReport Ringer usage, Notification fallback) -> one-shot native messaging host -> buzz pipe; tray ringer cue until ring stop, click/key or cap, not cut by other buzzes; PBX hostname written locally only (plan in .agent/handoff-next-build.md; awaiting user go-ahead) | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests | pending | m45 |
 | m50 | haptics redesign: strength levels 33/66/100, cycles picker per row, named pattern builder replacing Advanced, minimal strength writes with idle restore, Test everywhere (Haptics + Notifications pages) | src/Slender.Engine;src/Slender.Settings;tests | done | m45 |
 | m51 | mouse wheel adjusts every Settings slider while hovered | src/Slender.Settings | done | m48 |
-| m52 | device registry: one HID arrival/removal notification (no polling), supported-device catalog, known-device store, present/disconnected/hidden states, IDeviceModule start/stop with per-module fault boundary; MX Master 4 and K860 registered as modules around LogiMouse/LogiKeyboard with no behaviour change, their connect retry woken by arrival | src/Slender.Engine/Devices;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Hidpp/LogiDeviceBase.cs;src/Slender.Tray/Program.cs;src/Slender.Tray/TrayApplication.cs;src/Slender.Tray/StatusPublisher.cs;tests/Slender.Tests | pending | m56 |
+| m52 | device registry: one HID arrival/removal notification (no polling), supported-device catalog, known-device store, present/disconnected/hidden states, IDeviceModule start/stop with per-module fault boundary; MX Master 4 and K860 registered as modules around LogiMouse/LogiKeyboard with no behaviour change, their connect retry woken by arrival | src/Slender.Engine/Devices;src/Slender.Engine/Contracts/EngineContracts.cs;src/Slender.Hidpp/LogiDeviceBase.cs;src/Slender.Tray/Program.cs;src/Slender.Tray/TrayApplication.cs;src/Slender.Tray/StatusPublisher.cs;tests/Slender.Tests | done | m56 |
 | m53 | device UI from the status device list: tray menu, popover, rail and Settings show present devices, grey disconnected ones with Remove device (forget Slender settings only), hide never-installed ones | src/Slender.Settings;src/Slender.Tray/TrayApplication.cs;tests/Slender.Tests | pending | m52 |
 | m54 | Yealink WH64 module (src/Slender.Yealink): presence by USB, COL02 hook/mute/reject, mute synced with the Windows mic, call LEDs, Teams button (COL04 0x9B) bindable; tray submenu and Settings page; live output writes only with go-ahead | src/Slender.Yealink;src/Slender.Engine/Devices;src/Slender.Settings;src/Slender.Tray;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m52;m53 |
 | m55 | Yealink vendor channel: capture rig in the private research repo (USBPcap/USB Connect installs need go-ahead), battery, dock and link read-only first, then allowlisted settings | src/Slender.Yealink;docs/devices/yealink-wh64.md;tests/Slender.Tests | pending | m54 |
@@ -118,7 +118,6 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
 - 2026-10-20T09:57:25+00:00 8cb78553 Released 1.1.37: macros, Excel add-in, notification haptics, per-app DPI, battery estimate, K860 disconnect fix, onboard remaps, gap fixes; 1916 tests; device/UI checks and memory measurement pending
 - 2026-10-20T21:42:58+00:00 8eb4d25f 1.1.38 released (cue repeats for a ringer). 3CX ringer researched (web client drives the Yealink via WebHID; call notification only when unfocused, 30 s auto-close); m49 planned, awaiting go-ahead. Handoff rewritten for a fresh session
 - 2026-10-20T22:06:03+00:00 862bd1ab 187888a Settings window minimum raised to 1166x869 DIPs (user 2026-10-21: never smaller than current size, capped to work area); closing minimised/maximised no longer saves the size (had saved 160x28); 1919 tests; pushed, not released
@@ -138,4 +137,5 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 - 2026-10-22T01:51:42+00:00 7fb79a0b Planned device modules (in-process, presence-gated, greyed when disconnected) and the Yealink WH64 headset module: m52-m55; research in personal/yealink-headset-control
 - 2026-10-22T01:54:35+00:00 0507a6b0 Username found in tracked .agent audit/map/verify files on origin since first commit; user approved scrub to %localuser% with history rewrite + force-push (m56, do first), then m52
 - 2026-10-22T02:00:21+00:00 85e71a4b m56 done: history rewritten (username -> %localuser%), audit cache untracked + excluded, force-pushed main and tags; old SHAs remain on GitHub until GC
+- 2026-10-22T02:15:54+00:00 65ec2df5 m52 done: device registry (CM_Register_Notification presence, catalog, known-devices.txt, active/sleeping/disconnected/hidden, per-module fault boundary), Logi modules wrap existing loops (Wake cuts backoff), status.json Presence; 2006 tests, AOT clean; live arrival/removal not yet observed on hardware
 <!-- /DC:LOG -->

@@ -519,6 +519,48 @@
           "src/Slender.Settings/MainWindow.Ring.cs"
         ]
       }
+    ],
+    "m52": [
+      {
+        "done": true,
+        "done_at": "2026-10-22T02:15:44+00:00",
+        "est_min": 25,
+        "goal": "registry core: DeviceCatalog, KnownDeviceStore, DeviceRegistry (presence rules, sleep grace timer, module start/stop, fault boundary, forget) + tests",
+        "id": "c1",
+        "note": "DeviceCatalog, KnownDeviceStore (known-devices.txt), DeviceRegistry; boot grace for listed known devices",
+        "targets": [
+          "src/Slender.Engine/Devices",
+          "tests/Slender.Tests/Engine"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-22T02:15:44+00:00",
+        "est_min": 25,
+        "goal": "Windows HID presence (CM_Register_Notification, path VID/PID parse), LogiDeviceBase.Wake cuts reconnect backoff, LogiDeviceModule adapter + tests",
+        "id": "c2",
+        "note": "WindowsHidPresence (CM_Register_Notification, SetupDi path parse), LogiDeviceBase.Wake, LogiDeviceModule",
+        "targets": [
+          "src/Slender.Engine/Devices/WindowsHidPresence.cs",
+          "src/Slender.Hidpp/LogiDeviceBase.cs",
+          "src/Slender.Engine/Devices/LogiDeviceModule.cs",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-10-22T02:15:44+00:00",
+        "est_min": 20,
+        "goal": "wire registry into tray (Program.cs), DeviceState.Presence in status.json, review + verify",
+        "id": "c3",
+        "note": "Program.cs wiring, DeviceState.Presence in status.json, AOT publish clean",
+        "targets": [
+          "src/Slender.Tray/Program.cs",
+          "src/Slender.Tray/StatusPublisher.cs",
+          "src/Slender.Tray/TrayApplication.cs",
+          "src/Slender.Engine/Contracts/EngineContracts.cs"
+        ]
+      }
     ]
   },
   "errors": [
@@ -606,7 +648,7 @@
       "summary": "Refresh pictures deleted the only copy of the device renders when Options+ was no longer installed (depots gone). Restored from an old test scratchpad copy; Refresh now stages and swaps, AssetCache keeps a backup in %APPDATA%/Slender/device-pictures and restores from it"
     }
   ],
-  "rev": 271,
+  "rev": 277,
   "review": {
     "advice": [],
     "config": {
@@ -13397,6 +13439,13 @@
       "note": "",
       "source": "auto",
       "start": "2026-10-19T03:09:51+00:00"
+    },
+    {
+      "end": "2026-10-22T02:15:44+00:00",
+      "id": "s10",
+      "note": "",
+      "source": "auto",
+      "start": "2026-10-22T02:15:44+00:00"
     }
   ],
   "todos": [

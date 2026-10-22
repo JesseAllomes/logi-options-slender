@@ -75,3 +75,4 @@ resume uses `.agent/drainclamp-state.md` alone. This file is for forensics.
 - 2026-10-20T06:44:14+00:00 ed96ea6e Paused before the next build at the user's request (compact/new session). Builder briefs in .agent/handoff-next-build.md; one worktree per builder; nothing spawned
 - 2026-10-20T07:40:40+00:00 913ad3c1 Gate 6 priorities recorded in DECISIONS (memory to the max with flawless function; Excel add-in never locks/freezes/crashes Excel); review not run
 - 2026-10-20T08:03:22+00:00 df41d376 DECISIONS compacted 46 -> 21 lines (merged, superseded ones folded in); originals in .agent/drainclamp-decisions-archive.md
+- 2026-10-20T09:32:51+00:00 5673580e User closed m15, m16, m32; m38-m43 (released) and m47 marked done; m7 open until next week's payrun
