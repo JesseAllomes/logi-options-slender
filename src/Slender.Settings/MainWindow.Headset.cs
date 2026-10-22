@@ -1,7 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Slender.Engine;
+using Slender.Engine.Devices;
 using Slender.Settings.Logic;
 using Slender.Settings.Views;
 using Windows.System;
@@ -9,24 +11,61 @@ using Windows.System;
 namespace Slender.Settings;
 
 /// <summary>
-/// Yealink WH64 headset (m54): a rail tile, a popover row and one page. Shown only when a registry-aware tray lists the headset
-/// (present, or installed and disconnected). No render exists for it, so it uses a plain glyph; nothing is downloaded.
+/// Yealink WH64 (m54, split in m59): two rail tiles (headset, base), a popover row and two pages. Shown only when a registry-aware
+/// tray lists the headset (present, or installed and disconnected). The tiles use the cached Yealink pictures, else a plain glyph.
 /// </summary>
 public sealed partial class MainWindow
 {
     private const string HeadsetName = "Yealink WH64";
+    private const string BaseName = "WH64 base";
     private const string HeadsetGlyph = "";
 
     private bool HeadsetListed() => DevicePresenceView.Listed(_status.Status, DeviceIds.Headset);
 
-    private Button HeadsetTile()
+    private YealinkView HeadsetPictureView()
     {
-        bool selected = _page == Page.Headset;
+        HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
+        return YealinkPictures.ChooseHeadset(h?.Model, HeadsetSettingValue(h, "Platform"));
+    }
+
+    /// <summary>Copies the pictures once, the first time the rail lists the headset. The rail redraws when they are ready.</summary>
+    private void EnsureYealinkPictures()
+    {
+        YealinkView view = HeadsetPictureView();
+        if (!_yealinkViews.ContainsKey(view))
+        {
+            LoadYealinkView(view);
+        }
+    }
+
+    private Button HeadsetTile(bool baseTile = false)
+    {
+        Page page = baseTile ? Page.Base : Page.Headset;
+        string name = baseTile ? BaseName : HeadsetName;
+        bool selected = _page == page;
         bool offline = DevicePresenceView.Dimmed(_status.Status, DeviceIds.Headset);
         var content = new StackPanel { Spacing = 5, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var thumb = new Grid { Height = 44, Opacity = offline ? 0.5 : 1, Children = { new FontIcon { Glyph = HeadsetGlyph, FontSize = 26, Foreground = Ui.Muted } } };
+        FrameworkElement thumb;
+        if (_yealinkViews.GetValueOrDefault(baseTile ? YealinkView.Base : HeadsetPictureView()) is { } device)
+        {
+            thumb = new Image
+            {
+                Height = 44,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Source = Ui.Bitmap(device.ThumbPath, decodePixelHeight: (int)Math.Ceiling(44 * _scale)),
+            };
+        }
+        else
+        {
+            thumb = new Grid { Height = 44, Children = { new FontIcon { Glyph = HeadsetGlyph, FontSize = 26, Foreground = Ui.Muted } } };
+        }
+
+        thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);
-        content.Children.Add(Ui.Text(DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset) ?? (_status.Device(DeviceIds.Headset)?.BatteryPercent is { } pct ? $"{pct}%" : "On"), 11.5, Ui.Muted));
+        string caption = DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset)
+            ?? (baseTile ? "Base" : _status.Device(DeviceIds.Headset)?.BatteryPercent is { } pct ? $"{pct}%" : "On");
+        content.Children.Add(Ui.Text(caption, 11.5, Ui.Muted));
 
         var button = new Button
         {
@@ -40,10 +79,10 @@ public sealed partial class MainWindow
             Content = content,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
-        AutomationProperties.SetName(button, HeadsetName + DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset));
-        ToolTipService.SetToolTip(button, HeadsetName);
-        button.Click += (_, _) => OpenPage(Page.Headset);
-        if (DevicePresenceView.Removable(_status.Status, DeviceIds.Headset))
+        AutomationProperties.SetName(button, name + DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset));
+        ToolTipService.SetToolTip(button, name);
+        button.Click += (_, _) => OpenPage(page);
+        if (!baseTile && DevicePresenceView.Removable(_status.Status, DeviceIds.Headset))
         {
             var remove = new MenuFlyoutItem { Text = "Remove device", Icon = new FontIcon { Glyph = "" } };
             remove.Click += async (_, _) => await ConfirmRemoveDeviceAsync(DeviceIds.Headset, HeadsetName, "Windows is not changed.");
@@ -78,13 +117,12 @@ public sealed partial class MainWindow
         return row;
     }
 
-    /// <summary>The headset page: the three bindable buttons, mute sync and the (experimental) lights. Saved whether or not it is plugged in.</summary>
-    private void BuildHeadsetPage()
+    private void AddHeadsetHeader(string title)
     {
-        YealinkSettings y = _config.Config.Yealink;
-        var title = Ui.Text(HeadsetName, 24, Ui.Ink, Ui.Heading);
-        title.Margin = new Thickness(0, 0, 0, 4);
-        PagePanel.Children.Add(title);
+        _dropDownOpen = _sliderHeld = false;
+        var heading = Ui.Text(title, 24, Ui.Ink, Ui.Heading);
+        heading.Margin = new Thickness(0, 0, 0, 4);
+        PagePanel.Children.Add(heading);
         PagePanel.Children.Add(Ui.Text(DevicePresenceView.Subtitle(_status.Status, DeviceIds.Headset), 12, Ui.Muted));
         if (_status.Status is null || !_status.TrayRunning)
         {
@@ -95,40 +133,36 @@ public sealed partial class MainWindow
             AddHeadsetNote("The headset isn't connected. Your changes are saved and apply when it connects.");
         }
 
-        AddHeadsetPicture(_status.Device(DeviceIds.Headset)?.Headset, y);
-        AddHeadsetStatus();
-
-        AddSection("BUTTONS");
-        AddHeadsetButtonRow("Hook button", "The answer and end-call button. Runs on both pick up and hang up.", y.Hook, (s, a) => s with { Hook = a });
-        AddHeadsetButtonRow("Reject button", null, y.Reject, (s, a) => s with { Reject = a });
-        AddHeadsetButtonRow("Teams button", null, y.TeamsButton, (s, a) => s with { TeamsButton = a });
-
-        AddSection("BASE STATUS");
-        AddRow("Read headset status", "Lets Slender read the battery, signal and settings from the base. Read only: nothing is changed on the base. Off stops it from sending the base anything.",
-            PageToggle("Read headset status", y.VendorReads, on => _config.Update(x => x with { Yealink = x.Yealink with { VendorReads = on } })));
-
-        AddSection("MUTE AND LIGHTS");
-        AddRow("Mute syncs Windows microphone", "The mute button mutes the Windows microphone, and the headset's mute light follows it.",
-            PageToggle("Mute syncs Windows microphone", y.MuteSync, on => _config.Update(x => x with { Yealink = x.Yealink with { MuteSync = on } })));
-        AddRow("Headset lights", "Experimental. Lets Slender switch the headset's mute light. Off until it is tested on your headset; nothing is written to the headset while it is off.",
-            PageToggle("Headset lights", y.LedWrites, on => _config.Update(x => x with { Yealink = x.Yealink with { LedWrites = on } })));
-    }
-
-    private bool _headsetAsked;
-
-    /// <summary>
-    /// What the base says (battery, charging, docked, signal, range) and, read-only, its own settings grouped as USB Connect does.
-    /// Opening the page asks the tray for a fresh read, once per visit; the tray limits how often it really reads.
-    /// </summary>
-    private void AddHeadsetStatus()
-    {
         if (!_headsetAsked)
         {
             _headsetAsked = true;
             AskTray(DeviceMessages.HeadsetRefreshName);
         }
+    }
 
-        HeadsetState? h = _status.Status?.Devices.FirstOrDefault(d => d.Id == DeviceIds.Headset)?.Headset;
+    /// <summary>The base page: its picture and keys, the switch that lets Slender ask the base anything, then the base's own settings.</summary>
+    private void BuildBasePage()
+    {
+        YealinkSettings y = _config.Config.Yealink;
+        HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
+        AddHeadsetHeader(BaseName);
+        AddHeadsetPicture(h, y, YealinkView.Base);
+
+        AddSection("BASE STATUS");
+        AddRow("Read headset status", "Lets Slender talk to the base: read the battery, signal and settings, and change the settings on these pages. Off stops it from sending the base anything.",
+            PageToggle("Read headset status", y.VendorReads, on => _config.Update(x => x with { Yealink = x.Yealink with { VendorReads = on } })));
+
+        AddHeadsetSettings(h, y, YealinkTarget.Base);
+    }
+
+    /// <summary>The headset page: its picture, what it reports, the bindable buttons, mute sync and lights, then the headset's own settings. Saved whether or not it is plugged in.</summary>
+    private void BuildHeadsetPage()
+    {
+        YealinkSettings y = _config.Config.Yealink;
+        HeadsetState? h = _status.Device(DeviceIds.Headset)?.Headset;
+        AddHeadsetHeader(HeadsetName);
+        AddHeadsetPicture(h, y, HeadsetPictureView());
+
         var rows = HeadsetView.StatusRows(h);
         if (rows.Count > 0)
         {
@@ -136,16 +170,21 @@ public sealed partial class MainWindow
             foreach (var (label, value) in rows) AddRow(label, null, Ui.Text(value, 13, Ui.Ink));
         }
 
-        var groups = HeadsetView.Groups(h);
-        if (groups.Count == 0) return;
-        AddSection("BASE SETTINGS");
-        AddHeadsetNote("What the base is set to now. Change these in Yealink USB Connect; Slender only reads them.");
-        foreach (var (group, items) in groups)
-        {
-            AddSection(group.ToUpperInvariant());
-            foreach (var item in items) AddRow(item.Label, null, Ui.Text(item.Value, 13, Ui.Ink));
-        }
+        AddSection("BUTTONS");
+        AddHeadsetButtonRow("Hook button", "The answer and end-call button. Runs on both pick up and hang up.", y.Hook, (s, a) => s with { Hook = a });
+        AddHeadsetButtonRow("Reject button", null, y.Reject, (s, a) => s with { Reject = a });
+        AddHeadsetButtonRow("Teams button", null, y.TeamsButton, (s, a) => s with { TeamsButton = a });
+
+        AddSection("MUTE AND LIGHTS");
+        AddRow("Mute syncs Windows microphone", "The mute button mutes the Windows microphone, and the headset's mute light follows it.",
+            PageToggle("Mute syncs Windows microphone", y.MuteSync, on => _config.Update(x => x with { Yealink = x.Yealink with { MuteSync = on } })));
+        AddRow("Headset lights", "Experimental. Lets Slender switch the headset's mute light. Off until it is tested on your headset; nothing is written to the headset while it is off.",
+            PageToggle("Headset lights", y.LedWrites, on => _config.Update(x => x with { Yealink = x.Yealink with { LedWrites = on } })));
+
+        AddHeadsetSettings(h, y, YealinkTarget.Headset);
     }
+
+    private bool _headsetAsked;
 
     private void AddHeadsetNote(string text)
     {

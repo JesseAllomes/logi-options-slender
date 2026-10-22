@@ -28,7 +28,7 @@ public static class YealinkSlots
 
 /// <summary>
 /// The WH64 pictures come from the user's own Yealink USB Connect install, never from this repository: the install is found
-/// from its uninstall entry, the best scale folder for the screen is picked and the file for the headset's build is copied
+/// from its uninstall entry, the largest scale folder is picked and the file for the headset's build is copied
 /// into Slender's picture cache (<see cref="AssetCache.EnsureFrom"/>), which keeps it and a backup. The hotspot positions are
 /// Slender's own, measured on those images (percent of the picture). Pure so it can be tested.
 /// </summary>
@@ -38,14 +38,17 @@ public static class YealinkPictures
 
     private const string ModelDual = "dual";
 
-    /// <summary>The device-id folder name in the picture cache for a view.</summary>
+    /// <summary>
+    /// The device-id folder name in the picture cache for a view. The "-2" marks the large (largest scale) copy: caches made before
+    /// it hold the small picture, and a new id makes Slender take the large one once.
+    /// </summary>
     public static string DeviceId(YealinkView view) => view switch
     {
-        YealinkView.Mono => "yealink-wh64-mono",
-        YealinkView.Dual => "yealink-wh64-dual",
-        YealinkView.TeamsMono => "yealink-wh64-teams-mono",
-        YealinkView.TeamsDual => "yealink-wh64-teams-dual",
-        _ => "yealink-wh64-base",
+        YealinkView.Mono => "yealink-wh64-mono-2",
+        YealinkView.Dual => "yealink-wh64-dual-2",
+        YealinkView.TeamsMono => "yealink-wh64-teams-mono-2",
+        YealinkView.TeamsDual => "yealink-wh64-teams-dual-2",
+        _ => "yealink-wh64-base-2",
     };
 
     /// <summary>File name inside a USB Connect scale folder (the large picture).</summary>
@@ -102,12 +105,8 @@ public static class YealinkPictures
 
     public static string DrawableRoot(string installLocation) => Path.Combine(installLocation, "resource", "drawable");
 
-    /// <summary>
-    /// The scale folder names ("1", "1.25"...) best for a screen scale, best first: the smallest folder that is at least the
-    /// screen scale (sharp without waste), then larger ones, then smaller ones from the largest down. Names that are not
-    /// numbers (the svg folder) are ignored.
-    /// </summary>
-    public static IReadOnlyList<string> RankScales(IEnumerable<string> folderNames, double screenScale)
+    /// <summary>The scale folder names ("1", "1.25"...) largest first: the biggest picture is copied. Names that are not numbers (the svg folder) are ignored.</summary>
+    public static IReadOnlyList<string> RankScales(IEnumerable<string> folderNames)
     {
         var scales = new List<(string Name, double Value)>();
         foreach (string name in folderNames)
@@ -118,17 +117,13 @@ public static class YealinkPictures
             }
         }
 
-        return
-        [
-            .. scales.Where(s => s.Value >= screenScale - 1e-9).OrderBy(s => s.Value).Select(s => s.Name),
-            .. scales.Where(s => s.Value < screenScale - 1e-9).OrderByDescending(s => s.Value).Select(s => s.Name),
-        ];
+        return [.. scales.OrderByDescending(s => s.Value).Select(s => s.Name)];
     }
 
     /// <summary>The first existing file for a view over the ranked scale folders, or null.</summary>
-    public static string? FindFile(string drawableRoot, YealinkView view, double screenScale, Func<string, bool> fileExists, Func<string, IEnumerable<string>> subfolderNames)
+    public static string? FindFile(string drawableRoot, YealinkView view, Func<string, bool> fileExists, Func<string, IEnumerable<string>> subfolderNames)
     {
-        foreach (string scale in RankScales(subfolderNames(drawableRoot), screenScale))
+        foreach (string scale in RankScales(subfolderNames(drawableRoot)))
         {
             string path = Path.Combine(drawableRoot, scale, FileName(view));
             if (fileExists(path))
@@ -144,14 +139,14 @@ public static class YealinkPictures
     /// Fills dir with a copy of the view's picture and our hotspots (AssetCache's own layout.json, written last). Null when
     /// USB Connect is not installed or lacks the picture.
     /// </summary>
-    public static CachedDevice? Copy(YealinkView view, string? drawableRoot, double screenScale, string dir)
+    public static CachedDevice? Copy(YealinkView view, string? drawableRoot, string dir)
     {
         if (drawableRoot is null)
         {
             return null;
         }
 
-        string? file = FindFile(drawableRoot, view, screenScale, File.Exists,
+        string? file = FindFile(drawableRoot, view, File.Exists,
             root => Directory.Exists(root) ? Directory.EnumerateDirectories(root).Select(d => Path.GetFileName(d)) : []);
         if (file is null)
         {

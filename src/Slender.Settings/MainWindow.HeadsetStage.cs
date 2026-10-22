@@ -18,33 +18,18 @@ namespace Slender.Settings;
 /// </summary>
 public sealed partial class MainWindow
 {
-    private const double HsStageWidth = 640, HsStageHeight = 340, HsPicture = 300, HsLabelWidth = 168, HsLabelHeight = 44;
+    private const double HsStageWidth = 660, HsStageHeight = 440, HsPicture = 400, HsLabelWidth = 150, HsLabelHeight = 44;
 
     private readonly Dictionary<YealinkView, CachedDevice?> _yealinkViews = [];
     private readonly HashSet<YealinkView> _yealinkLoading = [];
-    private bool _headsetShowBase;
     private string? _yealinkRefreshText;
 
     /// <summary>The value of a base setting by its label (the list the tray published), or null.</summary>
     private static string? HeadsetSettingValue(HeadsetState? h, string label) => h?.Settings?.FirstOrDefault(s => s.Label == label)?.Value;
 
-    private void AddHeadsetPicture(HeadsetState? h, YealinkSettings y)
+    private void AddHeadsetPicture(HeadsetState? h, YealinkSettings y, YealinkView view)
     {
-        var bar = new SelectorBar { Margin = new Thickness(-8, 12, 0, 6) };
-        bar.Items.Add(new SelectorBarItem { Text = "Headset", Tag = false });
-        bar.Items.Add(new SelectorBarItem { Text = "Base", Tag = true });
-        bar.SelectedItem = bar.Items[_headsetShowBase ? 1 : 0];
-        bar.SelectionChanged += (s, _) =>
-        {
-            if (s.SelectedItem?.Tag is bool toBase && toBase != _headsetShowBase)
-            {
-                _headsetShowBase = toBase;
-                BuildPage();
-            }
-        };
-        PagePanel.Children.Add(bar);
-
-        YealinkView view = _headsetShowBase ? YealinkView.Base : YealinkPictures.ChooseHeadset(h?.Model, HeadsetSettingValue(h, "Platform"));
+        PagePanel.Children.Add(new Border { Height = 12 });
         if (!_yealinkViews.TryGetValue(view, out CachedDevice? device))
         {
             LoadYealinkView(view);
@@ -85,25 +70,29 @@ public sealed partial class MainWindow
             return;
         }
 
-        double scale = _scale;
         _ = Task.Run(() =>
             {
                 string? drawable = FindYealinkDrawable();
-                CachedDevice? shown = _assets.EnsureFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, drawable, scale, dir));
-                foreach (YealinkView other in Enum.GetValues<YealinkView>().Where(v => v != view))
+                var found = new Dictionary<YealinkView, CachedDevice?>();
+                foreach (YealinkView each in new[] { view }.Concat(Enum.GetValues<YealinkView>()).Distinct())
                 {
-                    _assets.EnsureFrom(YealinkPictures.DeviceId(other), dir => YealinkPictures.Copy(other, drawable, scale, dir));
+                    found[each] = _assets.EnsureFrom(YealinkPictures.DeviceId(each), dir => YealinkPictures.Copy(each, drawable, dir));
                 }
 
-                return shown;
+                return found;
             })
             .ContinueWith(t => DispatcherQueue.TryEnqueue(() =>
             {
                 _yealinkLoading.Remove(view);
-                _yealinkViews[view] = t.IsCompletedSuccessfully ? t.Result : null;
-                if (_page == Page.Headset)
+                foreach (YealinkView each in Enum.GetValues<YealinkView>())
                 {
-                    BuildPage();
+                    _yealinkViews[each] = t.IsCompletedSuccessfully ? t.Result.GetValueOrDefault(each) : null;
+                }
+
+                BuildRail();
+                if (_page is Page.Headset or Page.Base)
+                {
+                    RebuildHeadsetPage();
                 }
             }), TaskScheduler.Default);
     }
@@ -112,12 +101,11 @@ public sealed partial class MainWindow
     private async Task RefreshYealinkPicturesAsync(Button button, YealinkView shown)
     {
         button.IsEnabled = false;
-        double scale = _scale;
         string? drawable = await Task.Run(FindYealinkDrawable);
         bool all = true;
         foreach (YealinkView view in new[] { shown }.Concat(Enum.GetValues<YealinkView>()).Distinct())
         {
-            (CachedDevice? device, bool refreshed) = await Task.Run(() => _assets.RefreshFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, drawable, scale, dir)));
+            (CachedDevice? device, bool refreshed) = await Task.Run(() => _assets.RefreshFrom(YealinkPictures.DeviceId(view), dir => YealinkPictures.Copy(view, drawable, dir)));
             _yealinkViews[view] = device;
             all &= refreshed;
         }
@@ -125,6 +113,7 @@ public sealed partial class MainWindow
         _yealinkRefreshText = all ? "Pictures refreshed" : drawable is null
             ? "USB Connect isn't on this PC, kept your pictures"
             : "Couldn't refresh, kept your pictures";
+        BuildRail();
         BuildPage();
     }
 
@@ -156,17 +145,6 @@ public sealed partial class MainWindow
     private void LayoutHeadsetPicture(Canvas stage, CachedDevice device, YealinkView view, HeadsetState? h, YealinkSettings y)
     {
         double left = (HsStageWidth - HsPicture) / 2, top = 20;
-        var card = new Border
-        {
-            Width = HsPicture,
-            Height = HsPicture,
-            CornerRadius = new CornerRadius(14),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0xEC, 0xEC, 0xEA)),
-            IsHitTestVisible = false,
-        };
-        Canvas.SetLeft(card, left);
-        Canvas.SetTop(card, top);
-        stage.Children.Add(card);
         var image = new Image
         {
             Width = HsPicture,

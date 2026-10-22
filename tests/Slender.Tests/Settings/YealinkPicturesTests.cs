@@ -72,33 +72,27 @@ public sealed class YealinkPicturesTests : IDisposable
 
     // ---- scale and file choice ----
 
-    [Theory]
-    [InlineData(1.0, "1,1.25,1.5,2")]
-    [InlineData(1.25, "1.25,1.5,2,1")]
-    [InlineData(1.3, "1.5,2,1.25,1")]
-    [InlineData(2.5, "2,1.5,1.25,1")]
-    public void Scale_folders_are_ranked_for_the_screen(double screen, string expected)
+    [Fact]
+    public void Scale_folders_are_ranked_largest_first_ignoring_non_numbers()
     {
-        Assert.Equal(expected.Split(','), YealinkPictures.RankScales(["svg", "2", "1", "1.5", "1.25"], screen));
+        Assert.Equal(["2", "1.5", "1.25", "1"], YealinkPictures.RankScales(["svg", "2", "1", "1.5", "1.25"]));
+        Assert.Empty(YealinkPictures.RankScales(["svg"]));
     }
 
     [Fact]
-    public void The_file_comes_from_the_best_scale_that_has_it()
+    public void The_file_comes_from_the_largest_scale_that_has_it()
     {
         WritePicture("1", YealinkView.Mono, 400);
         WritePicture("2", YealinkView.Mono, 800);
-        string? two = YealinkPictures.FindFile(Drawable, YealinkView.Mono, 1.75, File.Exists, Subfolders);
+        string? two = YealinkPictures.FindFile(Drawable, YealinkView.Mono, File.Exists, Subfolders);
         Assert.EndsWith(Path.Combine("2", "pic_WH64_mono_big.png"), two);
 
-        string? one = YealinkPictures.FindFile(Drawable, YealinkView.Mono, 1.0, File.Exists, Subfolders);
-        Assert.EndsWith(Path.Combine("1", "pic_WH64_mono_big.png"), one);
-
-        // The best folder lacks this view: the next one is used.
+        // The largest folder lacks this view: the next one is used.
         WritePicture("1", YealinkView.Base, 400);
-        string? baseFile = YealinkPictures.FindFile(Drawable, YealinkView.Base, 2.0, File.Exists, Subfolders);
+        string? baseFile = YealinkPictures.FindFile(Drawable, YealinkView.Base, File.Exists, Subfolders);
         Assert.EndsWith(Path.Combine("1", "pic_WH64_base_big.png"), baseFile);
 
-        Assert.Null(YealinkPictures.FindFile(Drawable, YealinkView.TeamsDual, 1.0, File.Exists, Subfolders));
+        Assert.Null(YealinkPictures.FindFile(Drawable, YealinkView.TeamsDual, File.Exists, Subfolders));
     }
 
     // ---- variant choice ----
@@ -160,17 +154,17 @@ public sealed class YealinkPicturesTests : IDisposable
         WritePicture("2", YealinkView.Mono, 800);
         var cache = Cache;
 
-        CachedDevice? device = cache.EnsureFrom(YealinkPictures.DeviceId(YealinkView.Mono), dir => YealinkPictures.Copy(YealinkView.Mono, Drawable, 2.0, dir));
+        CachedDevice? device = cache.EnsureFrom(YealinkPictures.DeviceId(YealinkView.Mono), dir => YealinkPictures.Copy(YealinkView.Mono, Drawable, dir));
 
         Assert.NotNull(device);
         Assert.StartsWith(Path.Combine(_root, "assets"), device.ImagePath);
         Assert.Equal(800, device.ImageWidth);
         Assert.Equal(YealinkPictures.Hotspots(YealinkView.Mono), device.Layout.Hotspots);
-        Assert.True(File.Exists(Path.Combine(_root, "assets", "yealink-wh64-mono", "layout.json")));
+        Assert.True(File.Exists(Path.Combine(_root, "assets", "yealink-wh64-mono-2", "layout.json")));
 
         // Later runs read the cache and never need USB Connect.
         Directory.Delete(Install, recursive: true);
-        CachedDevice? again = cache.EnsureFrom(YealinkPictures.DeviceId(YealinkView.Mono), dir => YealinkPictures.Copy(YealinkView.Mono, null, 2.0, dir));
+        CachedDevice? again = cache.EnsureFrom(YealinkPictures.DeviceId(YealinkView.Mono), dir => YealinkPictures.Copy(YealinkView.Mono, null, dir));
         Assert.NotNull(again);
         Assert.Equal(device.Layout.Hotspots, again.Layout.Hotspots);
     }
@@ -178,8 +172,8 @@ public sealed class YealinkPicturesTests : IDisposable
     [Fact]
     public void Without_usb_connect_nothing_is_cached_and_the_caller_gets_null()
     {
-        Assert.Null(Cache.EnsureFrom(YealinkPictures.DeviceId(YealinkView.Base), dir => YealinkPictures.Copy(YealinkView.Base, null, 1.0, dir)));
-        Assert.False(Directory.Exists(Path.Combine(_root, "assets", "yealink-wh64-base")));
+        Assert.Null(Cache.EnsureFrom(YealinkPictures.DeviceId(YealinkView.Base), dir => YealinkPictures.Copy(YealinkView.Base, null, dir)));
+        Assert.False(Directory.Exists(Path.Combine(_root, "assets", "yealink-wh64-base-2")));
     }
 
     [Fact]
@@ -188,16 +182,16 @@ public sealed class YealinkPicturesTests : IDisposable
         WritePicture("1", YealinkView.Base, 400);
         var cache = Cache;
         string id = YealinkPictures.DeviceId(YealinkView.Base);
-        Assert.NotNull(cache.EnsureFrom(id, dir => YealinkPictures.Copy(YealinkView.Base, Drawable, 1.0, dir)));
+        Assert.NotNull(cache.EnsureFrom(id, dir => YealinkPictures.Copy(YealinkView.Base, Drawable, dir)));
 
         Directory.Delete(Install, recursive: true);
-        (CachedDevice? kept, bool refreshed) = cache.RefreshFrom(id, dir => YealinkPictures.Copy(YealinkView.Base, null, 1.0, dir));
+        (CachedDevice? kept, bool refreshed) = cache.RefreshFrom(id, dir => YealinkPictures.Copy(YealinkView.Base, null, dir));
         Assert.False(refreshed);
         Assert.NotNull(kept);
         Assert.Equal(400, kept.ImageWidth);
 
         WritePicture("2", YealinkView.Base, 800);
-        (CachedDevice? fresh, bool refreshedNow) = cache.RefreshFrom(id, dir => YealinkPictures.Copy(YealinkView.Base, Drawable, 2.0, dir));
+        (CachedDevice? fresh, bool refreshedNow) = cache.RefreshFrom(id, dir => YealinkPictures.Copy(YealinkView.Base, Drawable, dir));
         Assert.True(refreshedNow);
         Assert.Equal(800, fresh!.ImageWidth);
     }
@@ -208,11 +202,11 @@ public sealed class YealinkPicturesTests : IDisposable
         WritePicture("1", YealinkView.Dual, 400);
         var cache = Cache;
         string id = YealinkPictures.DeviceId(YealinkView.Dual);
-        Assert.NotNull(cache.EnsureFrom(id, dir => YealinkPictures.Copy(YealinkView.Dual, Drawable, 1.0, dir)));
+        Assert.NotNull(cache.EnsureFrom(id, dir => YealinkPictures.Copy(YealinkView.Dual, Drawable, dir)));
         Directory.Delete(Path.Combine(_root, "assets", id), recursive: true);
         Directory.Delete(Install, recursive: true);
 
-        CachedDevice? restored = cache.EnsureFrom(id, dir => YealinkPictures.Copy(YealinkView.Dual, null, 1.0, dir));
+        CachedDevice? restored = cache.EnsureFrom(id, dir => YealinkPictures.Copy(YealinkView.Dual, null, dir));
 
         Assert.NotNull(restored);
         Assert.Equal(YealinkPictures.Hotspots(YealinkView.Dual), restored.Layout.Hotspots);

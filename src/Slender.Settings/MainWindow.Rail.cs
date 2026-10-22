@@ -32,7 +32,9 @@ public sealed partial class MainWindow
 
         if (HeadsetListed())
         {
+            EnsureYealinkPictures();
             RailPanel.Children.Add(HeadsetTile());
+            RailPanel.Children.Add(HeadsetTile(baseTile: true));
         }
 
         if (visible.Count == 0 && !HeadsetListed())
@@ -51,7 +53,7 @@ public sealed partial class MainWindow
     /// <summary>Moves the selection to the first visible device when the selected one is hidden. True when it changed.</summary>
     private bool EnsureVisibleKind()
     {
-        if (_page == Page.Headset && !HeadsetListed())
+        if (_page is Page.Headset or Page.Base && !HeadsetListed())
         {
             _page = Page.Device; // the headset was removed or never listed by this tray
             return true;
@@ -160,7 +162,7 @@ public sealed partial class MainWindow
 
     private Button GearTile()
     {
-        bool selected = _page is not (Page.Device or Page.Headset);
+        bool selected = _page is not (Page.Device or Page.Headset or Page.Base);
         var button = new Button
         {
             Style = Ui.Res<Style>("PlainButtonStyle"),
@@ -173,9 +175,9 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
             Content = new Grid { Children = { new FontIcon { Glyph = "", FontSize = 18, Foreground = Ui.Mark, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } } },
         };
-        AutomationProperties.SetName(button, "Point and scroll, haptics, actions ring and general settings");
-        ToolTipService.SetToolTip(button, "Point & scroll, Haptics, Actions Ring, General");
-        button.Click += (_, _) => OpenPage(_page is Page.Device or Page.Headset ? Page.Pointer : _page);
+        AutomationProperties.SetName(button, "Point and scroll, haptics, actions ring, general and 3CX settings");
+        ToolTipService.SetToolTip(button, "Point & scroll, Haptics, Actions Ring, General, 3CX");
+        button.Click += (_, _) => OpenPage(_page is Page.Device or Page.Headset or Page.Base ? Page.Pointer : _page);
         return button;
     }
 

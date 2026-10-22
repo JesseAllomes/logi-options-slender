@@ -1,4 +1,5 @@
 using Slender.Engine;
+using Slender.Engine.Devices;
 using Slender.Settings.Logic;
 using Slender.Tray;
 
@@ -31,18 +32,75 @@ public class HeadsetViewTests
     [InlineData(7, "Good")]
     public void Signal_words(int signal, string word) => Assert.Equal(word, HeadsetView.SignalWord(signal));
 
-    [Fact]
-    public void Settings_group_in_the_order_sent_and_empty_when_none()
+    private static HeadsetSetting Reported(string key, string raw, string text = "x")
     {
-        Assert.Empty(HeadsetView.Groups(null));
-        Assert.Empty(HeadsetView.Groups(new HeadsetState(true, 1, false, false, 1, true, [])));
-        var h = new HeadsetState(true, 1, false, false, 1, true,
-        [
-            new HeadsetSetting("General", "A", "1"), new HeadsetSetting("Sound", "B", "2"), new HeadsetSetting("General", "C", "3"),
-        ]);
-        var g = HeadsetView.Groups(h);
-        Assert.Equal(["General", "Sound"], g.Select(x => x.Group));
-        Assert.Equal(["A", "C"], g[0].Items.Select(i => i.Label));
+        YealinkSettingDef def = YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf(key)];
+        return new HeadsetSetting(def.Group, def.Label, text, key, raw);
+    }
+
+    private static HeadsetState With(params HeadsetSetting[] settings) => new(true, 1, false, false, 1, true, settings);
+
+    [Fact]
+    public void Settings_are_empty_when_none_were_sent()
+    {
+        Assert.Empty(HeadsetView.Groups(null, YealinkTarget.Headset));
+        Assert.Empty(HeadsetView.Groups(With(), YealinkTarget.Base));
+    }
+
+    [Fact]
+    public void Settings_split_by_target_and_group_in_catalog_order()
+    {
+        var h = With(Reported("wireless.range", "1"), Reported("keypad_tone.enable", "1"), Reported("auto_sleep.time", "0"), Reported("call.priority", "2"));
+        var headset = HeadsetView.Groups(h, YealinkTarget.Headset);
+        Assert.Equal(["General", "Sound"], headset.Select(g => g.Group));
+        Assert.Equal(["auto_sleep.time"], headset[0].Items.Select(i => i.Def.Key));
+        Assert.Equal(["keypad_tone.enable"], headset[1].Items.Select(i => i.Def.Key));
+
+        var baseGroups = HeadsetView.Groups(h, YealinkTarget.Base);
+        Assert.Equal(["General", "Calling"], baseGroups.Select(g => g.Group));
+        Assert.Equal(["wireless.range"], baseGroups[0].Items.Select(i => i.Def.Key));
+        Assert.Equal("2", baseGroups[1].Items[0].Raw);
+        Assert.Equal(YealinkSettingsCatalog.IndexOf("call.priority"), baseGroups[1].Items[0].CatalogIndex);
+    }
+
+    [Fact]
+    public void A_setting_with_the_same_label_in_two_groups_matches_by_key()
+    {
+        var h = With(Reported("phone_ringtone.enable", "0"));
+        Assert.Empty(HeadsetView.Groups(h, YealinkTarget.Base));
+        var g = Assert.Single(HeadsetView.Groups(h, YealinkTarget.Headset));
+        Assert.Equal("Desk Phone", g.Group);
+    }
+
+    [Fact]
+    public void Settings_from_an_older_tray_match_by_label_and_stay_read_only()
+    {
+        var h = With(new HeadsetSetting("Sound", "Keypad tone", "On"), new HeadsetSetting("Sound", "Not in the catalog", "?"));
+        var g = Assert.Single(HeadsetView.Groups(h, YealinkTarget.Headset));
+        HeadsetSettingItem item = Assert.Single(g.Items);
+        Assert.Equal("keypad_tone.enable", item.Def.Key);
+        Assert.Null(item.Raw);
+        Assert.False(item.Adjustable);
+        Assert.Equal("On", item.Text);
+    }
+
+    [Fact]
+    public void Only_settable_settings_with_a_known_raw_value_are_adjustable()
+    {
+        var h = With(Reported("keypad_tone.enable", "1"), Reported("features.bluetooth_adapter_name", "Name"), new HeadsetSetting("Sound", "Sidetone level", "3", "sidetone.level", null));
+        var items = HeadsetView.Groups(h, YealinkTarget.Headset).SelectMany(g => g.Items).ToDictionary(i => i.Def.Key);
+        Assert.True(items["keypad_tone.enable"].Adjustable);
+        Assert.False(items["features.bluetooth_adapter_name"].Adjustable);
+        Assert.False(items["sidetone.level"].Adjustable);
+    }
+
+    [Fact]
+    public void On_off_choices_are_detected()
+    {
+        Assert.True(HeadsetView.IsOnOff(YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("keypad_tone.enable")]));
+        Assert.False(HeadsetView.IsOnOff(YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("platform.mode")]));
+        Assert.False(HeadsetView.IsOnOff(YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("sidetone.level")]));
+        Assert.False(HeadsetView.IsOnOff(YealinkSettingsCatalog.All[YealinkSettingsCatalog.IndexOf("wireless.range")]));
     }
 
     [Fact]

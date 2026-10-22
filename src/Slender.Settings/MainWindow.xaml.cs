@@ -29,6 +29,8 @@ public sealed partial class MainWindow : Window
         Ring,
         General,
         Headset,
+        Base,
+        ThreeCx,
     }
 
     /// <summary>Test hook: SLENDER_CONFIG_DIR redirects config.json and window state to another folder.</summary>
@@ -118,7 +120,7 @@ public sealed partial class MainWindow : Window
 
         if (ConfigDirOverride is not null && Environment.GetEnvironmentVariable("SLENDER_PAGE") is { } start)
         {
-            _page = start.ToLowerInvariant() switch { "pointer" => Page.Pointer, "haptics" => Page.Haptics, "ring" => Page.Ring, "general" => Page.General, _ => _page }; // test hook
+            _page = start.ToLowerInvariant() switch { "pointer" => Page.Pointer, "haptics" => Page.Haptics, "ring" => Page.Ring, "general" => Page.General, "3cx" => Page.ThreeCx, _ => _page }; // test hook
         }
 
         _ready = true;
@@ -457,9 +459,9 @@ public sealed partial class MainWindow : Window
         }
 
         BuildRail();
-        if (_page == Page.Headset)
+        if (_page is Page.Headset or Page.Base)
         {
-            BuildPage(); // its connected / disconnected note follows the tray
+            RebuildHeadsetPage(); // its connected / disconnected note and values follow the tray
         }
 
         UpdateInfoBars();
