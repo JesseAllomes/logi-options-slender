@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=178 -->
+<!-- drainclamp-build: state; schema=1; generation=179 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -118,7 +118,6 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-20T21:42:58+00:00 8eb4d25f 1.1.38 released (cue repeats for a ringer). 3CX ringer researched (web client drives the Yealink via WebHID; call notification only when unfocused, 30 s auto-close); m49 planned, awaiting go-ahead. Handoff rewritten for a fresh session
 - 2026-10-20T22:06:03+00:00 862bd1ab 187888a Settings window minimum raised to 1166x869 DIPs (user 2026-10-21: never smaller than current size, capped to work area); closing minimised/maximised no longer saves the size (had saved 160x28); 1919 tests; pushed, not released
 - 2026-10-20T23:56:33+00:00 d52c0a1b Fn lock reset on update/login fixed: per-channel Fn (all ON in config) was written on every start/connect, undoing Fn+Esc; now written only on change, Fn+Esc mirrors to current channel; 1921 tests; pushed, not released. Open: arrow keys 'disabled' (no hotkey held, nothing in config), keyboard page button cut in half (need screenshot)
 - 2026-10-21T00:31:10+00:00 97bd1037 Fn+Esc live: 0x40A3 event triggers read (was 30 s poll); Settings popover/bottom/General toggles + channel pickers refresh in place, pending local edits adopt file Fn values (no stale write-back); ring open/close logged to diagnose ~1 h arrow-key outage (ended at 10:48 tray restart); 1923 tests; pushed, not released
@@ -138,4 +137,5 @@ Username scrub (user 2026-10-22, go-ahead given incl. history rewrite + force-pu
 - 2026-10-22T02:00:21+00:00 85e71a4b m56 done: history rewritten (username -> %localuser%), audit cache untracked + excluded, force-pushed main and tags; old SHAs remain on GitHub until GC
 - 2026-10-22T02:15:54+00:00 65ec2df5 m52 done: device registry (CM_Register_Notification presence, catalog, known-devices.txt, active/sleeping/disconnected/hidden, per-module fault boundary), Logi modules wrap existing loops (Wake cuts backoff), status.json Presence; 2006 tests, AOT clean; live arrival/removal not yet observed on hardware
 - 2026-10-22T02:28:22+00:00 60f9e264 m53 done: presence-aware tray + Settings (hidden omitted, sleeping shown normally as Asleep, disconnected greyed with Remove device); Remove backs up config then resets that device's settings (Ring/Excel/Macros kept); 2028 tests, AOT clean; UI not yet seen live
+- 2026-10-22T03:16:01+00:00 52828c33 Released v1.1.42 (m52 device registry + m53 device UI) to GitHub Releases. Next: user checks presence live (sleep/disconnect, Remove device), then m54 Yealink module (LED/output writes need go-ahead)
 <!-- /DC:LOG -->
