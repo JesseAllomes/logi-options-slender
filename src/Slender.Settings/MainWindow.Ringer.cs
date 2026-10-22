@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Slender.Engine;
 using Slender.Engine.Ringer;
 using Slender.Settings.Logic;
+using Slender.Settings.Services;
 using Slender.Settings.Views;
 
 namespace Slender.Settings;
@@ -30,7 +31,12 @@ public sealed partial class MainWindow
         var address = new TextBox { PlaceholderText = "https://pbx.example.com", Width = 320, MaxLength = RingerOrigin.MaxLength, Text = _config.Config.Haptics.RingerOrigin ?? string.Empty };
         AutomationProperties.SetName(address, "3CX web address");
         ToolTipService.SetToolTip(address, RingerText.AddressTip);
-        AddRow("3CX address", "The address you open the 3CX web client at. https only.", address);
+        var find = new Button { Content = "Find", Style = Ui.Res<Style>("QuietButtonStyle") };
+        ToolTipService.SetToolTip(find, "Reads the address from your installed 3CX web app's shortcut");
+        var addressRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        addressRow.Children.Add(address);
+        addressRow.Children.Add(find);
+        AddRow("3CX address", "The address the 3CX web app opens. Find fills it in from the installed app. https only.", addressRow);
 
         HapticCue Get() => _config.Config.Haptics.Ringer.Clamped();
         void Set(HapticCue q) => _config.Update(x => x with { Haptics = x.Haptics with { Ringer = q.Clamped() } });
@@ -107,6 +113,17 @@ public sealed partial class MainWindow
             Apply(result, result.Status is RingerInstallStatus.Removed or RingerInstallStatus.NotSetUp);
         };
         folderButton.Click += (_, _) => OpenFolder(installer.ExtensionDirectory);
+        find.Click += async (_, _) =>
+        {
+            find.IsEnabled = false;
+            string? origin = await Task.Run(() => WebAppShortcuts.Find3cx(WebAppShortcutScan.Read()));
+            find.IsEnabled = true;
+            if (origin is not null) address.Text = origin;
+            message.Text = origin is not null
+                ? $"Found your 3CX web app: {origin}. Press Set up to use it."
+                : "No installed 3CX web app found. Type the address it opens instead.";
+            message.Foreground = origin is not null ? Ui.Muted : Ui.Warn;
+        };
 
         ShowStatus();
         _status.Changed += ShowStatus;
