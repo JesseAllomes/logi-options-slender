@@ -211,4 +211,11 @@ public sealed class YealinkPicturesTests : IDisposable
         Assert.NotNull(restored);
         Assert.Equal(YealinkPictures.Hotspots(YealinkView.Dual), restored.Layout.Hotspots);
     }
+
+    [Fact]
+    public void Legacy_id_is_the_id_before_the_large_copy()
+    {
+        Assert.Equal("yealink-wh64-base", YealinkPictures.LegacyDeviceId(YealinkView.Base));
+        Assert.Equal("yealink-wh64-teams-mono", YealinkPictures.LegacyDeviceId(YealinkView.TeamsMono));
+    }
 }

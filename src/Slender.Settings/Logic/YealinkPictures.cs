@@ -51,6 +51,9 @@ public static class YealinkPictures
         _ => "yealink-wh64-base-2",
     };
 
+    /// <summary>The small copy taken before the large one existed; kept as a fallback once USB Connect is gone.</summary>
+    public static string LegacyDeviceId(YealinkView view) => DeviceId(view)[..^2];
+
     /// <summary>File name inside a USB Connect scale folder (the large picture).</summary>
     public static string FileName(YealinkView view) => view switch
     {

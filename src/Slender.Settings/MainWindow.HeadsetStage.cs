@@ -76,7 +76,8 @@ public sealed partial class MainWindow
                 var found = new Dictionary<YealinkView, CachedDevice?>();
                 foreach (YealinkView each in new[] { view }.Concat(Enum.GetValues<YealinkView>()).Distinct())
                 {
-                    found[each] = _assets.EnsureFrom(YealinkPictures.DeviceId(each), dir => YealinkPictures.Copy(each, drawable, dir));
+                    found[each] = _assets.EnsureFrom(YealinkPictures.DeviceId(each), dir => YealinkPictures.Copy(each, drawable, dir))
+                        ?? _assets.EnsureFrom(YealinkPictures.LegacyDeviceId(each), _ => null);
                 }
 
                 return found;
