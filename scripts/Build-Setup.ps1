@@ -93,6 +93,15 @@ try {
     # Slender.Buzz: the tiny client hooks and scripts call to buzz the mouse (docs/buzz.md). NativeAOT so it starts at once.
     & dotnet publish (Join-Path $RepoRoot 'tools\Slender.Buzz\Slender.Buzz.csproj') -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version -o $Staging --nologo
     if ($LASTEXITCODE -ne 0) { throw "Buzz publish failed ($LASTEXITCODE)." }
+    # Slender.RingerHost: the Edge native messaging host of the 3CX ringer (docs/3cx-ringer.md), a one-shot NativeAOT exe. Settings copies it
+    # to %LOCALAPPDATA%\Slender\edge-ringer when the user sets the ringer up; the extension is staged as EdgeRinger\extension for the same step.
+    & dotnet publish (Join-Path $RepoRoot 'tools\Slender.RingerHost\Slender.RingerHost.csproj') -c Release -r win-x64 -p:PublishAot=true -p:Version=$Version -o $Staging --nologo
+    if ($LASTEXITCODE -ne 0) { throw "RingerHost publish failed ($LASTEXITCODE)." }
+    $RingerExt = Join-Path $RepoRoot 'tools\Slender.EdgeRinger\extension'
+    New-Item -ItemType Directory -Force -Path (Join-Path $Staging 'EdgeRinger\extension') | Out-Null
+    foreach ($f in 'manifest.json', 'background.js', 'relay.js', 'main.js') {
+        Copy-Item -LiteralPath (Join-Path $RingerExt $f) -Destination (Join-Path $Staging "EdgeRinger\extension\$f") -Force
+    }
     # Slender Excel add-in (opt-in from Settings; docs/excel-addin.md): one packed 64-bit .xll, staged as ExcelAddin\. Nothing registers it
     # at install time; Settings copies it to %LOCALAPPDATA%\Slender\ExcelAddin and writes the HKCU OPEN value only when the user turns it on.
     $AddinProj = Join-Path $RepoRoot 'src\Slender.ExcelAddin\Slender.ExcelAddin.csproj'
@@ -103,7 +112,7 @@ try {
     New-Item -ItemType Directory -Force -Path (Join-Path $Staging 'ExcelAddin') | Out-Null
     Copy-Item -LiteralPath $xll -Destination (Join-Path $Staging 'ExcelAddin\Slender.ExcelAddin64-packed.xll') -Force
 
-    foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe', 'Slender.Buzz.exe') {
+    foreach ($exe in 'Slender.Tray.exe', 'Slender.Settings.exe', 'Slender.Buzz.exe', 'Slender.RingerHost.exe') {
         if (-not (Test-Path -LiteralPath (Join-Path $Staging $exe))) { throw "Publish did not produce $exe." }
     }
 

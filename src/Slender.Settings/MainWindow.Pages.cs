@@ -318,6 +318,7 @@ public sealed partial class MainWindow
 
         BuildHapticEvents(c);
         BuildNotificationHaptics();
+        BuildRingerSection();
     }
 
     private void BuildGeneralPage()

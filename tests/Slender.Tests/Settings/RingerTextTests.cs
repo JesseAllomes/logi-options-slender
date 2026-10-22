@@ -1,0 +1,43 @@
+using System.Globalization;
+using Slender.Settings.Logic;
+
+namespace Slender.Tests.Settings;
+
+public class RingerTextTests
+{
+    [Fact]
+    public void Status_says_not_set_up_waiting_or_the_last_signal_in_local_time()
+    {
+        Assert.Equal("Not set up", RingerText.Status(false, null, null));
+        Assert.Equal("Not set up", RingerText.Status(false, DateTimeOffset.UtcNow, "headset")); // removed since: no stale signal
+        Assert.Equal("Set up — waiting for the first call", RingerText.Status(true, null, null));
+
+        var at = new DateTimeOffset(2026, 10, 22, 3, 5, 0, TimeSpan.Zero);
+        string local = at.ToLocalTime().ToString("d MMM, h:mm tt", CultureInfo.InvariantCulture);
+        Assert.Equal($"Last ring signal: {local} (headset)", RingerText.Status(true, at, "headset"));
+        Assert.Equal($"Last ring signal: {local} (notification)", RingerText.Status(true, at, "notification"));
+    }
+
+    [Theory]
+    [InlineData("https://pbx.example.com", false)]
+    [InlineData(" https://pbx.example.com:8443/ ", false)]
+    [InlineData("", true)]
+    [InlineData(null, true)]
+    [InlineData("http://pbx.example.com", true)]
+    [InlineData("https://pbx.example.com/web", true)]
+    public void The_address_box_explains_a_bad_address_in_plain_words(string? text, bool problem)
+    {
+        string? message = RingerText.AddressProblem(text);
+        Assert.Equal(problem, message is not null);
+        if (message is not null) Assert.DoesNotContain("Normalize", message);
+    }
+
+    [Fact]
+    public void The_steps_name_the_three_things_to_do_in_edge()
+    {
+        Assert.Contains("edge://extensions", RingerText.Steps);
+        Assert.Contains("Developer mode", RingerText.Steps);
+        Assert.Contains("Load unpacked", RingerText.Steps);
+        Assert.StartsWith("1.", RingerText.Steps);
+    }
+}
