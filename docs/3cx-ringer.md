@@ -13,6 +13,16 @@ It is off until you set it up, and while it is not ringing nothing of it runs: n
 3. The host passes it to the running Slender tray over the local buzz pipe (`!ring start hid`, `!ring stop notification`, see `docs/buzz.md`) and exits.
 4. The tray plays the ringer cue until the ring ends. Ordinary buzzes are dropped while it rings, so nothing cuts it. A second start while ringing changes nothing.
 
+## What starts the buzz
+
+The 3CX tab has a "Buzz the mouse when a call rings" choice:
+
+- **The headset base rings.** Slender listens for the Yealink WH64 base ringing. It works with any phone app and needs no setup. The base signals a ring with a quick burst of key presses on its media-key interface; Slender only counts that burst, and reads nothing else from it. Volume key presses are never mistaken for it. The interface is opened only while this choice is on.
+- **3CX rings in Edge.** The Edge extension described here starts the buzz. It needs the setup below.
+- **Either one** (the default). Whichever signals first starts the buzz, and the other signal while it rings changes nothing. The answer and reject buttons keep working with the extension in every case.
+
+The last ring signal shown on the tab says "headset base" when the base started it.
+
 ## Answer or reject with a mouse button
 
 In Settings, Haptics, "3CX RINGER", **Answer with** and **Reject with** each take Middle click, Forward, Back or Off (the default). Only those three, because Slender sees them through its mouse hook and can hold one back from its normal action. The mouse's other buttons are not offered.

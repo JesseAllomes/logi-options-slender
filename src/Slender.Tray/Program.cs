@@ -163,6 +163,7 @@ static class Program
             LedWritesEnabled = config.Yealink.LedWrites,
             MuteSync = config.Yealink.MuteSync,
             VendorReadsEnabled = config.Yealink.VendorReads,
+            BaseRingEnabled = ListensToBaseRing(config),
         };
         // Button presses run their bound action on the thread pool, never on the module's read thread.
         using var yealinkRouter = yealinkModule is null ? null
@@ -223,7 +224,9 @@ static class Program
         buzz.Start();
         // 3CX ringer (docs/3cx-ringer.md): the Edge extension's native host sends ring start/stop over the buzz pipe. Remember the last
         // start for Settings, and after an update refresh the host copy Edge runs (a stat when set up; nothing at all when not).
-        engine.RingSignalReceived += (_, e) => app.NoteRingSignal(e.At, e.Source == RingerSignalSource.Headset ? "headset" : "notification");
+        engine.RingSignalReceived += (_, e) => app.NoteRingSignal(e.At, e.Source switch { RingerSignalSource.Headset => "headset", RingerSignalSource.Base => "base", _ => "notification" });
+        // The Yealink base ringing starts the same ringer (the engine drops it when RingSource is Extension).
+        if (yealinkModule is not null) yealinkModule.BaseRingChanged += start => engine.SignalRing(new RingSignal(start, RingerSignalSource.Base));
         if (StatusJson.TryRead(Path.Combine(SyncPaths.StateDirectory, "status.json")) is { LastRingSignal: { } lastRing, LastRingSource: { } lastRingSource })
             app.NoteRingSignal(lastRing, lastRingSource, publish: false);
         _ = Task.Run(() =>
@@ -274,7 +277,7 @@ static class Program
             keys.ApplyConfig(changed);
             // Reopens the headset link only if a flag changed while it is open; off the UI thread because opening touches HID.
             if (yealinkModule is not null)
-                _ = Task.Run(() => { var y = engine.Config.Yealink; yealinkModule.ApplySettings(y.LedWrites, y.MuteSync, y.VendorReads); });
+                _ = Task.Run(() => { var y = engine.Config.Yealink; yealinkModule.ApplySettings(y.LedWrites, y.MuteSync, y.VendorReads, ListensToBaseRing(engine.Config)); });
             _ = mouse.SetThumbWheelInvertAsync(changed.Pointer.InvertThumbWheel, CancellationToken.None);
             _ = mouse.SetSmartShiftAsync(new SmartShiftSetting(changed.Pointer.SmartShiftEnabled, (byte)changed.Pointer.SmartShiftThreshold), CancellationToken.None);
             _ = mouse.SetSmoothScrollAsync(changed.Pointer.SmoothScroll, CancellationToken.None);
@@ -290,6 +293,9 @@ static class Program
 
         return app.RestartRequested;
     }
+
+    /// <summary>The base's consumer keys are read only while its ringing can start a buzz that would play.</summary>
+    private static bool ListensToBaseRing(SlenderConfig c) => c.Haptics is { Enabled: true, Ringer.Enabled: true, RingSource: not CallRingSource.Extension };
 
     /// <summary>Wheel resistance, Sense Panel force and haptic strength (m26): applied now and re-applied on every connect; null leaves the device alone.</summary>
     private static async Task ApplyMouseFeel(LogiMouse mouse, SlenderConfig config)

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Slender.Engine;
 using Slender.Engine.Ringer;
 
 namespace Slender.Settings.Logic;
@@ -14,11 +15,21 @@ public static class RingerText
     /// <summary>"Not set up", "Set up - waiting for the first call", or the last ring signal in the user's local time.</summary>
     public static string Status(bool setUp, DateTimeOffset? lastSignal, string? source)
     {
-        if (!setUp) return "Not set up";
+        bool fromBase = source == "base" && lastSignal is not null; // the base needs no extension, so it counts even when not set up
+        if (!setUp && !fromBase) return "Not set up";
         if (lastSignal is not { } at) return "Set up — waiting for the first call";
         string time = at.ToLocalTime().ToString("d MMM, h:mm tt", CultureInfo.InvariantCulture);
-        return $"Last ring signal: {time} ({(source == "notification" ? "notification" : "headset")})";
+        return $"Last ring signal: {time} ({source switch { "notification" => "notification", "base" => "headset base", _ => "headset" }})";
     }
+
+    public const string SourceHelp = "The headset base works with any phone app and needs no setup. 3CX in Edge needs the extension set up below.";
+
+    /// <summary>The three choices for what starts the buzz, in RingSource order of the picker: base, Edge extension, either.</summary>
+    public static readonly string[] SourceChoices = ["The headset base rings", "3CX rings in Edge", "Either one"];
+
+    public static int SourceIndex(CallRingSource source) => source switch { CallRingSource.Base => 0, CallRingSource.Extension => 1, _ => 2 };
+
+    public static CallRingSource SourceAt(int index) => index switch { 0 => CallRingSource.Base, 1 => CallRingSource.Extension, _ => CallRingSource.Either };
 
     public const string RingButtonsHelp = "While a 3CX call is ringing, this mouse button answers or rejects it from any app. Off leaves the button alone. "
         + "Outside a ringing call the button does what it always does. Needs the Ringer buzz on.";

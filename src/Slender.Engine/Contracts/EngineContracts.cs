@@ -327,6 +327,9 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// <summary>The 3CX web address (https origin, see RingerOrigin) the Edge extension runs on; null until the user sets the ringer up.</summary>
     public string? RingerOrigin { get; init; }
 
+    /// <summary>What starts the ringer buzz: the headset base ringing, the 3CX Edge extension, or either (default).</summary>
+    public CallRingSource RingSource { get; init; } = CallRingSource.Either;
+
     /// <summary>The mouse button (a hook button's control id, see RingButtons) that answers a ringing 3CX call; 0 = off.</summary>
     public ushort RingAnswerButton { get; init; }
 
@@ -338,7 +341,7 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
         other is not null && Enabled == other.Enabled && Level == other.Level && OnButtonPress == other.OnButtonPress
         && OnActionsRing == other.OnActionsRing && Strength == other.Strength
         && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && SameMap(Patterns, other.Patterns) && Notify.Equals(other.Notify)
-        && Ringer == other.Ringer && RingerOrigin == other.RingerOrigin
+        && Ringer == other.Ringer && RingerOrigin == other.RingerOrigin && RingSource == other.RingSource
         && RingAnswerButton == other.RingAnswerButton && RingRejectButton == other.RingRejectButton;
 
     public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count, Patterns.Count);

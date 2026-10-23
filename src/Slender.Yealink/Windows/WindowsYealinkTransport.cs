@@ -9,7 +9,7 @@ namespace Slender.Yealink.Windows;
 /// <summary>
 /// Finds the WH64's HID interface (USB MI_03) by vendor/product and collection and opens, shared: the telephony copy (COL02), the
 /// Teams collection (COL04), the standard telephony collection (COL01) for input only, and, only when vendor reads are on, the
-/// vendor channel (COL05) for reads and allowlisted requests. COL03 is never opened, and COL01 is never written.
+/// vendor channel (COL05) for reads and allowlisted requests. The consumer keys (COL03) are opened, read only, only when asked for; COL01 is never written.
 /// </summary>
 public sealed class WindowsYealinkTransport : IYealinkTransport
 {
@@ -17,10 +17,11 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
     private const ushort TeamsPage = 0xFF99;
     private const ushort StandardPage = 0x000B;
     private const ushort VendorPage = 0xFF00;
+    private const ushort ConsumerPage = 0x000C;
 
-    public IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log)
+    public IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log, bool consumerKeys = false)
     {
-        string? telephonyPath = null, teamsPath = null, standardPath = null, vendorPath = null;
+        string? telephonyPath = null, teamsPath = null, standardPath = null, vendorPath = null, consumerPath = null;
         foreach (var path in EnumeratePaths())
         {
             switch (Classify(path))
@@ -29,11 +30,12 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
                 case YealinkCollection.Teams: teamsPath ??= path; break;
                 case YealinkCollection.Standard: standardPath ??= path; break;
                 case YealinkCollection.Vendor: if (vendorReads) vendorPath ??= path; break;
+                case YealinkCollection.ConsumerKeys: if (consumerKeys) consumerPath ??= path; break;
             }
         }
-        if (telephonyPath == null && teamsPath == null && standardPath == null && vendorPath == null) return null;
+        if (telephonyPath == null && teamsPath == null && standardPath == null && vendorPath == null && consumerPath == null) return null;
 
-        SafeFileHandle? tel = null, teams = null, std = null, vendor = null;
+        SafeFileHandle? tel = null, teams = null, std = null, vendor = null, consumer = null;
         try
         {
             CollectionCaps? caps = null;
@@ -79,6 +81,21 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
                     }
                 }
             }
+            int consumerLength = 0;
+            if (consumerPath != null)
+            {
+                consumer = OpenHandle(consumerPath, false, log);
+                if (consumer != null)
+                {
+                    var cc = HidpCapsReader.Read(consumer, out ushort page);
+                    if (cc == null || page != ConsumerPage)
+                    {
+                        log("Yealink: consumer keys collection did not match; skipped");
+                        consumer.Dispose(); consumer = null;
+                    }
+                    else consumerLength = cc.InputReportLength;
+                }
+            }
             int vendorIn = 0, vendorOut = 0;
             if (vendorPath != null)
             {
@@ -94,17 +111,18 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
                     else { vendorIn = vc.InputReportLength; vendorOut = vc.OutputReportLength; }
                 }
             }
-            if (tel == null && teams == null && std == null && vendor == null) return null;
+            if (tel == null && teams == null && std == null && vendor == null && consumer == null) return null;
 
             var link = new WindowsYealinkLink(new LinkParts
             {
                 Telephony = tel, TelephonyCaps = caps, TelephonyLength = caps?.InputReportLength ?? 0,
                 Teams = teams, TeamsLength = teamsLength,
                 Standard = std, StandardCaps = stdCaps, StandardLength = stdCaps?.InputReportLength ?? 0,
+                Consumer = consumer, ConsumerLength = consumerLength,
                 Vendor = vendor, VendorLength = vendorIn, VendorOutLength = vendorOut,
                 WriteLeds = writeLeds,
             }, onReport, log);
-            tel = null; teams = null; std = null; vendor = null;
+            tel = null; teams = null; std = null; vendor = null; consumer = null;
             return link;
         }
         finally
@@ -113,6 +131,7 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
             teams?.Dispose();
             std?.Dispose();
             vendor?.Dispose();
+            consumer?.Dispose();
         }
     }
 
@@ -132,7 +151,7 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
 
     /// <summary>
     /// Which wanted collection an interface path is, from its text alone (nothing is opened to ask): the WH64's USB MI_03
-    /// interface, COL01, COL02, COL04 or COL05. Null for everything else, so other devices and the other collections are never touched.
+    /// interface, COL01, COL02, COL03, COL04 or COL05. Null for everything else, so other devices and the other collections are never touched.
     /// </summary>
     internal static YealinkCollection? Classify(string interfacePath)
     {
@@ -142,6 +161,7 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
             || !p.Contains("mi_03", StringComparison.Ordinal)) return null;
         if (p.Contains("&col01", StringComparison.Ordinal)) return YealinkCollection.Standard;
         if (p.Contains("&col02", StringComparison.Ordinal)) return YealinkCollection.Telephony;
+        if (p.Contains("&col03", StringComparison.Ordinal)) return YealinkCollection.ConsumerKeys;
         if (p.Contains("&col04", StringComparison.Ordinal)) return YealinkCollection.Teams;
         if (p.Contains("&col05", StringComparison.Ordinal)) return YealinkCollection.Vendor;
         return null;
@@ -184,9 +204,9 @@ public sealed class WindowsYealinkTransport : IYealinkTransport
 /// </summary>
 internal sealed class LinkParts
 {
-    public SafeFileHandle? Telephony, Teams, Standard, Vendor;
+    public SafeFileHandle? Telephony, Teams, Standard, Vendor, Consumer;
     public CollectionCaps? TelephonyCaps, StandardCaps;
-    public int TelephonyLength, TeamsLength, StandardLength, VendorLength, VendorOutLength;
+    public int TelephonyLength, TeamsLength, StandardLength, VendorLength, VendorOutLength, ConsumerLength;
     public bool WriteLeds;
 }
 
@@ -224,11 +244,12 @@ internal sealed unsafe class WindowsYealinkLink : IYealinkLink
 
     public WindowsYealinkLink(LinkParts parts, YealinkReportHandler onReport, Action<string> log)
     {
-        var list = new List<Channel>(4);
+        var list = new List<Channel>(5);
         if (parts.Telephony != null) list.Add(new Channel(YealinkCollection.Telephony, parts.Telephony, parts.TelephonyLength));
         if (parts.Teams != null) list.Add(new Channel(YealinkCollection.Teams, parts.Teams, parts.TeamsLength));
         if (parts.Standard != null) list.Add(new Channel(YealinkCollection.Standard, parts.Standard, parts.StandardLength));
         if (parts.Vendor != null) list.Add(new Channel(YealinkCollection.Vendor, parts.Vendor, parts.VendorLength));
+        if (parts.Consumer != null) list.Add(new Channel(YealinkCollection.ConsumerKeys, parts.Consumer, parts.ConsumerLength));
         _channels = [.. list];
         Telephony = parts.Telephony != null ? parts.TelephonyCaps : null;
         Standard = parts.Standard != null ? parts.StandardCaps : null;

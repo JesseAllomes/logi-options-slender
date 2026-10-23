@@ -28,6 +28,18 @@ public sealed partial class MainWindow
         help.Margin = new Thickness(0, 0, 0, 6);
         PagePanel.Children.Add(help);
 
+        var sourceBox = new ComboBox { Width = 220 };
+        AutomationProperties.SetName(sourceBox, "Buzz the mouse when a call rings");
+        foreach (string choice in RingerText.SourceChoices) sourceBox.Items.Add(choice);
+        sourceBox.SelectedIndex = RingerText.SourceIndex(_config.Config.Haptics.RingSource);
+        sourceBox.SelectionChanged += (_, _) =>
+        {
+            if (sourceBox.SelectedIndex < 0) return;
+            var chosen = RingerText.SourceAt(sourceBox.SelectedIndex);
+            if (chosen != _config.Config.Haptics.RingSource) _config.Update(x => x with { Haptics = x.Haptics with { RingSource = chosen } });
+        };
+        AddRow("Buzz the mouse when a call rings", RingerText.SourceHelp, sourceBox);
+
         var address = new TextBox { PlaceholderText = "https://pbx.example.com", Width = 320, MaxLength = RingerOrigin.MaxLength, Text = _config.Config.Haptics.RingerOrigin ?? string.Empty };
         AutomationProperties.SetName(address, "3CX web address");
         ToolTipService.SetToolTip(address, RingerText.AddressTip);
