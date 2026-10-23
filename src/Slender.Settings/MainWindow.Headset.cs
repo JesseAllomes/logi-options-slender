@@ -18,7 +18,6 @@ public sealed partial class MainWindow
 {
     private const string HeadsetName = "Yealink WH64";
     private const string BaseName = "WH64 base";
-    private const string HeadsetGlyph = "";
 
     private bool HeadsetListed() => DevicePresenceView.Listed(_status.Status, DeviceIds.Headset);
 
@@ -75,23 +74,6 @@ public sealed partial class MainWindow
         }
 
         return button;
-    }
-
-    private FrameworkElement HeadsetPopRow()
-    {
-        bool offline = DevicePresenceView.Dimmed(_status.Status, DeviceIds.Headset);
-        var row = new Grid { ColumnSpacing = 12, Padding = new Thickness(10, 8, 12, 8), CornerRadius = new CornerRadius(8), Background = Ui.Brush("Paper2Brush") };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.Children.Add(new Grid { Height = 36, Opacity = offline ? 0.5 : 1, Children = { new FontIcon { Glyph = HeadsetGlyph, FontSize = 22, Foreground = Ui.Muted } } });
-
-        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 1 };
-        text.Children.Add(Ui.Text(HeadsetName, 14, Ui.Ink, Ui.Heading));
-        text.Children.Add(Ui.Text(DevicePresenceView.Subtitle(_status.Status, DeviceIds.Headset), 12, Ui.Muted));
-        Grid.SetColumn(text, 1);
-        row.Children.Add(text);
-        AutomationProperties.SetName(row, HeadsetName + DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset));
-        return row;
     }
 
     private void AddHeadsetHeader(string title)

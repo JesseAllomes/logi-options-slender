@@ -308,72 +308,93 @@ public sealed partial class MainWindow
         return grid;
     }
 
-    /// <summary>Both devices with their battery, from status.json. Thumbnails come from the cache if it is already there.</summary>
+    private const double PopTileHeight = 104;
+
+    /// <summary>
+    /// The devices as a two-column grid of pictures (user 2026-10-23: no labels). Clicking one opens Slender on that device's page;
+    /// the name, battery and state are in the tooltip and the accessible name.
+    /// </summary>
     private void UpdateDeviceRows()
     {
         _popRows.Children.Clear();
-        if (VisibleKinds().Count == 0 && !HeadsetListed())
-        {
-            _popRows.Children.Add(Ui.Text("No devices yet", 12, Ui.Muted));
-        }
-
+        var tiles = new List<Button>();
         foreach (DeviceKind kind in VisibleKinds())
         {
             string id = ControlCatalog.DeviceId(kind);
-            DeviceState? state = _status.Device(id);
-            bool trayDown = _status.Status is null;
-            bool offline = DevicePresenceView.Dimmed(_status.Status, id);
-
-            var row = new Grid { ColumnSpacing = 12, Padding = new Thickness(10, 8, 12, 8), CornerRadius = new CornerRadius(8), Background = Ui.Brush("Paper2Brush") };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            FrameworkElement thumb = DeviceThumb(kind);
-            thumb.Opacity = offline ? 0.5 : 1;
-            row.Children.Add(thumb);
-
-            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 1 };
-            text.Children.Add(Ui.Text(ControlCatalog.DeviceName(kind), 14, Ui.Ink, Ui.Heading));
-            text.Children.Add(Ui.Text(DevicePresenceView.Subtitle(_status.Status, id), 12, Ui.Muted));
-            Grid.SetColumn(text, 1);
-            row.Children.Add(text);
-
-            FrameworkElement battery = BatteryText(_status.Status, state, id, offline || trayDown);
-            battery.VerticalAlignment = VerticalAlignment.Center;
-            Grid.SetColumn(battery, 2);
-            row.Children.Add(battery);
-
-            string batteryName = state?.BatteryPercent is { } p ? $", battery {p} percent" : string.Empty;
-            AutomationProperties.SetName(row, ControlCatalog.DeviceName(kind) + batteryName + DevicePresenceView.AccessibleSuffix(_status.Status, id));
-            _popRows.Children.Add(row);
+            string battery = _status.Device(id)?.BatteryPercent is { } p ? $", battery {p}%" : string.Empty;
+            tiles.Add(PopTile(BuiltInPictures.For(kind), ControlCatalog.DeviceName(kind) + battery + DevicePresenceView.AccessibleSuffix(_status.Status, id),
+                DevicePresenceView.Dimmed(_status.Status, id), () => { _kind = kind; _page = Page.Device; }));
         }
 
         if (HeadsetListed())
         {
-            _popRows.Children.Add(HeadsetPopRow());
+            bool offline = DevicePresenceView.Dimmed(_status.Status, DeviceIds.Headset);
+            string battery = _status.Device(DeviceIds.Headset)?.BatteryPercent is { } p ? $", battery {p}%" : string.Empty;
+            string suffix = DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset);
+            tiles.Add(PopTile(BuiltInPictures.Headset, HeadsetName + battery + suffix, offline, () => _page = Page.Headset));
+            tiles.Add(PopTile(BuiltInPictures.Base, BaseName + suffix, offline, () => _page = Page.Base));
+        }
+
+        if (tiles.Count == 0)
+        {
+            _popRows.Children.Add(Ui.Text("No devices yet", 12, Ui.Muted));
+        }
+        else
+        {
+            var grid = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                if (i % 2 == 0)
+                {
+                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                }
+
+                Grid.SetRow(tiles[i], i / 2);
+                Grid.SetColumn(tiles[i], i % 2);
+                grid.Children.Add(tiles[i]);
+            }
+
+            _popRows.Children.Add(grid);
         }
 
         FitPopover();
     }
 
-    private FrameworkElement DeviceThumb(DeviceKind kind)
+    private Button PopTile(CachedDevice device, string name, bool offline, Action select)
     {
-        string file = BuiltInPictures.For(kind).ThumbPath;
-        var image = new Image { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
-        if (kind == DeviceKind.Mouse)
+        double imageHeight = PopTileHeight - 16;
+        var image = new Image
         {
-            image.Height = 36;
-            image.Source = Ui.Bitmap(file, decodePixelHeight: (int)Math.Ceiling(36 * _scale));
-        }
-        else
+            Stretch = Stretch.Uniform,
+            Height = imageHeight,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = offline ? 0.5 : 1,
+            Source = Ui.Bitmap(device.ThumbPath, decodePixelHeight: (int)Math.Ceiling(imageHeight * _scale)),
+        };
+        var button = new Button
         {
-            image.Width = 44;
-            image.Height = 36;
-            image.Source = Ui.Bitmap(file, decodePixelWidth: (int)Math.Ceiling(44 * _scale));
-        }
-
-        return image;
+            Style = Ui.Res<Style>("PlainButtonStyle"),
+            Height = PopTileHeight,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Padding = new Thickness(8),
+            CornerRadius = new CornerRadius(8),
+            Background = Ui.Brush("Paper2Brush"),
+            Content = image,
+        };
+        AutomationProperties.SetName(button, name);
+        ToolTipService.SetToolTip(button, name);
+        button.Click += async (_, _) =>
+        {
+            select();
+            RebuildAll();
+            await UnfoldAsync();
+        };
+        return button;
     }
 
     /// <summary>"You're in Excel · N buttons changed". The icon is extracted after the first frame.</summary>

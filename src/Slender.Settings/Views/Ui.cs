@@ -95,25 +95,35 @@ internal static class Ui
     }
 
     private const int BitmapCacheLimit = 32;
-    private static readonly Dictionary<(string Path, bool ByWidth), (int Size, BitmapImage Image)> s_bitmaps = [];
+    private const int SizesPerPicture = 3;
+    private static readonly Dictionary<(string Path, bool ByWidth), List<(int Size, BitmapImage Image)>> s_bitmaps = [];
 
     /// <summary>
-    /// A decoded-at-display-size image from a file (decode sizes in physical pixels). The last decode of each file and axis is
-    /// kept, so a page rebuild reuses it instead of decoding again (that showed as a blank flash); a new size replaces it, so a
-    /// window resize never piles up copies. UI thread only.
+    /// A decoded-at-display-size image from a file (decode sizes in physical pixels). The last few sizes of each file and axis are
+    /// kept (a picture shows as a rail tile, a popover tile and on its page), so a page rebuild reuses the decode instead of
+    /// decoding again, which showed as a blank flash; older sizes drop out, so a window resize never piles up copies. UI thread only.
     /// </summary>
     public static BitmapImage Bitmap(string path, int decodePixelWidth = 0, int decodePixelHeight = 0)
     {
         var key = (path, decodePixelWidth > 0);
         int size = decodePixelWidth > 0 ? decodePixelWidth : decodePixelHeight;
-        if (s_bitmaps.TryGetValue(key, out var cached) && cached.Size == size)
+        if (!s_bitmaps.TryGetValue(key, out var sizes))
         {
-            return cached.Image;
+            if (s_bitmaps.Count >= BitmapCacheLimit)
+            {
+                s_bitmaps.Clear();
+            }
+
+            s_bitmaps[key] = sizes = [];
         }
 
-        if (s_bitmaps.Count >= BitmapCacheLimit && !s_bitmaps.ContainsKey(key))
+        int at = sizes.FindIndex(s => s.Size == size);
+        if (at >= 0)
         {
-            s_bitmaps.Clear();
+            var hit = sizes[at];
+            sizes.RemoveAt(at);
+            sizes.Insert(0, hit);
+            return hit.Image;
         }
 
         var bmp = new BitmapImage();
@@ -127,7 +137,12 @@ internal static class Ui
         }
 
         bmp.UriSource = new Uri(path);
-        s_bitmaps[key] = (size, bmp);
+        sizes.Insert(0, (size, bmp));
+        if (sizes.Count > SizesPerPicture)
+        {
+            sizes.RemoveAt(sizes.Count - 1);
+        }
+
         return bmp;
     }
 
