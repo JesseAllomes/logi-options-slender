@@ -226,6 +226,8 @@ public sealed class YealinkModule : IDeviceModule
             return;
         }
         _refusal = null;
+        // The preview makes the base send the same key bursts as a real ring; a pass can delay it a few seconds.
+        SuppressBaseRing(TimeSpan.FromSeconds(12));
         try
         {
             if (!vendor!.PreviewRing())

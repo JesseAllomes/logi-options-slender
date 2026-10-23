@@ -363,6 +363,34 @@ public class YealinkPreviewRingModuleTests
     }
 
     [Fact]
+    public void The_bursts_a_preview_causes_do_not_count_as_a_call_ringing()
+    {
+        var m = Make();
+        m.BaseRingEnabled = true;
+        m.Start();
+        var link = _transport.Link!;
+        var got = new List<bool>();
+        m.BaseRingChanged += got.Add;
+        void Burst(byte code)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                link.Feed(YealinkCollection.ConsumerKeys, 1, code);
+                link.Feed(YealinkCollection.ConsumerKeys, 1);
+            }
+        }
+
+        Burst(2);
+        Assert.Equal([true], got); // a real ring is heard
+
+        m.PreviewRing();
+        Burst(1);
+        Burst(2);
+
+        Assert.Equal([true], got);
+    }
+
+    [Fact]
     public void Off_hook_refuses_with_a_reason_and_sends_nothing()
     {
         var m = Make();
