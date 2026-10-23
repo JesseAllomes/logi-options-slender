@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=211 -->
+<!-- drainclamp-build: state; schema=1; generation=213 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -60,6 +60,7 @@ Headset pages (user 2026-10-23; supersedes the Headset/Base switch on one page) 
 Device pictures (user 2026-10-23; supersedes copying pictures from Options+ and USB Connect, "device pictures are Slender's own copies, never committed" and every Refresh pictures button) -> four photoreal pictures generated with Codex from the real devices and approved by the user (WH64 Teams mono headset, WH64 base, MX Master 4, ERGO K860; logos and key legends kept) ship with Slender in src/Slender.Settings/Assets/Devices (committed; they are public in every release anyway, agent default); nothing is copied from Options+ or USB Connect for pictures; callouts are plain percentages measured on these files (Logic/BuiltInPictures.cs); the user's old picture caches are left untouched; a 'not affiliated with Logitech or Yealink' line goes in the README and installer
 Preview ring (user 2026-10-23, live-tested with go-ahead) -> a Preview ring button rings the WH64 base for about 1.5 s at the selected PC-call ring volume (3 s was distracting): Hello, SoftphoneAddIn 0x37 "Slender" (sid from the base), CallAllocCid 0x3A, CallSyncState 0x3C 05 then 06, quit 0x38 p1=0; only that sequence is allowlisted; an unregistered ring is refused by the base; the ring-sound setting does not change this ring, so the button previews volume only (wording says so); not during a call or while a real call rings; desk-phone ring cannot be previewed; quit always sent
 Ring trigger (user 2026-10-23) -> what makes the mouse buzz for a 3CX call is the user's choice: the Edge extension, the headset base ringing, or either; plain wording; the base-ring signal is still to be found from a live 3CX call capture (an SDK ring showed nothing Slender can hear)
+Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rings all sound the same) -> Slender plays its own ring sound while a call rings: seven sounds made from scratch in code and approved by the user (Classic, Old phone bell, Chime, Marimba, Soft pulse, Digital, Rise; generator committed so they can be rebuilt), Off by default until chosen; the user picks the playback device (any Windows output, default the WH64 headset) and a ring-sound volume; it starts and stops with the ring buzz (base ring or extension), stops on answer, click or 90 s; a Play button previews it; all on the 3CX tab; nothing loaded or playing while idle
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -127,6 +128,7 @@ Ring trigger (user 2026-10-23) -> what makes the mouse buzz for a 3CX call is th
 | m60 | Shipped device pictures: BuiltInPictures (contract) wired into mouse, keyboard, headset and base stages, rail tiles and popover; picture copying removed (AssetCache picture copy/backup/refresh, YealinkPictures copy/scale/install lookup, Refresh pictures buttons); HotspotMapper plain percentages; icons import kept; not-affiliated note; Gate 6 r80 moot | src/Slender.Settings;tests/Slender.Tests;README.md | pending | m59 |
 | m61 | Preview ring: allowlisted register/alloc/ring/quit sequence in Slender.Yealink (multi-fragment 0x37), module PreviewRing with guards, Settings->tray message, Preview ring button by the ring volume rows (base page) | src/Slender.Yealink;src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m59 |
 | m62 | Ring trigger choice on the 3CX tab (Edge extension / headset base ringing / either): live 3CX call capture first, then build | src/Slender.Yealink;src/Slender.Engine;src/Slender.Settings;tests/Slender.Tests | pending | m61 |
+| m63 | Ring sound: shipped WAVs + generator, tray player on a chosen output device (loops while ringing), config (sound, device, volume), 3CX tab rows + preview; live check on a real call incl. base ring volume 0 still detected | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m62 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
