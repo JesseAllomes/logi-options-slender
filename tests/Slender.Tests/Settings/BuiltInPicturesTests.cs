@@ -60,6 +60,14 @@ public sealed class BuiltInPicturesTests
     }
 
     [Fact]
+    public void The_pictures_are_published_with_the_app()
+    {
+        // 1.1.48 shipped without them: Debug builds copied the files, the installer's publish did not.
+        string csproj = File.ReadAllText(Path.Combine(DevicesFolder(), "..", "..", "Slender.Settings.csproj"));
+        Assert.Contains("<Content Include=\"Assets\\Devices\\*.webp\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" />", csproj);
+    }
+
+    [Fact]
     public void Mouse_and_keyboard_resolve_by_kind()
     {
         Assert.Same(BuiltInPictures.Mouse, BuiltInPictures.For(DeviceKind.Mouse));
