@@ -17,6 +17,9 @@ public enum VendorRead { Status, All }
 /// A timeout skips that setting; a silent Hello or three timeouts in a row end the pass.
 /// <see cref="Set"/> changes one catalogued setting: EnvSet, then an EnvGet of the same key to read it back, by the same one-at-a-time
 /// rule and timer. A write asked for during a pass waits for it; one waiting write per setting is kept (the latest for that setting).
+/// <see cref="PreviewRing"/> rings the base for a moment: register a softphone session, ask for a call id, ring on, a one-shot
+/// 1.5 s timer, ring off, quit. Whatever fails, the ring is switched off and the session ended; a preview asked for during a pass
+/// or write waits and starts after the writes.
 /// </summary>
 public sealed class YealinkVendorSession : IDisposable
 {
@@ -24,6 +27,9 @@ public sealed class YealinkVendorSession : IDisposable
     private const int MaxSilent = 3;
     private const int StepHello = 0, StepVersion = 1, StepDect = 2, StepSettings = 3;
     private const int WriteHello = 0, WriteSet = 1, WriteRead = 2;
+    private const int PvHello = 0, PvAdd = 1, PvAlloc = 2, PvOn = 3, PvRinging = 4, PvOff = 5, PvQuit = 6;
+    public const int RingMs = 1500;
+    private const string PreviewFailed = "The base did not play the preview ring.";
 
     private readonly VendorWriter _write;
     private readonly Action<string> _log;
@@ -41,6 +47,9 @@ public sealed class YealinkVendorSession : IDisposable
     private bool _writing, _verifying;
     private int _writeStage, _writeIndex = -1;
     private string? _writeRaw, _writeProblem;
+    private bool _previewing, _previewPending, _ringOn, _registered;
+    private int _pvStage;
+    private ushort _sid, _cid;
     private HeadsetStatus _status;
     private IReadOnlyList<HeadsetSetting>? _settings;
 
@@ -49,6 +58,7 @@ public sealed class YealinkVendorSession : IDisposable
         _write = write;
         _log = log;
         _decoder.Reply += OnReply;
+        _decoder.CallReply += OnCallReply;
         _decoder.StatusChanged += OnStatus;
     }
 
@@ -123,15 +133,151 @@ public sealed class YealinkVendorSession : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Rings the base for <see cref="RingMs"/> at the PC-call ring volume. Starts at once when idle; during a pass or write it waits
+    /// and starts after the pending writes. False (nothing sent) after Dispose or while a preview is already running.
+    /// </summary>
+    public bool PreviewRing()
+    {
+        lock (_gate)
+        {
+            if (_disposed || _previewing) return false;
+            if (_running) _previewPending = true;
+            else StartPreview();
+        }
+        Notify();
+        return true;
+    }
+
     public void Dispose()
     {
         lock (_gate)
         {
+            if (_previewing) EndPreviewNow();
+            _previewPending = false;
             _disposed = true;
             _running = false;
             Array.Clear(_pending);
             _timer?.Dispose();
             _timer = null;
+        }
+    }
+
+    private void EndPreviewNow()
+    {
+        try
+        {
+            if (_ringOn) _write(_frame.AsSpan(0, VendorRequests.BuildCallState(_sid, _cid, false, _frame)));
+            if (_registered) _write(_frame.AsSpan(0, VendorRequests.BuildQuit(_sid, _frame)));
+        }
+        catch (Exception ex) { _log($"Yealink: ending the preview ring failed: {ex.Message}"); }
+        _ringOn = _registered = false;
+    }
+
+    private void StartPreview()
+    {
+        SetProblem(null);
+        _running = true;
+        _previewing = true;
+        _ringOn = _registered = false;
+        _pvStage = _helloDone ? PvAdd : PvHello;
+        SendPreview();
+    }
+
+    private void FailPreview(string why)
+    {
+        _log($"Yealink: preview ring failed: {why}");
+        SetProblem(PreviewFailed);
+        _dirty = true;
+        if (_ringOn && _pvStage < PvOff) _pvStage = PvOff;
+        else if (_registered && _pvStage < PvQuit) _pvStage = PvQuit;
+        else { Finish(); return; }
+        SendPreview();
+    }
+
+    private void SendPreview()
+    {
+        int stage = _pvStage;
+        try
+        {
+            if (stage == PvAdd)
+            {
+                Span<byte> frames = stackalloc byte[3 * VendorFrame.Length];
+                var first = frames[..VendorFrame.Length];
+                var middle = frames.Slice(VendorFrame.Length, VendorFrame.Length);
+                var last = frames[(2 * VendorFrame.Length)..];
+                VendorRequests.BuildSoftphoneAdd(first, middle, last);
+                if (!_write(first) || !_write(middle) || !_write(last))
+                {
+                    FailPreview("vendor channel is not writable");
+                    return;
+                }
+            }
+            else
+            {
+                int length;
+                switch (stage)
+                {
+                    case PvHello: length = VendorRequests.Build(VendorCommand.Hello, _frame); break;
+                    case PvAlloc: length = VendorRequests.BuildAllocCid(_sid, _frame); break;
+                    case PvOn: _ringOn = true; length = VendorRequests.BuildCallState(_sid, _cid, true, _frame); break;
+                    case PvOff: _ringOn = false; length = VendorRequests.BuildCallState(_sid, _cid, false, _frame); break;
+                    default: _registered = false; length = VendorRequests.BuildQuit(_sid, _frame); break;
+                }
+                if (!_write(_frame.AsSpan(0, length)))
+                {
+                    FailPreview("vendor channel is not writable");
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            FailPreview(ex.Message);
+            return;
+        }
+        if (_running && _previewing && _pvStage == stage) Arm(TimeoutMs);
+    }
+
+    private void OnCallReply(byte command, ushort status, ushort p2, ushort cid)
+    {
+        lock (_gate)
+        {
+            if (_running && _previewing) OnPreviewReply(command, status == 0, p2, cid);
+        }
+        Notify();
+    }
+
+    private void OnPreviewReply(byte command, bool ok, ushort p2, ushort cid)
+    {
+        switch (_pvStage)
+        {
+            case PvAdd when command == (byte)VendorCommand.SoftphoneAddIn:
+                if (!ok || p2 == 0) { FailPreview("registration refused"); break; }
+                _sid = p2;
+                _registered = true;
+                _pvStage = PvAlloc;
+                SendPreview();
+                break;
+            case PvAlloc when command == (byte)VendorCommand.AllocCid:
+                if (!ok) { FailPreview("no call id"); break; }
+                _cid = cid;
+                _pvStage = PvOn;
+                SendPreview();
+                break;
+            case PvOn when command == (byte)VendorCommand.CallSyncState:
+                if (!ok) { _ringOn = false; FailPreview("ring refused"); break; }
+                _pvStage = PvRinging;
+                Arm(RingMs);
+                break;
+            case PvOff when command == (byte)VendorCommand.CallSyncState:
+                if (!ok) { FailPreview("ring off refused"); break; }
+                _pvStage = PvQuit;
+                SendPreview();
+                break;
+            case PvQuit when command == (byte)VendorCommand.Quit:
+                Finish();
+                break;
         }
     }
 
@@ -242,7 +388,16 @@ public sealed class YealinkVendorSession : IDisposable
         lock (_gate)
         {
             if (command == (byte)VendorCommand.Hello) _helloDone = true;
-            if (command is (byte)VendorCommand.EnvSet or (byte)VendorCommand.EnvSetLong)
+            bool preview = _running && _previewing;
+            if (preview)
+            {
+                if (command == (byte)VendorCommand.Hello && _pvStage == PvHello)
+                {
+                    _pvStage = PvAdd;
+                    SendPreview();
+                }
+            }
+            else if (command is (byte)VendorCommand.EnvSet or (byte)VendorCommand.EnvSetLong)
             {
                 // An echo of the write, not a reading: the read-back sets the value.
             }
@@ -260,7 +415,8 @@ public sealed class YealinkVendorSession : IDisposable
                 _dirty = true;
             }
 
-            if (_running && _writing) OnWriteReply(command, key, value);
+            if (preview) { }
+            else if (_running && _writing) OnWriteReply(command, key, value);
             else if (_running && Matches(command, key))
             {
                 _silent = 0;
@@ -323,11 +479,11 @@ public sealed class YealinkVendorSession : IDisposable
         }
     }
 
-    private void Arm()
+    private void Arm(int ms = TimeoutMs)
     {
-        _deadline = Environment.TickCount64 + TimeoutMs;
+        _deadline = Environment.TickCount64 + ms;
         _timer ??= new Timer(static o => ((YealinkVendorSession)o!).OnTimer(), this, Timeout.Infinite, Timeout.Infinite);
-        _timer.Change(TimeoutMs, Timeout.Infinite);
+        _timer.Change(ms, Timeout.Infinite);
     }
 
     private void OnTimer()
@@ -349,6 +505,16 @@ public sealed class YealinkVendorSession : IDisposable
     private void ExpireLocked()
     {
         if (!_running) return;
+        if (_previewing)
+        {
+            if (_pvStage == PvRinging)
+            {
+                _pvStage = PvOff;
+                SendPreview();
+            }
+            else FailPreview("no answer");
+            return;
+        }
         if (_writing)
         {
             FailWrite("no answer", unanswered: true);
@@ -371,6 +537,7 @@ public sealed class YealinkVendorSession : IDisposable
         _running = false;
         _writing = false;
         _verifying = false;
+        _previewing = false;
         _timer?.Dispose();
         _timer = null;
         if (_disposed) return;
@@ -380,6 +547,11 @@ public sealed class YealinkVendorSession : IDisposable
             _pending[i] = null;
             StartWrite(i, raw);
             return;
+        }
+        if (_previewPending)
+        {
+            _previewPending = false;
+            StartPreview();
         }
     }
 }

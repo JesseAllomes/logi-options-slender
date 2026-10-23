@@ -409,7 +409,7 @@ public sealed partial class SlenderEngine : IDisposable
     private RingerSession? _ringer;
 
     /// <summary>A call is ringing: ordinary buzzes are dropped so they never cut the ringer.</summary>
-    private bool Ringing => _ringer?.IsRinging == true;
+    public bool Ringing => _ringer?.IsRinging == true;
 
     /// <summary>Raised (any thread) when a ring-start arrives from the Edge extension, with the time and which signal fired. Settings shows the last one.</summary>
     public event EventHandler<RingSignalEventArgs>? RingSignalReceived;

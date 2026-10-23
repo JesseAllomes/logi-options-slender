@@ -177,7 +177,15 @@ static class Program
             // Battery, signal and the base's settings reach status.json and the tray menu; Settings' Headset page asks for a re-read.
             app.HeadsetInfo = yealinkModule.GetHeadset;
             app.RefreshHeadset = () => _ = Task.Run(yealinkModule.RefreshSettings);
-            app.SetHeadsetSetting = (index, value) => _ = Task.Run(() => yealinkModule.SetSetting(index, value));
+            // One after another, so a volume change posted just before Preview is written before the base rings.
+            Task headsetWork = Task.CompletedTask;
+            void RunHeadsetWork(Action work)
+            {
+                lock (yealinkModule) headsetWork = headsetWork.ContinueWith(_ => work(), TaskScheduler.Default);
+            }
+            app.SetHeadsetSetting = (index, value) => RunHeadsetWork(() => yealinkModule.SetSetting(index, value));
+            // Not while a 3CX ring is sounding: the base would ring over the real one.
+            app.PreviewHeadsetRing = () => { if (!engine.Ringing) RunHeadsetWork(yealinkModule.PreviewRing); };
             yealinkModule.HeadsetChanged += app.DevicesChanged;
             registry.Changed += (_, _) =>
             {

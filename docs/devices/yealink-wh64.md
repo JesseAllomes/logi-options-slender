@@ -29,9 +29,20 @@ pages: only a listed value or a number in range, written with EnvSet (0x04 short
 ask first and are refused during a call; the hearing-protection settings ask first.
 
 What Slender can send is a fixed list: hello, version, handset status, the two forms of "read one setting", and the two forms of
-"set one setting", which are built only for a catalogued, editable setting and a value the catalog lists. Any other command is
-refused in code, so nothing that resets, flashes, runs a shell, moves files, powers off or updates firmware can be built,
+"set one setting", which are built only for a catalogued, editable setting and a value the catalog lists, and the four commands of the
+preview ring (below), each built by its own function. Any other command is refused in code, so nothing that resets, flashes, runs a shell, moves files, powers off or updates firmware can be built,
 whatever the page or config says. With Talk to the base off the vendor collection is never opened and nothing is sent.
+
+## Preview ring
+
+The Preview ring button on the base page rings the base for about 1.5 seconds at the PC calls ring volume (confirmed live
+2026-10-23), so you can hear what you set. The base rings only for a registered softphone session, so each preview does: hello (if
+not done), register a session named "Slender" (0x37; the base answers with a session id), ask for call ids (0x3A), tell the base
+the call is ringing (0x3C, state 05), wait 1.5 seconds on a one-shot timer, tell it the call is idle (06), end the session (0x38).
+If a step fails or goes unanswered, the ring is still switched off and the session ended. A volume change made just before is
+written first. It is refused during a call, with Talk to the base off, while Yealink USB Connect runs, and while a 3CX ring is
+sounding. The ring sound setting does not change this ring, and the desk phone ring cannot be previewed. The base sends key
+presses while it rings; Slender ignores them.
 
 ## What each button does
 

@@ -680,6 +680,12 @@ public static class DeviceMessages
     /// catalog, writes, reads the setting back and publishes it; a refusal or failure shows as HeadsetState.WriteProblem.
     /// </summary>
     public const string HeadsetSetName = "Slender.HeadsetSet";
+
+    /// <summary>
+    /// Settings asks the tray to ring the base for a moment at the PC-call ring volume (m61); no parameters. The tray does nothing
+    /// while a 3CX ring is active; a refusal or failure shows as HeadsetState.WriteProblem.
+    /// </summary>
+    public const string HeadsetPreviewRingName = "Slender.HeadsetPreviewRing";
 }
 
 /// <summary>A ring-start reached the tray: when (local time) and which signal fired.</summary>

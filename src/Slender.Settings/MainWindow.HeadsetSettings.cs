@@ -17,7 +17,7 @@ public sealed partial class MainWindow
 {
     private bool _dropDownOpen, _sliderHeld, _settingRebuildPending;
     private (int Index, long Value)? _settingPending;
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settingTimer;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settingTimer, _previewRingTimer;
     private readonly Dictionary<int, (string Raw, DateTimeOffset At)> _sentSettings = [];
 
     private bool SettingBusy => _dropDownOpen || _sliderHeld || _settingTimer?.IsRunning == true;
@@ -64,7 +64,43 @@ public sealed partial class MainWindow
                 string? help = item.Def.Help is { } h1 && caution is not null ? h1 + " " + caution : item.Def.Help ?? caution;
                 AddRow(item.Def.Label, help, item.Adjustable ? HeadsetSettingControl(item, why is null) : Ui.Text(item.Text, 13, Ui.Ink));
             }
+
+            if (group == YealinkSettingsCatalog.BaseRinger && target == YealinkTarget.Base)
+            {
+                AddRow("Preview ring", "Rings the base for a moment at the PC calls ring volume, so you can hear it. The ring sound setting doesn't change this ring.",
+                    PreviewRingButton(why is null));
+            }
         }
+    }
+
+    private Button PreviewRingButton(bool enabled)
+    {
+        var play = new Button { Content = "Play", Style = Ui.Res<Style>("QuietButtonStyle"), IsEnabled = enabled && _previewRingTimer?.IsRunning != true };
+        AutomationProperties.SetName(play, "Preview ring");
+        play.Click += (_, _) =>
+        {
+            _settingTimer?.Stop();
+            SendPendingSetting();
+            AskTray(DeviceMessages.HeadsetPreviewRingName);
+            play.IsEnabled = false;
+            // A one-shot timer that exists only for these two seconds.
+            var timer = DispatcherQueue.CreateTimer();
+            _previewRingTimer = timer;
+            timer.Interval = TimeSpan.FromSeconds(2);
+            timer.IsRepeating = false;
+            timer.Tick += (s, _) =>
+            {
+                s.Stop();
+                _previewRingTimer = null;
+                play.IsEnabled = enabled;
+                if (_page is Page.Headset or Page.Base)
+                {
+                    RebuildHeadsetPage(); // a redraw during the 2 s made a new, still disabled button
+                }
+            };
+            timer.Start();
+        };
+        return play;
     }
 
     private void RememberSent(int index, long value)

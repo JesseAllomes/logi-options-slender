@@ -6,7 +6,7 @@ namespace Slender.Yealink;
 public readonly record struct HeadsetStatus(bool? Registered, int? BatteryPercent, bool? Charging, bool? Docked, int? Signal, bool? InRange, string? Model = null);
 
 /// <summary>
-/// Reads the base's messages: command replies (Hello, version, EnvGet and EnvSet short and long, GetDect) and the unsolicited DECT channel
+/// Reads the base's messages: command replies (Hello, version, EnvGet and EnvSet short and long, GetDect, and the preview-ring commands, which raise <see cref="CallReply"/>) and the unsolicited DECT channel
 /// 0x0D of the notification stream (battery, signal). Every other notification channel, the debug log above all, is ignored on its
 /// first byte. Replies raise <see cref="Reply"/>; a changed headset status raises <see cref="StatusChanged"/>. Nothing is
 /// allocated for a notification; a reply allocates its key and value strings.
@@ -32,6 +32,9 @@ public sealed class VendorDecoder
 
     /// <summary>Command byte, settings key (null for an unset EnvGet or any other command) and value (null when unset).</summary>
     public event Action<byte, string?, string?>? Reply;
+
+    /// <summary>Preview-ring replies: command byte, status (p1; 0 is ok), p2 (the session id for the add), and the first call id of an alloc (else 0).</summary>
+    public event Action<byte, ushort, ushort, ushort>? CallReply;
 
     public event Action<HeadsetStatus>? StatusChanged;
 
@@ -84,6 +87,10 @@ public sealed class VendorDecoder
                 break;
             case VendorCommand.Hello or VendorCommand.GetVersion:
                 Reply?.Invoke(cmd, null, null);
+                break;
+            case VendorCommand.SoftphoneAddIn or VendorCommand.Quit or VendorCommand.AllocCid or VendorCommand.CallSyncState when m.Length >= 6:
+                ushort cid = cmd == (byte)VendorCommand.AllocCid && m.Length >= 8 ? (ushort)(m[6] | m[7] << 8) : (ushort)0;
+                CallReply?.Invoke(cmd, (ushort)(m[2] | m[3] << 8), (ushort)(m[4] | m[5] << 8), cid);
                 break;
         }
     }

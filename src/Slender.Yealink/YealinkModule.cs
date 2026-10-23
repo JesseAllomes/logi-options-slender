@@ -11,7 +11,7 @@ namespace Slender.Yealink;
 /// VendorReads (default on): the vendor channel is opened and the base is asked for its battery, signal and settings at Start,
 /// on Wake and when Settings asks (<see cref="RefreshSettings"/>, at most every few seconds); between those the base pushes
 /// battery and signal on its own. With it off the channel is never opened and nothing is sent. Only allowlisted requests exist: the
-/// reads, and (<see cref="SetSetting"/>) a write of a catalogued, editable setting to a value the catalog lists.
+/// reads, (<see cref="SetSetting"/>) a write of a catalogued, editable setting to a value the catalog lists, and (<see cref="PreviewRing"/>) a brief ring.
 /// Mute, hook and reject also arrive on the standard telephony collection, which is read (never written) beside the private one.
 /// MuteSync: the headset's mute press toggles the Windows default microphone, and the mute LED (when LED writes are on) follows
 /// the Windows mute, including changes made elsewhere. The microphone object and its notification exist only while a link is open.
@@ -185,6 +185,42 @@ public sealed class YealinkModule : IDeviceModule
         catch (Exception ex) { _log($"Yealink: setting change failed: {ex.Message}"); }
     }
 
+    /// <summary>
+    /// Settings asked to ring the base for a moment at the PC-call ring volume. Refused, with the reason in
+    /// <see cref="HeadsetState.WriteProblem"/> and nothing sent, with vendor reads off, while another app owns the headset, without a
+    /// vendor channel, or during a call. Otherwise run by the session.
+    /// </summary>
+    public void PreviewRing()
+    {
+        string? problem = null;
+        YealinkVendorSession? vendor = null;
+        lock (_gate)
+        {
+            if (_started && !_vendorOn) problem = "Turn on Talk to the base (on the base page) to preview the ring.";
+            else if (_standDown()) problem = $"Close {YealinkConnectProcess} to preview the ring.";
+            else if ((vendor = _vendor) == null || _link == null) problem = "The headset base is not connected.";
+            else if (_offHook) problem = "Finish the call before previewing the ring.";
+        }
+
+        if (problem != null)
+        {
+            _log($"Yealink: refused the preview ring: {problem}");
+            _refusal = problem;
+            OnVendorChanged();
+            return;
+        }
+        _refusal = null;
+        try
+        {
+            if (!vendor!.PreviewRing())
+            {
+                _refusal = "The headset base is not connected.";
+                OnVendorChanged();
+            }
+        }
+        catch (Exception ex) { _log($"Yealink: preview ring failed: {ex.Message}"); }
+    }
+
     private void BeginVendor(VendorRead what, bool checkStandDown)
     {
         var vendor = _vendor;
@@ -325,12 +361,12 @@ public sealed class YealinkModule : IDeviceModule
         var vendor = _vendor;
         _vendor = null;
         _refusal = null;
+        vendor?.Dispose(); // while the link is still open, so a ring in progress can be switched off
         try { link?.Dispose(); }
         catch (Exception ex) { _log($"Yealink: close failed: {ex.Message}"); }
         if (vendor != null)
         {
             vendor.Changed -= OnVendorChanged;
-            vendor.Dispose();
             OnVendorChanged(); // what it knew is gone with it
         }
         DisposeMic(mic);

@@ -4,10 +4,12 @@ using Slender.Engine.Devices;
 namespace Slender.Yealink;
 
 /// <summary>
-/// The only commands this code can put on the vendor channel (report 0xC8). All but the two EnvSets are reads or a handshake;
-/// nothing that resets, flashes, runs a shell, moves files, powers off or updates firmware has an id here, and
-/// <see cref="VendorRequests.Build"/> refuses every other byte, the EnvSets included: those are built only by
-/// <see cref="VendorRequests.BuildEnvSet"/>, for a catalogued, editable setting and a value the catalog lists.
+/// The only commands this code can put on the vendor channel (report 0xC8). All but the two EnvSets and the four preview-ring
+/// commands are reads or a handshake; nothing that resets, flashes, runs a shell, moves files, powers off or updates firmware
+/// has an id here, and <see cref="VendorRequests.Build"/> refuses every other byte, those six included: the EnvSets are built
+/// only by <see cref="VendorRequests.BuildEnvSet"/>, for a catalogued, editable setting and a value the catalog lists, and the
+/// preview ring only by <see cref="VendorRequests.BuildSoftphoneAdd"/>, <see cref="VendorRequests.BuildAllocCid"/>,
+/// <see cref="VendorRequests.BuildCallState"/> (ring or idle only) and <see cref="VendorRequests.BuildQuit"/>.
 /// </summary>
 public enum VendorCommand : byte
 {
@@ -22,6 +24,14 @@ public enum VendorCommand : byte
     EnvGetLong = 0x22,
     /// <summary>Write one setting whose key is longer than 16 characters (only through <see cref="VendorRequests.BuildEnvSet"/>).</summary>
     EnvSetLong = 0x23,
+    /// <summary>Register (p1 = 1) a softphone session named "Slender"; the reply carries the session id (only through <see cref="VendorRequests.BuildSoftphoneAdd"/>).</summary>
+    SoftphoneAddIn = 0x37,
+    /// <summary>End a softphone session, p2 = its id (only through <see cref="VendorRequests.BuildQuit"/>).</summary>
+    Quit = 0x38,
+    /// <summary>Ask a registered session for call ids; the reply carries the first and last (only through <see cref="VendorRequests.BuildAllocCid"/>).</summary>
+    AllocCid = 0x3A,
+    /// <summary>Tell the base a call is ringing (05) or idle (06) on a registered session (only through <see cref="VendorRequests.BuildCallState"/>).</summary>
+    CallSyncState = 0x3C,
     /// <summary>Handset status: registered, signal, battery, docked, alive.</summary>
     GetDect = 0x79,
 }
@@ -156,6 +166,75 @@ public static class VendorRequests
     {
         if (def.IsChoice) return def.ChoiceIndex(raw) >= 0;
         return long.TryParse(raw, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out long n) && def.RawFor(n) == raw;
+    }
+
+    public const string SessionName = "Slender", SessionVersion = "v1";
+    private const int SoftphoneBody = 160, VersionOffset = 32, FirstBody = 54, MiddleBody = 60;
+
+    /// <summary>
+    /// Writes the three fragments of the softphone registration (each buffer at least <see cref="VendorFrame.Length"/> bytes, cleared
+    /// first): a 160-byte body holding "Slender" and "v1", split 54, 60 and 46 bytes after the six-byte command header.
+    /// </summary>
+    public static void BuildSoftphoneAdd(Span<byte> first, Span<byte> middle, Span<byte> last)
+    {
+        if (first.Length < VendorFrame.Length || middle.Length < VendorFrame.Length || last.Length < VendorFrame.Length)
+            throw new ArgumentException("Frame buffer is shorter than a vendor report.");
+        Span<byte> message = stackalloc byte[6 + SoftphoneBody];
+        message.Clear();
+        message[0] = (byte)VendorCommand.SoftphoneAddIn;
+        message[1] = SoftphoneBody;
+        message[2] = 1;
+        Encoding.ASCII.GetBytes(SessionName, message[6..]);
+        Encoding.ASCII.GetBytes(SessionVersion, message[(6 + VersionOffset)..]);
+        Fragment(first, VendorFrame.First, 0x00, message[..VendorFrame.MaxChunk]);
+        Fragment(middle, VendorFrame.Middle, 0x04, message.Slice(VendorFrame.MaxChunk, VendorFrame.MaxChunk));
+        Fragment(last, VendorFrame.Last, 0x08, message[(2 * VendorFrame.MaxChunk)..]);
+    }
+
+    private static void Fragment(Span<byte> frame, byte position, byte seq, ReadOnlySpan<byte> chunk)
+    {
+        frame.Clear();
+        frame[0] = VendorFrame.ReportId;
+        frame[1] = position;
+        frame[2] = (byte)chunk.Length;
+        frame[3] = seq;
+        chunk.CopyTo(frame[VendorFrame.HeaderLength..]);
+    }
+
+    /// <summary>Call ids for a registered session: 50 of them.</summary>
+    public static int BuildAllocCid(ushort sid, Span<byte> frame) => Simple(VendorCommand.AllocCid, sid, 50, frame);
+
+    /// <summary>Ends the session sid.</summary>
+    public static int BuildQuit(ushort sid, Span<byte> frame) => Simple(VendorCommand.Quit, 0, sid, frame);
+
+    /// <summary>The call state of session sid, call cid: ringing (05) or idle (06), nothing else.</summary>
+    public static int BuildCallState(ushort sid, ushort cid, bool ringing, Span<byte> frame)
+    {
+        int length = Simple(VendorCommand.CallSyncState, sid, cid, frame);
+        frame[2] = 6 + 0x36;
+        frame[5] = 0x36;
+        frame[10] = (byte)sid;
+        frame[11] = (byte)(sid >> 8);
+        frame[12] = (byte)cid;
+        frame[13] = (byte)(cid >> 8);
+        frame[14] = ringing ? (byte)0x05 : (byte)0x06;
+        frame[17] = 0x02;
+        return length;
+    }
+
+    private static int Simple(VendorCommand command, ushort p1, ushort p2, Span<byte> frame)
+    {
+        if (frame.Length < VendorFrame.Length) throw new ArgumentException("Frame buffer is shorter than a vendor report.", nameof(frame));
+        frame.Clear();
+        frame[0] = VendorFrame.ReportId;
+        frame[1] = VendorFrame.Single;
+        frame[2] = 6;
+        frame[4] = (byte)command;
+        frame[6] = (byte)p1;
+        frame[7] = (byte)(p1 >> 8);
+        frame[8] = (byte)p2;
+        frame[9] = (byte)(p2 >> 8);
+        return VendorFrame.Length;
     }
 
     /// <summary>The EnvGet for a key: the short form up to 16 characters, the long one beyond.</summary>

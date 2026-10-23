@@ -42,7 +42,7 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
-    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage;
+    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage, _headsetPreviewRingMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -123,6 +123,11 @@ public sealed class TrayApplication : IDisposable
         fixed (char* set = DeviceMessages.HeadsetSetName)
         {
             _headsetSetMessage = Win32.RegisterWindowMessageW(set);
+        }
+
+        fixed (char* preview = DeviceMessages.HeadsetPreviewRingName)
+        {
+            _headsetPreviewRingMessage = Win32.RegisterWindowMessageW(preview);
         }
 
         CreateWindow();
@@ -237,6 +242,9 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Settings asks to change a base setting: catalog index and value (DeviceMessages.HeadsetSetName); set from Program. Null without the headset module.</summary>
     public Action<int, long>? SetHeadsetSetting { get; set; }
+
+    /// <summary>Settings asks to ring the base for a moment (DeviceMessages.HeadsetPreviewRingName); set from Program. Null without the headset module.</summary>
+    public Action? PreviewHeadsetRing { get; set; }
 
     /// <summary>Forgets a device in the registry (set from Program); true when it was removed. Null without a registry.</summary>
     public Func<string, bool>? ForgetDevice { get; set; }
@@ -440,6 +448,12 @@ public sealed class TrayApplication : IDisposable
         if (msg != 0 && msg == _headsetSetMessage)
         {
             SetHeadsetSetting?.Invoke((int)wParam, (long)lParam);
+            return true;
+        }
+
+        if (msg != 0 && msg == _headsetPreviewRingMessage)
+        {
+            PreviewHeadsetRing?.Invoke();
             return true;
         }
 
