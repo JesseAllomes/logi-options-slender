@@ -94,3 +94,4 @@ resume uses `.agent/drainclamp-state.md` alone. This file is for forensics.
 - 2026-10-21T22:37:41+00:00 d78a709b 1.1.41 released (strength glitch fix, notification haptics on uncloak + app name from toast text); config backed up as config.backup-20261022-before-1.1.41.json. Waiting: user decides on m49 3CX plugin
 - 2026-10-22T01:51:42+00:00 7fb79a0b Planned device modules (in-process, presence-gated, greyed when disconnected) and the Yealink WH64 headset module: m52-m55; research in personal/yealink-headset-control
 - 2026-10-22T01:54:35+00:00 0507a6b0 Username found in tracked .agent audit/map/verify files on origin since first commit; user approved scrub to %localuser% with history rewrite + force-push (m56, do first), then m52
+- 2026-10-22T02:00:21+00:00 85e71a4b m56 done: history rewritten (username -> %localuser%), audit cache untracked + excluded, force-pushed main and tags; old SHAs remain on GitHub until GC

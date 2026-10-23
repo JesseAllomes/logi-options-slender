@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=213 -->
+<!-- drainclamp-build: state; schema=1; generation=214 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -139,7 +139,6 @@ Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rin
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T02:00:21+00:00 85e71a4b m56 done: history rewritten (username -> %localuser%), audit cache untracked + excluded, force-pushed main and tags; old SHAs remain on GitHub until GC
 - 2026-10-22T02:15:54+00:00 65ec2df5 m52 done: device registry (CM_Register_Notification presence, catalog, known-devices.txt, active/sleeping/disconnected/hidden, per-module fault boundary), Logi modules wrap existing loops (Wake cuts backoff), status.json Presence; 2006 tests, AOT clean; live arrival/removal not yet observed on hardware
 - 2026-10-22T02:28:22+00:00 60f9e264 m53 done: presence-aware tray + Settings (hidden omitted, sleeping shown normally as Asleep, disconnected greyed with Remove device); Remove backs up config then resets that device's settings (Ring/Excel/Macros kept); 2028 tests, AOT clean; UI not yet seen live
 - 2026-10-22T03:16:01+00:00 52828c33 Released v1.1.42 (m52 device registry + m53 device UI) to GitHub Releases. Next: user checks presence live (sleep/disconnect, Remove device), then m54 Yealink module (LED/output writes need go-ahead)
@@ -159,4 +158,5 @@ Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rin
 - 2026-10-23T00:18:03+00:00 1e568c99 1.1.48 shipped without the device pictures (publish skipped Assets/Devices); fixed 0df7ead (Content with CopyToPublishDirectory + test), released 1.1.49 with the pictures in the staging output
 - 2026-10-23T00:41:36+00:00 3b83333d m61 preview ring (160d4f6) + m62 ring trigger (3ad755e: COL03 burst detector, CallRingSource Base/Extension/Either default Either, 3CX tab row) merged; preview suppresses the detector 12 s; 2423 tests. Live: unregistered ring refused, registered ring at usb_ring_volume, ring type does not change it; real 3CX ring = 12-press COL03 bursts at start/stop. User ring volume stays 1
 - 2026-10-23T01:09:01+00:00 2c23e7b4 Ring types 1-8 tested live (headset on ear): all the same on a PC-triggered ring; user 2026-10-23 gave up ring-sound selection (rows stay as Yealink offers them); preview cool-down 4 s
+- 2026-10-23T01:48:13+00:00 55b37133 m63 ring sound merged (fd56ecd): WASAPI shared player on a dedicated thread only while playing, AUTOCONVERTPCM, chosen device/volume, starts/stops with RingerSession, preview message; 2457 tests; AOT publish 0 warnings; real playback untested
 <!-- /DC:LOG -->
