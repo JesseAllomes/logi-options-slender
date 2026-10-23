@@ -3,9 +3,9 @@ namespace Slender.Yealink;
 /// <summary>
 /// The collections this module reads: the private telephony copy (COL02), the Teams button (COL04), the standard telephony one
 /// (COL01, input only: Teams and the 3CX web client own its outputs) and the vendor channel (COL05, read, and written only with
-/// requests from the allowlist).
+/// requests from the allowlist), and, only while the base-ring source is on, the consumer keys (COL03, input only).
 /// </summary>
-public enum YealinkCollection { Telephony, Teams, Standard, Vendor }
+public enum YealinkCollection { Telephony, Teams, Standard, Vendor, ConsumerKeys }
 
 /// <summary>Called on the transport's read thread; the span is only valid for the call.</summary>
 public delegate void YealinkReportHandler(YealinkCollection collection, ReadOnlySpan<byte> report);
@@ -15,10 +15,10 @@ public interface IYealinkTransport
 {
     /// <summary>
     /// Opens the WH64's telephony, Teams and standard telephony collections (the telephony one for writing too only when
-    /// writeLeds) and, only when vendorReads, the vendor channel (shared read/write). Null when the headset is not present.
+    /// writeLeds) and, only when vendorReads, the vendor channel (shared read/write), and the consumer keys (read only) only when consumerKeys. Null when the headset is not present.
     /// Nothing is read until the returned link's Start. Never throws for a missing device; failures go to log.
     /// </summary>
-    IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log);
+    IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log, bool consumerKeys = false);
 }
 
 /// <summary>One open session. Disposing cancels pending I/O, joins the read thread and closes every handle.</summary>

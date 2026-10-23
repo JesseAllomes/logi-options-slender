@@ -16,6 +16,8 @@ public class RingerTextTests
         string local = at.ToLocalTime().ToString("d MMM, h:mm tt", CultureInfo.InvariantCulture);
         Assert.Equal($"Last ring signal: {local} (headset)", RingerText.Status(true, at, "headset"));
         Assert.Equal($"Last ring signal: {local} (notification)", RingerText.Status(true, at, "notification"));
+        Assert.Equal($"Last ring signal: {local} (headset base)", RingerText.Status(true, at, "base"));
+        Assert.Equal($"Last ring signal: {local} (headset base)", RingerText.Status(false, at, "base")); // the base needs no extension
     }
 
     [Theory]

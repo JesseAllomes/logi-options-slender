@@ -30,7 +30,7 @@ internal sealed class FakeLink(ICollectionCaps? caps, YealinkReportHandler handl
 internal sealed class FakeTransport : IYealinkTransport
 {
     public bool Present = true;
-    public bool WriteRequested, VendorRequested;
+    public bool WriteRequested, VendorRequested, ConsumerRequested;
     public int Opens;
     public FakeLink? Link;
 
@@ -40,9 +40,10 @@ internal sealed class FakeTransport : IYealinkTransport
     /// <summary>Answers each vendor request the module writes (synchronously, as the read thread would); null = the base is silent.</summary>
     public Func<byte[], byte[]?>? VendorReply;
 
-    public IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log)
+    public IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log, bool consumerKeys = false)
     {
         Opens++;
+        ConsumerRequested = consumerKeys;
         WriteRequested = writeLeds;
         VendorRequested = vendorReads;
         if (!Present) return null;
@@ -215,13 +216,13 @@ public class YealinkModuleTests
     [InlineData(@"\\?\hid#vid_6993&pid_b0ae&mi_03&col04#7&1&0&0003#{4d1e55b2-f16f-11cf-88cb-001111000030}", YealinkCollection.Teams)]
     [InlineData(@"\\?\hid#vid_6993&pid_b0ae&mi_03&col01#7&1&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}", YealinkCollection.Standard)]
     [InlineData(@"\\?\hid#vid_6993&pid_b0ae&mi_03&col05#7&1&0&0004#{4d1e55b2-f16f-11cf-88cb-001111000030}", YealinkCollection.Vendor)]
+    [InlineData(@"\\?\hid#vid_6993&pid_b0ae&mi_03&col03#7&1&0&0002#{4d1e55b2-f16f-11cf-88cb-001111000030}", YealinkCollection.ConsumerKeys)]
     public void Wanted_interfaces_are_classified_from_the_path(string path, YealinkCollection expected)
     {
         Assert.Equal(expected, WindowsYealinkTransport.Classify(path));
     }
 
     [Theory]
-    [InlineData(@"\\?\hid#vid_6993&pid_b0ae&mi_03&col03#7&1&0&0002#{x}")]
     [InlineData(@"\\?\hid#vid_6993&pid_b0ae&mi_02&col02#7&1&0&0000#{x}")]
     [InlineData(@"\\?\hid#vid_6993&pid_b0af&mi_03&col02#7&1&0&0000#{x}")]
     [InlineData(@"\\?\hid#vid_046d&pid_b0ae&mi_03&col02#7&1&0&0000#{x}")]
@@ -232,6 +233,6 @@ public class YealinkModuleTests
 
     private sealed class ThrowingTransport : IYealinkTransport
     {
-        public IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log) => throw new IOException("denied");
+        public IYealinkLink? Open(bool writeLeds, bool vendorReads, YealinkReportHandler onReport, Action<string> log, bool consumerKeys = false) => throw new IOException("denied");
     }
 }

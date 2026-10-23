@@ -422,6 +422,8 @@ public sealed partial class SlenderEngine : IDisposable
     {
         try
         {
+            var allowed = _config.Haptics.RingSource;
+            if (allowed == (signal.Source == RingerSignalSource.Base ? CallRingSource.Extension : CallRingSource.Base)) return;
             if (signal.Start) RingSignalReceived?.Invoke(this, new RingSignalEventArgs(DateTimeOffset.Now, signal.Source));
             RingerSession session;
             lock (_gate)

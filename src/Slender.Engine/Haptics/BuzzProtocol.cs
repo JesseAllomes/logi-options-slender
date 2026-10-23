@@ -5,8 +5,11 @@ using Slender.Engine.Ringer;
 
 namespace Slender.Engine;
 
-/// <summary>Which signal told the ringer a call is ringing: the headset's ringer bit, or the 3CX page's notification.</summary>
-public enum RingerSignalSource { Headset, Notification }
+/// <summary>Which signal told the ringer a call is ringing: the headset's ringer bit, the 3CX page's notification, or the Yealink base itself.</summary>
+public enum RingerSignalSource { Headset, Notification, Base }
+
+/// <summary>What may start the ringer buzz: the Yealink headset base, the Edge extension, or either.</summary>
+public enum CallRingSource { Base, Extension, Either }
 
 /// <summary>A call started ringing (Start) or stopped, as reported by the Edge extension through the native host.</summary>
 public readonly record struct RingSignal(bool Start, RingerSignalSource Source);

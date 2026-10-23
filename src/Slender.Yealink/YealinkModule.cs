@@ -15,7 +15,9 @@ namespace Slender.Yealink;
 /// Mute, hook and reject also arrive on the standard telephony collection, which is read (never written) beside the private one.
 /// MuteSync: the headset's mute press toggles the Windows default microphone, and the mute LED (when LED writes are on) follows
 /// the Windows mute, including changes made elsewhere. The microphone object and its notification exist only while a link is open.
-/// Events are raised on the read thread and must return quickly. LedWritesEnabled, MuteSync and VendorReadsEnabled are read at Start.
+/// BaseRingEnabled (default off): the consumer keys collection (COL03) is opened read-only, on the same read thread, and the base's ring
+/// bursts raise <see cref="BaseRingChanged"/>. With it off that collection is never opened.
+/// Events are raised on the read thread and must return quickly. LedWritesEnabled, MuteSync, VendorReadsEnabled and BaseRingEnabled are read at Start.
 /// </summary>
 public sealed class YealinkModule : IDeviceModule
 {
@@ -36,6 +38,8 @@ public sealed class YealinkModule : IDeviceModule
     private bool _ledsOn;
     private bool _syncOn;
     private bool _vendorOn;
+    private bool _baseRingOn;
+    private readonly BaseRingDetector _ringDetector;
     private long _lastRefresh;
     private volatile YealinkVendorSession? _vendor;
     private volatile bool _offHook;
@@ -52,6 +56,8 @@ public sealed class YealinkModule : IDeviceModule
     /// <param name="tick">Milliseconds clock for the refresh limit. Default: Environment.TickCount64.</param>
     public YealinkModule(IYealinkTransport transport, Action<string> log, Func<bool>? standDown = null, Func<IMicMute>? micFactory = null, Func<long>? tick = null)
     {
+        _ringDetector = new BaseRingDetector(tick);
+        _ringDetector.Changed += OnBaseRing;
         _tick = tick ?? (static () => Environment.TickCount64);
         _micFactory = micFactory ?? (() => new Windows.WindowsMicMute());
         _transport = transport;
@@ -70,11 +76,20 @@ public sealed class YealinkModule : IDeviceModule
     /// <summary>When true (default false) MutePressed toggles the Windows microphone and the mute LED follows it.</summary>
     public bool MuteSync { get; set; }
 
+    /// <summary>When true (default false) the base's ringing is listened for and raises <see cref="BaseRingChanged"/>.</summary>
+    public bool BaseRingEnabled { get; set; }
+
     public event Action<bool>? HookChanged;
     public event Action? MutePressed;
     public event Action? FlashPressed;
     public event Action? RejectPressed;
     public event Action? TeamsButtonPressed;
+
+    /// <summary>The base started (true) or stopped (false) ringing. Read thread; return quickly.</summary>
+    public event Action<bool>? BaseRingChanged;
+
+    /// <summary>Ignore base ring bursts for this long (the preview ring makes the base send them too).</summary>
+    public void SuppressBaseRing(TimeSpan span) => _ringDetector.SuppressFor(span);
 
     /// <summary>The base reported a new battery, signal or setting (or the link closed and they were cleared). May come from any thread; return quickly.</summary>
     public event Action? HeadsetChanged;
@@ -91,6 +106,7 @@ public sealed class YealinkModule : IDeviceModule
             _ledsOn = LedWritesEnabled;
             _syncOn = MuteSync;
             _vendorOn = VendorReadsEnabled;
+            _baseRingOn = BaseRingEnabled;
             TryOpen();
         }
     }
@@ -205,18 +221,20 @@ public sealed class YealinkModule : IDeviceModule
     /// Sets the flags and, if they differ from what the running link was opened with, reopens it so they take effect now
     /// (Stop and Start under the module's own lock, so serial with the registry's calls). Nothing happens while stopped.
     /// </summary>
-    public void ApplySettings(bool ledWrites, bool muteSync, bool vendorReads = true)
+    public void ApplySettings(bool ledWrites, bool muteSync, bool vendorReads = true, bool baseRing = false)
     {
         lock (_gate)
         {
             LedWritesEnabled = ledWrites;
             MuteSync = muteSync;
             VendorReadsEnabled = vendorReads;
-            if (!_started || (_ledsOn == ledWrites && _syncOn == muteSync && _vendorOn == vendorReads)) return;
+            BaseRingEnabled = baseRing;
+            if (!_started || (_ledsOn == ledWrites && _syncOn == muteSync && _vendorOn == vendorReads && _baseRingOn == baseRing)) return;
             Close();
             _ledsOn = ledWrites;
             _syncOn = muteSync;
             _vendorOn = vendorReads;
+            _baseRingOn = baseRing;
             TryOpen();
         }
     }
@@ -258,7 +276,7 @@ public sealed class YealinkModule : IDeviceModule
                 return;
             }
 
-            var link = _transport.Open(_ledsOn, _vendorOn, OnReport, _log);
+            var link = _transport.Open(_ledsOn, _vendorOn, OnReport, _log, _baseRingOn);
             if (link == null)
             {
                 _log("Yealink: headset interfaces not found");
@@ -338,6 +356,12 @@ public sealed class YealinkModule : IDeviceModule
         lock (_ledLock) { _led = null; _ledSent = false; }
     }
 
+    private void OnBaseRing(bool start)
+    {
+        try { BaseRingChanged?.Invoke(start); }
+        catch (Exception ex) { _log($"Yealink: base ring handler failed: {ex.Message}"); }
+    }
+
     private void OnVendorChanged()
     {
         try { HeadsetChanged?.Invoke(); }
@@ -349,6 +373,11 @@ public sealed class YealinkModule : IDeviceModule
         if (collection == YealinkCollection.Vendor)
         {
             _vendor?.OnReport(report);
+            return;
+        }
+        if (collection == YealinkCollection.ConsumerKeys)
+        {
+            if (_baseRingOn) _ringDetector.Feed(report);
             return;
         }
         var decoder = _decoder;
