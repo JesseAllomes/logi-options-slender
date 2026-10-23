@@ -42,7 +42,7 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
-    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage, _headsetPreviewRingMessage;
+    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage, _headsetPreviewRingMessage, _ringSoundPreviewMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -128,6 +128,11 @@ public sealed class TrayApplication : IDisposable
         fixed (char* preview = DeviceMessages.HeadsetPreviewRingName)
         {
             _headsetPreviewRingMessage = Win32.RegisterWindowMessageW(preview);
+        }
+
+        fixed (char* ringSound = DeviceMessages.RingSoundPreviewName)
+        {
+            _ringSoundPreviewMessage = Win32.RegisterWindowMessageW(ringSound);
         }
 
         CreateWindow();
@@ -245,6 +250,9 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Settings asks to ring the base for a moment (DeviceMessages.HeadsetPreviewRingName); set from Program. Null without the headset module.</summary>
     public Action? PreviewHeadsetRing { get; set; }
+
+    /// <summary>Settings asks to play the ring sound once (DeviceMessages.RingSoundPreviewName): sound number and volume number as the message carries them; set from Program.</summary>
+    public Action<int, int>? PreviewRingSound { get; set; }
 
     /// <summary>Forgets a device in the registry (set from Program); true when it was removed. Null without a registry.</summary>
     public Func<string, bool>? ForgetDevice { get; set; }
@@ -454,6 +462,12 @@ public sealed class TrayApplication : IDisposable
         if (msg != 0 && msg == _headsetPreviewRingMessage)
         {
             PreviewHeadsetRing?.Invoke();
+            return true;
+        }
+
+        if (msg != 0 && msg == _ringSoundPreviewMessage)
+        {
+            PreviewRingSound?.Invoke((int)wParam, (int)lParam);
             return true;
         }
 

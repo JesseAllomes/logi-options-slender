@@ -31,6 +31,11 @@
     <Content Include="..\Slender.Settings\Assets\Fonts\JetBrainsMono-Medium.ttf" Link="Assets\Fonts\JetBrainsMono-Medium.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The ring sounds are read from Assets\Sounds next to the exe; the installer puts Settings and the tray in one folder, and this gives a dev build of the tray the same files. -->
+    <Content Include="..\Slender.Settings\Assets\Sounds\*.wav" Link="Assets\Sounds\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(SlenderUpdateSource)' != ''">
     <!-- Build-Setup.ps1 passes -p:SlenderUpdateSource=<artifactseleases>: the default update source baked into this build (slender.sync.json still overrides). -->
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">

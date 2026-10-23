@@ -129,6 +129,9 @@ public sealed class JsonConfigStore : IConfigStore
                 Ringer = haptics.Ringer is { } ringer ? ToCue(ringer) : HapticCues.DefaultRinger,
                 RingerOrigin = Slender.Engine.Ringer.RingerOrigin.Normalize(haptics.RingerOrigin),
                 RingSource = Enum.TryParse(haptics.RingSource, ignoreCase: true, out CallRingSource ringSource) && Enum.IsDefined(ringSource) ? ringSource : CallRingSource.Either,
+                RingSound = Slender.Engine.Ringer.RingSounds.Find(haptics.RingSound)?.Id,
+                RingSoundDevice = string.IsNullOrWhiteSpace(haptics.RingSoundDevice) ? null : haptics.RingSoundDevice,
+                RingSoundVolume = Math.Clamp(haptics.RingSoundVolume ?? Slender.Engine.Ringer.RingSounds.DefaultVolume, 0, 100),
                 RingAnswerButton = Slender.Engine.Ringer.RingButtons.Normalize(haptics.RingAnswerButton ?? 0),
                 RingRejectButton = Slender.Engine.Ringer.RingButtons.Normalize(haptics.RingRejectButton ?? 0),
             },
@@ -313,6 +316,9 @@ public sealed class JsonConfigStore : IConfigStore
                 Ringer = config.Haptics.Ringer == HapticCues.DefaultRinger ? null : FromCue(config.Haptics.Ringer),
                 RingerOrigin = config.Haptics.RingerOrigin,
                 RingSource = config.Haptics.RingSource == CallRingSource.Either ? null : config.Haptics.RingSource.ToString(),
+                RingSound = config.Haptics.RingSound,
+                RingSoundDevice = config.Haptics.RingSoundDevice,
+                RingSoundVolume = config.Haptics.RingSoundVolume == Slender.Engine.Ringer.RingSounds.DefaultVolume ? null : config.Haptics.RingSoundVolume,
                 RingAnswerButton = config.Haptics.RingAnswerButton == 0 ? null : config.Haptics.RingAnswerButton,
                 RingRejectButton = config.Haptics.RingRejectButton == 0 ? null : config.Haptics.RingRejectButton,
             },
@@ -601,6 +607,9 @@ public sealed class JsonConfigStore : IConfigStore
         public HapticCueDto? Ringer { get; set; }
         public string? RingerOrigin { get; set; }
         public string? RingSource { get; set; }
+        public string? RingSound { get; set; }
+        public string? RingSoundDevice { get; set; }
+        public int? RingSoundVolume { get; set; }
         public int? RingAnswerButton { get; set; }
         public int? RingRejectButton { get; set; }
     }

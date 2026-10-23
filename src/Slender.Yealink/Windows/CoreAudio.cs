@@ -10,16 +10,115 @@ namespace Slender.Yealink.Windows;
 [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
 internal partial interface IMMDeviceEnumerator
 {
-    [PreserveSig] int EnumAudioEndpoints(int dataFlow, uint stateMask, out nint devices);
+    [PreserveSig] int EnumAudioEndpoints(int dataFlow, uint stateMask, out IMMDeviceCollection devices);
 
     [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+
+    [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
+}
+
+[GeneratedComInterface]
+[Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
+internal partial interface IMMDeviceCollection
+{
+    [PreserveSig] int GetCount(out uint count);
+
+    [PreserveSig] int Item(uint index, out IMMDevice device);
 }
 
 [GeneratedComInterface]
 [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
 internal partial interface IMMDevice
 {
-    [PreserveSig] int Activate(in Guid iid, uint clsCtx, nint activationParams, out IAudioEndpointVolume volume);
+    /// <summary>The interface comes back raw: wrap it with <see cref="CoreAudioCom.Wrap{T}"/> (the type depends on the iid asked for).</summary>
+    [PreserveSig] int Activate(in Guid iid, uint clsCtx, nint activationParams, out nint iface);
+
+    [PreserveSig] int OpenPropertyStore(uint access, out IPropertyStore properties);
+
+    [PreserveSig] int GetId(out nint id);
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct PropertyKey(Guid fmtid, uint pid)
+{
+    public Guid Fmtid = fmtid;
+    public uint Pid = pid;
+}
+
+/// <summary>PROPVARIANT on 64-bit Windows: 24 bytes, the pointer member at offset 8.</summary>
+[StructLayout(LayoutKind.Sequential, Size = 24)]
+internal struct PropVariant
+{
+    public ushort Vt;
+    public ushort Reserved1, Reserved2, Reserved3;
+    public nint Pointer;
+}
+
+[GeneratedComInterface]
+[Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+internal partial interface IPropertyStore
+{
+    [PreserveSig] int GetCount(out uint count);
+
+    [PreserveSig] int GetAt(uint index, out PropertyKey key);
+
+    [PreserveSig] int GetValue(in PropertyKey key, out PropVariant value);
+}
+
+[GeneratedComInterface]
+[Guid("1CB9AD4C-DBFA-4C32-B178-C2F568A703B2")]
+internal partial interface IAudioClient
+{
+    [PreserveSig] int Initialize(int shareMode, uint streamFlags, long bufferDuration, long periodicity, nint format, in Guid sessionGuid);
+
+    [PreserveSig] int GetBufferSize(out uint frames);
+
+    [PreserveSig] int GetStreamLatency(out long latency);
+
+    [PreserveSig] int GetCurrentPadding(out uint frames);
+
+    [PreserveSig] int IsFormatSupported(int shareMode, nint format, out nint closest);
+
+    [PreserveSig] int GetMixFormat(out nint format);
+
+    [PreserveSig] int GetDevicePeriod(out long defaultPeriod, out long minimumPeriod);
+
+    [PreserveSig] int Start();
+
+    [PreserveSig] int Stop();
+
+    [PreserveSig] int Reset();
+
+    [PreserveSig] int SetEventHandle(nint handle);
+
+    [PreserveSig] int GetService(in Guid iid, out nint service);
+}
+
+[GeneratedComInterface]
+[Guid("F294ACFC-3146-4483-A7BF-ADDCA7C260E2")]
+internal partial interface IAudioRenderClient
+{
+    [PreserveSig] int GetBuffer(uint frames, out nint data);
+
+    [PreserveSig] int ReleaseBuffer(uint frames, uint flags);
+}
+
+internal static class CoreAudioCom
+{
+    private static readonly StrategyBasedComWrappers Wrappers = new();
+
+    /// <summary>Wraps a raw COM pointer (taking over the caller's reference) as a generated interface.</summary>
+    public static T Wrap<T>(nint raw) where T : class
+    {
+        try { return (T)Wrappers.GetOrCreateObjectForComInstance(raw, CreateObjectFlags.None); }
+        finally { Marshal.Release(raw); }
+    }
+
+    public static void Release(object? com)
+    {
+        if (com == null) return;
+        try { Marshal.FinalReleaseComObject(com); } catch { /* wrapper without a COM identity: the finalizer releases it */ }
+    }
 }
 
 [GeneratedComInterface]

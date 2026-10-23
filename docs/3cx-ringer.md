@@ -43,6 +43,16 @@ A port kept open with `connectNative` was the alternative. It would give instant
 
 The extension version is now 1.1.0. After updating Slender, press **Set up** again and reload the extension in `edge://extensions` so Edge picks up the new files.
 
+## Ring sound
+
+The **Ring sound** section on the same page plays one of seven built-in sounds (Classic, Old phone bell, Chime, Marimba, Soft pulse, Digital, Rise) on the PC while a call rings. It starts and stops exactly with the buzz: the same start signals (headset base or Edge extension, per "Buzz the mouse when a call rings"), and the same ends (stop signal, any mouse click, the 90 second limit). Off by default. It plays even when the buzz is switched off, and the tray keeps listening to the base if either one is on.
+
+- **Play it on** picks the playback device. The first choice is the Yealink WH64 headset when it is connected, otherwise the Windows default device. The headset only plays PC sound while it is off the base. A device that is gone makes the ring silent (logged); the buzz is unaffected.
+- **Volume** (0 to 100 percent) is a gain on the sound, on top of the device's own volume.
+- **Play** previews the sound once. It is ignored while a call rings and the button waits 3 seconds between plays.
+
+How it plays: the tray starts one thread only while a sound plays. It opens the WAV (24 kHz mono, 16-bit, in `AssetsSounds` next to the app) and a WASAPI shared-mode stream on the device, hands Windows the file's own format and lets it convert to the device's (auto-convert with default quality resampling), refills a 500 ms buffer every 100 ms and loops until stopped. On stop the thread ends and is joined and every audio object is released; nothing exists between rings. The sounds are made by `tools/ringtones/make_ringtones.py` (standard library only).
+
 ## Privacy
 
 No call data leaves the page. The extension never reads or sends caller names, numbers, titles or any page content. The only things it sends are "started", "stopped", the signal name, a poll, and whether the Answer/Decline click found its button. It reads only the labels of the page's buttons to find those two. It has one permission (`nativeMessaging`), runs only on the one address you give, and has no storage and no network access. Slender keeps the time and signal of the last ring start in `status.json` so Settings can show it; nothing else is recorded.

@@ -431,16 +431,52 @@ public sealed partial class SlenderEngine : IDisposable
                 if (_disposed) return;
                 if (_ringer is null)
                 {
-                    _ringer = new RingerSession(_holdTimer, _queue, RingerCue, _player.Play, _player.Cancel, _hook.SetClickWatch, _log);
+                    _ringer = new RingerSession(_holdTimer, _queue, RingerCue, _player.Play, _player.Cancel, _hook.SetClickWatch, _log,
+                        () => RingSoundChoice(_config.Haptics, 0, null) is not null, StartRingSound, StopRingSound);
                     _hook.AnyButtonPressed += OnAnyButton;
                 }
                 session = _ringer;
             }
             session.Signal(signal.Start);
             if (!signal.Start) _ringChannel?.Disarm();
-            else if (RingButtons.AnyOn(_config.Haptics) && RingerCue() is not null) RingChannel.Arm();
+            else if (RingButtons.AnyOn(_config.Haptics) && (RingerCue() is not null || RingSoundChoice(_config.Haptics, 0, null) is not null)) RingChannel.Arm();
         }
         catch (Exception ex) { SafeLog("ring signal failed", ex); }
+    }
+
+    /// <summary>Plays the ring sound; set by the tray. Null (tests, no audio) means no ring sound.</summary>
+    public IRingSoundPlayer? RingSoundPlayer { get; set; }
+
+    /// <summary>The folder with the sound WAVs (RingSounds.Folder); set by the tray.</summary>
+    public string? RingSoundFolder { get; set; }
+
+    private (string Path, string? Device, int Volume)? RingSoundChoice(HapticSettings haptics, int soundNumber, int? volume)
+    {
+        if (RingSoundPlayer is null || RingSoundFolder is null) return null;
+        var sound = soundNumber > 0 ? (soundNumber <= RingSounds.All.Count ? RingSounds.All[soundNumber - 1] : null) : RingSounds.Find(haptics.RingSound);
+        if (sound is null) return null;
+        return (Path.Combine(RingSoundFolder, sound.File), haptics.RingSoundDevice, Math.Clamp(volume ?? haptics.RingSoundVolume, 0, 100));
+    }
+
+    private void StartRingSound()
+    {
+        if (RingSoundChoice(_config.Haptics, 0, null) is { } c) RingSoundPlayer!.Play(c.Path, c.Device, c.Volume, loop: true);
+    }
+
+    private void StopRingSound() => RingSoundPlayer?.Stop();
+
+    /// <summary>
+    /// Settings' Play button: the ring sound once, never while a call rings. A non-zero soundNumber (index + 1) and volumeNumber (volume + 1) replace the
+    /// saved ones, which the tray's config may not have reloaded yet; the device comes from <paramref name="saved"/>. Any thread.
+    /// </summary>
+    public void PreviewRingSound(HapticSettings saved, int soundNumber, int volumeNumber)
+    {
+        try
+        {
+            if (Ringing || RingSoundChoice(saved, soundNumber, volumeNumber > 0 ? volumeNumber - 1 : null) is not { } c) return;
+            RingSoundPlayer!.Play(c.Path, c.Device, c.Volume, loop: false);
+        }
+        catch (Exception ex) { SafeLog("ring sound preview failed", ex); }
     }
 
     private IRingCommandChannel? _ringChannel;

@@ -44,6 +44,7 @@
     <Content Include="Assets\Fonts\*-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Slender.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Devices\*.webp" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\Sounds\*.wav" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

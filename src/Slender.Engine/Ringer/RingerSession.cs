@@ -18,6 +18,9 @@ internal sealed class RingerSession : IDisposable
     private readonly Action _cancelPlay;
     private readonly Action<bool> _watchClicks;
     private readonly ILog _log;
+    private readonly Func<bool>? _wantsSound;
+    private readonly Action? _startSound, _stopSound;
+    private bool _soundOn;            // queue thread only
     private IDisposable? _next, _cap; // queue thread only
     private int _round;               // queue thread only: bumped at every start and end, so stale timers do nothing
     private volatile bool _ringing;
@@ -28,8 +31,15 @@ internal sealed class RingerSession : IDisposable
     /// <param name="play">Plays a cue on the mouse.</param>
     /// <param name="cancelPlay">Stops the cue still playing.</param>
     /// <param name="watchClicks">Turns the mouse hook's any-button notice on or off.</param>
-    public RingerSession(IHoldTimer timer, IWorkQueue queue, Func<HapticCue?> cue, Action<HapticCue> play, Action cancelPlay, Action<bool> watchClicks, ILog log)
+    /// <param name="wantsSound">True when a ring sound is chosen: the ring then runs even with the buzz cue off.</param>
+    /// <param name="startSound">Starts the looping ring sound at the start of a ring.</param>
+    /// <param name="stopSound">Stops it when the ring ends.</param>
+    public RingerSession(IHoldTimer timer, IWorkQueue queue, Func<HapticCue?> cue, Action<HapticCue> play, Action cancelPlay, Action<bool> watchClicks, ILog log,
+        Func<bool>? wantsSound = null, Action? startSound = null, Action? stopSound = null)
     {
+        _wantsSound = wantsSound;
+        _startSound = startSound;
+        _stopSound = stopSound;
         _timer = timer;
         _queue = queue;
         _cue = cue;
@@ -75,13 +85,27 @@ internal sealed class RingerSession : IDisposable
     private void Begin()
     {
         if (_ringing) return;
-        if (_cue() is not { } cue) return;
+        var cue = _cue();
+        bool sound = _wantsSound?.Invoke() == true;
+        if (cue is null && !sound) return;
         Volatile.Write(ref _consumed, 0);
         _ringing = true;
         int round = ++_round;
         _watchClicks(true);
         _cap = _timer.Schedule(MaxRingMs, () => PostIfCurrent(round, End));
-        Ring(round, cue);
+        if (sound)
+        {
+            _soundOn = true;
+            Sound(_startSound);
+        }
+
+        if (cue is { } first) Ring(round, first);
+    }
+
+    private void Sound(Action? action)
+    {
+        try { action?.Invoke(); }
+        catch (Exception ex) { try { _log.Error("ring sound failed", ex); } catch { } }
     }
 
     private void Ring(int round, HapticCue cue)
@@ -92,8 +116,8 @@ internal sealed class RingerSession : IDisposable
         {
             _next?.Dispose();
             _next = null;
-            // The cue may have changed in Settings during the ring; the next round plays the new one (null: ringer switched off, stop).
-            if (_cue() is { } now) Ring(round, now); else End();
+            // The cue may have changed in Settings during the ring; the next round plays the new one (null: buzz switched off; the ring ends unless its sound plays on).
+            if (_cue() is { } now) Ring(round, now); else if (!_soundOn) End();
         }));
     }
 
@@ -109,6 +133,14 @@ internal sealed class RingerSession : IDisposable
         _next = _cap = null;
         _watchClicks(false);
         _cancelPlay();
+        StopSound();
+    }
+
+    private void StopSound()
+    {
+        if (!_soundOn) return;
+        _soundOn = false;
+        Sound(_stopSound);
     }
 
     public void Dispose()
@@ -119,5 +151,6 @@ internal sealed class RingerSession : IDisposable
         _next?.Dispose();
         _cap?.Dispose();
         try { _watchClicks(false); } catch { }
+        StopSound();
     }
 }

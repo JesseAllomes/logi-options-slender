@@ -43,8 +43,8 @@ public sealed partial class WindowsMicMute : IMicMute
             Check(enumerator.GetDefaultAudioEndpoint(ECapture, ECommunications, out var device));
             _device = device;
             var vol = AudioEndpointVolumeIid;
-            Check(device.Activate(in vol, ClsctxAll, 0, out var volume));
-            _volume = volume;
+            Check(device.Activate(in vol, ClsctxAll, 0, out nint volume));
+            _volume = CoreAudioCom.Wrap<IAudioEndpointVolume>(volume);
         }
         catch
         {

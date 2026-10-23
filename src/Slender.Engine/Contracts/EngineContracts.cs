@@ -330,6 +330,15 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
     /// <summary>What starts the ringer buzz: the headset base ringing, the 3CX Edge extension, or either (default).</summary>
     public CallRingSource RingSource { get; init; } = CallRingSource.Either;
 
+    /// <summary>The ring sound that plays on the PC while a call rings (id from RingSounds); null = off.</summary>
+    public string? RingSound { get; init; }
+
+    /// <summary>Core Audio endpoint id of the playback device for the ring sound; null = the WH64 headset when present, else the Windows default.</summary>
+    public string? RingSoundDevice { get; init; }
+
+    /// <summary>Ring sound volume, 0-100.</summary>
+    public int RingSoundVolume { get; init; } = Slender.Engine.Ringer.RingSounds.DefaultVolume;
+
     /// <summary>The mouse button (a hook button's control id, see RingButtons) that answers a ringing 3CX call; 0 = off.</summary>
     public ushort RingAnswerButton { get; init; }
 
@@ -342,6 +351,7 @@ public sealed record HapticSettings(bool Enabled = true, int Level = 2, bool OnB
         && OnActionsRing == other.OnActionsRing && Strength == other.Strength
         && SameMap(Cues, other.Cues) && SameMap(Alerts, other.Alerts) && SameMap(Patterns, other.Patterns) && Notify.Equals(other.Notify)
         && Ringer == other.Ringer && RingerOrigin == other.RingerOrigin && RingSource == other.RingSource
+        && RingSound == other.RingSound && RingSoundDevice == other.RingSoundDevice && RingSoundVolume == other.RingSoundVolume
         && RingAnswerButton == other.RingAnswerButton && RingRejectButton == other.RingRejectButton;
 
     public override int GetHashCode() => HashCode.Combine(Enabled, Level, OnButtonPress, OnActionsRing, Strength, Cues.Count, Alerts.Count, Patterns.Count);
@@ -689,6 +699,13 @@ public static class DeviceMessages
     /// while a 3CX ring is active; a refusal or failure shows as HeadsetState.WriteProblem.
     /// </summary>
     public const string HeadsetPreviewRingName = "Slender.HeadsetPreviewRing";
+
+    /// <summary>
+    /// Settings asks the tray to play the ring sound once on the chosen device (m63): wParam = sound index in RingSounds.All + 1
+    /// (0 = the saved setting), lParam = volume 0-100 plus 1 (0 = the saved volume). The device always comes from the saved
+    /// config. Ignored while a call is ringing.
+    /// </summary>
+    public const string RingSoundPreviewName = "Slender.RingSoundPreview";
 }
 
 /// <summary>A ring-start reached the tray: when (local time) and which signal fired.</summary>

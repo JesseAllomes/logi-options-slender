@@ -125,6 +125,10 @@ static class Program
             new Slender.Engine.ExcelAddin.ExcelAddinClient(new Slender.Engine.ExcelAddin.NamedPipeExcelAddinTransport()), log);
         var executor = new ActionExecutor(excelOrAddin, foreground, log);
         using var engine = new SlenderEngine(mouse, hook, foreground, excelOrAddin, executor, config, log);
+        // Ring sound (m63): the player holds nothing until a ring or a preview plays; the engine starts and stops it with the ring.
+        var ringSound = new Slender.Yealink.Windows.WasapiRingSoundPlayer(log.Info);
+        engine.RingSoundPlayer = ringSound;
+        engine.RingSoundFolder = Slender.Engine.Ringer.RingSounds.Folder(AppContext.BaseDirectory);
         // Macros run on their own threads (pauses never hold up the engine); Esc, a second press or the time cap ends one.
         using var macros = new Slender.Engine.Macros.MacroRunner(new Slender.Engine.Macros.WindowsMacroInput(log: log), log: log)
         {
@@ -269,6 +273,12 @@ static class Program
         };
 
         engine.DpiCapabilitiesChanged += (_, _) => app.SetDpiCapabilities(engine.DpiCapabilities);
+        // Settings saves first, but the tray's reload can lag: the device comes from the newest file, the sound and volume from the message.
+        app.PreviewRingSound = (sound, volume) => ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try { engine.PreviewRingSound(store.Load().Haptics, sound, volume); }
+            catch (Exception ex) { log.Error("ring sound preview failed", ex); }
+        });
         app.ConfigChanged += (_, changed) =>
         {
             sync.NotifyConfigChanged();
@@ -285,6 +295,7 @@ static class Program
             _ = ApplyMouseFeel(mouse, changed).ContinueWith(_ => app.RefreshMouseValues(), TaskScheduler.Default);
         };
         app.Run();
+        ringSound.Stop();
         log.Info("Slender stopping");
         if (!app.RestartRequested)
         {
@@ -294,8 +305,9 @@ static class Program
         return app.RestartRequested;
     }
 
-    /// <summary>The base's consumer keys are read only while its ringing can start a buzz that would play.</summary>
-    private static bool ListensToBaseRing(SlenderConfig c) => c.Haptics is { Enabled: true, Ringer.Enabled: true, RingSource: not CallRingSource.Extension };
+    /// <summary>The base's consumer keys are read only while its ringing can start a buzz or a ring sound that would play.</summary>
+    internal static bool ListensToBaseRing(SlenderConfig c) =>
+        c.Haptics.RingSource != CallRingSource.Extension && (c.Haptics is { Enabled: true, Ringer.Enabled: true } || c.Haptics.RingSound is not null);
 
     /// <summary>Wheel resistance, Sense Panel force and haptic strength (m26): applied now and re-applied on every connect; null leaves the device alone.</summary>
     private static async Task ApplyMouseFeel(LogiMouse mouse, SlenderConfig config)

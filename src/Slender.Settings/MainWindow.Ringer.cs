@@ -160,5 +160,7 @@ public sealed partial class MainWindow
         ShowStatus();
         _status.Changed += ShowStatus;
         status.Unloaded += (_, _) => _status.Changed -= ShowStatus;
+
+        BuildRingSoundSection();
     }
 }

@@ -5,7 +5,7 @@ import wave
 from pathlib import Path
 
 RATE = 24000
-OUT = Path(__file__).parent
+OUT = Path(__file__).resolve().parents[2] / "src" / "Slender.Settings" / "Assets" / "Sounds"
 
 
 def silence(sec):
