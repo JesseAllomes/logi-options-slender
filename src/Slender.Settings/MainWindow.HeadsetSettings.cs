@@ -83,10 +83,10 @@ public sealed partial class MainWindow
             SendPendingSetting();
             AskTray(DeviceMessages.HeadsetPreviewRingName);
             play.IsEnabled = false;
-            // A one-shot timer that exists only for these two seconds.
+            // A one-shot timer that exists only for these four seconds: back-to-back registrations strain the base.
             var timer = DispatcherQueue.CreateTimer();
             _previewRingTimer = timer;
-            timer.Interval = TimeSpan.FromSeconds(2);
+            timer.Interval = TimeSpan.FromSeconds(4);
             timer.IsRepeating = false;
             timer.Tick += (s, _) =>
             {
@@ -95,7 +95,7 @@ public sealed partial class MainWindow
                 play.IsEnabled = enabled;
                 if (_page is Page.Headset or Page.Base)
                 {
-                    RebuildHeadsetPage(); // a redraw during the 2 s made a new, still disabled button
+                    RebuildHeadsetPage(); // a redraw during the wait made a new, still disabled button
                 }
             };
             timer.Start();
