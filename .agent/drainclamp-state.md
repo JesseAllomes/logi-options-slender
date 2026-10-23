@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=205 -->
+<!-- drainclamp-build: state; schema=1; generation=206 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -133,7 +133,6 @@ Device pictures (user 2026-10-23; supersedes copying pictures from Options+ and 
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-21T21:59:04+00:00 d0e471f3 Notification haptics never fired on Win11 26300: no EVENT_SYSTEM_ALERT, toast = ShellExperienceHost CoreWindow 'New notification' uncloaked (0x8018); client MSAA name only 'New notification' (app was always Unknown). Fix: second hook on UNCLOAKED (OBJID_WINDOW), MSAA BFS -> first STATICTEXT = app (ToastNames.AppFromParts). Verified live: tray reader returned 'Windows PowerShell'. 1966 tests; pushed, not released. 3CX appears after its first toast (3CX toasts only when unfocused, 30 s; m49 still the ringer path)
 - 2026-10-21T22:37:41+00:00 d78a709b 1.1.41 released (strength glitch fix, notification haptics on uncloak + app name from toast text); config backed up as config.backup-20261022-before-1.1.41.json. Waiting: user decides on m49 3CX plugin
 - 2026-10-22T01:51:42+00:00 7fb79a0b Planned device modules (in-process, presence-gated, greyed when disconnected) and the Yealink WH64 headset module: m52-m55; research in personal/yealink-headset-control
 - 2026-10-22T01:54:35+00:00 0507a6b0 Username found in tracked .agent audit/map/verify files on origin since first commit; user approved scrub to %localuser% with history rewrite + force-push (m56, do first), then m52
@@ -153,4 +152,5 @@ Device pictures (user 2026-10-23; supersedes copying pictures from Options+ and 
 - 2026-10-22T08:25:21+00:00 8f3468e3 Custom base ringtone fully investigated and ruled out: headset rings extracted (TONE_INCOMING*.mp3, 8kHz mono); base rings (Ring1-8) sit in DES-encrypted base fw (no key); base MCU command table has NO file commands (File* are Linux-only stubs, verified via recovered wire-byte map validated on 13/15 known cmds); no file-write path; flashing blocked (encrypted + never-firmware). Only custom-ring route left is Slender playing a WAV in the earpiece. Research in personal/yealink-headset-control: rc8-wire-map.md, ring-extraction.md, firmware-*.md
 - 2026-10-22T22:15:42+00:00 554b7b3d m59 c1-c4: headset/base split into two tiles+pages, base settings adjustable (allowlisted EnvSet 0x04/0x23, read back), pictures larger without card (scale 2, fallback to small copy), 3CX fifth tab; 2386 tests; released 1.1.47 (config backup before-m59). Next c5: live check, first write only on go-ahead
 - 2026-10-23T00:00:26+00:00 2bfa6018 Gate 6 m59 R6-R10: 8 fixed, 17 refuted, r80 dismissed (copy code removed). Labels/placement audit applied (Yealink's own wording, per-page groups, plug-in busylight on base). m60: Codex photoreal device pictures approved and shipped in Assets/Devices; all picture copying and Refresh pictures removed; decoded pictures reused across rebuilds (flicker); not-affiliated note; 2379 tests
+- 2026-10-23T00:03:24+00:00 27f2e5d8 1.1.48 released (m59 review fixes + labels, m60 shipped pictures + flicker fix); vpk publish step failed, draft published with gh; config backed up as config.backup-20261023-before-m60.json. Next: live look (pictures, callouts, keyboard framing 0.66, flicker) and m59 c5 first write on go-ahead
 <!-- /DC:LOG -->
