@@ -85,7 +85,7 @@ public sealed partial class MainWindow
             _infoDevice.Message = text.Message;
         }
 
-        bool low = !trayDown && !DevicePresenceView.Dimmed(_status.Status, deviceId) && state is { BatteryPercent: < 20, Charging: false };
+        bool low = !trayDown && !DevicePresenceView.Dimmed(_status.Status, deviceId) && BatteryGlyphModel.IsLow(state, BatteryGlyphModel.ThresholdFor(deviceId, _config.Config.BatteryAlerts));
         _infoBattery.IsOpen = low;
         if (low && state?.BatteryPercent is { } percent)
         {

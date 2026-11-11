@@ -448,6 +448,7 @@ public sealed partial class MainWindow : Window
         }
 
         UpdateInfoBars();
+        UpdateHeadingBattery();
         UpdateStageDim();
         string versionRow = UpdateText.Version(_status.Status, string.Empty) + _status.TrayRunning;
         if (_page == Page.General && versionRow != _versionRow)

@@ -65,6 +65,7 @@
             <TextBlock x:Name="HeadingTitle" FontFamily="{StaticResource DisplayFont}" FontSize="34" LineHeight="38"
                        Foreground="{StaticResource InkBrush}" />
             <TextBlock x:Name="HeadingSub" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="2,2,0,0" />
+            <ContentControl x:Name="HeadingBattery" IsTabStop="False" HorizontalAlignment="Left" Margin="2,8,0,0" />
           </StackPanel>
         </StackPanel>
       </Grid>

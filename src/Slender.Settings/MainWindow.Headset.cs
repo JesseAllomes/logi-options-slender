@@ -39,9 +39,9 @@ public sealed partial class MainWindow
 
         thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);
-        string caption = baseTile ? (offline ? "Off" : "On")
-            : DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Headset) ?? (_status.Device(DeviceIds.Headset)?.BatteryPercent is { } pct ? $"{pct}%" : "On");
-        content.Children.Add(Ui.Text(caption, 11.5, Ui.Muted));
+        content.Children.Add(baseTile
+            ? Ui.Text(offline ? "Off" : "On", 11.5, Ui.Muted)
+            : BatteryGlyph.Create(BatteryGlyphModel.For(_status.Status, DeviceIds.Headset, _config.Config.BatteryAlerts), BatteryGlyphSize.Small, Ui.Muted, compact: true));
 
         var button = new Button
         {
@@ -55,7 +55,7 @@ public sealed partial class MainWindow
             Content = content,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
-        AutomationProperties.SetName(button, name + DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset));
+        AutomationProperties.SetName(button, name + (baseTile ? string.Empty : ", " + BatteryGlyphModel.For(_status.Status, DeviceIds.Headset, _config.Config.BatteryAlerts).AccessibleText.ToLowerInvariant()) + DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset));
         ToolTipService.SetToolTip(button, name);
         button.Click += (_, _) => OpenPage(page);
         if (!baseTile && DevicePresenceView.Removable(_status.Status, DeviceIds.Headset))
@@ -83,6 +83,14 @@ public sealed partial class MainWindow
         heading.Margin = new Thickness(0, 0, 0, 4);
         PagePanel.Children.Add(heading);
         PagePanel.Children.Add(Ui.Text(DevicePresenceView.Subtitle(_status.Status, DeviceIds.Headset), 12, Ui.Muted));
+        if (title == HeadsetName)
+        {
+            FrameworkElement battery = LargeBattery(DeviceIds.Headset);
+            battery.HorizontalAlignment = HorizontalAlignment.Left;
+            battery.Margin = new Thickness(0, 8, 0, 0);
+            PagePanel.Children.Add(battery);
+        }
+
         if (_status.Status is null || !_status.TrayRunning)
         {
             AddHeadsetNote("Slender isn't running. Changes you make here are saved and apply when it starts.");

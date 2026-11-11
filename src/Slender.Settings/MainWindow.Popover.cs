@@ -321,17 +321,17 @@ public sealed partial class MainWindow
         foreach (DeviceKind kind in VisibleKinds())
         {
             string id = ControlCatalog.DeviceId(kind);
-            string battery = _status.Device(id)?.BatteryPercent is { } p ? $", battery {p}%" : string.Empty;
-            tiles.Add(PopTile(BuiltInPictures.For(kind), ControlCatalog.DeviceName(kind) + battery + DevicePresenceView.AccessibleSuffix(_status.Status, id),
-                DevicePresenceView.Dimmed(_status.Status, id), () => { _kind = kind; _page = Page.Device; }));
+            BatteryGlyphModel glyph = BatteryGlyphModel.For(_status.Status, id, _config.Config.BatteryAlerts);
+            tiles.Add(PopTile(BuiltInPictures.For(kind), ControlCatalog.DeviceName(kind) + ", " + glyph.AccessibleText.ToLowerInvariant() + DevicePresenceView.AccessibleSuffix(_status.Status, id),
+                DevicePresenceView.Dimmed(_status.Status, id), () => { _kind = kind; _page = Page.Device; }, glyph));
         }
 
         if (HeadsetListed())
         {
             bool offline = DevicePresenceView.Dimmed(_status.Status, DeviceIds.Headset);
-            string battery = _status.Device(DeviceIds.Headset)?.BatteryPercent is { } p ? $", battery {p}%" : string.Empty;
+            BatteryGlyphModel glyph = BatteryGlyphModel.For(_status.Status, DeviceIds.Headset, _config.Config.BatteryAlerts);
             string suffix = DevicePresenceView.AccessibleSuffix(_status.Status, DeviceIds.Headset);
-            tiles.Add(PopTile(BuiltInPictures.Headset, HeadsetName + battery + suffix, offline, () => _page = Page.Headset));
+            tiles.Add(PopTile(BuiltInPictures.Headset, HeadsetName + ", " + glyph.AccessibleText.ToLowerInvariant() + suffix, offline, () => _page = Page.Headset, glyph));
             tiles.Add(PopTile(BuiltInPictures.Base, BaseName + suffix, offline, () => _page = Page.Base));
         }
 
@@ -362,9 +362,9 @@ public sealed partial class MainWindow
         FitPopover();
     }
 
-    private Button PopTile(CachedDevice device, string name, bool offline, Action select)
+    private Button PopTile(CachedDevice device, string name, bool offline, Action select, BatteryGlyphModel? battery = null)
     {
-        double imageHeight = PopTileHeight - 16;
+        double imageHeight = PopTileHeight - 16 - (battery is null ? 0 : 20);
         var image = new Image
         {
             Stretch = Stretch.Uniform,
@@ -386,6 +386,14 @@ public sealed partial class MainWindow
             Background = Ui.Brush("Paper2Brush"),
             Content = image,
         };
+        if (battery is not null)
+        {
+            var stack = new StackPanel { Spacing = 4, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            stack.Children.Add(image);
+            stack.Children.Add(BatteryGlyph.Create(battery, BatteryGlyphSize.Small, Ui.Muted));
+            button.Content = stack;
+        }
+
         AutomationProperties.SetName(button, name);
         ToolTipService.SetToolTip(button, name);
         button.Click += async (_, _) =>

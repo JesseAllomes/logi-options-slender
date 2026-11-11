@@ -684,6 +684,9 @@ public sealed partial class MainWindow
 
     // ---- heading ----
 
+    /// <summary>The selected device's battery under the heading: large glyph plus the days-left estimate.</summary>
+    private void UpdateHeadingBattery() => HeadingBattery.Content = LargeBattery(ControlCatalog.DeviceId(_kind));
+
     private void UpdateHeading()
     {
         Profile? profile = ProfileOps.Find(_config.Config, _app);
@@ -694,6 +697,7 @@ public sealed partial class MainWindow
             ? (_kind == DeviceKind.Mouse ? "Default for every app" : "Default for every app")
             : ProfileOps.Subtitle(changed, _kind, isAllApps: false);
 
+        UpdateHeadingBattery();
         if (HeadingIconHost.Tag as string != (_app ?? "*"))
         {
             HeadingIconHost.Tag = _app ?? "*";

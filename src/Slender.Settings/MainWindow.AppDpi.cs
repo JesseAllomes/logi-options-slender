@@ -32,6 +32,21 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>The large battery glyph with the days-left estimate beside it (not while greyed or charging).</summary>
+    private FrameworkElement LargeBattery(string id)
+    {
+        BatteryGlyphModel model = BatteryGlyphModel.For(_status.Status, id, _config.Config.BatteryAlerts);
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
+        row.Children.Add(BatteryGlyph.Create(model, BatteryGlyphSize.Large));
+        string? estimate = _status.Device(id)?.BatteryEstimate;
+        if (!model.Dimmed && model.Kind is not (BatteryGlyphKind.Charging or BatteryGlyphKind.Full or BatteryGlyphKind.Error) && !string.IsNullOrWhiteSpace(estimate))
+        {
+            row.Children.Add(Ui.Text(estimate!, 13, Ui.Muted));
+        }
+
+        return row;
+    }
+
     /// <summary>One row per device: battery level and the days-left estimate from its history.</summary>
     private void BuildBatterySection()
     {
@@ -39,7 +54,12 @@ public sealed partial class MainWindow
         foreach (DeviceKind kind in new[] { DeviceKind.Mouse, DeviceKind.Keyboard })
         {
             AddRow(ControlCatalog.DeviceName(kind), "Days left comes from how fast the battery has been draining. It needs a few days of use first.",
-                Ui.Text(BatteryLine.Text(_status.Device(ControlCatalog.DeviceId(kind))), 13, Ui.Muted));
+                LargeBattery(ControlCatalog.DeviceId(kind)));
+        }
+
+        if (HeadsetListed())
+        {
+            AddRow(HeadsetName, null, LargeBattery(DeviceIds.Headset));
         }
     }
 }

@@ -92,7 +92,7 @@ public sealed partial class MainWindow
 
         thumb.Opacity = offline ? 0.5 : 1;
         content.Children.Add(thumb);
-        content.Children.Add(BatteryText(_status.Status, state, id, offline));
+        content.Children.Add(RailBattery(id));
 
         var button = new Button
         {
@@ -106,7 +106,7 @@ public sealed partial class MainWindow
             Content = content,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
-        string battery = state?.BatteryPercent is { } p ? $", battery {p} percent" : string.Empty;
+        string battery = ", " + BatteryGlyphModel.For(_status.Status, id, _config.Config.BatteryAlerts).AccessibleText.ToLowerInvariant();
         AutomationProperties.SetName(button, ControlCatalog.DeviceName(kind) + battery + DevicePresenceView.AccessibleSuffix(_status.Status, id));
         ToolTipService.SetToolTip(button, ControlCatalog.DeviceName(kind) + (!offline && state?.BatteryEstimate is { Length: > 0 } estimate && state.Charging is false ? " · " + estimate : string.Empty));
         button.Click += (_, _) => SelectDevice(kind);
@@ -128,23 +128,8 @@ public sealed partial class MainWindow
         return button;
     }
 
-    private static FrameworkElement BatteryText(SlenderStatus? status, DeviceState? state, string id, bool offline)
-    {
-        string? word = DevicePresenceView.BatteryWord(status, id);
-        string text = state is null ? "—"
-            : offline ? word ?? "Off"
-            : state.BatteryPercent is { } p ? $"{p}%" : word ?? state.BatteryText ?? "—";
-        bool shown = !offline && state is not null && (state.Connected || word is not null);
-        bool low = shown && state is { BatteryPercent: < 20, Charging: false };
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, HorizontalAlignment = HorizontalAlignment.Center };
-        if (shown && state is { Charging: true })
-        {
-            row.Children.Add(Ui.Glyph("", 10, Ui.Live));
-        }
-
-        row.Children.Add(Ui.Text(text, 11.5, low ? Ui.Warn : Ui.Muted));
-        return row;
-    }
+    private FrameworkElement RailBattery(string id) =>
+        BatteryGlyph.Create(BatteryGlyphModel.For(_status.Status, id, _config.Config.BatteryAlerts), BatteryGlyphSize.Small, Ui.Muted, compact: true);
 
     private Button GearTile()
     {
