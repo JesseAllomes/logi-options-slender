@@ -935,6 +935,56 @@
         "note": "",
         "targets": []
       }
+    ],
+    "m65": [
+      {
+        "done": true,
+        "done_at": "2026-11-11T01:52:06+00:00",
+        "est_min": 10,
+        "goal": "Contract: DeviceState.ChargeState + StatusSnapshot mouse/keyboard charge state, publisher fills it (orchestrator on main)",
+        "id": "c1",
+        "note": "DeviceState.ChargeState + StatusSnapshot Mouse/KeyboardChargeState + StatusPublisher.ChargeText",
+        "targets": [
+          "src/Slender.Engine/Contracts/EngineContracts.cs",
+          "src/Slender.Tray/StatusPublisher.cs"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-11-11T02:26:24+00:00",
+        "est_min": 25,
+        "goal": "Tray: badge -> whole-logo pulse (red low, green charging), corner battery and bolt removed; tests",
+        "id": "c2",
+        "note": "Whole-logo CPU recolour pulse, 20 frames/1.6 s, red E0352B / green 2DBE60, a3bd3a4",
+        "targets": [
+          "src/Slender.Tray/BadgeModel.cs",
+          "src/Slender.Tray/TrayBadgeRenderer.cs",
+          "src/Slender.Tray/TrayBadgeController.cs",
+          "src/Slender.Tray/TrayApplication.cs",
+          "tests/Slender.Tests/Tray"
+        ]
+      },
+      {
+        "done": true,
+        "done_at": "2026-11-11T02:26:25+00:00",
+        "est_min": 25,
+        "goal": "Settings: HQ vector BatteryGlyph with percent, bolt, Charged, low colour; popover rows + rail tiles + device pages for mouse/keyboard/headset; tests",
+        "id": "c3",
+        "note": "BatteryGlyph vector control + model on popover, rail, device pages, apps Battery; bottom bar per-device threshold, 3d1bcc6",
+        "targets": [
+          "src/Slender.Settings",
+          "tests/Slender.Tests"
+        ]
+      },
+      {
+        "done": false,
+        "done_at": null,
+        "est_min": 20,
+        "goal": "Preview review, merge, release, live check",
+        "id": "c4",
+        "note": "",
+        "targets": []
+      }
     ]
   },
   "errors": [
@@ -1032,7 +1082,7 @@
       "summary": "Live probe: COL02 (FF30 report 4) sends nothing on mute/hook presses; mute arrives only on COL01 report 2. Teams button on COL04 works. Likely needs Yealink_SetHidWorkingState-style activation; mute sync dead until fixed"
     }
   ],
-  "rev": 401,
+  "rev": 408,
   "review": {
     "advice": [],
     "config": {
@@ -19647,6 +19697,20 @@
       "note": "",
       "source": "auto",
       "start": "2026-11-11T01:02:48+00:00"
+    },
+    {
+      "end": "2026-11-11T01:52:06+00:00",
+      "id": "s19",
+      "note": "",
+      "source": "auto",
+      "start": "2026-11-11T01:52:06+00:00"
+    },
+    {
+      "end": "2026-11-11T02:26:25+00:00",
+      "id": "s20",
+      "note": "",
+      "source": "auto",
+      "start": "2026-11-11T02:26:24+00:00"
     }
   ],
   "todos": [

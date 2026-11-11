@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=221 -->
+<!-- drainclamp-build: state; schema=1; generation=224 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -63,6 +63,7 @@ Ring trigger (user 2026-10-23) -> what makes the mouse buzz for a 3CX call is th
 Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rings all sound the same) -> Slender plays its own ring sound while a call rings: seven sounds made from scratch in code and approved by the user (Classic, Old phone bell, Chime, Marimba, Soft pulse, Digital, Rise; generator committed so they can be rebuilt), Off by default until chosen; the user picks the playback device (any Windows output, default the WH64 headset) and a ring-sound volume; it starts and stops with the ring buzz (base ring or extension), stops on answer, click or 90 s; a Play button previews it; all on the 3CX tab; nothing loaded or playing while idle
 Tray battery badge (user 2026-11-11) -> charging status shows the moment the mouse is plugged in or unplugged; while a device charges or is low (under its battery alert threshold: mouse 15%, keyboard 10%) the normal Slender tray icon gains a small animated battery badge in the corner (filling bars when charging, red pulse when low); 'make it really, really sleek' = anti-aliased, smooth easing, sized per DPI; low wins over charging, which device in the tooltip, full + plugged = static badge, no timer or frames while nothing animates, Windows animation off = static (agent defaults)
 Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation and the bolt-style variants) -> while charging the Slender S crossfades to a white lightning bolt and back; the corner battery shows the real level (static fill = percent, green charging, red pulsing when low); full on charger = S + full battery, static; badge kept small in the corner so the S stays readable
+Battery visibility (user 2026-11-11, supersedes the tray badge look: corner battery and S-to-bolt crossfade) -> tray: no corner badge; the whole logo pulses red at/under the alert threshold (mouse 15%, keyboard 10%), pulses green while charging, low wins; battery level lives in proper high-quality battery icons with accurate percentages on the popover and on each device's page in Settings (mouse, keyboard, headset); percent is what the device reports (K860 0x1000 may report coarse steps)
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -132,6 +133,7 @@ Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation
 | m62 | Ring trigger choice on the 3CX tab (Edge extension / headset base ringing / either): live 3CX call capture first, then build | src/Slender.Yealink;src/Slender.Engine;src/Slender.Settings;tests/Slender.Tests | pending | m61 |
 | m63 | Ring sound: shipped WAVs + generator, tray player on a chosen output device (loops while ringing), config (sound, device, volume), 3CX tab rows + preview; live check on a real call incl. base ring volume 0 still detected | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m62 |
 | m64 | Battery charging + animated tray badge (built 91f9a12, released 1.1.53; live check open: plug/unplug mouse, low badge): 0x1004 battery event (fn0) handled so plug/unplug shows at once (no 5-min wait), charge state Charging/Full/Error kept apart; tray icon = Slender icon + small battery badge drawn with Direct2D (RingCanvas) into cached frames: filling bars loop while charging, soft red pulse while a device is under its alert threshold and not charging (low beats charging), static full badge when plugged and full; timer and frames exist only while animating; Windows animations off = static badge | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Engine/Contracts;tests/Slender.Tests | pending | m63 |
+| m65 | Battery visibility redo: tray corner badge removed (too hard to see); whole Slender logo pulses red when a device is at/under its alert threshold and not charging, pulses green while charging (low wins), plain otherwise, static tint when Windows animations are off; HQ vector battery glyph with accurate percent (bolt when charging, 'Charged' when full) on the popover and every device page/rail tile (mouse, keyboard, headset); DeviceState.ChargeState in status.json | src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m64 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -142,7 +144,6 @@ Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T03:40:45+00:00 0eba68ee m49 go-ahead (user 2026-10-22: 'continue with the plugin'); builder in .worktrees/m49 (wt-m49)
 - 2026-10-22T03:59:22+00:00 ac47d7ef m49 built + merged ff (68789cb,b5652cd,216e066) and pushed: MV3 extension (HID Ringer bit primary, call Notification fallback, start/stop only), RingerHost AOT one-shot native host, !ring protocol, RingerSession (cue loop until stop/click/90 s, other buzzes dropped), RingerInstaller (HKCU host key, previous value kept), Settings 3CX RINGER on Haptics page; 2116 tests; NOT released, nothing run live (needs Set up + Load unpacked + a real call)
 - 2026-10-22T04:01:19+00:00 898ad1d2 State updated: m49 row (built, open until live call), ARCH ringer line, handoff refreshed for 2026-10-22; release 1.1.43 waits on the user
 - 2026-10-22T04:06:49+00:00 ff38d20f Find button: WebAppShortcuts (pure, --app-url parse, 3CX match, origin via RingerOrigin) + Settings WebAppShortcutScan (IShellLinkW over Start menu/Startup/Desktop, on press only); live scan found the user's 3CX origin; 2125 tests. Releasing 1.1.43 (user: yes to Find before release)
@@ -162,4 +163,5 @@ Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation
 - 2026-11-10T23:36:10+00:00 ef8df1c1 m64 opened (user 2026-11-11): charging status at once via 0x1004 event + animated tray badge (charging fill, low pulse); look = Slender icon + badge, really sleek
 - 2026-11-11T01:02:48+00:00 4e427687 m64 built + merged + pushed 91f9a12 (author rewritten to noreply; Gmail push declined): 0x1004/0x1000 battery events, ChargeState, tray badge (S<->bolt crossfade, real-level battery, low pulse); 2528 tests; Gate 6 skipped (review mode off); releasing
 - 2026-11-11T01:09:27+00:00 c2827754 1.1.53 released (m64 battery badge); SDK 10.0.404 installed per-user (NU1903: ILCompiler 10.0.13 advisory, patched >=10.0.14); config backed up as config.backup-20261111-before-m64.json. Next: user updates, live check plug/unplug + low badge
+- 2026-11-11T02:26:25+00:00 93ab6f4a m65 c2+c3 merged (a3bd3a4, 3d1bcc6): build clean, 2528 tests; releasing
 <!-- /DC:LOG -->
