@@ -133,4 +133,15 @@ public sealed class BadgeModelTests
         Assert.InRange(1000.0 / BadgeTiming.TimerIntervalMs, 11, 13);
         Assert.InRange(BadgeTiming.PeriodMs(BadgeKind.Low), 1550, 1650);
     }
+
+    [Fact]
+    public void State_carries_the_winning_devices_percent()
+    {
+        var st = BadgeModel.DecideState(Dev(40, charging: true), Dev(8, threshold: 10), true);
+        Assert.Equal(BadgeKind.Low, st.Kind);
+        Assert.Equal(8, st.Percent);
+        Assert.Equal(new BadgeState(BadgeKind.Charging, 62), BadgeModel.DecideState(Dev(62, charging: true), Absent, true));
+        Assert.Equal(new BadgeState(BadgeKind.None, 0), BadgeModel.DecideState(Dev(80), Dev(60, threshold: 10), true));
+        Assert.Equal(7, BadgeModel.DecideState(Dev(9, threshold: 10), Dev(7, threshold: 10), true).Percent); // both low: the lower level
+    }
 }

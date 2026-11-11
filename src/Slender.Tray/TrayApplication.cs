@@ -1147,11 +1147,12 @@ public sealed class TrayApplication : IDisposable
                 _iconSize = size;
             }
 
-            var kind = BadgeModel.Decide(
+            var state = BadgeModel.DecideState(
                 new BadgeInput(_connected, _battery, _config.BatteryAlerts.MouseThresholdPercent),
                 new BadgeInput(_keyboardConnected, _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent),
                 _config.BatteryAlerts.Enabled);
-            bool changed = _badge.Set(kind, Ring.RingNative.ClientAreaAnimationEnabled(), size, _icon, Environment.TickCount64);
+            int fill = state.Kind == BadgeKind.None ? 0 : TrayBadgeRenderer.FillWidth(size, state.Kind == BadgeKind.Full ? 100 : state.Percent);
+            bool changed = _badge.Set(state.Kind, Ring.RingNative.ClientAreaAnimationEnabled(), size, fill, _icon, Environment.TickCount64);
             bool timer = _badge.NeedsTimer;
             if (timer && !_badgeTimerOn)
             {
