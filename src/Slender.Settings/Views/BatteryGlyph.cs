@@ -57,10 +57,15 @@ internal static class BatteryGlyph
 
         if (model.ShowBolt)
         {
-            var points = new PointCollection();
-            foreach ((double x, double y) in g.Bolt) points.Add(new Point(x, y));
-            canvas.Children.Add(new Polygon { Points = points, Stroke = ground, StrokeThickness = g.BoltEdge * 2, StrokeLineJoin = PenLineJoin.Round, Fill = ground });
-            canvas.Children.Add(new Polygon { Points = points, Fill = ink });
+            // WinUI rejects one PointCollection on two shapes (E_INVALIDARG), so each polygon gets its own.
+            PointCollection BoltPoints()
+            {
+                var points = new PointCollection();
+                foreach ((double x, double y) in g.Bolt) points.Add(new Point(x, y));
+                return points;
+            }
+            canvas.Children.Add(new Polygon { Points = BoltPoints(), Stroke = ground, StrokeThickness = g.BoltEdge * 2, StrokeLineJoin = PenLineJoin.Round, Fill = ground });
+            canvas.Children.Add(new Polygon { Points = BoltPoints(), Fill = ink });
         }
 
         var text = Ui.Text(compact ? model.CompactLabel : model.Label, g.FontSize, label);
