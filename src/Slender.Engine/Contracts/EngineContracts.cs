@@ -590,6 +590,11 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
     public IReadOnlyList<int>? DpiValues { get; init; }
     /// <summary>Days-left sentence from the battery history ("About 12 days left", "Not enough data yet", "Charging"); null when not known.</summary>
     public string? BatteryEstimate { get; init; }
+    /// <summary>
+    /// Where the battery is in its charge cycle as the device reported it: "charging", "full" (on the charger, complete) or "error"
+    /// (on the charger, fault); null when discharging or unknown. <see cref="DeviceState.Charging"/> stays true for charging and full.
+    /// </summary>
+    public string? ChargeState { get; init; }
     /// <summary>Current scroll wheel resistance 0-100 (0x2111 torque); null when unknown.</summary>
     public int? WheelResistance { get; init; }
     /// <summary>Current Sense Panel force reading in device units (0x19C0); null when unknown.</summary>

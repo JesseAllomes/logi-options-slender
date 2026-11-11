@@ -31,7 +31,9 @@ public sealed record StatusSnapshot(
     IReadOnlyList<DeviceEntry>? Devices = null,
     DateTimeOffset? LastRingSignal = null,
     string? LastRingSource = null,
-    Slender.Engine.HeadsetState? Headset = null);
+    Slender.Engine.HeadsetState? Headset = null,
+    string? MouseChargeState = null,
+    string? KeyboardChargeState = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -43,12 +45,22 @@ public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int
 /// </summary>
 public sealed class StatusPublisher : IDisposable
 {
+    /// <summary>status.json text for a reading's charge state: "charging", "full", "error", or null when discharging or unknown.</summary>
+    public static string? ChargeText(Slender.Hidpp.BatteryStatus? battery) => battery?.State switch
+    {
+        Slender.Hidpp.ChargeState.Charging => "charging",
+        Slender.Hidpp.ChargeState.Full => "full",
+        Slender.Hidpp.ChargeState.Error => "error",
+        _ => null,
+    };
+
     private static DeviceState MouseDeviceState(StatusSnapshot s)
     {
         var state = new DeviceState("mx-master-4", "MX Master 4", s.MouseConnected, s.MouseConnected ? s.MouseBattery : null, s.MouseConnected && s.MouseCharging)
         {
             Dpi = s.MouseConnected ? s.MouseDpi : null,
             BatteryEstimate = s.MouseConnected ? s.MouseBatteryEstimate : null,
+            ChargeState = s.MouseConnected ? s.MouseChargeState : null,
             Firmware = s.MouseFirmware,
             WheelMode = s.MouseConnected ? s.WheelMode : null,
             Hosts = s.MouseConnected ? s.MouseHosts : null,
@@ -193,7 +205,7 @@ public sealed class StatusPublisher : IDisposable
         DeviceState[] all =
             [
                 MouseDeviceState(s) with { Presence = PresenceText(s.Devices, DeviceCatalog.MxMaster4) },
-                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { BatteryEstimate = s.KeyboardConnected ? s.KeyboardBatteryEstimate : null, Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null, Presence = PresenceText(s.Devices, DeviceCatalog.ErgoK860) },
+                new DeviceState("ergo-k860", "ERGO K860", s.KeyboardConnected, s.KeyboardConnected ? s.KeyboardBattery : null, s.KeyboardConnected && s.KeyboardCharging) { BatteryEstimate = s.KeyboardConnected ? s.KeyboardBatteryEstimate : null, ChargeState = s.KeyboardConnected ? s.KeyboardChargeState : null, Channel = s.KeyboardConnected ? s.KeyboardChannel : null, Firmware = s.KeyboardFirmware, Hosts = s.KeyboardConnected ? s.KeyboardHosts : null, Presence = PresenceText(s.Devices, DeviceCatalog.ErgoK860) },
             ];
         // With a registry list, a never-installed (Hidden) device is not in status.json at all; without one, both always are.
         IReadOnlyList<DeviceState> devices = s.Devices is null ? all : all.Where(d => !IsHidden(s.Devices, d.Id)).ToArray();

@@ -91,7 +91,8 @@ public sealed class TrayApplication : IDisposable
                 _updates?.CurrentVersion, _updates?.AvailableVersion, _updates?.UpdateReady ?? false, _mouseValues, _keyboard?.CurrentChannel,
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
                 ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
-                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke(), _lastRing, _lastRingSource, HeadsetInfo?.Invoke()),
+                _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke(), _lastRing, _lastRingSource, HeadsetInfo?.Invoke(),
+                StatusPublisher.ChargeText(_battery), StatusPublisher.ChargeText(_keyboardBattery)),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
