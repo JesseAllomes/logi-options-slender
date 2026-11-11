@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=224 -->
+<!-- drainclamp-build: state; schema=1; generation=225 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -144,7 +144,6 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T03:59:22+00:00 ac47d7ef m49 built + merged ff (68789cb,b5652cd,216e066) and pushed: MV3 extension (HID Ringer bit primary, call Notification fallback, start/stop only), RingerHost AOT one-shot native host, !ring protocol, RingerSession (cue loop until stop/click/90 s, other buzzes dropped), RingerInstaller (HKCU host key, previous value kept), Settings 3CX RINGER on Haptics page; 2116 tests; NOT released, nothing run live (needs Set up + Load unpacked + a real call)
 - 2026-10-22T04:01:19+00:00 898ad1d2 State updated: m49 row (built, open until live call), ARCH ringer line, handoff refreshed for 2026-10-22; release 1.1.43 waits on the user
 - 2026-10-22T04:06:49+00:00 ff38d20f Find button: WebAppShortcuts (pure, --app-url parse, 3CX match, origin via RingerOrigin) + Settings WebAppShortcutScan (IShellLinkW over Start menu/Startup/Desktop, on press only); live scan found the user's 3CX origin; 2125 tests. Releasing 1.1.43 (user: yes to Find before release)
 - 2026-10-22T04:09:35+00:00 5832d3ed 1.1.43 released (3CX ringer m49 + Find button); staged Slender.RingerHost.exe + EdgeRinger/extension; config backed up as config.backup-20261022-before-1.1.43.json. Next: user updates, Find, Set up, Edge Load unpacked, one real call
@@ -164,4 +163,5 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 - 2026-11-11T01:02:48+00:00 4e427687 m64 built + merged + pushed 91f9a12 (author rewritten to noreply; Gmail push declined): 0x1004/0x1000 battery events, ChargeState, tray badge (S<->bolt crossfade, real-level battery, low pulse); 2528 tests; Gate 6 skipped (review mode off); releasing
 - 2026-11-11T01:09:27+00:00 c2827754 1.1.53 released (m64 battery badge); SDK 10.0.404 installed per-user (NU1903: ILCompiler 10.0.13 advisory, patched >=10.0.14); config backed up as config.backup-20261111-before-m64.json. Next: user updates, live check plug/unplug + low badge
 - 2026-11-11T02:26:25+00:00 93ab6f4a m65 c2+c3 merged (a3bd3a4, 3d1bcc6): build clean, 2528 tests; releasing
+- 2026-11-11T02:29:38+00:00 4a73fc92 m65 released as 1.1.54; config backed up (config.backup-20261111-before-m65.json); live check open: red pulse at threshold, green on charger, glyphs on screen
 <!-- /DC:LOG -->
