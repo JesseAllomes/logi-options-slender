@@ -80,7 +80,14 @@ public static class ThumbWheelUnits
     public const int PerNotch = 6;
 }
 
-public readonly record struct BatteryStatus(int Percent, bool Charging);
+/// <summary>Where the battery is in its charge cycle. Full = on the charger and complete; Error = on the charger but the device reports a fault.</summary>
+public enum ChargeState { Discharging = 0, Charging = 1, Full = 2, Error = 3 }
+
+/// <summary>
+/// One battery reading. <see cref="Charging"/> is true while on the charger and not faulted (Charging or Full), as before;
+/// <see cref="State"/> tells charging and full apart.
+/// </summary>
+public readonly record struct BatteryStatus(int Percent, bool Charging, ChargeState State = ChargeState.Discharging);
 
 /// <summary>The scroll wheel's mode (0x2111 fn1 p[0]: 1 free-spin, 2 ratchet).</summary>
 public enum WheelMode { Unknown = 0, Ratchet = 1, FreeSpin = 2 }
@@ -212,4 +219,10 @@ public interface ILogiMouse : IDisposable
 
     /// <summary>Raised when <see cref="Hosts"/> was read and differs from the previous value.</summary>
     event EventHandler? HostsChanged { add { } remove { } }
+
+    /// <summary>
+    /// Raised (background thread) when the device announces a battery change on its own (0x1004 / 0x1000 event, e.g. the
+    /// charger was plugged in or out, or the level moved). Read only; polling stays as the fallback.
+    /// </summary>
+    event EventHandler<BatteryStatus>? BatteryChanged { add { } remove { } }
 }

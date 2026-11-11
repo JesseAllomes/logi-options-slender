@@ -151,4 +151,7 @@ public interface ILogiKeyboard : IDisposable
 
     /// <summary>Battery state, or null when unavailable or disconnected.</summary>
     Task<BatteryStatus?> GetBatteryAsync(CancellationToken ct);
+
+    /// <summary>Raised (background thread) when the keyboard announces a battery change on its own (0x1004 / 0x1000 event). Read only.</summary>
+    event EventHandler<BatteryStatus>? BatteryChanged { add { } remove { } }
 }
