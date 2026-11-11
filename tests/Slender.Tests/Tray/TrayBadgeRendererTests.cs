@@ -8,214 +8,130 @@ public sealed unsafe class TrayBadgeRendererTests
     [DllImport("user32.dll")] private static extern int DestroyIcon(nint icon);
     [DllImport("user32.dll")] private static extern nint LoadImageW(nint inst, char* name, uint type, int cx, int cy, uint flags);
 
-    private static byte[] Gray(int size)
-    {
-        var b = new byte[size * size * 4];
-        for (int i = 0; i < b.Length; i += 4) { b[i] = b[i + 1] = b[i + 2] = 0x80; b[i + 3] = 0xFF; }
-        return b;
-    }
-
-    /// <summary>An orange tile with a white block standing in for the S, at the spot the real S sits.</summary>
-    private static byte[] Tile(int size, out (int X0, int Y0, int X1, int Y1) glyph)
-    {
-        var b = new byte[size * size * 4];
-        for (int i = 0; i < b.Length; i += 4) { b[i] = 0x33; b[i + 1] = 0x73; b[i + 2] = 0xB8; b[i + 3] = 0xFF; }
-        glyph = (size * 3 / 8, size * 3 / 8, size * 3 / 8 + size / 4, size * 3 / 8 + size * 3 / 8);
-        for (int y = glyph.Y0; y <= glyph.Y1; y++)
-            for (int x = glyph.X0; x <= glyph.X1; x++) { int o = (y * size + x) * 4; b[o] = b[o + 1] = b[o + 2] = 0xFF; }
-        return b;
-    }
-
     private static (byte B, byte G, byte R, byte A) Px(byte[] frame, int size, int x, int y)
     {
         int o = (y * size + x) * 4;
         return (frame[o], frame[o + 1], frame[o + 2], frame[o + 3]);
     }
 
-    private static int FillPixels(byte[] frame, int size, bool red)
+    private static byte[] Tile(int size) => TileWith(size, out _);
+
+    /// <summary>A straight-orange tile (transparent first row and column, half-alpha second column, white S block with a half-white fringe).</summary>
+    private static byte[] TileWith(int size, out (int X0, int Y0, int X1, int Y1) s)
     {
-        var l = TrayBadgeRenderer.LayoutFor(size);
-        int y = l.Y + l.H / 2, n = 0;
-        for (int x = l.X; x < l.X + l.BodyW; x++)
+        var b = new byte[size * size * 4];
+        void Set(int x, int y, int r, int g, int bl, int a)
         {
-            var p = Px(frame, size, x, y);
-            if (p.A >= 200 && (red ? p.R > p.G + 90 : p.G > p.R + 90)) n++;
+            int o = (y * size + x) * 4;
+            b[o] = (byte)(bl * a / 255); b[o + 1] = (byte)(g * a / 255); b[o + 2] = (byte)(r * a / 255); b[o + 3] = (byte)a;
         }
 
-        return n;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++) Set(x, y, 0xF5, 0x82, 0x20, x == 0 || y == 0 ? 0 : x == 1 ? 128 : 255);
+        s = (size * 3 / 8, size * 3 / 8, size * 3 / 8 + size / 4, size * 3 / 8 + size * 3 / 8);
+        for (int y = s.Y0; y <= s.Y1; y++)
+            for (int x = s.X0; x <= s.X1; x++) Set(x, y, 255, 255, 255, 255);
+        for (int y = s.Y0; y <= s.Y1; y++) Set(s.X0 - 1, y, 250, 194, 144, 255); // half white, half orange
+        return b;
     }
 
     [Theory]
     [InlineData(16)]
-    [InlineData(20)]
     [InlineData(24)]
-    [InlineData(32)]
     [InlineData(40)]
     public void Frames_have_the_right_count_and_size(int size)
     {
-        var basePx = Tile(size, out _);
-        int fw = TrayBadgeRenderer.FillWidth(size, 50);
-        var charging = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, true, size, basePx, fw);
-        Assert.Equal(BadgeTiming.FrameCount(BadgeKind.Charging, true), charging.Length);
-        Assert.Equal(40, charging.Length);
-        Assert.Equal(BadgeTiming.FrameCount(BadgeKind.Low, true), TrayBadgeRenderer.RenderFrames(BadgeKind.Low, true, size, basePx, fw).Length);
-        var full = TrayBadgeRenderer.RenderFrames(BadgeKind.Full, true, size, basePx, 99);
-        Assert.Single(full);
-        Assert.Equal(size * size * 4, full[0].Length);
-        Assert.Empty(TrayBadgeRenderer.RenderFrames(BadgeKind.None, true, size, basePx, fw));
-    }
-
-    [Theory]
-    [InlineData(16)]
-    [InlineData(20)]
-    [InlineData(24)]
-    [InlineData(32)]
-    [InlineData(40)]
-    public void Level_maps_to_a_fill_width_in_whole_pixels(int size)
-    {
-        int max = TrayBadgeRenderer.LayoutFor(size).FillMax;
-        Assert.Equal(1, TrayBadgeRenderer.FillWidth(size, 0));
-        Assert.Equal(1, TrayBadgeRenderer.FillWidth(size, 1));
-        Assert.Equal(max, TrayBadgeRenderer.FillWidth(size, 100));
-        Assert.Equal(max, TrayBadgeRenderer.FillWidth(size, 250));
-        Assert.Equal((int)Math.Round(max / 2.0, MidpointRounding.AwayFromZero), TrayBadgeRenderer.FillWidth(size, 50));
-        int prev = 0;
-        for (int p = 0; p <= 100; p++)
-        {
-            int w = TrayBadgeRenderer.FillWidth(size, p);
-            Assert.InRange(w, prev, max);
-            prev = w;
-        }
-    }
-
-    [Theory]
-    [InlineData(16, 15)]
-    [InlineData(16, 85)]
-    [InlineData(24, 50)]
-    [InlineData(32, 85)]
-    public void Drawn_green_fill_has_exactly_the_level_width(int size, int percent)
-    {
-        int fw = TrayBadgeRenderer.FillWidth(size, percent);
-        var frames = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, false, size, Gray(size), fw);
-        Assert.Single(frames);
-        Assert.Equal(fw, FillPixels(frames[0], size, red: false));
+        var basePx = Tile(size);
+        var low = TrayBadgeRenderer.RenderFrames(BadgeKind.Low, true, size, basePx);
+        Assert.Equal(BadgeTiming.FrameCount(BadgeKind.Low, true), low.Length);
+        Assert.Equal(20, low.Length);
+        Assert.All(low, f => Assert.Equal(size * size * 4, f.Length));
+        Assert.Equal(BadgeTiming.FrameCount(BadgeKind.Charging, true), TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, true, size, basePx).Length);
+        Assert.Single(TrayBadgeRenderer.RenderFrames(BadgeKind.Low, false, size, basePx));
+        Assert.Empty(TrayBadgeRenderer.RenderFrames(BadgeKind.None, true, size, basePx));
+        Assert.Empty(TrayBadgeRenderer.RenderFrames(BadgeKind.Low, true, size, new byte[size * size * 4])); // nothing orange to move
     }
 
     [Fact]
-    public void Full_badge_is_a_full_solid_green_gauge_in_a_transparent_notch()
+    public void Pulse_starts_at_the_plain_icon_peaks_midway_and_mirrors_so_frames_are_shared()
+    {
+        const int size = 16;
+        var basePx = Tile(size);
+        var f = TrayBadgeRenderer.RenderFrames(BadgeKind.Low, true, size, basePx);
+        Assert.Equal(basePx, f[0]);
+        Assert.NotEqual(f[0], f[10]);
+        for (int i = 1; i < 10; i++) Assert.Same(f[i], f[20 - i]);       // a sine is symmetric
+        Assert.True(f.Distinct().Count() <= 11);
+        Assert.Equal(1.0, TrayBadgeRenderer.Blend(true, 10, 20), 6);
+        Assert.Equal(0.0, TrayBadgeRenderer.Blend(true, 0, 20), 6);
+        Assert.Equal(1.0, TrayBadgeRenderer.Blend(false, 0, 1));
+    }
+
+    [Theory]
+    [InlineData("Low")]
+    [InlineData("Charging")]
+    public void Orange_moves_toward_the_target_white_S_and_alpha_stay(string name)
     {
         const int size = 24;
-        var l = TrayBadgeRenderer.LayoutFor(size);
-        var f = TrayBadgeRenderer.RenderFrames(BadgeKind.Full, true, size, Gray(size), l.FillMax)[0];
-        Assert.Equal(l.FillMax, FillPixels(f, size, red: false));
-        Assert.Equal(((byte)0x80, (byte)0x80, (byte)0x80, (byte)0xFF), Px(f, size, 0, 0));
-        Assert.Equal(0, Px(f, size, l.X - 1, l.Y + l.H / 2).A);
-        Assert.Equal(0, Px(f, size, l.X + l.BodyW / 2, l.Y - 1).A);
-        Assert.Equal(((byte)0x58, (byte)0xD1, (byte)0x30, (byte)0xFF), Px(f, size, l.X + l.Stroke + l.Pad + 1, l.Y + l.H / 2)); // #30D158
-    }
-
-    [Fact]
-    public void Charging_fill_does_not_move_between_frames()
-    {
-        const int size = 16;
-        int fw = TrayBadgeRenderer.FillWidth(size, 50);
-        var frames = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, true, size, Gray(size), fw);
-        Assert.All(frames, f => Assert.Equal(fw, FillPixels(f, size, red: false)));
-    }
-
-    [Fact]
-    public void Crossfade_holds_the_S_then_eases_to_the_bolt_and_back()
-    {
-        int n = BadgeTiming.FrameCount(BadgeKind.Charging, true);
-        double B(int i) => TrayBadgeRenderer.Describe(BadgeKind.Charging, true, i, n).Bolt;
-        for (int i = 0; i < 15; i++) Assert.Equal(0, B(i));              // S holds 1.2 s (15 frames)
-        for (int i = 20; i <= 34; i++) Assert.Equal(1, B(i));            // bolt holds from 1.6 s to 2.8 s
-        for (int i = 16; i <= 20; i++) Assert.True(B(i) >= B(i - 1));    // fades in over 0.4 s
-        for (int i = 36; i < n; i++) Assert.True(B(i) <= B(i - 1));      // and back out
-        Assert.InRange(B(17), 0.01, 0.99);
-        Assert.InRange(B(n - 1), 0.0, 0.5);
-        Assert.Equal(1, TrayBadgeRenderer.Describe(BadgeKind.Charging, false, 0, 1).Bolt); // reduced motion: static bolt
-        Assert.Equal(0, TrayBadgeRenderer.Describe(BadgeKind.Full, true, 0, 1).Bolt);
-        Assert.Equal(0, TrayBadgeRenderer.Describe(BadgeKind.Low, true, 5, 20).Bolt);
-    }
-
-    [Fact]
-    public void Glyph_finder_reads_the_flat_orange_and_the_S_box()
-    {
-        var tile = Tile(24, out var g);
-        var found = TrayBadgeRenderer.FindGlyph(tile, 24);
-        Assert.True(found.Found);
-        Assert.Equal((0xB8, 0x73, 0x33), ((int)found.R, (int)found.G, (int)found.B));
-        Assert.Equal(g, (found.X0, found.Y0, found.X1, found.Y1));
-        Assert.False(TrayBadgeRenderer.FindGlyph(Gray(24), 24).Found);
-    }
-
-    [Theory]
-    [InlineData(16)]
-    [InlineData(24)]
-    [InlineData(32)]
-    public void Charging_swaps_the_S_for_a_white_bolt_on_flat_orange(int size)
-    {
-        var tile = Tile(size, out var g);
-        var frames = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, true, size, tile, TrayBadgeRenderer.FillWidth(size, 50));
-        Assert.Same(frames[0], frames[10]);                // identical hold frames share one array
-        Assert.Same(frames[22], frames[30]);
-        Assert.NotSame(frames[0], frames[22]);
-        static int White(byte[] f, int s, (int X0, int Y0, int X1, int Y1) r)
+        var kind = Enum.Parse<BadgeKind>(name);
+        int target = TrayBadgeRenderer.TargetRgb(kind);
+        var tile = TileWith(size, out var s);
+        var f = TrayBadgeRenderer.RenderFrames(kind, true, size, tile);
+        var mid = f[5]; var peak = f[10];
+        int x = 14, y = 4; // plain orange
+        var (b0, g0, r0, _) = Px(tile, size, x, y);
+        var (bm, gm, rm, _) = Px(mid, size, x, y);
+        var (bp, gp, rp, _) = Px(peak, size, x, y);
+        double D(int r, int g, int b) => Math.Abs(r - (target >> 16 & 255)) + Math.Abs(g - (target >> 8 & 255)) + Math.Abs(b - (target & 255));
+        Assert.True(D(rm, gm, bm) < D(r0, g0, b0));
+        Assert.True(D(rp, gp, bp) < D(rm, gm, bm));
+        Assert.InRange(D(rp, gp, bp), 0, 6);
+        // The S is untouched at every frame, and so is every alpha.
+        foreach (var fr in f)
         {
-            int n = 0;
-            for (int y = r.Y0 - 1; y <= r.Y1 + 1; y++)
-                for (int x = r.X0 - 1; x <= r.X1 + 1; x++) { int o = (y * s + x) * 4; if (f[o] > 235 && f[o + 1] > 235 && f[o + 2] > 235) n++; }
-            return n;
+            for (int yy = s.Y0; yy <= s.Y1; yy++)
+                for (int xx = s.X0; xx <= s.X1; xx++) Assert.Equal(Px(tile, size, xx, yy), Px(fr, size, xx, yy));
+            for (int i = 3; i < fr.Length; i += 4) Assert.Equal(tile[i], fr[i]);
         }
 
-        int s0 = White(frames[0], size, g), bolt = White(frames[22], size, g);
-        Assert.True(bolt > 0, "the bolt is white");
-        Assert.NotEqual(s0, bolt);
-        Assert.Equal(((byte)0x33, (byte)0x73, (byte)0xB8, (byte)0xFF), Px(frames[22], size, 2, 2)); // outside the S box the orange is untouched
+        // Antialiased edge: the half-alpha orange pixel keeps its alpha and reaches the target in straight colour; the half-white
+        // fringe moves only its orange half, so it stays lighter than the flat target.
+        var edge = Px(peak, size, 1, 10);
+        Assert.Equal(128, edge.A);
+        Assert.InRange(edge.R * 255 / 128, (target >> 16 & 255) - 4, (target >> 16 & 255) + 4);
+        var fringe = Px(peak, size, s.X0 - 1, 10);
+        Assert.True(fringe.R + fringe.G + fringe.B > rp + gp + bp + 100);
+        Assert.Equal(0, Px(peak, size, 0, 0).A);
     }
 
     [Fact]
-    public void Low_keeps_the_S_and_pulses_only_the_red_fill_at_the_level()
+    public void Red_and_green_targets_read_as_red_and_green()
     {
-        const int size = 16;
-        var tile = Tile(size, out var g);
-        int fw = TrayBadgeRenderer.FillWidth(size, 5);
-        var frames = TrayBadgeRenderer.RenderFrames(BadgeKind.Low, true, size, tile, fw);
-        Assert.Equal(20, frames.Length);
-        var l = TrayBadgeRenderer.LayoutFor(size);
-        int fy = l.Y + l.H / 2, fx = l.X + l.Stroke + l.Pad;
-        var bright = Px(frames[0], size, fx, fy);
-        var dim = Px(frames[10], size, fx, fy);
-        Assert.True(bright.R > 200 && bright.G < 100);
-        Assert.True(dim.R < bright.R * 0.6, "the red fill dims");
-        Assert.Equal(Px(frames[0], size, l.X + l.BodyW - 2, fy), Px(frames[10], size, l.X + l.BodyW - 2, fy)); // body stays solid
-        Assert.Equal(Px(tile, size, g.X0, g.Y0), Px(frames[10], size, g.X0, g.Y0));                              // the S stays
-        var stat = TrayBadgeRenderer.RenderFrames(BadgeKind.Low, false, size, tile, fw);
-        Assert.Single(stat);
-        Assert.True(Px(stat[0], size, fx, fy).R > 200);
+        var tile = Tile(16);
+        var red = Px(TrayBadgeRenderer.RenderFrames(BadgeKind.Low, false, 16, tile)[0], 16, 8, 3);
+        var green = Px(TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, false, 16, tile)[0], 16, 8, 3);
+        Assert.True(red.R > 180 && red.G < 90);
+        Assert.True(green.G > 150 && green.R < 90);
     }
 
     [Fact]
     public void Frames_become_alpha_icons_that_read_back()
     {
         const int size = 16;
-        var l = TrayBadgeRenderer.LayoutFor(size);
-        var frame = TrayBadgeRenderer.RenderFrames(BadgeKind.Full, false, size, Gray(size), l.FillMax)[0];
+        var frame = TrayBadgeRenderer.RenderFrames(BadgeKind.Low, false, size, Tile(size))[0];
         nint icon = TrayBadgeRenderer.MakeIcon(frame, size);
         Assert.NotEqual(0, icon);
         try
         {
             var back = TrayBadgeRenderer.ReadIconPixels(icon, size);
             Assert.NotNull(back);
-            Assert.Equal(0, Px(back!, size, l.X - 1, l.Y + l.H / 2).A);
-            Assert.True(Px(back!, size, l.X + l.Stroke + 1, l.Y + l.H / 2).G > 180);
-            Assert.Equal(0x80, Px(back!, size, 0, 0).R);
+            Assert.Equal(0, Px(back!, size, 0, 0).A);
+            Assert.True(Px(back!, size, 8, 3).R > 180);
         }
         finally { DestroyIcon(icon); }
     }
 
-    // ---- opt-in preview: SLENDER_BADGE_PNG_DIR=<dir> writes contact sheets of every frame ----
+    // ---- opt-in preview: SLENDER_BADGE_PNG_DIR=<dir> writes contact sheets of every frame, named {Low|Charging}-{anim|static}-{size}-{dark|light}.png ----
 
     private static string? FindIco()
     {
@@ -250,24 +166,16 @@ public sealed unsafe class TrayBadgeRendererTests
         foreach (int size in new[] { 16, 20, 24, 32, 40 })
         {
             var basePx = BaseIcon(ico!, size);
-            void Sheet(string file, byte[][] frames)
-            {
-                foreach (var (name, r, g, b) in bgs) WriteSheet(Path.Combine(dir, file.Replace("{bg}", name)), frames, size, r, g, b);
-            }
-
-            foreach (int level in new[] { 15, 50, 85 })
-                Sheet($"Charging-anim-{size}-{{bg}}-L{level}.png", TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, true, size, basePx, TrayBadgeRenderer.FillWidth(size, level)));
-            Sheet($"Charging-static-{size}-{{bg}}-L50.png", TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, false, size, basePx, TrayBadgeRenderer.FillWidth(size, 50)));
-            foreach (int level in new[] { 5, 15 })
-                Sheet($"Low-anim-{size}-{{bg}}-L{level}.png", TrayBadgeRenderer.RenderFrames(BadgeKind.Low, true, size, basePx, TrayBadgeRenderer.FillWidth(size, level)));
-            Sheet($"Low-static-{size}-{{bg}}-L15.png", TrayBadgeRenderer.RenderFrames(BadgeKind.Low, false, size, basePx, TrayBadgeRenderer.FillWidth(size, 15)));
-            Sheet($"Full-static-{size}-{{bg}}.png", TrayBadgeRenderer.RenderFrames(BadgeKind.Full, true, size, basePx, 100));
+            foreach (var (kind, kn) in new[] { (BadgeKind.Low, "Low"), (BadgeKind.Charging, "Charging") })
+                foreach (bool anim in new[] { true, false })
+                    foreach (var (name, r, g, b) in bgs)
+                        WriteSheet(Path.Combine(dir, $"{kn}-{(anim ? "anim" : "static")}-{size}-{name}.png"), TrayBadgeRenderer.RenderFrames(kind, anim, size, basePx), size, r, g, b);
         }
     }
 
     private static void WriteSheet(string path, byte[][] frames, int size, byte br, byte bg, byte bb)
     {
-        const int scale = 8, pad = 8, cols = 6;
+        const int scale = 8, pad = 8, cols = 5;
         int cell = size * scale + pad;
         int rows8 = (frames.Length + cols - 1) / cols;
         int stripW = frames.Length * (size + 4) + pad;

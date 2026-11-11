@@ -19,15 +19,15 @@ public sealed class BadgeModelTests
         Assert.Equal(BadgeKind.Charging, BadgeModel.Decide(Dev(40, charging: true), Absent, true));
 
     [Fact]
-    public void Full_on_charger_shows_static_full() =>
-        Assert.Equal(BadgeKind.Full, BadgeModel.Decide(Dev(100, charging: true, state: ChargeState.Full), Absent, true));
+    public void Full_on_charger_shows_nothing() =>
+        Assert.Equal(BadgeKind.None, BadgeModel.Decide(Dev(100, charging: true, state: ChargeState.Full), Absent, true));
 
     [Fact]
     public void Low_beats_charging_on_the_other_device() =>
         Assert.Equal(BadgeKind.Low, BadgeModel.Decide(Dev(40, charging: true), Dev(8, threshold: 10), true));
 
     [Fact]
-    public void Charging_beats_full() =>
+    public void Charging_beats_full_on_the_other_device() =>
         Assert.Equal(BadgeKind.Charging, BadgeModel.Decide(Dev(100, true, ChargeState.Full), Dev(50, charging: true, threshold: 10), true));
 
     [Theory]
@@ -78,25 +78,25 @@ public sealed class BadgeModelTests
     }
 
     [Fact]
-    public void Only_charging_and_low_animate_and_only_with_windows_animations()
+    public void Only_low_and_charging_pulse_and_only_with_windows_animations()
     {
         Assert.True(BadgeTiming.NeedsTimer(BadgeKind.Charging, true));
         Assert.True(BadgeTiming.NeedsTimer(BadgeKind.Low, true));
-        Assert.False(BadgeTiming.NeedsTimer(BadgeKind.Full, true));
         Assert.False(BadgeTiming.NeedsTimer(BadgeKind.None, true));
         Assert.False(BadgeTiming.NeedsTimer(BadgeKind.Charging, false));
         Assert.False(BadgeTiming.NeedsTimer(BadgeKind.Low, false));
     }
 
     [Fact]
-    public void Reduced_motion_and_static_kinds_use_one_frame()
+    public void Reduced_motion_uses_one_frame_and_a_loop_is_modest()
     {
         Assert.Equal(1, BadgeTiming.FrameCount(BadgeKind.Charging, false));
         Assert.Equal(1, BadgeTiming.FrameCount(BadgeKind.Low, false));
-        Assert.Equal(1, BadgeTiming.FrameCount(BadgeKind.Full, true));
         Assert.Equal(0, BadgeTiming.FrameCount(BadgeKind.None, true));
-        Assert.True(BadgeTiming.FrameCount(BadgeKind.Charging, true) > 10);
-        Assert.True(BadgeTiming.FrameCount(BadgeKind.Low, true) > 10);
+        Assert.Equal(0, BadgeTiming.FrameCount(BadgeKind.None, false));
+        Assert.InRange(BadgeTiming.FrameCount(BadgeKind.Low, true), 16, 20);
+        Assert.InRange(BadgeTiming.FrameCount(BadgeKind.Charging, true), 16, 20);
+        Assert.InRange(BadgeTiming.PeriodMs(BadgeKind.Low), 1550, 1650);
     }
 
     [Theory]
@@ -123,25 +123,7 @@ public sealed class BadgeModelTests
     public void Static_frame_index_is_always_zero()
     {
         Assert.Equal(0, BadgeTiming.FrameIndex(BadgeKind.Charging, false, 12345));
-        Assert.Equal(0, BadgeTiming.FrameIndex(BadgeKind.Full, true, 12345));
+        Assert.Equal(0, BadgeTiming.FrameIndex(BadgeKind.None, true, 12345));
         Assert.Equal(0, BadgeTiming.FrameIndex(BadgeKind.Low, true, -5));
-    }
-
-    [Fact]
-    public void Frame_rate_is_about_twelve_per_second()
-    {
-        Assert.InRange(1000.0 / BadgeTiming.TimerIntervalMs, 11, 13);
-        Assert.InRange(BadgeTiming.PeriodMs(BadgeKind.Low), 1550, 1650);
-    }
-
-    [Fact]
-    public void State_carries_the_winning_devices_percent()
-    {
-        var st = BadgeModel.DecideState(Dev(40, charging: true), Dev(8, threshold: 10), true);
-        Assert.Equal(BadgeKind.Low, st.Kind);
-        Assert.Equal(8, st.Percent);
-        Assert.Equal(new BadgeState(BadgeKind.Charging, 62), BadgeModel.DecideState(Dev(62, charging: true), Absent, true));
-        Assert.Equal(new BadgeState(BadgeKind.None, 0), BadgeModel.DecideState(Dev(80), Dev(60, threshold: 10), true));
-        Assert.Equal(7, BadgeModel.DecideState(Dev(9, threshold: 10), Dev(7, threshold: 10), true).Percent); // both low: the lower level
     }
 }

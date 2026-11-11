@@ -3,23 +3,26 @@ using Slender.Tray.Native;
 namespace Slender.Tray;
 
 /// <summary>
-/// Owns the badge icon handles. While there is no badge it holds nothing: no frames, no canvas, no timer state. A kind's frames
-/// are rendered once when it starts (the canvas is released straight after) and every HICON is destroyed when the kind or the
-/// icon size changes, or the badge ends.
+/// Owns the pulse icon handles. While the icon is plain it holds nothing: no frames, no timer state. A kind's frames are rendered
+/// once when it starts and every HICON is destroyed when the kind or the icon size changes, or the pulse ends.
 /// </summary>
 internal sealed class TrayBadgeController : IDisposable
 {
-    private readonly Func<BadgeKind, bool, int, int, nint, nint[]> _render;
+    private readonly Func<BadgeKind, bool, int, nint, nint[]> _render;
     private nint[] _frames = [];
     private BadgeKind _kind;
     private bool _animated;
     private int _size;
-    private int _fillWidth;
     private long _startMs;
     private int _frameIndex;
 
-    public TrayBadgeController(Func<BadgeKind, bool, int, int, nint, nint[]>? render = null) =>
+    private readonly Action<nint> _destroy;
+
+    public TrayBadgeController(Func<BadgeKind, bool, int, nint, nint[]>? render = null, Action<nint>? destroy = null)
+    {
         _render = render ?? TrayBadgeRenderer.RenderIcons;
+        _destroy = destroy ?? (icon => Win32.DestroyIcon(icon));
+    }
 
     public BadgeKind Kind => _kind;
 
@@ -32,24 +35,22 @@ internal sealed class TrayBadgeController : IDisposable
     public bool NeedsTimer => _frames.Length > 1 && BadgeTiming.NeedsTimer(_kind, _animated);
 
     /// <summary>
-    /// Shows <paramref name="kind"/> at <paramref name="size"/> with a battery fill <paramref name="fillWidth"/> px wide. Frames are rebuilt only when
-    /// the kind, the animation mode, the size or the drawn width changes (not on every reading). Returns true when the icon to display changed.
+    /// Shows <paramref name="kind"/> at <paramref name="size"/>. Frames are rebuilt only when the kind, the animation mode or the size
+    /// changes (not on every reading). Returns true when the icon to display changed.
     /// </summary>
-    public bool Set(BadgeKind kind, bool animationsOn, int size, int fillWidth, nint baseIcon, long nowMs)
+    public bool Set(BadgeKind kind, bool animationsOn, int size, nint baseIcon, long nowMs)
     {
         bool animated = BadgeTiming.NeedsTimer(kind, animationsOn);
-        if (kind == BadgeKind.None) fillWidth = 0;
-        if (kind == _kind && animated == _animated && size == _size && fillWidth == _fillWidth && (kind == BadgeKind.None || _frames.Length > 0)) return false;
+        if (kind == _kind && animated == _animated && size == _size && (kind == BadgeKind.None || _frames.Length > 0)) return false;
 
         bool had = _frames.Length > 0;
         Clear();
         _kind = kind;
         _animated = animated;
         _size = size;
-        _fillWidth = fillWidth;
         if (kind != BadgeKind.None)
         {
-            try { _frames = _render(kind, animated, size, fillWidth, baseIcon); }
+            try { _frames = _render(kind, animated, size, baseIcon); }
             catch { _frames = []; }
             _startMs = nowMs;
             _frameIndex = 0;
@@ -71,7 +72,7 @@ internal sealed class TrayBadgeController : IDisposable
 
     private void Clear()
     {
-        foreach (nint icon in _frames.Distinct()) Win32.DestroyIcon(icon); // identical frames share one handle
+        foreach (nint icon in _frames.Distinct()) _destroy(icon); // identical frames share one handle
         _frames = [];
         _frameIndex = 0;
         _kind = BadgeKind.None;

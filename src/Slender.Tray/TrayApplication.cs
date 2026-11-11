@@ -1126,8 +1126,8 @@ public sealed class TrayApplication : IDisposable
     private nint ActiveIcon => _badge.CurrentIcon != 0 ? _badge.CurrentIcon : _icon;
 
     /// <summary>
-    /// Shows the badge the devices call for over the Slender icon (or the plain icon when none), and runs the animation timer only
-    /// while it animates. Also follows an icon-size change by reloading the base icon.
+    /// Pulses the Slender icon red (low battery) or green (charging), or leaves it plain, and runs the animation timer only
+    /// while it pulses. Also follows an icon-size change by reloading the base icon.
     /// </summary>
     private void RefreshBadge()
     {
@@ -1148,12 +1148,11 @@ public sealed class TrayApplication : IDisposable
                 _iconSize = size;
             }
 
-            var state = BadgeModel.DecideState(
+            var kind = BadgeModel.Decide(
                 new BadgeInput(_connected, _battery, _config.BatteryAlerts.MouseThresholdPercent),
                 new BadgeInput(_keyboardConnected, _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent),
                 _config.BatteryAlerts.Enabled);
-            int fill = state.Kind == BadgeKind.None ? 0 : TrayBadgeRenderer.FillWidth(size, state.Kind == BadgeKind.Full ? 100 : state.Percent);
-            bool changed = _badge.Set(state.Kind, Ring.RingNative.ClientAreaAnimationEnabled(), size, fill, _icon, Environment.TickCount64);
+            bool changed = _badge.Set(kind, Ring.RingNative.ClientAreaAnimationEnabled(), size, _icon, Environment.TickCount64);
             bool timer = _badge.NeedsTimer;
             if (timer && !_badgeTimerOn)
             {
