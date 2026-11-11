@@ -14,6 +14,7 @@ internal static unsafe class Win32
     public const uint MF_STRING = 0, MF_GRAYED = 1, MF_CHECKED = 8, MF_POPUP = 0x10, MF_SEPARATOR = 0x800;
     public const uint TPM_RIGHTBUTTON = 2, TPM_BOTTOMALIGN = 0x20, TPM_RETURNCMD = 0x100;
     public const uint IMAGE_ICON = 1, LR_DEFAULTCOLOR = 0;
+    public const uint WM_SETTINGCHANGE = 0x001A, WM_DISPLAYCHANGE = 0x007E;
     public const int SM_CXSMICON = 49, SM_CYSMICON = 50;
     public const nint IDI_APPLICATION = 32512;
 

@@ -16,7 +16,7 @@ namespace Slender.Tray;
 public sealed class TrayApplication : IDisposable
 {
     private const uint WM_TRAY = Win32.WM_APP + 1, WM_POST = Win32.WM_APP + 2;
-    private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4, TimerLockKeys = 5;
+    private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4, TimerLockKeys = 5, TimerBadge = 6;
     private const uint CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8, CmdHeadsetMute = 9;
     private const string WindowClass = UpdateMessages.TrayWindowClass;
 
@@ -46,6 +46,9 @@ public sealed class TrayApplication : IDisposable
 
     private nint _hwnd;
     private nint _icon;
+    private int _iconSize;
+    private readonly TrayBadgeController _badge = new();
+    private bool _badgeTimerOn;
     private bool _iconAdded;
     private SlenderConfig _config;
     private bool _connected;
@@ -137,6 +140,7 @@ public sealed class TrayApplication : IDisposable
 
         CreateWindow();
         _icon = LoadTrayIcon(_log);
+        _iconSize = Win32.GetSystemMetrics(Win32.SM_CXSMICON);
         UpdateStatus();
 
         if (_config.LaunchAtLogin && !_startup.IsEnabled)
@@ -156,6 +160,7 @@ public sealed class TrayApplication : IDisposable
             _mouse.ConnectionChanged += OnMouseConnectionChanged;
             _mouse.WheelModeChanged += OnMouseWheelModeChanged;
             _mouse.HostsChanged += OnDeviceHostsChanged;
+            _mouse.BatteryChanged += OnMouseBatteryChanged;
             SetConnected(_mouse.IsConnected);
         }
 
@@ -163,6 +168,7 @@ public sealed class TrayApplication : IDisposable
         {
             _keyboard.ConnectionChanged += OnKeyboardConnectionChanged;
             _keyboard.HostsChanged += OnDeviceHostsChanged;
+            _keyboard.BatteryChanged += OnKeyboardBatteryChanged;
             SetKeyboardConnected(_keyboard.IsConnected);
         }
 
@@ -304,6 +310,7 @@ public sealed class TrayApplication : IDisposable
             _mouse.ConnectionChanged -= OnMouseConnectionChanged;
             _mouse.WheelModeChanged -= OnMouseWheelModeChanged;
             _mouse.HostsChanged -= OnDeviceHostsChanged;
+            _mouse.BatteryChanged -= OnMouseBatteryChanged;
         }
 
         if (_foreground is not null)
@@ -315,6 +322,7 @@ public sealed class TrayApplication : IDisposable
         {
             _keyboard.ConnectionChanged -= OnKeyboardConnectionChanged;
             _keyboard.HostsChanged -= OnDeviceHostsChanged;
+            _keyboard.BatteryChanged -= OnKeyboardBatteryChanged;
         }
 
         _watcher?.Dispose();
@@ -338,6 +346,7 @@ public sealed class TrayApplication : IDisposable
             Win32.KillTimer(h, TimerGuard);
             Win32.KillTimer(h, TimerWatchdog);
             Win32.KillTimer(h, TimerLockKeys);
+            Win32.KillTimer(h, TimerBadge);
             _hwnd = 0;
             Win32.DestroyWindow(h);
             fixed (char* cls = WindowClass)
@@ -346,6 +355,7 @@ public sealed class TrayApplication : IDisposable
             }
         }
 
+        _badge.Dispose();
         if (_icon != 0)
         {
             Win32.DestroyIcon(_icon);
@@ -486,8 +496,15 @@ public sealed class TrayApplication : IDisposable
         if (msg == _taskbarCreated && _taskbarCreated != 0)
         {
             _iconAdded = false; // Explorer restarted: the icon is gone
+            RefreshBadge();
             AddIcon();
             return true;
+        }
+
+        if (msg == Win32.WM_SETTINGCHANGE || msg == Win32.WM_DISPLAYCHANGE)
+        {
+            RefreshBadge(); // icon size or the Windows animations switch may have changed
+            return false;
         }
 
         if (msg == Win32.WM_DESTROY)
@@ -515,6 +532,13 @@ public sealed class TrayApplication : IDisposable
                 break;
             case TimerLockKeys:
                 PollLockKeys();
+                break;
+            case TimerBadge:
+                if (_badge.Tick(Environment.TickCount64))
+                {
+                    RefreshTip();
+                }
+
                 break;
             case TimerWatchdog:
                 if (_watchdog?.Check() == WatchdogVerdict.Restart)
@@ -589,7 +613,7 @@ public sealed class TrayApplication : IDisposable
             uID = 1,
             uFlags = Win32.NIF_MESSAGE | Win32.NIF_ICON | Win32.NIF_TIP,
             uCallbackMessage = WM_TRAY,
-            hIcon = _icon,
+            hIcon = ActiveIcon,
         };
         _tip.AsSpan(0, Math.Min(_tip.Length, BatteryTip.MaxLength)).CopyTo(new Span<char>(nid.szTip, 128));
         return nid;
@@ -740,6 +764,7 @@ public sealed class TrayApplication : IDisposable
     private void OnConfigFileChanged(object? sender, SlenderConfig config) => Post(() =>
     {
         _config = config;
+        RefreshBadge();
         SyncLockKeyPolling();
         SyncStartup();
         ConfigChanged?.Invoke(this, _config);
@@ -827,6 +852,7 @@ public sealed class TrayApplication : IDisposable
 
         UpdateStatus();
         _status.Changed();
+        RefreshBadge();
     }
 
     /// <summary>
@@ -887,6 +913,7 @@ public sealed class TrayApplication : IDisposable
 
         UpdateStatus();
         _status.Changed();
+        RefreshBadge();
     }
 
     /// <summary>Re-reads the keyboard's Easy-Switch channels (read only); HostsChanged republishes status when they differ.</summary>
@@ -917,19 +944,7 @@ public sealed class TrayApplication : IDisposable
         try
         {
             BatteryStatus? status = await _keyboard.GetBatteryAsync(_lifetime.Token);
-            Post(() =>
-            {
-                if (!_keyboardConnected)
-                {
-                    return;
-                }
-
-                _keyboardBattery = status ?? _keyboardBattery;
-                CheckBatteryAlert("keyboard", "ERGO K860", _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent);
-                RecordBattery("ergo-k860", _keyboardBattery, ref _keyboardEstimate);
-                UpdateStatus();
-                _status.Changed();
-            });
+            Post(() => ApplyKeyboardBattery(status));
         }
         catch (OperationCanceledException)
         {
@@ -1072,6 +1087,98 @@ public sealed class TrayApplication : IDisposable
         }
     }
 
+    private void OnMouseBatteryChanged(object? sender, BatteryStatus status) => Post(() => ApplyMouseBattery(status));
+
+    private void OnKeyboardBatteryChanged(object? sender, BatteryStatus status) => Post(() => ApplyKeyboardBattery(status));
+
+    /// <summary>UI thread. One path for a polled reading and a device-announced one: state, alert, history, tooltip, status and badge.</summary>
+    private void ApplyMouseBattery(BatteryStatus? status)
+    {
+        if (_disposed || !_connected)
+        {
+            return;
+        }
+
+        _battery = status ?? _battery;
+        CheckBatteryAlert("mouse", "MX Master 4", _battery, _config.BatteryAlerts.MouseThresholdPercent);
+        RecordBattery("mx-master-4", _battery, ref _mouseEstimate);
+        UpdateStatus();
+        _status.Changed();
+        RefreshBadge();
+    }
+
+    private void ApplyKeyboardBattery(BatteryStatus? status)
+    {
+        if (_disposed || !_keyboardConnected)
+        {
+            return;
+        }
+
+        _keyboardBattery = status ?? _keyboardBattery;
+        CheckBatteryAlert("keyboard", "ERGO K860", _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent);
+        RecordBattery("ergo-k860", _keyboardBattery, ref _keyboardEstimate);
+        UpdateStatus();
+        _status.Changed();
+        RefreshBadge();
+    }
+
+    private nint ActiveIcon => _badge.CurrentIcon != 0 ? _badge.CurrentIcon : _icon;
+
+    /// <summary>
+    /// Shows the badge the devices call for over the Slender icon (or the plain icon when none), and runs the animation timer only
+    /// while it animates. Also follows an icon-size change by reloading the base icon.
+    /// </summary>
+    private void RefreshBadge()
+    {
+        if (_disposed || _hwnd == 0 || _icon == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            int size = Win32.GetSystemMetrics(Win32.SM_CXSMICON);
+            nint stale = 0;
+            if (size != _iconSize)
+            {
+                nint fresh = LoadTrayIcon(_log);
+                stale = _icon;
+                _icon = fresh;
+                _iconSize = size;
+            }
+
+            var kind = BadgeModel.Decide(
+                new BadgeInput(_connected, _battery, _config.BatteryAlerts.MouseThresholdPercent),
+                new BadgeInput(_keyboardConnected, _keyboardBattery, _config.BatteryAlerts.KeyboardThresholdPercent),
+                _config.BatteryAlerts.Enabled);
+            bool changed = _badge.Set(kind, Ring.RingNative.ClientAreaAnimationEnabled(), size, _icon, Environment.TickCount64);
+            bool timer = _badge.NeedsTimer;
+            if (timer && !_badgeTimerOn)
+            {
+                StartTimer(TimerBadge, BadgeTiming.TimerIntervalMs);
+            }
+            else if (!timer && _badgeTimerOn)
+            {
+                StopTimer(TimerBadge);
+            }
+
+            _badgeTimerOn = timer;
+            if (changed || stale != 0)
+            {
+                RefreshTip(); // NIM_MODIFY only when the icon to show changed
+            }
+
+            if (stale != 0)
+            {
+                Win32.DestroyIcon(stale);
+            }
+        }
+        catch (Exception e)
+        {
+            _log.Error("Tray badge failed", e);
+        }
+    }
+
     private async Task RefreshBatteryAsync()
     {
         if (_disposed || !_connected || _mouse is null)
@@ -1082,19 +1189,7 @@ public sealed class TrayApplication : IDisposable
         try
         {
             BatteryStatus? status = await _mouse.GetBatteryAsync(_lifetime.Token);
-            Post(() =>
-            {
-                if (!_connected)
-                {
-                    return;
-                }
-
-                _battery = status ?? _battery;
-                CheckBatteryAlert("mouse", "MX Master 4", _battery, _config.BatteryAlerts.MouseThresholdPercent);
-                RecordBattery("mx-master-4", _battery, ref _mouseEstimate);
-                UpdateStatus();
-                _status.Changed();
-            });
+            Post(() => ApplyMouseBattery(status));
         }
         catch (OperationCanceledException)
         {
@@ -1227,6 +1322,7 @@ public sealed class TrayApplication : IDisposable
         if (saved)
         {
             _config = next;
+            RefreshBadge();
             SyncLockKeyPolling();
             ConfigChanged?.Invoke(this, _config);
         }
