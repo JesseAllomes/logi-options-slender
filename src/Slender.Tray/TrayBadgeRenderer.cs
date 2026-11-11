@@ -14,8 +14,7 @@ internal readonly record struct BadgeFrame(double Fill, double FillAlpha, double
 internal static unsafe class TrayBadgeRenderer
 {
     private static readonly RingColor Body = RingColor.Rgb(0x1C1C1E, 0.92f);
-    private static readonly RingColor Outline = RingColor.Rgb(0xFFFFFF, 0.55f);
-    private static readonly RingColor Nub = RingColor.Rgb(0x9C9C9E, 0.95f);
+    private static readonly RingColor Outline = RingColor.Rgb(0xD8D8DC);
     private static readonly RingColor Green = RingColor.Rgb(0x34C759);
     private static readonly RingColor Red = RingColor.Rgb(0xFF3B30);
     private static readonly RingColor White = RingColor.Rgb(0xFFFFFF);
@@ -25,17 +24,19 @@ internal static unsafe class TrayBadgeRenderer
 
     internal static Layout LayoutFor(int size)
     {
-        int w = Math.Max(8, (int)Math.Round(size * 0.62, MidpointRounding.AwayFromZero));
-        int h = Math.Max(5, (int)Math.Round(size * 0.36, MidpointRounding.AwayFromZero));
-        int nubW = Math.Max(1, (int)Math.Round(size * 0.06, MidpointRounding.AwayFromZero));
-        int nubH = Math.Min(h, Math.Max(2, (int)Math.Round(h * 0.4, MidpointRounding.AwayFromZero)));
+        int w = Math.Max(7, (int)Math.Round(size * 0.46, MidpointRounding.AwayFromZero));
+        int h = Math.Max(4, (int)Math.Round(size * 0.27, MidpointRounding.AwayFromZero));
+        int nubW = Math.Max(1, size >= 32 ? 2 : 1);
+        int nubH = Math.Min(h, Math.Max(2, (int)Math.Round(h * 0.45, MidpointRounding.AwayFromZero)));
         if ((h - nubH) % 2 != 0) nubH = Math.Min(h, nubH + 1);
-        int stroke = Math.Max(1, size / 16);
-        int gap = Math.Max(1, (int)Math.Round(size / 16.0, MidpointRounding.AwayFromZero));
-        return new Layout(size, size - w, size - h, w - nubW, h, nubW, nubH, stroke, size >= 24 ? 1 : 0, gap, h * 0.30);
+        int stroke = Math.Max(1, (int)Math.Round(size / 24.0, MidpointRounding.AwayFromZero));
+        int gap = size >= 32 ? 2 : 1;
+        return new Layout(size, size - w, size - h, w - nubW, h, nubW, nubH, stroke, size >= 20 ? 1 : 0, gap, h * 0.30);
     }
 
     // ---- frame parameters (pure) ----
+
+    private const double ChargeFadeFloor = 0.6;
 
     private static double EaseInOutCubic(double t) => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
 
@@ -52,17 +53,18 @@ internal static unsafe class TrayBadgeRenderer
             case BadgeKind.Charging:
             {
                 double t = phase * BadgeTiming.PeriodMs(BadgeKind.Charging);
-                if (t < BadgeTiming.ChargeGrowMs) return new BadgeFrame(EaseInOutCubic(t / BadgeTiming.ChargeGrowMs), 1, 1, false, true);
+                // Starts as a sliver at the faded level of the previous loop's end, so the loop is continuous.
+                if (t < BadgeTiming.ChargeGrowMs) return new BadgeFrame(0.12 + 0.88 * EaseInOutCubic(t / BadgeTiming.ChargeGrowMs), Math.Min(1, ChargeFadeFloor + (1 - ChargeFadeFloor) * t / 240), 1, true, true);
                 t -= BadgeTiming.ChargeGrowMs;
                 if (t < BadgeTiming.ChargeHoldMs) return new BadgeFrame(1, 1, 1, false, true);
                 t -= BadgeTiming.ChargeHoldMs;
-                return new BadgeFrame(1, Math.Clamp(1 - t / BadgeTiming.ChargeFadeMs, 0, 1), 1, false, true);
+                return new BadgeFrame(1, 1 - (1 - ChargeFadeFloor) * Math.Clamp(t / BadgeTiming.ChargeFadeMs, 0, 1), 1, false, true);
             }
             case BadgeKind.Low when !animated:
                 return new BadgeFrame(0.2, 1, 1, true, false);
             case BadgeKind.Low:
-                // 1.0 -> 0.35 -> 1.0 on a cosine, so frame 0 is fully visible and the loop is seamless.
-                return new BadgeFrame(0.2, 1, 0.675 + 0.325 * Math.Cos(phase * 2 * Math.PI), true, false);
+                // Only the red fill pulses (1.0 -> 0.35 -> 1.0 on a cosine); body and outline stay solid.
+                return new BadgeFrame(0.2, 0.675 + 0.325 * Math.Cos(phase * 2 * Math.PI), 1, true, false);
             default:
                 return new BadgeFrame(0, 1, 1, false, false);
         }
@@ -98,7 +100,7 @@ internal static unsafe class TrayBadgeRenderer
         c.FillRoundRect(x, y, l.BodyW, l.H, l.Radius, Body);
         // Terminal nub, joined to the outline.
         double nubY = y + (l.H - l.NubH) / 2.0;
-        c.FillRoundRect(x + l.BodyW - 0.5, nubY, l.NubW + 0.5, l.NubH, l.NubW * 0.5, Nub);
+        c.FillRoundRect(x + l.BodyW, nubY, l.NubW, l.NubH, l.NubW * 0.5, Outline);
         c.StrokeRoundRect(x + t / 2, y + t / 2, l.BodyW - t, l.H - t, Math.Max(0, l.Radius - t / 2), Outline, t);
 
         double fx = x + t + l.Pad, fy = y + t + l.Pad, fw = l.BodyW - 2 * (t + l.Pad), fh = l.H - 2 * (t + l.Pad);
@@ -106,11 +108,11 @@ internal static unsafe class TrayBadgeRenderer
         if (f.Sliver) width = Math.Max(1, width);
         if (width >= 1 && f.FillAlpha > 0)
         {
-            double r = Math.Min(Math.Max(0.5, l.Radius - t - l.Pad), Math.Min(fh / 2, width / 2));
+            double r = width <= 2 ? 0 : Math.Min(Math.Max(0.5, l.Radius - t - l.Pad), Math.Min(fh / 2, width / 2));
             c.FillRoundRect(fx, fy, width, fh, r, color.WithAlpha((float)f.FillAlpha));
         }
 
-        if (f.Bolt && l.Size >= 32)
+        if (f.Bolt && fh >= 7) // only where the gauge is tall enough for a crisp bolt
         {
             double cx = fx + fw / 2, cy = fy + fh / 2, s = fh * 1.0;
             ReadOnlySpan<(double, double)> pts = [(0.12, -0.5), (-0.28, 0.1), (-0.04, 0.1), (-0.12, 0.5), (0.28, -0.1), (0.04, -0.1)];

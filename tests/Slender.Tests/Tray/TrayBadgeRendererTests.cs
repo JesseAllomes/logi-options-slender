@@ -68,11 +68,13 @@ public sealed unsafe class TrayBadgeRendererTests
         int fy = l.Y + l.H / 2, firstX = l.X + l.Stroke + l.Pad, lastX = l.X + l.BodyW - l.Stroke - l.Pad - 1;
         static bool IsGreen((byte B, byte G, byte R, byte A) p) => p.G > 150 && p.R < 120 && p.A > 200;
 
-        Assert.False(IsGreen(Px(frames[0], size, firstX, fy)));                       // empty at the start of the loop
+        int Width(int i) { int w = 0; for (int x = firstX; x <= lastX; x++) if (Px(frames[i], size, x, fy).G > 100 && Px(frames[i], size, x, fy).R < 120) w++; return w; }
+        Assert.InRange(Width(0), 1, 2);                                               // starts as a sliver, not empty
         int count = frames.Length;
         int growEnd = (int)(count * 1200.0 / 1800.0);
         Assert.True(IsGreen(Px(frames[growEnd + 1], size, lastX, fy)));              // full while holding
-        Assert.False(IsGreen(Px(frames[count - 1], size, firstX, fy)));              // faded out at the end
+        Assert.True(Width(count - 1) > 0);                                           // the end fade stays visible
+        Assert.True(Px(frames[count - 1], size, firstX, fy).G < Px(frames[growEnd + 1], size, firstX, fy).G);
         int prev = -1;
         for (int i = 0; i <= growEnd; i++)
         {
@@ -92,7 +94,7 @@ public sealed unsafe class TrayBadgeRendererTests
         var l = TrayBadgeRenderer.LayoutFor(size);
         int fy = l.Y + l.H / 2, x0 = l.X + l.Stroke + l.Pad, x1 = l.X + l.BodyW - l.Stroke - l.Pad - 1;
         int total = x1 - x0 + 1, green = 0;
-        for (int x = x0; x <= x1; x++) if (Px(frames[0], size, x, fy + 2).G > 150 && Px(frames[0], size, x, fy + 2).R < 120) green++;
+        for (int x = x0; x <= x1; x++) if (Px(frames[0], size, x, fy).G > 150 && Px(frames[0], size, x, fy).R < 120) green++;
         Assert.InRange(green, total * 0.55, total * 0.75);
     }
 
@@ -106,8 +108,9 @@ public sealed unsafe class TrayBadgeRendererTests
         var p0 = Px(frames[0], size, fx, fy);
         Assert.True(p0.R > 200 && p0.G < 100 && p0.A > 240, "first interior pixel is red");
         var half = Px(frames[frames.Length / 2], size, fx, fy);
-        Assert.True(half.A < p0.A * 0.5, $"badge fades at mid loop ({half.A} vs {p0.A})");
-        Assert.Equal(frames[0], frames[0]);
+        Assert.True(half.R < p0.R * 0.6, $"the red fill dims at mid loop ({half.R} vs {p0.R})");
+        var bodyPx = Px(frames[frames.Length / 2], size, l.X + l.BodyW - 2, l.Y + l.H / 2);
+        Assert.Equal(Px(frames[0], size, l.X + l.BodyW - 2, l.Y + l.H / 2), bodyPx); // body stays solid
         var stat = TrayBadgeRenderer.RenderFrames(BadgeKind.Low, false, size, Gray(size));
         Assert.Single(stat);
         Assert.True(Px(stat[0], size, fx, fy).R > 200);
@@ -116,23 +119,24 @@ public sealed unsafe class TrayBadgeRendererTests
     [Fact]
     public void Describe_follows_the_spec()
     {
-        Assert.Equal(0, TrayBadgeRenderer.Describe(BadgeKind.Charging, true, 0, 22).Fill);
+        Assert.InRange(TrayBadgeRenderer.Describe(BadgeKind.Charging, true, 0, 22).Fill, 0.05, 0.2);
         Assert.Equal(1, TrayBadgeRenderer.Describe(BadgeKind.Charging, true, 17, 22).Fill);
-        Assert.True(TrayBadgeRenderer.Describe(BadgeKind.Charging, true, 21, 22).FillAlpha < 1);
-        Assert.Equal(1.0, TrayBadgeRenderer.Describe(BadgeKind.Low, true, 0, 20).Opacity, 3);
-        Assert.Equal(0.35, TrayBadgeRenderer.Describe(BadgeKind.Low, true, 10, 20).Opacity, 3);
+        Assert.InRange(TrayBadgeRenderer.Describe(BadgeKind.Charging, true, 21, 22).FillAlpha, 0.55, 0.99);
+        Assert.Equal(1.0, TrayBadgeRenderer.Describe(BadgeKind.Low, true, 0, 20).FillAlpha, 3);
+        Assert.Equal(0.35, TrayBadgeRenderer.Describe(BadgeKind.Low, true, 10, 20).FillAlpha, 3);
+        Assert.Equal(1.0, TrayBadgeRenderer.Describe(BadgeKind.Low, true, 10, 20).Opacity, 3);
         Assert.Equal(2.0 / 3.0, TrayBadgeRenderer.Describe(BadgeKind.Charging, false, 0, 1).Fill, 3);
         Assert.False(TrayBadgeRenderer.Describe(BadgeKind.Full, true, 0, 1).Bolt);
     }
 
     [Fact]
-    public void Bolt_is_drawn_only_from_32px()
+    public void Bolt_is_drawn_only_when_the_gauge_is_tall_enough()
     {
-        static int WhitePixels(byte[] f, int size) { int n = 0; for (int i = 0; i < f.Length; i += 4) if (f[i + 2] > 200 && f[i + 1] > 200 && f[i + 3] > 240) n++; return n; }
+        static int WhitePixels(byte[] f, int size) { int n = 0; for (int i = 0; i < f.Length; i += 4) if (f[i] > 248 && f[i + 2] > 248 && f[i + 1] > 248 && f[i + 3] > 248) n++; return n; }
         var small = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, false, 24, Gray(24))[0];
-        var big = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, false, 32, Gray(32))[0];
+        var big = TrayBadgeRenderer.RenderFrames(BadgeKind.Charging, false, 64, Gray(64))[0];
         Assert.Equal(0, WhitePixels(small, 24));
-        Assert.True(WhitePixels(big, 32) > 0);
+        Assert.True(WhitePixels(big, 64) > 0);
     }
 
     [Fact]
@@ -188,9 +192,19 @@ public sealed unsafe class TrayBadgeRendererTests
         Assert.NotNull(ico);
         (string Name, byte R, byte G, byte B)[] bgs = [("dark", 0x20, 0x20, 0x20), ("light", 0xF3, 0xF3, 0xF3)];
         BadgeKind[] kinds = [BadgeKind.Charging, BadgeKind.Low, BadgeKind.Full];
+        var bbox = new System.Text.StringBuilder();
         foreach (int size in new[] { 16, 20, 24, 32, 40 })
         {
             var basePx = BaseIcon(ico!, size);
+            int x0 = size, y0 = size, x1 = -1, y1 = -1;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int o = (y * size + x) * 4;
+                    if (basePx[o] > 200 && basePx[o + 1] > 200 && basePx[o + 2] > 200 && basePx[o + 3] > 200) { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
+                }
+            var lay = TrayBadgeRenderer.LayoutFor(size);
+            bbox.AppendLine($"{size}: glyph x{x0}-{x1} y{y0}-{y1}; badge x{lay.X}.. y{lay.Y}.. gap{lay.Gap}");
             foreach (var kind in kinds)
             {
                 foreach (bool animated in new[] { true, false })
@@ -202,6 +216,7 @@ public sealed unsafe class TrayBadgeRendererTests
                 }
             }
         }
+        File.WriteAllText(Path.Combine(dir, "glyph-bbox.txt"), bbox.ToString());
     }
 
     private static void WriteSheet(string path, byte[][] frames, int size, byte br, byte bg, byte bb)
