@@ -242,7 +242,7 @@ public class LogiMouseTests
         {
             await mouse.StartAsync(CancellationToken.None);
             await Wait.UntilAsync(() => mouse.IsConnected);
-            Assert.Equal(new BatteryStatus(80, true), await mouse.GetBatteryAsync(CancellationToken.None));
+            Assert.Equal(new BatteryStatus(80, true, ChargeState.Charging), await mouse.GetBatteryAsync(CancellationToken.None));
         }
     }
 

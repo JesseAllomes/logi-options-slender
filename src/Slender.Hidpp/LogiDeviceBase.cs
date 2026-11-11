@@ -488,17 +488,71 @@ public abstract class LogiDeviceBase : IDisposable
         try
         {
             if (await s.Device.GetFeatureIndexAsync(FeatureId.UnifiedBattery, ct).ConfigureAwait(false) != null)
-                return ParseBattery((await s.Device.CallAsync(FeatureId.UnifiedBattery, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
+                return ParseUnifiedBattery((await s.Device.CallAsync(FeatureId.UnifiedBattery, 1, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
             if (await s.Device.GetFeatureIndexAsync(FeatureId.Battery, ct).ConfigureAwait(false) != null)
-                return ParseBattery((await s.Device.CallAsync(FeatureId.Battery, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
+                return ParseBatteryStatus((await s.Device.CallAsync(FeatureId.Battery, 0, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false)).Params);
         }
         catch (HidppException) { }
         catch (ObjectDisposedException) { }
         return null;
     }
 
-    /// <summary>0x1004 fn1 / 0x1000 fn0: p[0] = level, p[2] = charging status (1..4 = charging).</summary>
-    public static BatteryStatus ParseBattery(ReadOnlySpan<byte> p) => new(Math.Min((int)p[0], 100), p[2] is >= 1 and <= 4);
+    /// <summary>
+    /// 0x1004 getStatus (fn1) and its fn0 event: p[0] = percent, p[2] = charging status (0 discharging, 1 charging, 2 charging slow,
+    /// 3 complete, 4 error).
+    /// </summary>
+    public static BatteryStatus ParseUnifiedBattery(ReadOnlySpan<byte> p)
+    {
+        int pct = Math.Min((int)p[0], 100);
+        return p[2] switch
+        {
+            1 or 2 => new(pct, true, ChargeState.Charging),
+            3 => new(pct, true, ChargeState.Full),
+            4 => new(pct, false, ChargeState.Error),
+            _ => new(pct, false, ChargeState.Discharging),
+        };
+    }
+
+    /// <summary>
+    /// 0x1000 getBatteryLevelStatus (fn0) and its fn0 event: p[0] = level, p[2] = status (0 discharging, 1 recharging, 2 almost full,
+    /// 3 charged, 4 slow recharge, 5 invalid battery, 6 thermal error, 7 other error).
+    /// </summary>
+    public static BatteryStatus ParseBatteryStatus(ReadOnlySpan<byte> p)
+    {
+        int pct = Math.Min((int)p[0], 100);
+        return p[2] switch
+        {
+            1 or 2 or 4 => new(pct, true, ChargeState.Charging),
+            3 => new(pct, true, ChargeState.Full),
+            5 or 6 or 7 => new(pct, false, ChargeState.Error),
+            _ => new(pct, false, ChargeState.Discharging),
+        };
+    }
+
+    /// <summary>Kept for the probe tool: parses with the 0x1004 layout.</summary>
+    public static BatteryStatus ParseBattery(ReadOnlySpan<byte> p) => ParseUnifiedBattery(p);
+
+    /// <summary>Raised (background thread) when the device announces a battery change itself (0x1004 / 0x1000 fn0 event).</summary>
+    public event EventHandler<BatteryStatus>? BatteryChanged;
+
+    private int _lastChargeState = -1;
+
+    private bool HandleBatteryEvent(Session s, HidppMessage msg)
+    {
+        if (msg.Function != 0) return false;
+        BatteryStatus st;
+        if (s.Device.TryGetCachedIndex(FeatureId.UnifiedBattery, out var ub) && ub != 0 && msg.FeatureIndex == ub)
+            st = ParseUnifiedBattery(msg.Params);
+        else if (s.Device.TryGetCachedIndex(FeatureId.Battery, out var bs) && bs != 0 && msg.FeatureIndex == bs)
+            st = ParseBatteryStatus(msg.Params);
+        else
+            return false;
+        if (Interlocked.Exchange(ref _lastChargeState, (int)st.State) != (int)st.State)
+            Log($"battery event: {st.Percent}% {st.State}");
+        try { BatteryChanged?.Invoke(this, st); }
+        catch (Exception ex) { Debug.WriteLine($"{Name} battery handler threw: {ex.Message}"); }
+        return true;
+    }
 
     // ---- notifications ------------------------------------------------------------------------
 
@@ -515,6 +569,7 @@ public abstract class LogiDeviceBase : IDisposable
             HandleWirelessStatus(s, msg);
         else if (s.Device.TryGetCachedIndex(FeatureId.ConfigChange, out var cfg) && msg.FeatureIndex == cfg)
             HandleConfigChange(s, msg);
+        else if (HandleBatteryEvent(s, msg)) { }
         else if (!HandleOtherNotification(s, msg))
             LogUnhandled(s, msg);
     }
@@ -588,7 +643,7 @@ public abstract class LogiDeviceBase : IDisposable
     /// <summary>Looks up the indices of the event-only features so their notifications can be told apart (IRoot fn0, allowlisted).</summary>
     private async Task ResolveEventFeaturesAsync(Session s, CancellationToken ct)
     {
-        foreach (var id in new[] { FeatureId.WirelessDeviceStatus, FeatureId.ConfigChange })
+        foreach (var id in new[] { FeatureId.WirelessDeviceStatus, FeatureId.ConfigChange, FeatureId.UnifiedBattery, FeatureId.Battery })
         {
             try { await s.Device.GetFeatureIndexAsync(id, ct).ConfigureAwait(false); }
             catch (HidppException) { }
