@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=214 -->
+<!-- drainclamp-build: state; schema=1; generation=219 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -61,6 +61,8 @@ Device pictures (user 2026-10-23; supersedes copying pictures from Options+ and 
 Preview ring (user 2026-10-23, live-tested with go-ahead) -> a Preview ring button rings the WH64 base for about 1.5 s at the selected PC-call ring volume (3 s was distracting): Hello, SoftphoneAddIn 0x37 "Slender" (sid from the base), CallAllocCid 0x3A, CallSyncState 0x3C 05 then 06, quit 0x38 p1=0; only that sequence is allowlisted; an unregistered ring is refused by the base; the ring-sound setting does not change this ring, so the button previews volume only (wording says so); not during a call or while a real call rings; desk-phone ring cannot be previewed; quit always sent
 Ring trigger (user 2026-10-23) -> what makes the mouse buzz for a 3CX call is the user's choice: the Edge extension, the headset base ringing, or either; plain wording; the base-ring signal is still to be found from a live 3CX call capture (an SDK ring showed nothing Slender can hear)
 Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rings all sound the same) -> Slender plays its own ring sound while a call rings: seven sounds made from scratch in code and approved by the user (Classic, Old phone bell, Chime, Marimba, Soft pulse, Digital, Rise; generator committed so they can be rebuilt), Off by default until chosen; the user picks the playback device (any Windows output, default the WH64 headset) and a ring-sound volume; it starts and stops with the ring buzz (base ring or extension), stops on answer, click or 90 s; a Play button previews it; all on the 3CX tab; nothing loaded or playing while idle
+Tray battery badge (user 2026-11-11) -> charging status shows the moment the mouse is plugged in or unplugged; while a device charges or is low (under its battery alert threshold: mouse 15%, keyboard 10%) the normal Slender tray icon gains a small animated battery badge in the corner (filling bars when charging, red pulse when low); 'make it really, really sleek' = anti-aliased, smooth easing, sized per DPI; low wins over charging, which device in the tooltip, full + plugged = static badge, no timer or frames while nothing animates, Windows animation off = static (agent defaults)
+Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation and the bolt-style variants) -> while charging the Slender S crossfades to a white lightning bolt and back; the corner battery shows the real level (static fill = percent, green charging, red pulsing when low); full on charger = S + full battery, static; badge kept small in the corner so the S stays readable
 <!-- /DC:DECISIONS -->
 
 <!-- DC:ROADMAP -->
@@ -129,6 +131,7 @@ Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rin
 | m61 | Preview ring: allowlisted register/alloc/ring/quit sequence in Slender.Yealink (multi-fragment 0x37), module PreviewRing with guards, Settings->tray message, Preview ring button by the ring volume rows (base page) | src/Slender.Yealink;src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m59 |
 | m62 | Ring trigger choice on the 3CX tab (Edge extension / headset base ringing / either): live 3CX call capture first, then build | src/Slender.Yealink;src/Slender.Engine;src/Slender.Settings;tests/Slender.Tests | pending | m61 |
 | m63 | Ring sound: shipped WAVs + generator, tray player on a chosen output device (loops while ringing), config (sound, device, volume), 3CX tab rows + preview; live check on a real call incl. base ring volume 0 still detected | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m62 |
+| m64 | Battery charging + animated tray badge: 0x1004 battery event (fn0) handled so plug/unplug shows at once (no 5-min wait), charge state Charging/Full/Error kept apart; tray icon = Slender icon + small battery badge drawn with Direct2D (RingCanvas) into cached frames: filling bars loop while charging, soft red pulse while a device is under its alert threshold and not charging (low beats charging), static full badge when plugged and full; timer and frames exist only while animating; Windows animations off = static badge | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Engine/Contracts;tests/Slender.Tests | pending | m63 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -139,8 +142,6 @@ Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rin
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T02:15:54+00:00 65ec2df5 m52 done: device registry (CM_Register_Notification presence, catalog, known-devices.txt, active/sleeping/disconnected/hidden, per-module fault boundary), Logi modules wrap existing loops (Wake cuts backoff), status.json Presence; 2006 tests, AOT clean; live arrival/removal not yet observed on hardware
-- 2026-10-22T02:28:22+00:00 60f9e264 m53 done: presence-aware tray + Settings (hidden omitted, sleeping shown normally as Asleep, disconnected greyed with Remove device); Remove backs up config then resets that device's settings (Ring/Excel/Macros kept); 2028 tests, AOT clean; UI not yet seen live
 - 2026-10-22T03:16:01+00:00 52828c33 Released v1.1.42 (m52 device registry + m53 device UI) to GitHub Releases. Next: user checks presence live (sleep/disconnect, Remove device), then m54 Yealink module (LED/output writes need go-ahead)
 - 2026-10-22T03:40:45+00:00 0eba68ee m49 go-ahead (user 2026-10-22: 'continue with the plugin'); builder in .worktrees/m49 (wt-m49)
 - 2026-10-22T03:59:22+00:00 ac47d7ef m49 built + merged ff (68789cb,b5652cd,216e066) and pushed: MV3 extension (HID Ringer bit primary, call Notification fallback, start/stop only), RingerHost AOT one-shot native host, !ring protocol, RingerSession (cue loop until stop/click/90 s, other buzzes dropped), RingerInstaller (HKCU host key, previous value kept), Settings 3CX RINGER on Haptics page; 2116 tests; NOT released, nothing run live (needs Set up + Load unpacked + a real call)
@@ -159,4 +160,6 @@ Ring sound (user 2026-10-23; ring-sound selection on the base given up, base rin
 - 2026-10-23T00:41:36+00:00 3b83333d m61 preview ring (160d4f6) + m62 ring trigger (3ad755e: COL03 burst detector, CallRingSource Base/Extension/Either default Either, 3CX tab row) merged; preview suppresses the detector 12 s; 2423 tests. Live: unregistered ring refused, registered ring at usb_ring_volume, ring type does not change it; real 3CX ring = 12-press COL03 bursts at start/stop. User ring volume stays 1
 - 2026-10-23T01:09:01+00:00 2c23e7b4 Ring types 1-8 tested live (headset on ear): all the same on a PC-triggered ring; user 2026-10-23 gave up ring-sound selection (rows stay as Yealink offers them); preview cool-down 4 s
 - 2026-10-23T01:48:13+00:00 55b37133 m63 ring sound merged (fd56ecd): WASAPI shared player on a dedicated thread only while playing, AUTOCONVERTPCM, chosen device/volume, starts/stops with RingerSession, preview message; 2457 tests; AOT publish 0 warnings; real playback untested
+- 2026-11-10T23:36:10+00:00 ef8df1c1 m64 opened (user 2026-11-11): charging status at once via 0x1004 event + animated tray badge (charging fill, low pulse); look = Slender icon + badge, really sleek
+- 2026-11-11T01:02:48+00:00 4e427687 m64 built + merged + pushed 91f9a12 (author rewritten to noreply; Gmail push declined): 0x1004/0x1000 battery events, ChargeState, tray badge (S<->bolt crossfade, real-level battery, low pulse); 2528 tests; Gate 6 skipped (review mode off); releasing
 <!-- /DC:LOG -->
