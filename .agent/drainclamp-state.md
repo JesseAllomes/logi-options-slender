@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=219 -->
+<!-- drainclamp-build: state; schema=1; generation=221 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -131,7 +131,7 @@ Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation
 | m61 | Preview ring: allowlisted register/alloc/ring/quit sequence in Slender.Yealink (multi-fragment 0x37), module PreviewRing with guards, Settings->tray message, Preview ring button by the ring volume rows (base page) | src/Slender.Yealink;src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m59 |
 | m62 | Ring trigger choice on the 3CX tab (Edge extension / headset base ringing / either): live 3CX call capture first, then build | src/Slender.Yealink;src/Slender.Engine;src/Slender.Settings;tests/Slender.Tests | pending | m61 |
 | m63 | Ring sound: shipped WAVs + generator, tray player on a chosen output device (loops while ringing), config (sound, device, volume), 3CX tab rows + preview; live check on a real call incl. base ring volume 0 still detected | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m62 |
-| m64 | Battery charging + animated tray badge: 0x1004 battery event (fn0) handled so plug/unplug shows at once (no 5-min wait), charge state Charging/Full/Error kept apart; tray icon = Slender icon + small battery badge drawn with Direct2D (RingCanvas) into cached frames: filling bars loop while charging, soft red pulse while a device is under its alert threshold and not charging (low beats charging), static full badge when plugged and full; timer and frames exist only while animating; Windows animations off = static badge | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Engine/Contracts;tests/Slender.Tests | pending | m63 |
+| m64 | Battery charging + animated tray badge (built 91f9a12, released 1.1.53; live check open: plug/unplug mouse, low badge): 0x1004 battery event (fn0) handled so plug/unplug shows at once (no 5-min wait), charge state Charging/Full/Error kept apart; tray icon = Slender icon + small battery badge drawn with Direct2D (RingCanvas) into cached frames: filling bars loop while charging, soft red pulse while a device is under its alert threshold and not charging (low beats charging), static full badge when plugged and full; timer and frames exist only while animating; Windows animations off = static badge | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Engine/Contracts;tests/Slender.Tests | pending | m63 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -142,7 +142,6 @@ Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T03:16:01+00:00 52828c33 Released v1.1.42 (m52 device registry + m53 device UI) to GitHub Releases. Next: user checks presence live (sleep/disconnect, Remove device), then m54 Yealink module (LED/output writes need go-ahead)
 - 2026-10-22T03:40:45+00:00 0eba68ee m49 go-ahead (user 2026-10-22: 'continue with the plugin'); builder in .worktrees/m49 (wt-m49)
 - 2026-10-22T03:59:22+00:00 ac47d7ef m49 built + merged ff (68789cb,b5652cd,216e066) and pushed: MV3 extension (HID Ringer bit primary, call Notification fallback, start/stop only), RingerHost AOT one-shot native host, !ring protocol, RingerSession (cue loop until stop/click/90 s, other buzzes dropped), RingerInstaller (HKCU host key, previous value kept), Settings 3CX RINGER on Haptics page; 2116 tests; NOT released, nothing run live (needs Set up + Load unpacked + a real call)
 - 2026-10-22T04:01:19+00:00 898ad1d2 State updated: m49 row (built, open until live call), ARCH ringer line, handoff refreshed for 2026-10-22; release 1.1.43 waits on the user
@@ -162,4 +161,5 @@ Tray badge look (user 2026-11-11, supersedes the filling-bars charging animation
 - 2026-10-23T01:48:13+00:00 55b37133 m63 ring sound merged (fd56ecd): WASAPI shared player on a dedicated thread only while playing, AUTOCONVERTPCM, chosen device/volume, starts/stops with RingerSession, preview message; 2457 tests; AOT publish 0 warnings; real playback untested
 - 2026-11-10T23:36:10+00:00 ef8df1c1 m64 opened (user 2026-11-11): charging status at once via 0x1004 event + animated tray badge (charging fill, low pulse); look = Slender icon + badge, really sleek
 - 2026-11-11T01:02:48+00:00 4e427687 m64 built + merged + pushed 91f9a12 (author rewritten to noreply; Gmail push declined): 0x1004/0x1000 battery events, ChargeState, tray badge (S<->bolt crossfade, real-level battery, low pulse); 2528 tests; Gate 6 skipped (review mode off); releasing
+- 2026-11-11T01:09:27+00:00 c2827754 1.1.53 released (m64 battery badge); SDK 10.0.404 installed per-user (NU1903: ILCompiler 10.0.13 advisory, patched >=10.0.14); config backed up as config.backup-20261111-before-m64.json. Next: user updates, live check plug/unplug + low badge
 <!-- /DC:LOG -->
