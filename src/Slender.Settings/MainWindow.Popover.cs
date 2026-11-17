@@ -526,8 +526,13 @@ public sealed partial class MainWindow
     }
 
     /// <summary>"Settings…" from the tray while the popover is open: unfold. Otherwise bring the window to the front.</summary>
-    public void ShowFromSignal()
+    public void ShowFromSignal(string? device = null)
     {
+        if (ApplyDeviceTarget(device) && !_popoverActive)
+        {
+            RebuildAll();
+        }
+
         if (_popoverActive)
         {
             _ = UnfoldAsync();

@@ -18,6 +18,15 @@ public static class Program
     /// <summary>True when started with <c>--popover</c> (tray icon left-click): the compact popover instead of the full window.</summary>
     public static bool PopoverMode { get; private set; }
 
+    /// <summary>The device named by <c>--device &lt;id&gt;</c> (another app linking straight to it), or null.</summary>
+    public static string? RequestedDevice { get; private set; }
+
+    private static string DeviceHandOff =>
+        Path.Combine(Environment.GetEnvironmentVariable("SLENDER_CONFIG_DIR") is { Length: > 0 } d ? d : SlenderPaths.LocalDirectory, "device-request.txt");
+
+    /// <summary>The device a later <c>--device</c> launch handed over, read once; null when there is none.</summary>
+    public static string? TakeDeviceRequest() => DeviceRequest.Take(DeviceHandOff);
+
     /// <summary>Stopwatch ticks at the top of Main, for the first-frame measurement.</summary>
     public static long StartTimestamp { get; private set; }
 
@@ -66,13 +75,23 @@ public static class Program
         // Apps started from Settings (Options+, Explorer) must not inherit the install folder: an open one blocks updates.
         try { Directory.SetCurrentDirectory(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)); } catch (IOException) { }
         PopoverMode = args.Any(a => string.Equals(a, "--popover", StringComparison.OrdinalIgnoreCase));
+        RequestedDevice = DeviceRequest.Parse(args);
+        if (RequestedDevice is not null)
+        {
+            PopoverMode = false; // a link to a device opens the full window at it
+        }
         _mutex = new Mutex(initiallyOwned: true, MutexName, out bool first);
         _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
         _toggleEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ToggleEventName);
         if (!first)
         {
             // Another settings process exists: a second --popover closes an open popover (or fronts the window); anything else
-            // asks it to come to the front (a popover unfolds into the window).
+            // asks it to come to the front (a popover unfolds into the window), at the requested device if there is one.
+            if (RequestedDevice is not null)
+            {
+                DeviceRequest.Hand(DeviceHandOff, RequestedDevice);
+            }
+
             (PopoverMode ? _toggleEvent : _showEvent).Set();
             return;
         }

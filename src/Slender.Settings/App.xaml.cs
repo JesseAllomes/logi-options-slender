@@ -26,7 +26,7 @@ public partial class App : Application
     }
 
     /// <summary>"Settings…" from the tray, or a plain launch while this process runs: show the window (a popover unfolds into it).</summary>
-    public void OnShowSignal() => _window?.ShowFromSignal();
+    public void OnShowSignal() => _window?.ShowFromSignal(Program.TakeDeviceRequest());
 
     /// <summary>The tray icon clicked again: an open popover closes and the process exits; a full window just comes to the front.</summary>
     public void OnToggleSignal() => _window?.ToggleFromSignal();

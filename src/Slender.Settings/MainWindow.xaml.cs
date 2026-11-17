@@ -58,6 +58,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         _kind = _ui.Device == DeviceIds.Keyboard ? DeviceKind.Keyboard : DeviceKind.Mouse;
+        ApplyDeviceTarget(Program.RequestedDevice);
         _app = _ui.App;
 
         _config = new ConfigService(ConfigDirOverride is null ? new JsonConfigStore() : new JsonConfigStore(ConfigDirOverride), DispatcherQueue);
@@ -483,6 +484,27 @@ public sealed partial class MainWindow : Window
         _kind = kind;
         _page = Page.Device;
         RebuildAll();
+    }
+
+    /// <summary>Points the window at the device another app linked to (<c>--device</c>); false for none or an unknown id.</summary>
+    private bool ApplyDeviceTarget(string? id)
+    {
+        if (DeviceRequest.Target(id) is not { } target)
+        {
+            return false;
+        }
+
+        if (target.Headset)
+        {
+            _page = Page.Headset;
+        }
+        else
+        {
+            _kind = target.Kind!.Value;
+            _page = Page.Device;
+        }
+
+        return true;
     }
 
     private void SelectApp(string? app)
