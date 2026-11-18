@@ -41,14 +41,21 @@ public enum UpdateNoticeKind
 }
 
 /// <summary>
-/// Decides when to check for an update (30 s after start, then every 6 hours, or on demand), downloads it, and applies it
-/// on request. One check or download runs at a time. Quiet by default: only the on-demand check reports "up to date" or a
-/// failure; a source that cannot be read is logged once. Callbacks may run on any thread; the tray marshals them.
+/// Decides when to check for an update (30 s after start, then every 15 minutes, when the tray menu or Settings is opened,
+/// at once on a release notice, or on demand), downloads it, and applies it on request. One check or download runs at a
+/// time. Quiet by default: only the on-demand check reports "up to date" or a failure; a source that cannot be read is
+/// logged once. Callbacks may run on any thread; the tray marshals them.
 /// </summary>
 public sealed class UpdateCoordinator : IDisposable
 {
     public static readonly TimeSpan FirstCheckDelay = TimeSpan.FromSeconds(30);
-    public static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
+    // A release shows within 15 minutes even without a notice (the 6-hour wait let a release sit unseen for most of a day).
+    // One check is one small GitHub API read.
+    public static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(15);
+    /// <summary>Opening the menu or Settings checks quietly, unless a check began this recently.</summary>
+    public static readonly TimeSpan CheckSoonGap = TimeSpan.FromMinutes(2);
+    /// <summary>A notice that arrives while a check runs is tried again after this (that check may have read the old list).</summary>
+    public static readonly TimeSpan NoticeRetryDelay = TimeSpan.FromSeconds(10);
     public static readonly TimeSpan SettingsCloseTimeout = TimeSpan.FromSeconds(5);
 
     public const string UpToDateText = "Slender is up to date";
@@ -68,9 +75,12 @@ public sealed class UpdateCoordinator : IDisposable
     private readonly Action? _applying;
     private readonly Action? _applyFailed;
     private readonly Func<TimeSpan, Action, IDisposable> _schedule;
+    private readonly Func<DateTimeOffset> _now;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly object _gate = new();
-    private IDisposable? _timer;
+    private IDisposable? _timer, _retry;
+    private long _lastCheckTicks;
+    private volatile string? _heard;
     private int _busy;
     private bool _failureLogged;
     private bool _disposed;
@@ -85,7 +95,8 @@ public sealed class UpdateCoordinator : IDisposable
         Action changed,
         Action? applying = null,
         Action? applyFailed = null,
-        Func<TimeSpan, Action, IDisposable>? schedule = null)
+        Func<TimeSpan, Action, IDisposable>? schedule = null,
+        Func<DateTimeOffset>? now = null)
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -95,6 +106,7 @@ public sealed class UpdateCoordinator : IDisposable
         _applying = applying;
         _applyFailed = applyFailed;
         _schedule = schedule ?? DefaultSchedule;
+        _now = now ?? (() => DateTimeOffset.UtcNow);
     }
 
     public string? CurrentVersion => _backend.CurrentVersion;
@@ -110,12 +122,70 @@ public sealed class UpdateCoordinator : IDisposable
     {
         if (_backend.IsAvailable)
         {
+            // Counts as a check for CheckSoon: the first one is already 30 s away (the notice socket connects sooner).
+            Interlocked.Exchange(ref _lastCheckTicks, _now().UtcTicks);
             ScheduleNext(FirstCheckDelay);
         }
     }
 
     /// <summary>The tray menu item or the settings button: reports "up to date" and failures.</summary>
     public Task CheckNowAsync() => CheckAsync(onDemand: true);
+
+    /// <summary>
+    /// The tray menu or Settings was opened, or the release notice socket (re)connected: a quiet check, unless one began in
+    /// the last two minutes. Safe from any thread.
+    /// </summary>
+    public void CheckSoon()
+    {
+        if (_disposed || !_backend.IsAvailable)
+        {
+            return;
+        }
+
+        if (_now().UtcTicks - Interlocked.Read(ref _lastCheckTicks) > CheckSoonGap.Ticks)
+        {
+            _ = CheckAsync(onDemand: false);
+        }
+    }
+
+    /// <summary>
+    /// A release notice for <paramref name="version"/> arrived: a quiet check now, even when an update is already ready
+    /// (a newer one may have followed it). A check already running may have read the list before the release landed, so
+    /// the notice is tried again 10 s later. Safe from any thread.
+    /// </summary>
+    public void OnReleaseNotice(string version)
+    {
+        if (_disposed || !_backend.IsAvailable || version == _backend.CurrentVersion || version == _available)
+        {
+            return;
+        }
+
+        _heard = version;
+        if (Interlocked.CompareExchange(ref _busy, 1, 0) != 0)
+        {
+            lock (_gate)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _retry?.Dispose();
+                _retry = _schedule(NoticeRetryDelay, () =>
+                {
+                    if (_heard == version)
+                    {
+                        OnReleaseNotice(version);
+                    }
+                });
+            }
+
+            return;
+        }
+
+        _heard = null;
+        _ = RunCheckAsync(onDemand: false);
+    }
 
     private void ScheduleNext(TimeSpan delay)
     {
@@ -178,10 +248,25 @@ public sealed class UpdateCoordinator : IDisposable
             return;
         }
 
+        await RunCheckAsync(onDemand).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The check itself; the caller holds <see cref="_busy"/> and this releases it. With an update already ready (only a
+    /// release notice gets here then) a newer version is downloaded beside it, and the ready one stays ready if that fails.
+    /// </summary>
+    private async Task RunCheckAsync(bool onDemand)
+    {
         try
         {
+            Interlocked.Exchange(ref _lastCheckTicks, _now().UtcTicks);
             string? version = await _backend.CheckAsync(_lifetime.Token).ConfigureAwait(false);
             _failureLogged = false;
+            if (!onDemand)
+            {
+                _log.Info("update check: " + (version ?? "none newer"));
+            }
+
             if (version is null)
             {
                 if (onDemand)
@@ -192,9 +277,19 @@ public sealed class UpdateCoordinator : IDisposable
                 return;
             }
 
-            _available = version;
-            _changed();
+            if (_ready && version == _available)
+            {
+                return; // the ready update is still the newest
+            }
+
+            if (!_ready)
+            {
+                _available = version;
+                _changed();
+            }
+
             await _backend.DownloadAsync(_lifetime.Token).ConfigureAwait(false);
+            _available = version;
             _ready = true;
             _log.Info("Update " + version + " downloaded; it installs on restart or when Slender next exits.");
             _changed();
@@ -296,6 +391,8 @@ public sealed class UpdateCoordinator : IDisposable
             _disposed = true;
             _timer?.Dispose();
             _timer = null;
+            _retry?.Dispose();
+            _retry = null;
         }
 
         _lifetime.Cancel();

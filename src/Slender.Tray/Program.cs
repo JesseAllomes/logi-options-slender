@@ -206,12 +206,20 @@ static class Program
         SyncSettings syncSettings = SyncSettings.LoadDefault();
         using var sync = new BackgroundSync(SyncServiceFactory.Create(), log);
         _ = sync.StartAsync();
+        string? updateSource = VelopackUpdateBackend.ResolveSource(syncSettings.UpdateSource);
+        var updateBackend = new VelopackUpdateBackend(updateSource);
         using var updates = new UpdateCoordinator(
-            new VelopackUpdateBackend(VelopackUpdateBackend.ResolveSource(syncSettings.UpdateSource)), new SettingsProcessCloser(), log,
+            updateBackend, new SettingsProcessCloser(), log,
             app.NotifyUpdate, app.UpdateStateChanged, applying: app.PrepareForUpdateRestart,
             applyFailed: app.RestoreAfterFailedRestart);
         app.AttachUpdates(updates);
         updates.Start();
+        // Build-Setup.ps1 announces each release; the tray hears it within seconds and checks at once (the 15-minute check
+        // stays as the fallback). Only an installed copy updating from GitHub listens; its ticket is an asset of the latest release.
+        using ReleaseListener? releaseNotices = updateBackend.IsAvailable && VelopackUpdateBackend.NoticeTicket(updateSource) is { } ticket
+            ? new ReleaseListener(ticket, "slender", updates.OnReleaseNotice, updates.CheckSoon, log.Info)
+            : null;
+        releaseNotices?.Start();
 
         // Actions Ring overlay: window and drawing resources exist only while it is open (docs/actions-ring-optionsplus.md).
         using var ring = new RingController(() => engine.Config, foreground, hook, engine.RunRingAction, engine.PlayRingHaptic, app.PostToUi, log);

@@ -16,7 +16,9 @@ public sealed class VelopackUpdateBackend : IUpdateBackend
     public const string SourceMetadataKey = "SlenderUpdateSource";
 
     private readonly UpdateManager? _manager;
-    private UpdateInfo? _update;
+    // The last check's answer, and the update that finished downloading (what Apply installs). Kept apart so a check after
+    // a release notice cannot swap a ready update for one that is not downloaded yet.
+    private UpdateInfo? _found, _downloaded;
 
     public VelopackUpdateBackend(string? updateSource)
     {
@@ -53,18 +55,32 @@ public sealed class VelopackUpdateBackend : IUpdateBackend
 
     public async Task<string?> CheckAsync(CancellationToken cancel)
     {
-        _update = await _manager!.CheckForUpdatesAsync().ConfigureAwait(false);
-        return _update?.TargetFullRelease.Version.ToString();
+        _found = await _manager!.CheckForUpdatesAsync().ConfigureAwait(false);
+        return _found?.TargetFullRelease.Version.ToString();
     }
 
-    public Task DownloadAsync(CancellationToken cancel) =>
-        _manager!.DownloadUpdatesAsync(_update ?? throw new InvalidOperationException("No update was found."), cancelToken: cancel);
+    public async Task DownloadAsync(CancellationToken cancel)
+    {
+        UpdateInfo update = _found ?? throw new InvalidOperationException("No update was found.");
+        await _manager!.DownloadUpdatesAsync(update, cancelToken: cancel).ConfigureAwait(false);
+        _downloaded = update;
+    }
 
     public void ApplyOnExit() =>
-        _manager!.WaitExitThenApplyUpdates(_update ?? throw new InvalidOperationException("No update was found."), silent: true, restart: false);
+        _manager!.WaitExitThenApplyUpdates(_downloaded ?? throw new InvalidOperationException("No update was downloaded."), silent: true, restart: false);
 
     public void ApplyAndRestart() =>
-        _manager!.ApplyUpdatesAndRestart(_update ?? throw new InvalidOperationException("No update was found."));
+        _manager!.ApplyUpdatesAndRestart(_downloaded ?? throw new InvalidOperationException("No update was downloaded."));
+
+    /// <summary>
+    /// Where the release notice ticket (notify.json, uploaded by scripts\ReleaseNotice.ps1) sits for a GitHub source: an
+    /// asset of the latest release. Null for a folder source, which has no notices.
+    /// </summary>
+    public static Uri? NoticeTicket(string? source) =>
+        source is not null && source.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase)
+        && Uri.TryCreate(source.TrimEnd('/') + "/releases/latest/download/notify.json", UriKind.Absolute, out Uri? ticket)
+            ? ticket
+            : null;
 }
 
 /// <summary>Finds the settings app of this install by process and asks its window to close with WM_CLOSE. Never kills anything.</summary>

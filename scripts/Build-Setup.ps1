@@ -10,7 +10,9 @@
   Updates ship through GitHub Releases on the public repo: the script downloads the latest release as the delta base,
   bakes the repo URL in as the tray's update source, packs, and publishes release v<Version>. The GitHub token comes from
   `gh auth token` at run time and is never written anywhere. HEAD must be committed and pushed first, so every release
-  matches a commit on GitHub. Installed apps find the new version within 6 hours, or on "Check for updates".
+  matches a commit on GitHub. After publishing, ReleaseNotice.ps1 puts the listen ticket (notify.json) on the release and
+  announces it, so running copies check within seconds; otherwise they find it within 15 minutes, or on "Check for updates".
+  A notice that fails is only a warning.
 .PARAMETER Version
   Package version (semver). Default: the next patch above the newest version in artifacts\releases after the download.
 .PARAMETER LocalOnly
@@ -146,6 +148,9 @@ try {
             --releaseName "Slender $Version" --tag "v$Version" --targetCommitish $head
         if ($LASTEXITCODE -ne 0) { throw "vpk upload failed ($LASTEXITCODE)." }
         Write-Host "Published $RepoUrl/releases/tag/v$Version"
+        # Instant release notice (scripts\ReleaseNotice.ps1): never fails the release.
+        . (Join-Path $PSScriptRoot 'ReleaseNotice.ps1')
+        Publish-ReleaseNotice $Version "v$Version"
     }
 }
 finally {

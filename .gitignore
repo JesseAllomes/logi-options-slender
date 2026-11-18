@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 # Slender
 # Reference upstream clones (read-only, untracked)
 .agent/upstream/
+
+# Release notices: the Azure subscription stays out of this public repo (scripts\ReleaseNotice.ps1)
+scripts/ReleaseNotice.local.json

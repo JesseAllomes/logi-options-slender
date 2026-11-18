@@ -415,9 +415,11 @@ public sealed class TrayApplication : IDisposable
             {
                 case Win32.WM_RBUTTONUP:
                 case Win32.WM_CONTEXTMENU:
+                    _updates?.CheckSoon(); // quiet, at most once per 2 minutes
                     ShowMenu();
                     break;
                 case Win32.WM_LBUTTONUP:
+                    _updates?.CheckSoon();
                     OpenSettings(popover: true);
                     break;
                 case Win32.NIN_BALLOONUSERCLICK:

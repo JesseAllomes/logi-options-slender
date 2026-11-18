@@ -89,6 +89,7 @@ public sealed class UpdateCoordinatorTests
         public List<string> Order = [];
         public List<TimeSpan> Delays = [];
         public List<Action> Timers = [];
+        public DateTimeOffset Now = new(2026, 11, 18, 6, 0, 0, TimeSpan.Zero);
 
         public UpdateCoordinator Create() => new(Backend, Settings, Log, (k, t) => { Order.Add("notice:" + t); Notices.Add((k, t)); }, () => Changes++, () => Applying++,
             () => { Order.Add("applyFailed"); ApplyFailed++; },
@@ -97,7 +98,8 @@ public sealed class UpdateCoordinatorTests
                 Delays.Add(delay);
                 Timers.Add(run);
                 return new Noop();
-            });
+            },
+            () => Now);
 
         /// <summary>Fires the most recent timer, as the clock would.</summary>
         public void Fire() => Timers[^1]();
@@ -139,14 +141,14 @@ public sealed class UpdateCoordinatorTests
     }
 
     [Fact]
-    public async Task Scheduled_check_rearms_every_6_hours_and_stays_quiet_when_up_to_date()
+    public async Task Scheduled_check_rearms_every_15_minutes_and_stays_quiet_when_up_to_date()
     {
         var h = new Harness();
         using UpdateCoordinator c = h.Create();
         c.Start();
         h.Fire();
         await WaitUntil(() => h.Delays.Count == 2);
-        Assert.Equal(TimeSpan.FromHours(6), h.Delays[1]);
+        Assert.Equal(TimeSpan.FromMinutes(15), h.Delays[1]);
         Assert.Equal(1, h.Backend.Checks);
         Assert.Empty(h.Notices);
         Assert.False(c.UpdateReady);
@@ -390,6 +392,135 @@ public sealed class UpdateCoordinatorTests
         c.Dispose();
         h.Fire();
         Assert.Single(h.Delays);
+    }
+
+    [Fact]
+    public async Task Opening_the_menu_checks_quietly_at_most_once_per_2_minutes()
+    {
+        var h = new Harness();
+        using UpdateCoordinator c = h.Create();
+        c.Start();
+        c.CheckSoon(); // the first check is already 30 s away
+        Assert.Equal(0, h.Backend.Checks);
+
+        h.Now += TimeSpan.FromMinutes(3);
+        c.CheckSoon();
+        await WaitUntil(() => h.Backend.Checks == 1);
+        h.Now += TimeSpan.FromMinutes(1);
+        c.CheckSoon();
+        Assert.Equal(1, h.Backend.Checks);
+        h.Now += TimeSpan.FromMinutes(2);
+        c.CheckSoon();
+        await WaitUntil(() => h.Backend.Checks == 2);
+        Assert.Empty(h.Notices);
+    }
+
+    [Fact]
+    public void Check_soon_does_nothing_without_an_update_source()
+    {
+        var h = new Harness { Backend = { IsAvailable = false } };
+        using UpdateCoordinator c = h.Create();
+        c.CheckSoon();
+        c.OnReleaseNotice("1.1.1");
+        Assert.Equal(0, h.Backend.Checks);
+        Assert.Empty(h.Notices);
+    }
+
+    [Fact]
+    public async Task Release_notice_checks_at_once_and_downloads()
+    {
+        var h = new Harness { Backend = { Found = "1.1.1" } };
+        using UpdateCoordinator c = h.Create();
+        c.Start();
+        c.OnReleaseNotice("1.1.1"); // within the 2-minute gap: a notice is not held back
+        await WaitUntil(() => c.UpdateReady);
+        Assert.Equal(1, h.Backend.Checks);
+        Assert.Equal("1.1.1", c.AvailableVersion);
+        Assert.Equal(UpdateNoticeKind.Ready, Assert.Single(h.Notices).Kind);
+    }
+
+    [Fact]
+    public void Release_notice_for_the_running_or_found_version_is_ignored()
+    {
+        var h = new Harness();
+        using UpdateCoordinator c = h.Create();
+        c.OnReleaseNotice("1.1.0");
+        Assert.Equal(0, h.Backend.Checks);
+    }
+
+    [Fact]
+    public async Task Release_notice_during_a_check_is_tried_again_after_10_seconds()
+    {
+        var h = new Harness { Backend = { CheckGate = new TaskCompletionSource<string?>() } };
+        using UpdateCoordinator c = h.Create();
+        Task first = c.CheckNowAsync();
+        await WaitUntil(() => h.Backend.Checks == 1);
+        c.OnReleaseNotice("1.1.1");
+        Assert.Equal([UpdateCoordinator.NoticeRetryDelay], h.Delays);
+        Assert.Equal(TimeSpan.FromSeconds(10), UpdateCoordinator.NoticeRetryDelay);
+        h.Backend.CheckGate.SetResult(null); // that check read the list before the release landed
+        await first;
+
+        h.Backend.CheckGate = null;
+        h.Backend.Found = "1.1.1";
+        h.Fire();
+        await WaitUntil(() => c.UpdateReady);
+        Assert.Equal(2, h.Backend.Checks);
+        Assert.Equal("1.1.1", c.AvailableVersion);
+    }
+
+    [Fact]
+    public async Task Release_notice_while_ready_downloads_the_newer_version()
+    {
+        var h = new Harness { Backend = { Found = "1.1.1" } };
+        using UpdateCoordinator c = h.Create();
+        await c.CheckNowAsync();
+        h.Backend.Found = "1.1.2";
+        c.OnReleaseNotice("1.1.2");
+        await WaitUntil(() => c.AvailableVersion == "1.1.2");
+        Assert.True(c.UpdateReady);
+        Assert.Equal(2, h.Backend.Downloads);
+    }
+
+    [Fact]
+    public async Task Failed_download_after_a_notice_keeps_the_ready_update()
+    {
+        var h = new Harness { Backend = { Found = "1.1.1" } };
+        using UpdateCoordinator c = h.Create();
+        await c.CheckNowAsync();
+        h.Backend.Found = "1.1.2";
+        h.Backend.DownloadGate = new TaskCompletionSource();
+        c.OnReleaseNotice("1.1.2");
+        await WaitUntil(() => h.Backend.Downloads == 2);
+        Assert.Equal("1.1.1", c.AvailableVersion); // still the ready one while 1.1.2 downloads
+        Assert.True(c.UpdateReady);
+        h.Backend.DownloadGate.SetException(new IOException("disk"));
+        await WaitUntil(() => h.Log.Errors == 1);
+        Assert.True(c.UpdateReady);
+        Assert.Equal("1.1.1", c.AvailableVersion);
+    }
+
+    [Fact]
+    public async Task Failed_check_after_a_notice_keeps_the_ready_update()
+    {
+        var h = new Harness { Backend = { Found = "1.1.1" } };
+        using UpdateCoordinator c = h.Create();
+        await c.CheckNowAsync();
+        h.Backend.CheckFails = new IOException("gone");
+        c.OnReleaseNotice("1.1.2");
+        await WaitUntil(() => h.Log.Errors == 1);
+        Assert.True(c.UpdateReady);
+        Assert.Equal("1.1.1", c.AvailableVersion);
+        Assert.Equal(1, h.Backend.Downloads);
+    }
+
+    [Fact]
+    public void Notice_ticket_is_an_asset_of_the_latest_github_release()
+    {
+        Assert.Equal("https://github.com/owner/repo/releases/latest/download/notify.json",
+            VelopackUpdateBackend.NoticeTicket("https://github.com/owner/repo/")?.ToString());
+        Assert.Null(VelopackUpdateBackend.NoticeTicket(@"D:\releases"));
+        Assert.Null(VelopackUpdateBackend.NoticeTicket(null));
     }
 
     [Fact]
