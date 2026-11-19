@@ -30,6 +30,7 @@ public sealed partial class MainWindow : Window
         General,
         Headset,
         Base,
+        Buds,
         ThreeCx,
     }
 
@@ -443,7 +444,7 @@ public sealed partial class MainWindow : Window
         }
 
         BuildRail();
-        if (_page is Page.Headset or Page.Base)
+        if (_page is Page.Headset or Page.Base or Page.Buds)
         {
             RebuildHeadsetPage(); // its connected / disconnected note and values follow the tray
         }
@@ -494,7 +495,11 @@ public sealed partial class MainWindow : Window
             return false;
         }
 
-        if (target.Headset)
+        if (target.Buds)
+        {
+            _page = Page.Buds;
+        }
+        else if (target.Headset)
         {
             _page = Page.Headset;
         }

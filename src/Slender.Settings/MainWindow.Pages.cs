@@ -20,6 +20,18 @@ public sealed partial class MainWindow
         PagePanel.Spacing = 0;
         PagePanel.MaxWidth = 660;
         if (_page is not (Page.Headset or Page.Base)) _headsetAsked = false;
+        if (_page != Page.Buds)
+        {
+            StopBudsTimers();
+            _budsAsked = false;
+        }
+
+        if (_page == Page.Buds)
+        {
+            BuildBudsPage();
+            return;
+        }
+
         if (_page == Page.Headset)
         {
             BuildHeadsetPage();

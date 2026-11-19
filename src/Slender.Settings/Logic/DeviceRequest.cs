@@ -1,7 +1,7 @@
 namespace Slender.Settings.Logic;
 
 /// <summary>Where <c>--device &lt;id&gt;</c> opens Settings: a mouse or keyboard page, or the headset page.</summary>
-public readonly record struct DeviceTarget(DeviceKind? Kind, bool Headset);
+public readonly record struct DeviceTarget(DeviceKind? Kind, bool Headset, bool Buds = false);
 
 /// <summary>
 /// <c>Slender.Settings --device &lt;id&gt;</c> opens Settings at that device (ids as in status.json: "mx-master-4",
@@ -35,6 +35,7 @@ public static class DeviceRequest
         DeviceIds.Mouse => new DeviceTarget(DeviceKind.Mouse, false),
         DeviceIds.Keyboard => new DeviceTarget(DeviceKind.Keyboard, false),
         DeviceIds.Headset => new DeviceTarget(null, true),
+        DeviceIds.Buds => new DeviceTarget(null, false, true),
         _ => null,
     };
 
@@ -74,5 +75,5 @@ public static class DeviceRequest
     }
 
     private static string? Known(string? id) =>
-        id?.Trim().ToLowerInvariant() is DeviceIds.Mouse or DeviceIds.Keyboard or DeviceIds.Headset ? id.Trim().ToLowerInvariant() : null;
+        id?.Trim().ToLowerInvariant() is DeviceIds.Mouse or DeviceIds.Keyboard or DeviceIds.Headset or DeviceIds.Buds ? id.Trim().ToLowerInvariant() : null;
 }

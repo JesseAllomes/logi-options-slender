@@ -15,6 +15,7 @@ public static class DeviceIds
     public const string Mouse = "mx-master-4";
     public const string Keyboard = "ergo-k860";
     public const string Headset = "yealink-wh64";
+    public const string Buds = "galaxy-buds4-pro";
 
     /// <summary>The thumb wheel is not a HID++ control id; Slender stores its binding under this pseudo id.</summary>
     public const ushort ThumbWheelPseudoId = 0xF150;

@@ -20,7 +20,7 @@ public sealed partial class MainWindow
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _settingTimer, _previewRingTimer;
     private readonly Dictionary<int, (string Raw, DateTimeOffset At)> _sentSettings = [];
 
-    private bool SettingBusy => _dropDownOpen || _sliderHeld || _settingTimer?.IsRunning == true;
+    private bool SettingBusy => _dropDownOpen || _sliderHeld || _settingTimer?.IsRunning == true || _budsSendTimer?.IsRunning == true;
 
     private void AddHeadsetSettings(HeadsetState? h, YealinkSettings y, YealinkTarget target)
     {
@@ -241,7 +241,7 @@ public sealed partial class MainWindow
 
     private void EndSettingEdit()
     {
-        if (_settingRebuildPending && !SettingBusy && _page is Page.Headset or Page.Base)
+        if (_settingRebuildPending && !SettingBusy && _page is Page.Headset or Page.Base or Page.Buds)
         {
             RebuildHeadsetPage();
         }

@@ -335,6 +335,11 @@ public sealed partial class MainWindow
             tiles.Add(PopTile(BuiltInPictures.Base, BaseName + suffix, offline, () => _page = Page.Base));
         }
 
+        if (BudsListed())
+        {
+            tiles.Add(BudsPopTile());
+        }
+
         if (tiles.Count == 0)
         {
             _popRows.Children.Add(Ui.Text("No devices yet", 12, Ui.Muted));

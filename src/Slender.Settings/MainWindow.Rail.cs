@@ -36,7 +36,12 @@ public sealed partial class MainWindow
             RailPanel.Children.Add(HeadsetTile(baseTile: true));
         }
 
-        if (visible.Count == 0 && !HeadsetListed())
+        if (BudsListed())
+        {
+            RailPanel.Children.Add(BudsTile());
+        }
+
+        if (visible.Count == 0 && !HeadsetListed() && !BudsListed())
         {
             RailPanel.Children.Add(Ui.Text("No devices yet", 11.5, Ui.Muted));
         }
@@ -55,6 +60,12 @@ public sealed partial class MainWindow
         if (_page is Page.Headset or Page.Base && !HeadsetListed())
         {
             _page = Page.Device; // the headset was removed or never listed by this tray
+            return true;
+        }
+
+        if (_page == Page.Buds && !BudsListed())
+        {
+            _page = Page.Device; // the buds were removed or never listed by this tray
             return true;
         }
 
@@ -133,7 +144,7 @@ public sealed partial class MainWindow
 
     private Button GearTile()
     {
-        bool selected = _page is not (Page.Device or Page.Headset or Page.Base);
+        bool selected = _page is not (Page.Device or Page.Headset or Page.Base or Page.Buds);
         var button = new Button
         {
             Style = Ui.Res<Style>("PlainButtonStyle"),
@@ -148,7 +159,7 @@ public sealed partial class MainWindow
         };
         AutomationProperties.SetName(button, "Point and scroll, haptics, actions ring, general and 3CX settings");
         ToolTipService.SetToolTip(button, "Point & scroll, Haptics, Actions Ring, General, 3CX");
-        button.Click += (_, _) => OpenPage(_page is Page.Device or Page.Headset or Page.Base ? Page.Pointer : _page);
+        button.Click += (_, _) => OpenPage(_page is Page.Device or Page.Headset or Page.Base or Page.Buds ? Page.Pointer : _page);
         return button;
     }
 
