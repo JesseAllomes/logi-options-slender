@@ -53,7 +53,7 @@ public static class SettingsLauncher
     public const string PopoverArgument = "--popover";
 
     /// <summary>How the settings exe is started; the popover flag is only passed for the tray-icon click.</summary>
-    public static ProcessStartInfo StartInfo(string exe, bool popover)
+    public static ProcessStartInfo StartInfo(string exe, bool popover, string? deviceId = null)
     {
         var info = new ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! };
         if (popover)
@@ -61,13 +61,20 @@ public static class SettingsLauncher
             info.ArgumentList.Add(PopoverArgument);
         }
 
+        // A second launch hands the device to a running Settings itself (DeviceRequest), so no signalling is needed for this case.
+        if (!string.IsNullOrEmpty(deviceId))
+        {
+            info.ArgumentList.Add("--device");
+            info.ArgumentList.Add(deviceId);
+        }
+
         return info;
     }
 
     /// <summary>Brings the running window forward or starts a new one (with --popover for the tray-icon click). Returns false when the exe cannot be found or started.</summary>
-    public static bool Launch(bool popover = false)
+    public static bool Launch(bool popover = false, string? deviceId = null)
     {
-        if (TrySignalRunning())
+        if (deviceId is null && TrySignalRunning())
         {
             return true;
         }
@@ -80,7 +87,7 @@ public static class SettingsLauncher
 
         try
         {
-            using Process? p = Process.Start(StartInfo(exe, popover));
+            using Process? p = Process.Start(StartInfo(exe, popover, deviceId));
             return p is not null;
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)

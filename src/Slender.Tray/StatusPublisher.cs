@@ -33,7 +33,8 @@ public sealed record StatusSnapshot(
     string? LastRingSource = null,
     Slender.Engine.HeadsetState? Headset = null,
     string? MouseChargeState = null,
-    string? KeyboardChargeState = null);
+    string? KeyboardChargeState = null,
+    Slender.Engine.BudsState? Buds = null);
 
 /// <summary>Values read back from the mouse (m26) so Settings can show "Default (device value)" beside its sliders.</summary>
 public sealed record MouseValues(int? WheelResistance, int? SensePanelForce, int? SensePanelBaseline, int? HapticStrength);
@@ -214,6 +215,15 @@ public sealed class StatusPublisher : IDisposable
         {
             devices = [.. devices, new DeviceState(DeviceCatalog.YealinkWh64, "Yealink WH64", PresenceText(s.Devices, DeviceCatalog.YealinkWh64) == "active", s.Headset?.BatteryPercent, s.Headset?.Charging ?? false)
                 { Presence = PresenceText(s.Devices, DeviceCatalog.YealinkWh64), Headset = s.Headset }];
+        }
+
+        // Galaxy Buds (Bluetooth Classic): listed once seen. Battery is the lowest connected bud, Charging any bud charging.
+        if (s.Devices is not null && !IsHidden(s.Devices, DeviceCatalog.GalaxyBuds4Pro))
+        {
+            var b = s.Buds;
+            devices = [.. devices, new DeviceState(DeviceCatalog.GalaxyBuds4Pro, "Galaxy Buds4 Pro", b?.Connected == true, TrayText.BudsLowest(b),
+                b is not null && (b.ChargingLeft == true || b.ChargingRight == true || b.ChargingCase == true))
+                { Presence = PresenceText(s.Devices, DeviceCatalog.GalaxyBuds4Pro), Firmware = b?.Firmware, Buds = b }];
         }
 
         return new SlenderStatus(

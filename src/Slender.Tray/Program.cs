@@ -156,7 +156,9 @@ static class Program
         // Device registry (m52): Windows pushes HID arrival/removal, each device module runs only while its device is around, and
         // status.json says which devices are active, sleeping or disconnected. The Logi modules wrap the existing HID++ loops
         // unchanged; an arrival only cuts their reconnect wait short. Disposed before the app, the presence source after it.
-        using IDevicePresenceSource? presence = noDevices ? null : new WindowsHidPresence();
+        // HID plus paired Bluetooth Classic devices (the Galaxy Buds are not HID), both pushed by Windows.
+        using IDevicePresenceSource? presence = noDevices ? null
+            : new CompositeDevicePresence(log, new WindowsHidPresence(), new Slender.GalaxyBuds.Windows.BluetoothClassicPresence());
         using var registry = presence is null ? null
             : new DeviceRegistry(DeviceCatalog.All, presence, new KnownDeviceStore(SyncPaths.StateDirectory, log), log);
         using var mouseModule = registry is null ? null : new LogiDeviceModule(DeviceCatalog.MxMaster4, mouse, registry.ReportLink);
@@ -172,11 +174,27 @@ static class Program
         // Button presses run their bound action on the thread pool, never on the module's read thread.
         using var yealinkRouter = yealinkModule is null ? null
             : new Slender.Yealink.YealinkRouter(yealinkModule, executor, () => engine.Config.Yealink, a => ThreadPool.QueueUserWorkItem(_ => a()), log.Info);
+        // Galaxy Buds4 Pro: in-process, connects (RFCOMM) only while the buds are present; holds nothing while stopped.
+        using var budsModule = registry is null ? null : new Slender.GalaxyBuds.BudsModule(new Slender.GalaxyBuds.Windows.WindowsBudsTransport(),
+            Slender.GalaxyBuds.Windows.BudsConnectHint.PairedAddress, registry.ReportLink, registry.ReportFault, log.Info,
+            connectHint: Slender.GalaxyBuds.Windows.BudsConnectHint.Create);
         if (registry is not null)
         {
             registry.Register(mouseModule!);
             registry.Register(keyboardModule!);
             registry.Register(yealinkModule!);
+            registry.Register(budsModule!);
+            app.BudsInfo = budsModule!.GetState;
+            app.RefreshBuds = app.DevicesChanged;
+            // Changes and the find beep run one after another off the UI thread; each waits up to ~2 s for the buds' answer.
+            Task budsWork = Task.CompletedTask;
+            void RunBudsWork(Action work)
+            {
+                lock (budsModule) budsWork = budsWork.ContinueWith(_ => work(), TaskScheduler.Default);
+            }
+            app.SetBudsSetting = (index, raw) => RunBudsWork(() => budsModule.Set(index, raw));
+            app.FindBuds = start => { if (start) RunBudsWork(() => budsModule.Find(true)); else budsModule.Find(false); };
+            budsModule.StateChanged += app.DevicesChanged;
             app.HeadsetMicMuted = yealinkModule!.GetMicMuted;
             app.ToggleHeadsetMic = yealinkModule.ToggleMicMute;
             // Battery, signal and the base's settings reach status.json and the tray menu; Settings' Headset page asks for a re-read.

@@ -17,7 +17,8 @@ public sealed class TrayApplication : IDisposable
 {
     private const uint WM_TRAY = Win32.WM_APP + 1, WM_POST = Win32.WM_APP + 2;
     private const nuint TimerBattery = 1, TimerKeyboard = 2, TimerGuard = 3, TimerWatchdog = 4, TimerLockKeys = 5, TimerBadge = 6;
-    private const uint CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8, CmdHeadsetMute = 9;
+    private const uint CmdHaptics = 3, CmdLaunch = 4, CmdSettings = 5, CmdQuit = 6, CmdUpdateApply = 7, CmdUpdateCheck = 8, CmdHeadsetMute = 9,
+        CmdBudsNoiseBase = 20, CmdBudsFind = 30, CmdBudsSettings = 31;
     private const string WindowClass = UpdateMessages.TrayWindowClass;
 
     private static readonly uint BatteryIntervalMs = (uint)TimeSpan.FromMinutes(5).TotalMilliseconds;
@@ -42,7 +43,8 @@ public sealed class TrayApplication : IDisposable
     private readonly ConcurrentQueue<Action> _posted = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly uint _taskbarCreated;
-    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage, _headsetPreviewRingMessage, _ringSoundPreviewMessage;
+    private readonly uint _updateCheckMessage, _updateApplyMessage, _forgetDeviceMessage, _headsetRefreshMessage, _headsetSetMessage, _headsetPreviewRingMessage, _ringSoundPreviewMessage,
+        _budsRefreshMessage, _budsSetMessage, _budsFindMessage;
 
     private nint _hwnd;
     private nint _icon;
@@ -70,6 +72,7 @@ public sealed class TrayApplication : IDisposable
     private string _statusText = string.Empty;
     private string _keyboardText = string.Empty;
     private string _headsetText = string.Empty;
+    private Slender.Engine.Devices.DevicePresence? _budsPresence;
     private UpdateCoordinator? _updates;
     private bool _readyBalloonShown;
     private readonly LockKeyIndicatorState _lockKeys = new();
@@ -92,7 +95,7 @@ public sealed class TrayApplication : IDisposable
                 _mouseFirmware, _keyboardFirmware, WheelModeText(_mouse?.WheelMode ?? WheelMode.Unknown),
                 ToHostStates(_mouse?.Hosts), ToHostStates(_keyboard?.Hosts),
                 _mouseEstimate?.Text, _keyboardEstimate?.Text, _dpiCaps, DeviceList?.Invoke(), _lastRing, _lastRingSource, HeadsetInfo?.Invoke(),
-                StatusPublisher.ChargeText(_battery), StatusPublisher.ChargeText(_keyboardBattery)),
+                StatusPublisher.ChargeText(_battery), StatusPublisher.ChargeText(_keyboardBattery), Buds: BudsInfo?.Invoke()),
             path: statusPath,
             log: log);
         _startup = startup ?? StartupRegistration.ForCurrentProcess();
@@ -132,6 +135,21 @@ public sealed class TrayApplication : IDisposable
         fixed (char* preview = DeviceMessages.HeadsetPreviewRingName)
         {
             _headsetPreviewRingMessage = Win32.RegisterWindowMessageW(preview);
+        }
+
+        fixed (char* budsRefresh = DeviceMessages.BudsRefreshName)
+        {
+            _budsRefreshMessage = Win32.RegisterWindowMessageW(budsRefresh);
+        }
+
+        fixed (char* budsSet = DeviceMessages.BudsSetName)
+        {
+            _budsSetMessage = Win32.RegisterWindowMessageW(budsSet);
+        }
+
+        fixed (char* budsFind = DeviceMessages.BudsFindName)
+        {
+            _budsFindMessage = Win32.RegisterWindowMessageW(budsFind);
         }
 
         fixed (char* ringSound = DeviceMessages.RingSoundPreviewName)
@@ -257,6 +275,18 @@ public sealed class TrayApplication : IDisposable
 
     /// <summary>Settings asks to ring the base for a moment (DeviceMessages.HeadsetPreviewRingName); set from Program. Null without the headset module.</summary>
     public Action? PreviewHeadsetRing { get; set; }
+
+    /// <summary>What the Galaxy Buds reported (battery, placement, settings); set from Program. Null without the buds module.</summary>
+    public Func<Slender.Engine.BudsState?>? BudsInfo { get; set; }
+
+    /// <summary>Settings Buds page opened: publish the buds state again (DeviceMessages.BudsRefreshName); set from Program.</summary>
+    public Action? RefreshBuds { get; set; }
+
+    /// <summary>Settings or the menu asks to change a buds setting: catalog index and logical raw value (DeviceMessages.BudsSetName); set from Program.</summary>
+    public Action<int, int>? SetBudsSetting { get; set; }
+
+    /// <summary>Settings or the menu starts (true) or stops (false) the find-my-earbuds beep (DeviceMessages.BudsFindName); set from Program.</summary>
+    public Action<bool>? FindBuds { get; set; }
 
     /// <summary>Settings asks to play the ring sound once (DeviceMessages.RingSoundPreviewName): sound number and volume number as the message carries them; set from Program.</summary>
     public Action<int, int>? PreviewRingSound { get; set; }
@@ -475,6 +505,34 @@ public sealed class TrayApplication : IDisposable
         if (msg != 0 && msg == _headsetPreviewRingMessage)
         {
             PreviewHeadsetRing?.Invoke();
+            return true;
+        }
+
+        if (msg != 0 && msg == _budsRefreshMessage)
+        {
+            RefreshBuds?.Invoke();
+            return true;
+        }
+
+        if (msg != 0 && msg == _budsSetMessage)
+        {
+            // Both come from another process: only a catalog index and an int-sized value are acted on.
+            long index = wParam, raw = lParam;
+            if (index >= 0 && index < Slender.Engine.Devices.GalaxyBudsSettingsCatalog.All.Count && raw >= int.MinValue && raw <= int.MaxValue)
+            {
+                SetBudsSetting?.Invoke((int)index, (int)raw);
+            }
+
+            return true;
+        }
+
+        if (msg != 0 && msg == _budsFindMessage)
+        {
+            if ((long)wParam is 0 or 1)
+            {
+                FindBuds?.Invoke((long)wParam == 1);
+            }
+
             return true;
         }
 
@@ -697,6 +755,38 @@ public sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>The buds submenu: battery line, noise controls, find my earbuds, open settings. Only while the buds are present.</summary>
+    private unsafe void AppendBuds(nint menu)
+    {
+        if (_budsPresence is not (Slender.Engine.Devices.DevicePresence.Active or Slender.Engine.Devices.DevicePresence.Sleeping)) return;
+        nint sub = Win32.CreatePopupMenu();
+        if (sub == 0) return;
+        var buds = BudsInfo?.Invoke();
+        bool live = buds?.Connected == true;
+        Append(sub, Win32.MF_GRAYED, 1, live ? TrayText.BudsBattery(buds) ?? "Connected" : "Not connected");
+        if (live)
+        {
+            int noiseIndex = Slender.Engine.Devices.GalaxyBudsSettingsCatalog.IndexOf(Slender.Engine.Devices.GalaxyBudsSettingsCatalog.NoiseMode);
+            var def = Slender.Engine.Devices.GalaxyBudsSettingsCatalog.All[noiseIndex];
+            int? current = buds!.Settings?.FirstOrDefault(x => x.Key == def.Key)?.Raw;
+            Win32.AppendMenuW(sub, Win32.MF_SEPARATOR, 0, null);
+            for (int i = 0; i < def.ChoiceCount; i++)
+            {
+                int raw = def.ChoiceRaw(i)!.Value;
+                Append(sub, current == raw ? Win32.MF_CHECKED : 0, (nuint)(CmdBudsNoiseBase + raw), def.Values![i * 2 + 1]);
+            }
+
+            Win32.AppendMenuW(sub, Win32.MF_SEPARATOR, 0, null);
+            Append(sub, 0, CmdBudsFind, buds.FindActive ? "Stop finding earbuds" : "Find my earbuds");
+        }
+
+        Append(sub, 0, CmdBudsSettings, "Open settings…");
+        fixed (char* p = "Galaxy Buds4 Pro")
+        {
+            Win32.AppendMenuW(menu, Win32.MF_STRING | Win32.MF_POPUP, (nuint)sub, p);
+        }
+    }
+
     private unsafe void ShowMenu()
     {
         nint menu = Win32.CreatePopupMenu();
@@ -716,6 +806,7 @@ public sealed class TrayApplication : IDisposable
             if (_statusText.Length > 0) Append(menu, Win32.MF_GRAYED, 1, _statusText);
             if (_keyboardText.Length > 0) Append(menu, Win32.MF_GRAYED, 1, _keyboardText);
             AppendHeadset(menu);
+            AppendBuds(menu);
             Append(menu, _config.Haptics.Enabled ? Win32.MF_CHECKED : 0, CmdHaptics, "Haptics");
             Append(menu, _config.LaunchAtLogin ? Win32.MF_CHECKED : 0, CmdLaunch, "Launch at login");
             Append(menu, 0, CmdSettings, "Settings…");
@@ -741,6 +832,15 @@ public sealed class TrayApplication : IDisposable
                     break;
                 case CmdSettings:
                     OpenSettings(popover: false);
+                    break;
+                case CmdBudsFind:
+                    FindBuds?.Invoke(BudsInfo?.Invoke()?.FindActive != true);
+                    break;
+                case CmdBudsSettings:
+                    OpenSettings(popover: false, Slender.Engine.Devices.DeviceCatalog.GalaxyBuds4Pro);
+                    break;
+                case >= CmdBudsNoiseBase and < CmdBudsNoiseBase + 4:
+                    SetBudsSetting?.Invoke(Slender.Engine.Devices.GalaxyBudsSettingsCatalog.IndexOf(Slender.Engine.Devices.GalaxyBudsSettingsCatalog.NoiseMode), (int)((uint)cmd - CmdBudsNoiseBase));
                     break;
                 case CmdUpdateApply:
                     _ = _updates?.ApplyAsync();
@@ -1232,6 +1332,7 @@ public sealed class TrayApplication : IDisposable
         _keyboardText = TrayText.Line("ERGO K860", keyboardPresence, _keyboardConnected, _keyboardBattery?.Percent, _keyboardBattery?.Charging ?? false, keyboardShort) ?? string.Empty;
         var headsetPresence = PresenceOf(list, Slender.Engine.Devices.DeviceCatalog.YealinkWh64);
         _headsetText = TrayText.Line("Yealink WH64", headsetPresence, headsetPresence == Slender.Engine.Devices.DevicePresence.Active, null, false) ?? string.Empty;
+        _budsPresence = PresenceOf(list, Slender.Engine.Devices.DeviceCatalog.GalaxyBuds4Pro);
         string tip = BatteryTip.Build(
         [
             new TipDevice("MX Master 4", _connected, _battery?.Percent, _battery?.Charging ?? false, mouseShort, mousePresence),
@@ -1281,9 +1382,9 @@ public sealed class TrayApplication : IDisposable
         ApplyChange(_config with { LaunchAtLogin = wanted });
     }
 
-    private void OpenSettings(bool popover)
+    private void OpenSettings(bool popover, string? deviceId = null)
     {
-        if (!SettingsLauncher.Launch(popover))
+        if (!SettingsLauncher.Launch(popover, deviceId))
         {
             ShowError("Could not start Slender Settings. Reinstall Slender or run it from its own folder.");
         }

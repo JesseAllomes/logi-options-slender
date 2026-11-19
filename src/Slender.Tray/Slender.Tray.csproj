@@ -5,6 +5,7 @@
     <ProjectReference Include="..\Slender.Hidpp\Slender.Hidpp.csproj" />
     <ProjectReference Include="..\Slender.Sync\Slender.Sync.csproj" />
     <ProjectReference Include="..\Slender.Yealink\Slender.Yealink.csproj" />
+    <ProjectReference Include="..\Slender.GalaxyBuds\Slender.GalaxyBuds.csproj" />
   </ItemGroup>
 
   <ItemGroup>
