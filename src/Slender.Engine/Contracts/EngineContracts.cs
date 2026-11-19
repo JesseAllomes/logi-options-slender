@@ -632,6 +632,10 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 /// string, Model the SKU ("SM-R640"). Settings lists every catalog entry the buds have reported (Devices.GalaxyBudsSettingsCatalog
 /// order), Raw as the logical int. FindActive is true while the find-my-earbuds beep plays. WriteProblem is the last change the tray
 /// refused or the buds did not take, in plain words; null once one succeeds.
+/// BatteryCyclesLeft/Right (1.1.58): full charge cycles each bud's battery has been through, as the buds count them (read at most
+/// every few hours; kept across reconnects). MultipointSupported and MultipointStreaming (1.1.58) are the buds' multipoint answer
+/// when they connected or the Buds page last opened: streaming is a bit mask, 1 media (A2DP), 2 call (HFP), 4/8/16 LE audio, 0 none.
+/// All four are null until the buds have answered.
 /// </summary>
 public sealed record BudsState(
     bool Connected,
@@ -647,7 +651,11 @@ public sealed record BudsState(
     string? Model = null,
     IReadOnlyList<BudsSetting>? Settings = null,
     bool FindActive = false,
-    string? WriteProblem = null);
+    string? WriteProblem = null,
+    double? BatteryCyclesLeft = null,
+    double? BatteryCyclesRight = null,
+    bool? MultipointSupported = null,
+    int? MultipointStreaming = null);
 
 /// <summary>One Galaxy Buds setting: catalog key, group, label, value as text and as the logical raw int.</summary>
 public sealed record BudsSetting(string Key, string Group, string Label, string Value, int Raw);

@@ -10,6 +10,10 @@ public static class BudsIds
     public const byte VersionInfoLong = 104;
     public const byte NoiseControlsUpdate = 119;
 
+    // Read requests (empty payload); the buds answer with the same id.
+    public const byte MultipointInfo = 118;
+    public const byte BatteryCycles = 206;
+
     public const byte AutoPause = 108;
     public const byte InEarCalls = 110;
     public const byte NoiseOneBud = 111;

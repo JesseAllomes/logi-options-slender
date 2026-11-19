@@ -132,7 +132,9 @@ public sealed class BudsCommandsTests
         // The capability map's "Keep out" section: firmware (176-190), reset/reboot/power, pairing and profile control, factory and
         // test modes, core dump and log control, battery reset, Find-My keys, hearing data, touchpad lock, unsupported 72,
         // manager info and time, and the loud tests.
-        var keepOut = new List<int> { 80, 82, 83, 114, 113, 112, 16, 18, 19, 21, 22, 23, 32, 86, 75, 171, 39, 48, 55, 58, 59, 60, 61, 207, 172, 173, 103, 204, 144, 72, 136, 167, 166, 157, 162 };
+        // 1.1.58 adds 217 (adaptive volume latches), 142 (lighting), 115 (multipoint control) and 131 (noise-cancelling strength,
+        // shown only).
+        var keepOut = new List<int> { 80, 82, 83, 114, 113, 112, 16, 18, 19, 21, 22, 23, 32, 86, 75, 171, 39, 48, 55, 58, 59, 60, 61, 207, 172, 173, 103, 204, 144, 72, 136, 167, 166, 157, 162, 217, 142, 115, 131 };
         keepOut.AddRange(Enumerable.Range(176, 15));
         foreach (int id in keepOut)
             for (int len = 0; len <= 16; len++)

@@ -17,6 +17,13 @@ public sealed class BudsModel
     public bool? ChargingLeft, ChargingRight, ChargingCase;
     public BudsPlacement? PlacementLeft, PlacementRight;
     public string? Firmware, Model;
+
+    /// <summary>206 answer: full charge cycles per bud (kept across reconnects; see BudsModule.CycleReadEvery).</summary>
+    public double? CyclesLeft, CyclesRight;
+
+    /// <summary>118 answer (revision 1 only): multipoint supported and the streaming mask (1 A2DP, 2 HFP, 4/8/16 LE audio).</summary>
+    public bool? MultipointSupported;
+    public int? MultipointStreaming;
     public readonly int?[] Raw = new int?[GalaxyBudsSettingsCatalog.All.Count];
 
     public static string? PlacementText(BudsPlacement? p) => p switch
@@ -72,7 +79,8 @@ public sealed class BudsModel
             settings.Add(new BudsSetting(def.Key, def.Group, def.Label, def.Key == GalaxyBudsSettingsCatalog.Gestures ? GesturesText(raw) : def.Text(raw), raw));
         }
         return new BudsState(connected, BatteryLeft, BatteryRight, BatteryCase, ChargingLeft, ChargingRight, ChargingCase,
-            PlacementText(PlacementLeft), PlacementText(PlacementRight), Firmware, Model, settings, findActive, writeProblem);
+            PlacementText(PlacementLeft), PlacementText(PlacementRight), Firmware, Model, settings, findActive, writeProblem,
+            CyclesLeft, CyclesRight, MultipointSupported, MultipointStreaming);
     }
 }
 
@@ -91,6 +99,8 @@ public static class BudsStatusParser
                 return true;
             case BudsIds.VersionInfoLong: ApplyVersion(m, frame.Payload); return true;
             case BudsIds.DebugSku: ApplySku(m, frame.Payload); return true;
+            case BudsIds.BatteryCycles: ApplyCycles(m, frame.Payload); return true;
+            case BudsIds.MultipointInfo: ApplyMultipoint(m, frame.Payload); return true;
             default: return false;
         }
     }
@@ -169,6 +179,41 @@ public static class BudsStatusParser
         Put(GalaxyBudsSettingsCatalog.InEarCalls, 34, Invert);
         Put(GalaxyBudsSettingsCatalog.Seamless, 19, Invert);
         Put(GalaxyBudsSettingsCatalog.AutoPause, 46);
+        Put(GalaxyBudsSettingsCatalog.NoiseCancellingStrength, 24);
+    }
+
+    /// <summary>Most cycles a bud battery is believed to report; anything above (or negative) is not a cycle count.</summary>
+    public const double MaxCycles = 100_000;
+
+    /// <summary>
+    /// 206 SOC_BATTERY_CYCLE answer: 16 bytes, two big-endian signed 64-bit counts (left, then right) in ten-thousandths of a full
+    /// charge cycle. Any other length is ignored; an out-of-range count leaves that side unknown.
+    /// </summary>
+    private static void ApplyCycles(BudsModel m, byte[] p)
+    {
+        if (p.Length != 16) return;
+        m.CyclesLeft = Cycles(System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(p.AsSpan(0, 8)));
+        m.CyclesRight = Cycles(System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(p.AsSpan(8, 8)));
+    }
+
+    private static double? Cycles(long tenThousandths) =>
+        tenThousandths >= 0 && tenThousandths / 10000.0 <= MaxCycles ? tenThousandths / 10000.0 : null;
+
+    /// <summary>
+    /// 118 MULTIPOINT_INFO answer: [0] revision, [1] supported, [2] state, [3] focus, [4] streaming mask, then bytes not mapped.
+    /// Only revision 1 (the one captured) is read; another revision leaves the multipoint fields unknown.
+    /// </summary>
+    private static void ApplyMultipoint(BudsModel m, byte[] p)
+    {
+        if (p.Length < 5 || p[0] != 1)
+        {
+            m.MultipointSupported = null;
+            m.MultipointStreaming = null;
+            return;
+        }
+
+        m.MultipointSupported = p[1] != 0;
+        m.MultipointStreaming = p[4];
     }
 
     /// <summary>104: [hwL, hwR, firmwareL (21 ASCII bytes), firmwareR (21)]. The left string is shown.</summary>

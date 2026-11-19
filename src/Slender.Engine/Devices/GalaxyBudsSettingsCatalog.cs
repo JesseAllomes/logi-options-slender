@@ -52,9 +52,10 @@ public sealed record BudsSettingDef(
 }
 
 /// <summary>
-/// Every Galaxy Buds4 Pro setting Slender handles, in page order (groups as Galaxy Wearable groups them). Settings → tray messages
-/// carry an index into <see cref="All"/>, so append new entries at the end of their group only before a release, never reorder
-/// after one ships. Source: personal/galaxy-buds-research docs/capability-map.md (2026-11-19).
+/// Every Galaxy Buds4 Pro setting Slender handles. Settings → tray messages carry an index into <see cref="All"/> and 1.1.57 shipped
+/// with the first 25 entries, so new entries go at the very end of the list, never in the middle, and nothing is ever reordered. The
+/// page groups rows by Group (first appearance order), so an appended entry still shows with its group. Source:
+/// personal/galaxy-buds-research docs/capability-map.md (2026-11-19).
 /// </summary>
 public static class GalaxyBudsSettingsCatalog
 {
@@ -83,6 +84,7 @@ public static class GalaxyBudsSettingsCatalog
     public const string InEarCalls = "in_ear_calls";
     public const string Seamless = "seamless";
     public const string AutoPause = "auto_pause";
+    public const string NoiseCancellingStrength = "noise_cancelling_strength";
 
     public const string GroupNoise = "Noise control";
     public const string GroupTouch = "Touch controls";
@@ -151,6 +153,10 @@ public static class GalaxyBudsSettingsCatalog
 
         new(Seamless, GroupConnection, "Auto switch to other devices", OnOff, Help: "Samsung devices on the same account."),
         new(AutoPause, GroupConnection, "Pause media when an earbud is removed", OnOff),
+
+        // Appended in 1.1.58 (never move entries above this line).
+        new(NoiseCancellingStrength, GroupNoise, "Noise cancelling strength", Min: 0, Max: 4, Editable: false,
+            Help: "Shown only: the level the buds report (4 is their default). Change it in Galaxy Wearable."),
     ];
 
     public static int IndexOf(string key)

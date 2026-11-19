@@ -40,7 +40,7 @@ internal sealed class FakeBudsLink : IBudsLink
         foreach (var f in frames)
         {
             Sent.Enqueue(f);
-            if (AutoAck && f.Id != BudsIds.DebugSku) Push(BudsTestData.FrameBytes(BudsIds.Ack, f.Id));
+            if (AutoAck && !BudsTestData.IsRead(f.Id)) Push(BudsTestData.FrameBytes(BudsIds.Ack, f.Id));
         }
     }
 
@@ -363,14 +363,14 @@ public sealed class BudsModuleTests
     public void RefusedChangesNeverReachTheLink()
     {
         using var m = Connected(out var link);
-        int before = link.Sent.Count(f => f.Id != BudsIds.DebugSku);
+        int before = link.Sent.Count(f => !BudsTestData.IsRead(f.Id));
         m.Set(GalaxyBudsSettingsCatalog.IndexOf(GalaxyBudsSettingsCatalog.Gestures), 0);
         Assert.NotNull(m.GetState().WriteProblem);
         m.Set(GalaxyBudsSettingsCatalog.IndexOf(GalaxyBudsSettingsCatalog.NoiseMode), 9);
         m.Set(-1, 0);
         m.Set(999, 0);
         m.Set(0, long.MaxValue);
-        Assert.Equal(before, link.Sent.Count(f => f.Id != BudsIds.DebugSku));
+        Assert.Equal(before, link.Sent.Count(f => !BudsTestData.IsRead(f.Id)));
         Assert.DoesNotContain(link.Sent, f => f.Id is 120 or 144);
     }
 
@@ -469,4 +469,84 @@ public sealed class BudsModuleTests
 
     [Fact]
     public void DeviceIdIsTheCatalogEntry() => Assert.Equal(DeviceCatalog.GalaxyBuds4Pro, Make().DeviceId);
+
+    private static void Answer(FakeBudsLink link)
+    {
+        link.Push(BudsTestData.FrameWithHeader(BudsTestData.MultipointHeader, BudsIds.MultipointInfo, BudsTestData.Hex(BudsTestData.MultipointPayloadHex)));
+        link.Push(BudsTestData.FrameWithHeader(BudsTestData.CyclesHeader, BudsIds.BatteryCycles, BudsTestData.Hex(BudsTestData.CyclesPayloadHex)));
+    }
+
+    [Fact]
+    public void LinkUpAsksMultipointAndCyclesEmptyAndShowsTheAnswers()
+    {
+        using var m = Connected(out var link);
+        Until(() => link.Sent.Any(f => f.Id == BudsIds.DebugSku), "model request");
+        Assert.Single(link.Sent, f => f.Id == BudsIds.MultipointInfo);
+        Assert.Single(link.Sent, f => f.Id == BudsIds.BatteryCycles);
+        Assert.All(link.Sent, f => Assert.Empty(f.Payload));
+        Assert.DoesNotContain(link.Sent, f => f.Id == 207);
+
+        Answer(link);
+        Until(() => m.GetState().BatteryCyclesRight is not null && m.GetState().MultipointSupported is not null, "answers");
+        var s = m.GetState();
+        Assert.Equal(2.62, s.BatteryCyclesLeft!.Value, 6);
+        Assert.Equal(20.39, s.BatteryCyclesRight!.Value, 6);
+        Assert.True(s.MultipointSupported);
+        Assert.Equal(0, s.MultipointStreaming);
+    }
+
+    [Fact]
+    public void CyclesAreAskedAtMostEverySixHoursAndKeptAcrossReconnects()
+    {
+        var m = Connected(out var link);
+        Until(() => link.Sent.Any(f => f.Id == BudsIds.DebugSku), "model request");
+        Answer(link);
+        Until(() => m.GetState().BatteryCyclesLeft is not null, "cycles");
+
+        // More status within the window: no second ask.
+        SendStatus(link);
+        SendStatus(link);
+        Until(() => m.GetState().MultipointSupported is not null, "multipoint");
+        Assert.Single(link.Sent, f => f.Id == BudsIds.BatteryCycles);
+
+        // Reconnect an hour later: multipoint is asked again, cycles are not, and the old cycles still show.
+        m.Stop();
+        Until(() => m.LiveThreads == 0, "thread to end");
+        Assert.Equal(2.62, m.GetState().BatteryCyclesLeft!.Value, 6);
+        Assert.Null(m.GetState().MultipointSupported);
+        _time.Advance(TimeSpan.FromHours(1));
+        m.Start();
+        Until(() => _transport.Creates == 2, "second connect");
+        var second = _transport.Last;
+        SendStatus(second);
+        Until(() => second.Sent.Any(f => f.Id == BudsIds.DebugSku), "model request again");
+        Assert.Single(second.Sent, f => f.Id == BudsIds.MultipointInfo);
+        Assert.DoesNotContain(second.Sent, f => f.Id == BudsIds.BatteryCycles);
+        Assert.Equal(20.39, m.GetState().BatteryCyclesRight!.Value, 6);
+
+        // Past six hours a status frame on the same link asks once more.
+        _time.Advance(BudsModule.CycleReadEvery);
+        SendStatus(second);
+        Until(() => second.Sent.Any(f => f.Id == BudsIds.BatteryCycles), "second cycles ask");
+        SendStatus(second);
+        Thread.Sleep(50);
+        Assert.Single(second.Sent, f => f.Id == BudsIds.BatteryCycles);
+        Assert.DoesNotContain(second.Sent, f => f.Id == 207);
+        m.Stop();
+    }
+
+    [Fact]
+    public void RefreshAsksMultipointWhenUpAndConnectsWhenDown()
+    {
+        using var m = Connected(out var link);
+        Until(() => link.Sent.Any(f => f.Id == BudsIds.DebugSku), "model request");
+        m.Refresh();
+        Until(() => link.Sent.Count(f => f.Id == BudsIds.MultipointInfo) == 2, "second multipoint ask");
+        Assert.Single(link.Sent, f => f.Id == BudsIds.BatteryCycles);
+
+        link.Dispose();
+        Until(() => !m.LinkUp, "link down");
+        m.Refresh();
+        Until(() => _transport.Creates == 2, "reconnect at once");
+    }
 }

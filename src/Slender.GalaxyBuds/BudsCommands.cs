@@ -5,13 +5,16 @@ namespace Slender.GalaxyBuds;
 /// <summary>
 /// The only messages Slender ever sends to the buds, with the payload length each takes. The send path checks this for every frame;
 /// anything else (firmware, reset, power, pairing, factory/test modes, Find-My keys, hearing data, 144 touchpad lock, 136/167 manager
-/// messages, 166/157 loud tests) is refused. 34 is the model request and only valid empty.
+/// messages, 166/157 loud tests, 207 battery-cycle reset, 131 noise-cancelling strength) is refused. 34, 118 and 206 are read
+/// requests (model, multipoint info, battery cycles) and only valid empty.
 /// </summary>
 public static class BudsAllowlist
 {
     private static readonly Dictionary<byte, int> Lengths = new()
     {
         [BudsIds.DebugSku] = 0,
+        [BudsIds.MultipointInfo] = 0,
+        [BudsIds.BatteryCycles] = 0,
         [BudsIds.NoiseControls] = 1,
         [BudsIds.AmbientLevel] = 1,
         [BudsIds.NoiseOneBud] = 1,
@@ -36,6 +39,9 @@ public static class BudsAllowlist
     public static bool IsAllowed(byte id, int payloadLength) => Lengths.TryGetValue(id, out int len) && len == payloadLength;
 
     public static IEnumerable<byte> AllowedIds => Lengths.Keys;
+
+    /// <summary>The read requests: sent empty, they change nothing on the buds.</summary>
+    public static bool IsReadRequest(byte id) => id is BudsIds.DebugSku or BudsIds.MultipointInfo or BudsIds.BatteryCycles;
 }
 
 /// <summary>Turns a catalog setting and logical raw value into the buds' message. Pure.</summary>

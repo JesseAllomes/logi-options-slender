@@ -9,12 +9,17 @@ namespace Slender.GalaxyBuds;
 /// 5 min). A Windows push (Wake, or a Bluetooth/audio arrival through the connect hint) tries at once. The link is reported up when
 /// the first frame arrives and down when the socket ends. Start, Stop and Wake never block: connecting happens on the worker, and no
 /// registry callback is made while the module lock is held. Settings go out only through <see cref="BudsAllowlist"/>.
+/// On link up it sends three read requests: multipoint info (118) and the model (34) every time, battery cycles (206) only when the
+/// last ask is older than <see cref="CycleReadEvery"/> (checked again on status frames, so a long link is asked again without a timer).
 /// </summary>
 public sealed class BudsModule : IDeviceModule, IDisposable
 {
     public static readonly TimeSpan FirstRetry = TimeSpan.FromSeconds(60);
     public static readonly TimeSpan MaxRetry = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan FindLimit = TimeSpan.FromSeconds(30);
+
+    /// <summary>Battery cycles change slowly: ask at most this often (across reconnects).</summary>
+    public static readonly TimeSpan CycleReadEvery = TimeSpan.FromHours(6);
 
     private readonly IBudsTransport _transport;
     private readonly Func<ulong?> _address;
@@ -39,6 +44,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     private int _pendingAck = -1;
     private bool _acked;
     private int _threads;
+    private DateTimeOffset? _cyclesAskedAt;
 
     public BudsModule(IBudsTransport transport, Func<ulong?> address, Action<string, bool> reportLink, Action<string, Exception> reportFault,
         Action<string>? log = null, TimeProvider? time = null, Func<Action, IDisposable?>? connectHint = null)
@@ -118,6 +124,18 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     /// <summary>The device's interfaces arrived: try now if the link is down.</summary>
     public void Wake() => TryNow();
 
+    /// <summary>
+    /// The Buds page opened: connect now when the link is down, otherwise ask the multipoint info (a read) again so the page line is
+    /// current. Never blocks for an answer.
+    /// </summary>
+    public void Refresh()
+    {
+        IBudsLink? link;
+        lock (_gate) link = _linkUp ? _link : null;
+        if (link is null) TryNow();
+        else TrySend(link, BudsIds.MultipointInfo, []);
+    }
+
     public void Dispose() => Stop();
 
     private void OnHint() => TryNow();
@@ -134,7 +152,18 @@ public sealed class BudsModule : IDeviceModule, IDisposable
         }
     }
 
-    private static BudsModel KeepIdentity(BudsModel old) => new() { Firmware = old.Firmware, Model = old.Model };
+    /// <summary>What survives a link drop: identity, and the battery cycles (asked only every few hours).</summary>
+    private static BudsModel KeepIdentity(BudsModel old) =>
+        new() { Firmware = old.Firmware, Model = old.Model, CyclesLeft = old.CyclesLeft, CyclesRight = old.CyclesRight };
+
+    /// <summary>Caller holds the lock. True (and the ask time recorded) when battery cycles should be asked now.</summary>
+    private bool TakeCycleAsk()
+    {
+        var now = _time.GetUtcNow();
+        if (_cyclesAskedAt is { } at && now - at < CycleReadEvery) return false;
+        _cyclesAskedAt = now;
+        return true;
+    }
 
     private void DisposeTimers()
     {
@@ -210,7 +239,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     /// <summary>False when this connection was stopped meanwhile.</summary>
     private bool HandleFrame(int gen, IBudsLink link, BudsFrame f)
     {
-        bool up = false, changed = false, stopFind = false;
+        bool up = false, changed = false, stopFind = false, askCycles = false;
         lock (_gate)
         {
             if (gen != _gen) return false;
@@ -219,6 +248,11 @@ public sealed class BudsModule : IDeviceModule, IDisposable
                 _linkUp = true;
                 _backoff = FirstRetry;
                 up = changed = true;
+                askCycles = TakeCycleAsk();
+            }
+            else if (f.Id is BudsIds.StatusUpdated or BudsIds.ExtendedStatusUpdated)
+            {
+                askCycles = TakeCycleAsk();
             }
 
             if (f.Id == BudsIds.Ack)
@@ -241,9 +275,15 @@ public sealed class BudsModule : IDeviceModule, IDisposable
 
         if (up)
         {
-            // Ask for the model name once per link; everything else the buds push on their own.
+            // Read requests once per link (the model last); everything else the buds push on their own.
+            TrySend(link, BudsIds.MultipointInfo, []);
+            if (askCycles) TrySend(link, BudsIds.BatteryCycles, []);
             TrySend(link, BudsIds.DebugSku, []);
             _reportLink(DeviceId, true);
+        }
+        else if (askCycles)
+        {
+            TrySend(link, BudsIds.BatteryCycles, []);
         }
 
         if (stopFind)
