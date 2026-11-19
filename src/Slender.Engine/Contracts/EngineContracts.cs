@@ -621,7 +621,36 @@ public sealed record DeviceState(string Id, string Name, bool Connected, int? Ba
 
     /// <summary>What the headset base reports over its vendor channel (m55); null for other devices, with the read switched off, or before the base has answered.</summary>
     public HeadsetState? Headset { get; init; }
+
+    /// <summary>What the Galaxy Buds report over their control channel; null for other devices or before the buds have answered.</summary>
+    public BudsState? Buds { get; init; }
 }
+
+/// <summary>
+/// Galaxy Buds state as the buds report it (read-only). Battery and charging per bud and for the case; null until reported.
+/// Placement per bud: "wearing", "idle", "in case", "case closed", "disconnected" (null when unknown). Firmware is the buds' firmware
+/// string, Model the SKU ("SM-R640"). Settings lists every catalog entry the buds have reported (Devices.GalaxyBudsSettingsCatalog
+/// order), Raw as the logical int. FindActive is true while the find-my-earbuds beep plays. WriteProblem is the last change the tray
+/// refused or the buds did not take, in plain words; null once one succeeds.
+/// </summary>
+public sealed record BudsState(
+    bool Connected,
+    int? BatteryLeft = null,
+    int? BatteryRight = null,
+    int? BatteryCase = null,
+    bool? ChargingLeft = null,
+    bool? ChargingRight = null,
+    bool? ChargingCase = null,
+    string? PlacementLeft = null,
+    string? PlacementRight = null,
+    string? Firmware = null,
+    string? Model = null,
+    IReadOnlyList<BudsSetting>? Settings = null,
+    bool FindActive = false,
+    string? WriteProblem = null);
+
+/// <summary>One Galaxy Buds setting: catalog key, group, label, value as text and as the logical raw int.</summary>
+public sealed record BudsSetting(string Key, string Group, string Label, string Value, int Raw);
 
 /// <summary>
 /// The Yealink base's own report (read-only). Every field is null until the base has said it. Signal is the DECT radio level the
@@ -711,6 +740,22 @@ public static class DeviceMessages
     /// config. Ignored while a call is ringing.
     /// </summary>
     public const string RingSoundPreviewName = "Slender.RingSoundPreview";
+
+    /// <summary>Settings asks the tray to publish the Galaxy Buds state again (posted when the Buds page opens); no parameters.</summary>
+    public const string BudsRefreshName = "Slender.BudsRefresh";
+
+    /// <summary>
+    /// Settings asks the tray to change one Galaxy Buds setting: wParam = index in Devices.GalaxyBudsSettingsCatalog.All, lParam = the
+    /// logical raw value (BudsSettingDef.Accepts). The tray checks both against its own catalog, writes, and publishes the buds'
+    /// answer; a refusal or failure shows as BudsState.WriteProblem.
+    /// </summary>
+    public const string BudsSetName = "Slender.BudsSet";
+
+    /// <summary>
+    /// Settings or the tray menu starts (wParam = 1) or stops (wParam = 0) the find-my-earbuds beep. The tray refuses to start while
+    /// either bud is worn (it is loud); a refusal shows as BudsState.WriteProblem.
+    /// </summary>
+    public const string BudsFindName = "Slender.BudsFind";
 }
 
 /// <summary>A ring-start reached the tray: when (local time) and which signal fired.</summary>
