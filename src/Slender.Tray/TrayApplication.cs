@@ -776,8 +776,12 @@ public sealed class TrayApplication : IDisposable
                 Append(sub, current == raw ? Win32.MF_CHECKED : 0, (nuint)(CmdBudsNoiseBase + raw), def.Values![i * 2 + 1]);
             }
 
-            Win32.AppendMenuW(sub, Win32.MF_SEPARATOR, 0, null);
-            Append(sub, 0, CmdBudsFind, buds.FindActive ? "Stop finding earbuds" : "Find my earbuds");
+            // Starting the loud find beep needs the confirm in Settings (the wear reading is not proven yet); the menu only stops it.
+            if (buds.FindActive)
+            {
+                Win32.AppendMenuW(sub, Win32.MF_SEPARATOR, 0, null);
+                Append(sub, 0, CmdBudsFind, "Stop finding earbuds");
+            }
         }
 
         Append(sub, 0, CmdBudsSettings, "Open settings…");
@@ -834,7 +838,7 @@ public sealed class TrayApplication : IDisposable
                     OpenSettings(popover: false);
                     break;
                 case CmdBudsFind:
-                    FindBuds?.Invoke(BudsInfo?.Invoke()?.FindActive != true);
+                    FindBuds?.Invoke(false);
                     break;
                 case CmdBudsSettings:
                     OpenSettings(popover: false, Slender.Engine.Devices.DeviceCatalog.GalaxyBuds4Pro);

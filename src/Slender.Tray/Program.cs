@@ -185,7 +185,8 @@ static class Program
             registry.Register(yealinkModule!);
             registry.Register(budsModule!);
             app.BudsInfo = budsModule!.GetState;
-            app.RefreshBuds = app.DevicesChanged;
+            // Opening the Buds page tries to connect at once when the link is down (instead of waiting out the backoff).
+            app.RefreshBuds = () => { budsModule.Wake(); app.DevicesChanged(); };
             // Changes and the find beep run one after another off the UI thread; each waits up to ~2 s for the buds' answer.
             Task budsWork = Task.CompletedTask;
             void RunBudsWork(Action work)
