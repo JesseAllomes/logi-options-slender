@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=231 -->
+<!-- drainclamp-build: state; schema=1; generation=232 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -135,7 +135,7 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 | m64 | Battery charging + animated tray badge (built 91f9a12, released 1.1.53; live check passed 2026-11-11; badge superseded by m65): 0x1004 battery event (fn0) handled so plug/unplug shows at once (no 5-min wait), charge state Charging/Full/Error kept apart; tray icon = Slender icon + small battery badge drawn with Direct2D (RingCanvas) into cached frames: filling bars loop while charging, soft red pulse while a device is under its alert threshold and not charging (low beats charging), static full badge when plugged and full; timer and frames exist only while animating; Windows animations off = static badge | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Engine/Contracts;tests/Slender.Tests | done | m63 |
 | m65 | Battery visibility redo: tray corner badge removed (too hard to see); whole Slender logo pulses red when a device is at/under its alert threshold and not charging, pulses green while charging (low wins), plain otherwise, static tint when Windows animations are off; HQ vector battery glyph with accurate percent (bolt when charging, 'Charged' when full) on the popover and every device page/rail tile (mouse, keyboard, headset); DeviceState.ChargeState in status.json | src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | done | m64 |
 | m66 | Galaxy Buds4 Pro module (tracked in personal/galaxy-buds-control g2-g6; protocol notes in personal/galaxy-buds-research): contract 656e63d, src/Slender.GalaxyBuds RFCOMM module + tray wiring, Settings Buds page, release | src/Slender.GalaxyBuds;src/Slender.Engine/Devices;src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | active | m53 |
-| m67 | Galaxy Buds read-only info (research map sections 7-11): battery cycles 206 (empty read, at most every 6 h, kept across reconnects; 207 never), multipoint info 118 (rev 1: supported + streaming mask; link up and page open), noise-cancelling strength ESU[24] as a read-only catalog entry appended at the end of All, siren detect 222/ESU[52] confirmed against captures; Buds page battery wear and multipoint lines | src/Slender.GalaxyBuds;src/Slender.Engine/Devices;src/Slender.Engine/Contracts;src/Slender.Tray/Program.cs;src/Slender.Settings;tests/Slender.Tests | active | m66 |
+| m67 | Galaxy Buds read-only info (research map sections 7-11): battery cycles 206 (empty read, at most every 6 h, kept across reconnects; 207 never), multipoint info 118 (rev 1: supported + streaming mask; link up and page open), noise-cancelling strength ESU[24] as a read-only catalog entry appended at the end of All, siren detect 222/ESU[52] confirmed against captures; Buds page battery wear and multipoint lines | src/Slender.GalaxyBuds;src/Slender.Engine/Devices;src/Slender.Engine/Contracts;src/Slender.Tray/Program.cs;src/Slender.Settings;tests/Slender.Tests | done | m66 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
@@ -146,7 +146,6 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T04:31:03+00:00 06d266a3 m54 c1-c5 merged ff 63f2c82 + pushed: Slender.Yealink (COL02/COL04 HidP decode, allowlisted LED builder off by default, Core Audio mic mute sync, stand-down for USB Connect), YealinkSettings + router + tray submenu + Settings headset page; 2181 tests; hardware and UI unseen; releasing 1.1.44 for c6 live check
 - 2026-10-22T04:33:20+00:00 cad31652 1.1.44 released (m54 Yealink headset module); config backed up as config.backup-20261022-before-1.1.44.json. Next c6: user updates, opens headset page, presses hook/mute/reject/Teams while agent reads the tray log; LED write test only on go-ahead
 - 2026-10-22T05:52:02+00:00 349d510e 1.1.45 released (m57 3CX ring buttons: Middle/Back/Forward answer or reject while a 3CX call rings, extension 1.1.0 polls a per-ring pipe); config backed up as config.backup-20261022-before-1.1.45.json; live check open
 - 2026-10-22T06:33:00+00:00 03c5f1bd 1.1.46 released (m55 c7/c8: Yealink vendor reads, COL01 mute fix, headset status/settings and picture page; research maps 395/399 RC8 commands incl. EnvSet wire format); config backed up as config.backup-20261022-before-1.1.46.json; live checks tomorrow
@@ -166,4 +165,5 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 - 2026-11-11T04:28:19+00:00 2854e234 m64+m65 live check passed (user): red pulse at threshold, green on charger, battery glyphs on screen; both done
 - 2026-11-19T02:14:38+00:00 1855785e m66 Galaxy Buds4 Pro released as 1.1.57 (898482a): module, tray submenu, Settings page; 2658 tests; config backed up as config.backup-20261119-before-m66.json; live check open (see personal/galaxy-buds-control)
 - 2026-11-19T02:47:42+00:00 40f4c924 m67 opened and merged (8b8acb6, 6e0d678): Buds read-only info (206 cycles, 118 multipoint, ESU[24] NC strength appended to catalog, siren 222 confirmed by fixtures); 2675 tests; releasing 1.1.58
+- 2026-11-19T02:51:17+00:00 6380a854 m67 Galaxy Buds read-only info released as 1.1.58 (6e0d678 + state a6d4351): 206 battery cycles, 118 multipoint, NC strength ESU[24] read-only, siren 222 confirmed; 2675 tests; config backed up as config.backup-20261119-before-m67.json; live check open (nothing sent live)
 <!-- /DC:LOG -->
