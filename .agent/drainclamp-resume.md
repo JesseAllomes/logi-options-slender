@@ -2,4 +2,4 @@
 Done: m56, m1, m2, m3, m4, m5, m8, m9, m10, m11, m12, m13, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32, m33, m34, m35, m36, m38, m39, m40, m41, m42, m43, m44, m37, m45, m46, m47, m48, m50, m51, m52, m53, m58, m64, m65
 In progress: m66: Galaxy Buds4 Pro module (tracked in personal/galaxy-buds-control g2-g6; protocol notes in personal/galaxy-buds-research): contract 656e63d, src/Slender.GalaxyBuds RFCOMM module + tray wiring, Settings Buds page, release
 Next: m14: sign-in: user creates personal MS app registration, slender.sync.json, live sync test
-Generation: 228
+Generation: 229

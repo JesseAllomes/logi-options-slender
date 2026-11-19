@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=228 -->
+<!-- drainclamp-build: state; schema=1; generation=229 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -145,7 +145,6 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 <!-- /DC:VERIFY -->
 
 <!-- DC:LOG -->
-- 2026-10-22T04:06:49+00:00 ff38d20f Find button: WebAppShortcuts (pure, --app-url parse, 3CX match, origin via RingerOrigin) + Settings WebAppShortcutScan (IShellLinkW over Start menu/Startup/Desktop, on press only); live scan found the user's 3CX origin; 2125 tests. Releasing 1.1.43 (user: yes to Find before release)
 - 2026-10-22T04:09:35+00:00 5832d3ed 1.1.43 released (3CX ringer m49 + Find button); staged Slender.RingerHost.exe + EdgeRinger/extension; config backed up as config.backup-20261022-before-1.1.43.json. Next: user updates, Find, Set up, Edge Load unpacked, one real call
 - 2026-10-22T04:31:03+00:00 06d266a3 m54 c1-c5 merged ff 63f2c82 + pushed: Slender.Yealink (COL02/COL04 HidP decode, allowlisted LED builder off by default, Core Audio mic mute sync, stand-down for USB Connect), YealinkSettings + router + tray submenu + Settings headset page; 2181 tests; hardware and UI unseen; releasing 1.1.44 for c6 live check
 - 2026-10-22T04:33:20+00:00 cad31652 1.1.44 released (m54 Yealink headset module); config backed up as config.backup-20261022-before-1.1.44.json. Next c6: user updates, opens headset page, presses hook/mute/reject/Teams while agent reads the tray log; LED write test only on go-ahead
@@ -165,4 +164,5 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 - 2026-11-11T02:26:25+00:00 93ab6f4a m65 c2+c3 merged (a3bd3a4, 3d1bcc6): build clean, 2528 tests; releasing
 - 2026-11-11T02:29:38+00:00 4a73fc92 m65 released as 1.1.54; config backed up (config.backup-20261111-before-m65.json); live check open: red pulse at threshold, green on charger, glyphs on screen
 - 2026-11-11T04:28:19+00:00 2854e234 m64+m65 live check passed (user): red pulse at threshold, green on charger, battery glyphs on screen; both done
+- 2026-11-19T02:14:38+00:00 1855785e m66 Galaxy Buds4 Pro released as 1.1.57 (898482a): module, tray submenu, Settings page; 2658 tests; config backed up as config.backup-20261119-before-m66.json; live check open (see personal/galaxy-buds-control)
 <!-- /DC:LOG -->
