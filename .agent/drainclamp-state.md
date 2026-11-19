@@ -1,4 +1,4 @@
-<!-- drainclamp-build: state; schema=1; generation=227 -->
+<!-- drainclamp-build: state; schema=1; generation=228 -->
 # DrainClamp state
 
 <!-- DC:ARCH -->
@@ -134,6 +134,7 @@ Battery visibility (user 2026-11-11, supersedes the tray badge look: corner batt
 | m63 | Ring sound: shipped WAVs + generator, tray player on a chosen output device (loops while ringing), config (sound, device, volume), 3CX tab rows + preview; live check on a real call incl. base ring volume 0 still detected | tools;src/Slender.Engine;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | pending | m62 |
 | m64 | Battery charging + animated tray badge (built 91f9a12, released 1.1.53; live check passed 2026-11-11; badge superseded by m65): 0x1004 battery event (fn0) handled so plug/unplug shows at once (no 5-min wait), charge state Charging/Full/Error kept apart; tray icon = Slender icon + small battery badge drawn with Direct2D (RingCanvas) into cached frames: filling bars loop while charging, soft red pulse while a device is under its alert threshold and not charging (low beats charging), static full badge when plugged and full; timer and frames exist only while animating; Windows animations off = static badge | src/Slender.Hidpp;src/Slender.Tray;src/Slender.Engine/Contracts;tests/Slender.Tests | done | m63 |
 | m65 | Battery visibility redo: tray corner badge removed (too hard to see); whole Slender logo pulses red when a device is at/under its alert threshold and not charging, pulses green while charging (low wins), plain otherwise, static tint when Windows animations are off; HQ vector battery glyph with accurate percent (bolt when charging, 'Charged' when full) on the popover and every device page/rail tile (mouse, keyboard, headset); DeviceState.ChargeState in status.json | src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | done | m64 |
+| m66 | Galaxy Buds4 Pro module (tracked in personal/galaxy-buds-control g2-g6; protocol notes in personal/galaxy-buds-research): contract 656e63d, src/Slender.GalaxyBuds RFCOMM module + tray wiring, Settings Buds page, release | src/Slender.GalaxyBuds;src/Slender.Engine/Devices;src/Slender.Engine/Contracts;src/Slender.Tray;src/Slender.Settings;tests/Slender.Tests | active | m53 |
 <!-- /DC:ROADMAP -->
 
 <!-- DC:VERIFY -->
