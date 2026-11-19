@@ -121,6 +121,42 @@ public static class BudsView
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
+    /// <summary>
+    /// The battery wear line: "Battery wear: left 2.6, right 20.4 full charge cycles" (one decimal, as the buds count them in
+    /// ten-thousandths); one side alone when only one is known; null when neither is.
+    /// </summary>
+    public static string? CyclesLine(BudsState? buds)
+    {
+        var parts = new List<string>(2);
+        if (buds?.BatteryCyclesLeft is { } l) parts.Add("left " + Cycles(l));
+        if (buds?.BatteryCyclesRight is { } r) parts.Add("right " + Cycles(r));
+        return parts.Count == 0 ? null : "Battery wear: " + string.Join(", ", parts) + " full charge cycles";
+    }
+
+    private static string Cycles(double v) => Math.Max(0, v).ToString("0.0", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// The quiet multipoint line from the buds' last multipoint answer: "Multipoint available · nothing streaming",
+    /// "Multipoint available · streaming media", "Multipoint not supported". Null when the buds have not answered.
+    /// </summary>
+    public static string? MultipointLine(BudsState? buds)
+    {
+        if (buds?.MultipointSupported is not { } supported) return null;
+        if (!supported) return "Multipoint not supported";
+        return "Multipoint available · " + StreamingText(buds.MultipointStreaming ?? 0);
+    }
+
+    /// <summary>Streaming mask as words: 1 media (A2DP), 2 call (HFP), 4/8/16 LE audio; 0 = nothing streaming.</summary>
+    public static string StreamingText(int mask)
+    {
+        if (mask == 0) return "nothing streaming";
+        var parts = new List<string>(3);
+        if ((mask & 1) != 0) parts.Add("media");
+        if ((mask & 2) != 0) parts.Add("call audio");
+        if ((mask & 0x1C) != 0) parts.Add("LE audio");
+        return parts.Count == 0 ? "streaming" : "streaming " + string.Join(" and ", parts);
+    }
+
     /// <summary>The lower of the two buds' levels (the case is not counted) and whether that bud charges; null level when neither is known.</summary>
     public static (int? Percent, bool Charging) Lowest(BudsState? buds)
     {

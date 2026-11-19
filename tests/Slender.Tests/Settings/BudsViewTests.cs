@@ -145,4 +145,42 @@ public class BudsViewTests
         Assert.Equal(new DeviceTarget(null, false, true), DeviceRequest.Target("galaxy-buds4-pro"));
         Assert.Equal("galaxy-buds4-pro", DeviceRequest.Parse(["--device", "galaxy-buds4-pro"]));
     }
+
+    [Fact]
+    public void Battery_wear_line_shows_each_known_bud_with_one_decimal()
+    {
+        Assert.Null(BudsView.CyclesLine(null));
+        Assert.Null(BudsView.CyclesLine(new BudsState(true)));
+        Assert.Equal("Battery wear: left 2.6, right 20.4 full charge cycles",
+            BudsView.CyclesLine(new BudsState(true, BatteryCyclesLeft: 2.62, BatteryCyclesRight: 20.39)));
+        Assert.Equal("Battery wear: right 0.0 full charge cycles", BudsView.CyclesLine(new BudsState(false, BatteryCyclesRight: 0)));
+    }
+
+    [Fact]
+    public void Multipoint_line_is_one_quiet_line()
+    {
+        Assert.Null(BudsView.MultipointLine(null));
+        Assert.Null(BudsView.MultipointLine(new BudsState(true)));
+        Assert.Equal("Multipoint not supported", BudsView.MultipointLine(new BudsState(true, MultipointSupported: false)));
+        Assert.Equal("Multipoint available · nothing streaming", BudsView.MultipointLine(new BudsState(true, MultipointSupported: true, MultipointStreaming: 0)));
+        Assert.Equal("Multipoint available · streaming media", BudsView.MultipointLine(new BudsState(true, MultipointSupported: true, MultipointStreaming: 1)));
+        Assert.Equal("streaming media and call audio", BudsView.StreamingText(3));
+        Assert.Equal("streaming LE audio", BudsView.StreamingText(8));
+        Assert.Equal("streaming", BudsView.StreamingText(0x40));
+    }
+
+    [Fact]
+    public void Noise_cancelling_strength_shows_read_only_in_the_noise_control_group()
+    {
+        BudsState b = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 0), S(GalaxyBudsSettingsCatalog.Seamless, 1),
+            S(GalaxyBudsSettingsCatalog.NoiseCancellingStrength, 4));
+        var groups = BudsView.Groups(b);
+        BudsGroup noise = groups.Single(g => g.Name == GalaxyBudsSettingsCatalog.GroupNoise);
+        Assert.Equal(GalaxyBudsSettingsCatalog.GroupNoise, groups[0].Name);
+        BudsRow row = noise.Rows.Single(r => r.Def.Key == GalaxyBudsSettingsCatalog.NoiseCancellingStrength);
+        Assert.Equal(BudsControlKind.Text, row.Kind);
+        Assert.False(row.Enabled);
+        Assert.Equal("4", row.Text);
+        Assert.Equal(GalaxyBudsSettingsCatalog.All.Count - 1, row.CatalogIndex);
+    }
 }

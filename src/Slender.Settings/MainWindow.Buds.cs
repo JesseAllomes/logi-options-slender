@@ -220,12 +220,23 @@ public sealed partial class MainWindow
         Part(1, "Right", BudsArt.Bud(false), b?.BatteryRight, b?.ChargingRight, BudsView.PlacementText(b?.PlacementRight));
         Part(2, "Case", BudsArt.Case(b?.ChargingCase == true), b?.BatteryCase, b?.ChargingCase, b?.ChargingCase == true ? "Charging" : string.Empty);
         PagePanel.Children.Add(grid);
-        if (BudsView.FirmwareLine(b) is { } line)
+        bool first = true;
+        void Small(string? line)
         {
+            if (line is null)
+            {
+                return;
+            }
+
             var small = Ui.Text(line, 11.5, Ui.Muted);
-            small.Margin = new Thickness(0, 8, 0, 0);
+            small.Margin = new Thickness(0, first ? 8 : 2, 0, 0);
+            first = false;
             PagePanel.Children.Add(small);
         }
+
+        Small(BudsView.FirmwareLine(b));
+        Small(BudsView.CyclesLine(b));
+        Small(connected ? BudsView.MultipointLine(b) : null);
     }
 
     /// <summary>Noise control as a four-way switch, and Find my earbuds beside it.</summary>
