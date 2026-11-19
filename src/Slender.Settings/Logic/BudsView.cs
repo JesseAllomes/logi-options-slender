@@ -191,27 +191,29 @@ public static class BudsView
     }
 
     /// <summary>
-    /// Everything the Buds page draws, as one string: the page redraws only when this changes. Reported drives the hero and notes,
-    /// shown (reported plus the user's held changes) the controls. A status update that only repeats what is on screen, such as the
-    /// buds confirming a switch the user just flipped, gives the same key, so the page is left alone instead of flickering.
+    /// Everything the Buds page draws apart from the setting values, as one string: the hero, the notes, the warning, find. The page
+    /// redraws when this or a setting value changes, and is left alone when a status update only repeats what is on screen.
     /// </summary>
-    public static string PageKey(BudsState? reported, BudsState? shown, bool connected, bool trayUp, string subtitle)
+    public static string StateKey(BudsState? reported, bool connected, bool trayUp, string subtitle)
     {
-        var key = new System.Text.StringBuilder();
-        key.Append(CultureInfo.InvariantCulture, $"{trayUp}|{connected}|{subtitle}|");
-        if (reported is { } b)
-        {
-            key.Append(CultureInfo.InvariantCulture,
-                $"{b.Connected}|{b.BatteryLeft}|{b.BatteryRight}|{b.BatteryCase}|{b.ChargingLeft}|{b.ChargingRight}|{b.ChargingCase}|{b.PlacementLeft}|{b.PlacementRight}|{b.Firmware}|{b.Model}|{b.FindActive}|{b.WriteProblem}|{b.BatteryCyclesLeft}|{b.BatteryCyclesRight}|{b.MultipointSupported}|{b.MultipointStreaming}");
-        }
-
-        foreach (BudsSetting s in shown?.Settings ?? [])
-        {
-            key.Append(CultureInfo.InvariantCulture, $"\n{s.Key}={s.Raw}:{s.Value}");
-        }
-
-        return key.ToString();
+        string key = string.Create(CultureInfo.InvariantCulture, $"{trayUp}|{connected}|{subtitle}");
+        return reported is not { } b
+            ? key
+            : key + string.Create(CultureInfo.InvariantCulture,
+                $"|{b.Connected}|{b.BatteryLeft}|{b.BatteryRight}|{b.BatteryCase}|{b.ChargingLeft}|{b.ChargingRight}|{b.ChargingCase}|{b.PlacementLeft}|{b.PlacementRight}|{b.Firmware}|{b.Model}|{b.FindActive}|{b.WriteProblem}|{b.BatteryCyclesLeft}|{b.BatteryCyclesRight}|{b.MultipointSupported}|{b.MultipointStreaming}");
     }
+
+    /// <summary>The setting values the page shows, by key (raw only: the text follows from it).</summary>
+    public static Dictionary<string, int> SettingRaws(BudsState? shown) =>
+        (shown?.Settings ?? []).GroupBy(s => s.Key).ToDictionary(g => g.Key, g => g.Last().Raw);
+
+    /// <summary>True when both hold the same keys with the same values.</summary>
+    public static bool SameRaws(IReadOnlyDictionary<string, int> a, IReadOnlyDictionary<string, int> b) =>
+        a.Count == b.Count && a.All(p => b.TryGetValue(p.Key, out int raw) && raw == p.Value);
+
+    /// <summary>Which setting rows show, in order. A change that leaves this alone needs no redraw: the control already shows it.</summary>
+    public static string RowsKey(BudsState? shown) =>
+        string.Join('|', Groups(shown).SelectMany(g => g.Rows).Select(r => r.Def.Key));
 
     /// <summary>True when another setting is shown only while this one holds some value, so a change here can add or remove rows.</summary>
     public static bool ControlsOthers(string key) => GalaxyBudsSettingsCatalog.All.Any(d => d.ShowWhenKey == key);

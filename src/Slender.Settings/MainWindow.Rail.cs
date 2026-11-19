@@ -17,11 +17,61 @@ namespace Slender.Settings;
 public sealed partial class MainWindow
 {
     private string _stripSignature = string.Empty;
+    private string _railSignature = string.Empty;
 
     // ---- rail: devices and the gear ----
 
+    /// <summary>
+    /// Everything the rail tiles draw from the status: which tiles, which is selected, each one's presence and battery. A status write
+    /// that changes none of it (a Buds setting echo, say) leaves the rail alone instead of clearing and redrawing it.
+    /// </summary>
+    private string RailSignature()
+    {
+        var sig = new System.Text.StringBuilder();
+        sig.Append(_page).Append('|').Append(_kind).Append('|').Append(_scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        void Device(string id)
+        {
+            DeviceState? state = _status.Device(id);
+            sig.Append('|').Append(id).Append(':')
+                .Append(DevicePresenceView.Dimmed(_status.Status, id)).Append(',')
+                .Append(DevicePresenceView.Removable(_status.Status, id)).Append(',')
+                .Append(DevicePresenceView.AccessibleSuffix(_status.Status, id)).Append(',')
+                .Append(BatteryGlyphModel.For(_status.Status, id, _config.Config.BatteryAlerts)).Append(',')
+                .Append(state?.BatteryEstimate).Append(',').Append(state?.Charging);
+        }
+
+        foreach (DeviceKind kind in VisibleKinds())
+        {
+            Device(ControlCatalog.DeviceId(kind));
+        }
+
+        if (HeadsetListed())
+        {
+            Device(DeviceIds.Headset);
+        }
+
+        if (BudsListed())
+        {
+            Device(DeviceIds.Buds);
+            bool offline = DevicePresenceView.Dimmed(_status.Status, DeviceIds.Buds);
+            sig.Append(BudsView.Glyph(CurrentBuds(), offline, DevicePresenceView.BatteryWord(_status.Status, DeviceIds.Buds), BudsThreshold));
+        }
+
+        return sig.ToString();
+    }
+
+    /// <summary>The status changed: redraw the rail only if something it shows did.</summary>
+    private void RefreshRail()
+    {
+        if (RailSignature() != _railSignature)
+        {
+            BuildRail();
+        }
+    }
+
     private void BuildRail()
     {
+        _railSignature = RailSignature();
         RailPanel.Children.Clear();
         RailVersion.Text = "v" + OwnVersion;
         List<DeviceKind> visible = VisibleKinds();

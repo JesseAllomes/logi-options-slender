@@ -99,24 +99,44 @@ public class BudsViewTests
     }
 
     [Fact]
-    public void Page_key_ignores_a_repeat_or_an_echo_of_the_users_change()
+    public void Redraw_keys_ignore_a_repeat_or_an_echo_of_the_users_change()
     {
-        string Key(BudsState r, IReadOnlyDictionary<string, int>? held = null) =>
-            BudsView.PageKey(r, BudsView.WithHeld(r, held ?? new Dictionary<string, int>()), true, true, "Connected");
+        Dictionary<string, int> Raws(BudsState r, IReadOnlyDictionary<string, int>? held = null) =>
+            BudsView.SettingRaws(BudsView.WithHeld(r, held ?? new Dictionary<string, int>()));
 
         BudsState before = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 0)) with { BatteryLeft = 80 };
         BudsState repeat = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 0)) with { BatteryLeft = 80 };
         BudsState after = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 1)) with { BatteryLeft = 80 };
         var flipped = new Dictionary<string, int> { [GalaxyBudsSettingsCatalog.SirenDetect] = 1 };
 
-        Assert.Equal(Key(before), Key(repeat)); // new list, same values: no redraw
-        Assert.Equal(Key(before, flipped), Key(after, flipped)); // the buds confirm the flip while it is held
-        Assert.Equal(Key(before, flipped), Key(after)); // and after the hold ends
-        Assert.NotEqual(Key(before), Key(after)); // a change made elsewhere still redraws
-        Assert.NotEqual(Key(before, flipped), Key(before)); // the buds did not take it: the switch goes back
+        Assert.True(BudsView.SameRaws(Raws(before), Raws(repeat))); // new list, same values: no redraw
+        Assert.True(BudsView.SameRaws(Raws(before, flipped), Raws(after, flipped))); // the buds confirm the flip while it is held
+        Assert.True(BudsView.SameRaws(Raws(before, flipped), Raws(after))); // and after the hold ends
+        Assert.False(BudsView.SameRaws(Raws(before), Raws(after))); // a change made elsewhere still redraws
+        Assert.False(BudsView.SameRaws(Raws(before, flipped), Raws(before))); // the buds did not take it: the switch goes back
+
+        // The tray writes some values in its own words (gestures); only the raw value counts.
+        BudsState worded = before with { Settings = [before.Settings![0] with { Value = "something else" }] };
+        Assert.True(BudsView.SameRaws(Raws(before), Raws(worded)));
+
+        string Key(BudsState? r, bool connected = true) => BudsView.StateKey(r, connected, true, "Connected");
+        Assert.Equal(Key(before), Key(after)); // setting values are not part of the state key
         Assert.NotEqual(Key(before), Key(before with { BatteryLeft = 79 }));
         Assert.NotEqual(Key(before), Key(before with { WriteProblem = "No" }));
-        Assert.NotEqual(Key(before), BudsView.PageKey(before, before, false, true, "Connected"));
+        Assert.NotEqual(Key(before), Key(before with { FindActive = true }));
+        Assert.NotEqual(Key(before), Key(before, connected: false));
+        Assert.NotEqual(Key(null), Key(before));
+    }
+
+    [Fact]
+    public void Rows_key_changes_only_when_rows_appear_or_go()
+    {
+        BudsState off = State(true, S(GalaxyBudsSettingsCatalog.VoiceDetect, 0), S(GalaxyBudsSettingsCatalog.VoiceDetectTimeout, 1), S(GalaxyBudsSettingsCatalog.SirenDetect, 0));
+        BudsState on = State(true, S(GalaxyBudsSettingsCatalog.VoiceDetect, 1), S(GalaxyBudsSettingsCatalog.VoiceDetectTimeout, 1), S(GalaxyBudsSettingsCatalog.SirenDetect, 0));
+        BudsState siren = State(true, S(GalaxyBudsSettingsCatalog.VoiceDetect, 0), S(GalaxyBudsSettingsCatalog.VoiceDetectTimeout, 1), S(GalaxyBudsSettingsCatalog.SirenDetect, 1));
+        Assert.NotEqual(BudsView.RowsKey(off), BudsView.RowsKey(on)); // the timeout row appears
+        Assert.Equal(BudsView.RowsKey(off), BudsView.RowsKey(siren)); // a plain switch adds nothing
+        Assert.Equal(string.Empty, BudsView.RowsKey(null));
     }
 
     [Fact]

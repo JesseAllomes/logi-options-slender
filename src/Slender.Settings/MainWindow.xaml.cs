@@ -443,7 +443,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        BuildRail();
+        RefreshRail(); // redraws only when a tile would change
         if (_page is Page.Headset or Page.Base or Page.Buds)
         {
             RebuildHeadsetPage(); // its connected / disconnected note and values follow the tray

@@ -21,8 +21,9 @@ public sealed partial class MainWindow
 
     private bool _budsAsked;
 
-    /// <summary>BudsView.PageKey of what the page shows now; a redraw that would draw the same is skipped.</summary>
-    private string? _budsPageKey;
+    /// <summary>What the page shows now (BudsView.StateKey and the setting values); a redraw that would draw the same is skipped.</summary>
+    private string? _budsStateKey;
+    private Dictionary<string, int>? _budsDrawnRaws;
     private (int Index, int Raw)? _budsPending;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _budsSendTimer, _budsHoldTimer;
 
@@ -125,7 +126,8 @@ public sealed partial class MainWindow
         bool trayUp = _status.Status is not null && _status.TrayRunning;
         bool connected = BudsView.IsConnected(reported) && trayUp;
         BudsState? shown = BudsView.WithHeld(reported, HeldBudsValues());
-        _budsPageKey = BudsView.PageKey(reported, shown, connected, trayUp, DevicePresenceView.Subtitle(_status.Status, DeviceIds.Buds));
+        _budsStateKey = BudsView.StateKey(reported, connected, trayUp, DevicePresenceView.Subtitle(_status.Status, DeviceIds.Buds));
+        _budsDrawnRaws = BudsView.SettingRaws(shown);
         _dropDownOpen = _sliderHeld = false;
 
         var heading = Ui.Text(BudsName, 24, Ui.Ink, Ui.Heading);
@@ -174,20 +176,36 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>The key the page would draw now. Built the same way as in BuildBudsPage.</summary>
-    private string CurrentBudsPageKey()
+    /// <summary>The buds as the page would show them now: the report with the user's held changes in place.</summary>
+    private BudsState? ShownBuds() => BudsView.WithHeld(CurrentBuds(), HeldBudsValues());
+
+    /// <summary>False when a redraw would draw what is already on screen (the buds repeating a value, or confirming the user's change).</summary>
+    private bool BudsPageChanged()
     {
+        if (_budsStateKey is null || _budsDrawnRaws is null)
+        {
+            return true;
+        }
+
         BudsState? reported = CurrentBuds();
         bool trayUp = _status.Status is not null && _status.TrayRunning;
         bool connected = BudsView.IsConnected(reported) && trayUp;
-        return BudsView.PageKey(reported, BudsView.WithHeld(reported, HeldBudsValues()), connected, trayUp, DevicePresenceView.Subtitle(_status.Status, DeviceIds.Buds));
+        return BudsView.StateKey(reported, connected, trayUp, DevicePresenceView.Subtitle(_status.Status, DeviceIds.Buds)) != _budsStateKey
+            || !BudsView.SameRaws(BudsView.SettingRaws(ShownBuds()), _budsDrawnRaws);
     }
 
-    /// <summary>False when a redraw would draw what is already on screen (the buds repeating a value, or confirming the user's change).</summary>
-    private bool BudsPageChanged() => _budsPageKey is null || CurrentBudsPageKey() != _budsPageKey;
-
-    /// <summary>A control already shows the value the user just set: count it as drawn, so the buds' echo does not redraw the page.</summary>
-    private void MarkBudsDrawn() => _budsPageKey = CurrentBudsPageKey();
+    /// <summary>
+    /// A control already shows the value the user just set: count that one value as drawn, so the buds' echo does not redraw the page.
+    /// Only that value: anything else that changed meanwhile (battery, another setting) still redraws.
+    /// </summary>
+    private void MarkBudsDrawn(int index, int raw)
+    {
+        string key = GalaxyBudsSettingsCatalog.All[index].Key;
+        if (_budsDrawnRaws is not null && _budsDrawnRaws.ContainsKey(key))
+        {
+            _budsDrawnRaws[key] = raw;
+        }
+    }
 
     private Dictionary<string, int> HeldBudsValues()
     {
@@ -266,9 +284,23 @@ public sealed partial class MainWindow
         bool enabled = connected && noise is { Enabled: true };
 
         var segments = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        var drawn = new List<(int Raw, string Label, Button Button)>();
+        int? current = noise?.Raw;
+
+        // Restyles the four segments in place, so picking one does not redraw the page.
+        void Paint()
+        {
+            foreach ((int raw, string label, Button b) in drawn)
+            {
+                bool on = current == raw;
+                b.Background = on ? Ui.MarkSoft : Ui.Paper3;
+                b.BorderBrush = on ? Ui.Mark : Ui.Brush("RailTransparent");
+                b.Content = Ui.Text(label, 13, on ? Ui.Ink : Ui.Muted);
+            }
+        }
+
         foreach ((int raw, string label) in BudsView.NoiseModes)
         {
-            bool on = noise?.Raw == raw;
             var segment = new Button
             {
                 Style = Ui.Res<Style>("PlainButtonStyle"),
@@ -277,9 +309,6 @@ public sealed partial class MainWindow
                 Padding = new Thickness(12, 0, 12, 0),
                 CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(1.5),
-                Background = on ? Ui.MarkSoft : Ui.Paper3,
-                BorderBrush = on ? Ui.Mark : Ui.Brush("RailTransparent"),
-                Content = Ui.Text(label, 13, on ? Ui.Ink : Ui.Muted),
                 IsEnabled = enabled,
             };
             AutomationProperties.SetName(segment, $"Noise control: {label}");
@@ -287,13 +316,18 @@ public sealed partial class MainWindow
             int value = raw;
             segment.Click += (_, _) =>
             {
-                if (noise?.Raw != value)
+                if (current != value)
                 {
-                    SendBuds(noiseIndex, value, rebuild: true);
+                    current = value;
+                    Paint();
+                    SendBuds(noiseIndex, value, rebuild: BudsView.ControlsOthers(GalaxyBudsSettingsCatalog.NoiseMode));
                 }
             };
+            drawn.Add((raw, label, segment));
             segments.Children.Add(segment);
         }
+
+        Paint();
 
         var row = new Grid { Margin = new Thickness(0, 18, 0, 0), ColumnSpacing = 16 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -418,15 +452,19 @@ public sealed partial class MainWindow
 
     // ---- sending ----
 
-    /// <summary>Posts one change, holds it on screen for 2 seconds, and redraws then (or now, when it adds or removes other rows).</summary>
+    /// <summary>
+    /// Posts one change and holds it on screen for 2 seconds. The control already shows it, so the page redraws only when the change
+    /// adds or removes other rows (<paramref name="rebuild"/>: this setting has dependants), and then at once.
+    /// </summary>
     private void SendBuds(int index, int raw, bool rebuild)
     {
+        string rowsBefore = rebuild ? BudsView.RowsKey(ShownBuds()) : string.Empty;
         _budsSent[index] = (raw, DateTimeOffset.Now);
         AskTray(DeviceMessages.BudsSetName, index, raw);
         StartBudsHold();
-        if (!rebuild)
+        if (!rebuild || BudsView.RowsKey(ShownBuds()) == rowsBefore)
         {
-            MarkBudsDrawn();
+            MarkBudsDrawn(index, raw);
         }
         else
         {
@@ -471,7 +509,7 @@ public sealed partial class MainWindow
 
         _budsSent[index] = (raw, DateTimeOffset.Now);
         _budsPending = (index, raw);
-        MarkBudsDrawn();
+        MarkBudsDrawn(index, raw);
         if (_budsSendTimer is null)
         {
             _budsSendTimer = DispatcherQueue.CreateTimer();
@@ -498,7 +536,7 @@ public sealed partial class MainWindow
             StartBudsHold();
             if (_page == Page.Buds)
             {
-                MarkBudsDrawn();
+                MarkBudsDrawn(p.Index, p.Raw);
             }
         }
     }
@@ -510,6 +548,7 @@ public sealed partial class MainWindow
         SendPendingBuds();
         _budsHoldTimer?.Stop();
         _budsSent.Clear();
-        _budsPageKey = null;
+        _budsStateKey = null;
+        _budsDrawnRaws = null;
     }
 }
