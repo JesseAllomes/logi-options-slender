@@ -18,6 +18,27 @@ public static class TrayText
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
+    /// <summary>The buds battery line: "L 100% · R 98% · Case 95%". Null when none of it is known.</summary>
+    public static string? BudsBattery(Slender.Engine.BudsState? b)
+    {
+        if (b is null) return null;
+        var parts = new List<string>(3);
+        if (b.BatteryLeft is { } l) parts.Add($"L {l}%");
+        if (b.BatteryRight is { } r) parts.Add($"R {r}%");
+        if (b.BatteryCase is { } c) parts.Add($"Case {c}%");
+        return parts.Count == 0 ? null : string.Join(" · ", parts);
+    }
+
+    /// <summary>Lowest battery among the earbuds that are connected (a bud reported disconnected is left out); null when none is known.</summary>
+    public static int? BudsLowest(Slender.Engine.BudsState? b)
+    {
+        if (b is null) return null;
+        int? low = null;
+        if (b.BatteryLeft is { } l && b.PlacementLeft != "disconnected") low = l;
+        if (b.BatteryRight is { } r && b.PlacementRight != "disconnected") low = low is { } x ? Math.Min(x, r) : r;
+        return low;
+    }
+
     public static string Device(string name, bool connected, int? percent, bool charging, string? estimateShort = null) =>
         !connected
             ? $"{name} — not connected"
