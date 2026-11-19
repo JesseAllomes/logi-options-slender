@@ -20,6 +20,9 @@ public sealed partial class MainWindow
     private const string BudsName = "Galaxy Buds4 Pro";
 
     private bool _budsAsked;
+
+    /// <summary>BudsView.PageKey of what the page shows now; a redraw that would draw the same is skipped.</summary>
+    private string? _budsPageKey;
     private (int Index, int Raw)? _budsPending;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _budsSendTimer, _budsHoldTimer;
 
@@ -122,6 +125,7 @@ public sealed partial class MainWindow
         bool trayUp = _status.Status is not null && _status.TrayRunning;
         bool connected = BudsView.IsConnected(reported) && trayUp;
         BudsState? shown = BudsView.WithHeld(reported, HeldBudsValues());
+        _budsPageKey = BudsView.PageKey(reported, shown, connected, trayUp, DevicePresenceView.Subtitle(_status.Status, DeviceIds.Buds));
         _dropDownOpen = _sliderHeld = false;
 
         var heading = Ui.Text(BudsName, 24, Ui.Ink, Ui.Heading);
@@ -169,6 +173,21 @@ public sealed partial class MainWindow
             AskTray(DeviceMessages.BudsRefreshName);
         }
     }
+
+    /// <summary>The key the page would draw now. Built the same way as in BuildBudsPage.</summary>
+    private string CurrentBudsPageKey()
+    {
+        BudsState? reported = CurrentBuds();
+        bool trayUp = _status.Status is not null && _status.TrayRunning;
+        bool connected = BudsView.IsConnected(reported) && trayUp;
+        return BudsView.PageKey(reported, BudsView.WithHeld(reported, HeldBudsValues()), connected, trayUp, DevicePresenceView.Subtitle(_status.Status, DeviceIds.Buds));
+    }
+
+    /// <summary>False when a redraw would draw what is already on screen (the buds repeating a value, or confirming the user's change).</summary>
+    private bool BudsPageChanged() => _budsPageKey is null || CurrentBudsPageKey() != _budsPageKey;
+
+    /// <summary>A control already shows the value the user just set: count it as drawn, so the buds' echo does not redraw the page.</summary>
+    private void MarkBudsDrawn() => _budsPageKey = CurrentBudsPageKey();
 
     private Dictionary<string, int> HeldBudsValues()
     {
@@ -405,7 +424,11 @@ public sealed partial class MainWindow
         _budsSent[index] = (raw, DateTimeOffset.Now);
         AskTray(DeviceMessages.BudsSetName, index, raw);
         StartBudsHold();
-        if (rebuild)
+        if (!rebuild)
+        {
+            MarkBudsDrawn();
+        }
+        else
         {
             DispatcherQueue.TryEnqueue(() =>
             {
@@ -448,6 +471,7 @@ public sealed partial class MainWindow
 
         _budsSent[index] = (raw, DateTimeOffset.Now);
         _budsPending = (index, raw);
+        MarkBudsDrawn();
         if (_budsSendTimer is null)
         {
             _budsSendTimer = DispatcherQueue.CreateTimer();
@@ -472,6 +496,10 @@ public sealed partial class MainWindow
             _budsSent[p.Index] = (p.Raw, DateTimeOffset.Now);
             AskTray(DeviceMessages.BudsSetName, p.Index, p.Raw);
             StartBudsHold();
+            if (_page == Page.Buds)
+            {
+                MarkBudsDrawn();
+            }
         }
     }
 
@@ -482,5 +510,6 @@ public sealed partial class MainWindow
         SendPendingBuds();
         _budsHoldTimer?.Stop();
         _budsSent.Clear();
+        _budsPageKey = null;
     }
 }

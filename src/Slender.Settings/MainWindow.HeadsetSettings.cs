@@ -236,6 +236,11 @@ public sealed partial class MainWindow
         }
 
         _settingRebuildPending = false;
+        if (_page == Page.Buds && !BudsPageChanged())
+        {
+            return; // same values as on screen: a full redraw would only flicker
+        }
+
         BuildPage();
     }
 

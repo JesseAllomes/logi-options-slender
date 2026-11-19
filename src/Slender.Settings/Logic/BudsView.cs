@@ -190,6 +190,29 @@ public static class BudsView
         return buds with { Settings = changed };
     }
 
+    /// <summary>
+    /// Everything the Buds page draws, as one string: the page redraws only when this changes. Reported drives the hero and notes,
+    /// shown (reported plus the user's held changes) the controls. A status update that only repeats what is on screen, such as the
+    /// buds confirming a switch the user just flipped, gives the same key, so the page is left alone instead of flickering.
+    /// </summary>
+    public static string PageKey(BudsState? reported, BudsState? shown, bool connected, bool trayUp, string subtitle)
+    {
+        var key = new System.Text.StringBuilder();
+        key.Append(CultureInfo.InvariantCulture, $"{trayUp}|{connected}|{subtitle}|");
+        if (reported is { } b)
+        {
+            key.Append(CultureInfo.InvariantCulture,
+                $"{b.Connected}|{b.BatteryLeft}|{b.BatteryRight}|{b.BatteryCase}|{b.ChargingLeft}|{b.ChargingRight}|{b.ChargingCase}|{b.PlacementLeft}|{b.PlacementRight}|{b.Firmware}|{b.Model}|{b.FindActive}|{b.WriteProblem}|{b.BatteryCyclesLeft}|{b.BatteryCyclesRight}|{b.MultipointSupported}|{b.MultipointStreaming}");
+        }
+
+        foreach (BudsSetting s in shown?.Settings ?? [])
+        {
+            key.Append(CultureInfo.InvariantCulture, $"\n{s.Key}={s.Raw}:{s.Value}");
+        }
+
+        return key.ToString();
+    }
+
     /// <summary>True when another setting is shown only while this one holds some value, so a change here can add or remove rows.</summary>
     public static bool ControlsOthers(string key) => GalaxyBudsSettingsCatalog.All.Any(d => d.ShowWhenKey == key);
 }

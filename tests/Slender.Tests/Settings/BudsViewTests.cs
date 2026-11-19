@@ -99,6 +99,27 @@ public class BudsViewTests
     }
 
     [Fact]
+    public void Page_key_ignores_a_repeat_or_an_echo_of_the_users_change()
+    {
+        string Key(BudsState r, IReadOnlyDictionary<string, int>? held = null) =>
+            BudsView.PageKey(r, BudsView.WithHeld(r, held ?? new Dictionary<string, int>()), true, true, "Connected");
+
+        BudsState before = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 0)) with { BatteryLeft = 80 };
+        BudsState repeat = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 0)) with { BatteryLeft = 80 };
+        BudsState after = State(true, S(GalaxyBudsSettingsCatalog.SirenDetect, 1)) with { BatteryLeft = 80 };
+        var flipped = new Dictionary<string, int> { [GalaxyBudsSettingsCatalog.SirenDetect] = 1 };
+
+        Assert.Equal(Key(before), Key(repeat)); // new list, same values: no redraw
+        Assert.Equal(Key(before, flipped), Key(after, flipped)); // the buds confirm the flip while it is held
+        Assert.Equal(Key(before, flipped), Key(after)); // and after the hold ends
+        Assert.NotEqual(Key(before), Key(after)); // a change made elsewhere still redraws
+        Assert.NotEqual(Key(before, flipped), Key(before)); // the buds did not take it: the switch goes back
+        Assert.NotEqual(Key(before), Key(before with { BatteryLeft = 79 }));
+        Assert.NotEqual(Key(before), Key(before with { WriteProblem = "No" }));
+        Assert.NotEqual(Key(before), BudsView.PageKey(before, before, false, true, "Connected"));
+    }
+
+    [Fact]
     public void A_change_is_held_for_two_seconds()
     {
         DateTimeOffset t = DateTimeOffset.Now;
