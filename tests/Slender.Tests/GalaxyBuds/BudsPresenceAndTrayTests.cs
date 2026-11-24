@@ -9,10 +9,11 @@ public sealed class BudsPresenceAndTrayTests
 {
     private sealed class Source(params HidDeviceKey[] keys) : IDevicePresenceSource
     {
-        public bool Started, Disposed, FailStart;
+        public bool Started, Disposed, FailStart, FailSnapshot;
         public event EventHandler? Changed;
         public void Start() { if (FailStart) throw new InvalidOperationException("no"); Started = true; }
-        public IReadOnlySet<HidDeviceKey> Snapshot() => new HashSet<HidDeviceKey>(keys);
+        public IReadOnlySet<HidDeviceKey> Snapshot() =>
+            FailSnapshot ? throw new InvalidOperationException("no") : new HashSet<HidDeviceKey>(keys);
         public void Dispose() => Disposed = true;
         public void Raise() => Changed?.Invoke(this, EventArgs.Empty);
     }
@@ -65,5 +66,56 @@ public sealed class BudsPresenceAndTrayTests
     {
         var info = SettingsLauncher.StartInfo(@"C:\x\Slender.Settings.exe", popover: false, DeviceCatalog.GalaxyBuds4Pro);
         Assert.Equal(["--device", "galaxy-buds4-pro"], info.ArgumentList);
+    }
+
+    [Fact]
+    public void CompositeSkipsASourceWhoseSnapshotFails()
+    {
+        var keyB = new HidDeviceKey(0x0075, 0xA013);
+        var a = new Source(new HidDeviceKey(0x6993, 0xB0AE)) { FailSnapshot = true };
+        var b = new Source(keyB);
+        using var c = new CompositeDevicePresence(null, a, b);
+        var snap = c.Snapshot();
+        Assert.Single(snap);
+        Assert.Contains(keyB, snap);
+    }
+
+    [Fact]
+    public void MalformedBluetoothIdsGiveNoAddress()
+    {
+        Assert.Null(BluetoothClassicPresence.ParseAddress("NOSLASH&AABBCCDDEEFF_C00000000"));
+        Assert.Null(BluetoothClassicPresence.ParseAddress(@"BTHENUM\DEV&1\NOAMPERSANDHERE"));
+        Assert.Null(BluetoothClassicPresence.ParseAddress(@"BTHENUM\X\7&0&AABB"));
+        Assert.Null(BluetoothClassicPresence.ParseAddress(@"BTHENUM\X\7&0&ZZZZZZZZZZZZ_C00000000"));
+        Assert.Null(BluetoothClassicPresence.ParseAddress(@"BTHENUM\X\7&0&000000000000_C00000000"));
+    }
+
+    private sealed class Tracked : IDisposable
+    {
+        public bool Disposed;
+        public void Dispose() => Disposed = true;
+    }
+
+    [Fact]
+    public void ConnectHintDisposesWhatItMadeWhenTheSecondWatcherFails()
+    {
+        var first = new Tracked();
+        int calls = 0;
+        var result = BudsConnectHint.Create(() => { }, (_, _) =>
+        {
+            if (++calls == 2) throw new InvalidOperationException("no");
+            return first;
+        });
+        Assert.Null(result);
+        Assert.True(first.Disposed);
+
+        var a = new Tracked();
+        var b = new Tracked();
+        var made = new Queue<Tracked>([a, b]);
+        var ok = BudsConnectHint.Create(() => { }, (_, _) => made.Dequeue());
+        Assert.NotNull(ok);
+        Assert.False(a.Disposed || b.Disposed);
+        ok.Dispose();
+        Assert.True(a.Disposed && b.Disposed);
     }
 }

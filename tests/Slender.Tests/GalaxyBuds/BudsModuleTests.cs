@@ -13,6 +13,7 @@ internal sealed class FakeBudsLink : IBudsLink
     public volatile bool Disposed;
     public bool FailConnect;
     public bool AutoAck = true;
+    public Action<BudsFrame>? OnWrite;
     public readonly ManualResetEventSlim Connecting = new();
 
     public void Connect()
@@ -40,6 +41,7 @@ internal sealed class FakeBudsLink : IBudsLink
         foreach (var f in frames)
         {
             Sent.Enqueue(f);
+            OnWrite?.Invoke(f);
             if (AutoAck && !BudsTestData.IsRead(f.Id)) Push(BudsTestData.FrameBytes(BudsIds.Ack, f.Id));
         }
     }
@@ -548,5 +550,70 @@ public sealed class BudsModuleTests
         Until(() => !m.LinkUp, "link down");
         m.Refresh();
         Until(() => _transport.Creates == 2, "reconnect at once");
+    }
+
+    [Fact]
+    public void FindIsStoppedWhenAnEarbudIsPutInDuringTheAckWait()
+    {
+        using var m = Connected(out var link);
+        link.AutoAck = false;
+        var t = Task.Run(() => m.Find(true));
+        Until(() => link.Sent.Any(f => f.Id == BudsIds.FindStart), "find start");
+        link.Push(BudsTestData.FrameBytes(96, 4, 100, 100, 1, 1, 0x13, 95, 0));
+        Until(() => t.IsCompleted, "Find to finish");
+        var s = m.GetState();
+        Assert.False(s.FindActive);
+        Assert.Equal("Find stopped: an earbud was put in.", s.WriteProblem);
+        Assert.Contains(link.Sent, f => f.Id == BudsIds.FindStop);
+        Assert.False(m.HasTimers);
+    }
+
+    [Fact]
+    public void FindSendsStopWhenTheStartIsNotAnswered()
+    {
+        using var m = Connected(out var link);
+        link.AutoAck = false;
+        m.Find(true);
+        var s = m.GetState();
+        Assert.Equal("The earbuds did not start the beep.", s.WriteProblem);
+        Assert.False(s.FindActive);
+        var ids = link.Sent.Select(f => f.Id).Where(id => id is BudsIds.FindStart or BudsIds.FindStop).ToArray();
+        Assert.Equal([BudsIds.FindStart, BudsIds.FindStop], ids);
+        Assert.False(m.HasTimers);
+    }
+
+    [Fact]
+    public void StoppingDuringTheFirstReadRequestsNeverLeavesTheLinkReportedUp()
+    {
+        var m = Make();
+        m.Start();
+        Until(() => _transport.Creates == 1, "connect attempt");
+        var link = _transport.Last;
+        link.OnWrite = f => { if (f.Id == BudsIds.MultipointInfo) m.Stop(); };
+        SendStatus(link);
+        Until(() => m.LiveThreads == 0, "thread to end");
+        lock (_links) Assert.True(_links.Count == 0 || !_links[^1].EndsWith(":True"), string.Join(",", _links));
+    }
+
+    [Fact]
+    public void StopDisposesTheConnectHintOutsideTheModuleLock()
+    {
+        bool? finished = null;
+        BudsModule? m = null;
+        int disposed = 0;
+        m = new BudsModule(_transport, () => _address,
+            (id, up) => { lock (_links) _links.Add($"{id}:{up}"); }, (id, e) => _faults.Add(e), null, _time,
+            connectHint: cb => new Disposer(() =>
+            {
+                Interlocked.Increment(ref disposed);
+                var task = Task.Run(() => m!.Wake());
+                finished = task.Wait(TimeSpan.FromSeconds(2));
+            }))
+        { AckTimeout = TimeSpan.FromMilliseconds(300) };
+        m.Start();
+        Until(() => _transport.Creates == 1, "connect attempt");
+        m.Stop();
+        Assert.Equal(1, disposed);
+        Assert.True(finished);
     }
 }

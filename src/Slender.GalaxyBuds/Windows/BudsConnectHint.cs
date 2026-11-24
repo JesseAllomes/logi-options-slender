@@ -10,12 +10,15 @@ namespace Slender.GalaxyBuds.Windows;
 public static class BudsConnectHint
 {
     public static IDisposable? Create(Action hint)
+        => Create(hint, static (g, h) => new DeviceInterfaceWatcher(g, h, arrivalsOnly: true));
+
+    internal static IDisposable? Create(Action hint, Func<Guid, Action, IDisposable> make)
     {
-        var made = new List<DeviceInterfaceWatcher>(2);
+        var made = new List<IDisposable>(2);
         try
         {
-            made.Add(new DeviceInterfaceWatcher(DeviceInterfaceWatcher.BthPortDevice, hint, arrivalsOnly: true));
-            made.Add(new DeviceInterfaceWatcher(DeviceInterfaceWatcher.KsAudio, hint, arrivalsOnly: true));
+            made.Add(make(DeviceInterfaceWatcher.BthPortDevice, hint));
+            made.Add(make(DeviceInterfaceWatcher.KsAudio, hint));
         }
         catch
         {
@@ -30,7 +33,7 @@ public static class BudsConnectHint
     public static ulong? PairedAddress() =>
         BluetoothClassicPresence.FindAddresses(DeviceCatalog.SamsungBluetoothVendorId, DeviceCatalog.GalaxyBuds4ProProductId) is { Count: > 0 } l ? l[0] : null;
 
-    private sealed class Group(List<DeviceInterfaceWatcher> watchers) : IDisposable
+    private sealed class Group(List<IDisposable> watchers) : IDisposable
     {
         public void Dispose()
         {

@@ -97,6 +97,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     public void Stop()
     {
         bool wasUp;
+        IDisposable? hint;
         lock (_gate)
         {
             if (!_started) return;
@@ -108,7 +109,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             _link = null;
             _attempt = false;
             DisposeTimers();
-            _hint?.Dispose();
+            hint = _hint;
             _hint = null;
             wasUp = _linkUp;
             _linkUp = false;
@@ -117,6 +118,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             Monitor.PulseAll(_gate);
         }
 
+        hint?.Dispose();
         if (wasUp) _reportLink(DeviceId, false);
         StateChanged?.Invoke();
     }
@@ -279,7 +281,15 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             TrySend(link, BudsIds.MultipointInfo, []);
             if (askCycles) TrySend(link, BudsIds.BatteryCycles, []);
             TrySend(link, BudsIds.DebugSku, []);
-            _reportLink(DeviceId, true);
+            bool still;
+            lock (_gate) still = gen == _gen && _linkUp;
+            if (still)
+            {
+                _reportLink(DeviceId, true);
+                bool wentDown;
+                lock (_gate) wentDown = !_linkUp;
+                if (wentDown) _reportLink(DeviceId, false);
+            }
         }
         else if (askCycles)
         {
@@ -490,19 +500,32 @@ public sealed class BudsModule : IDeviceModule, IDisposable
 
             if (!SendAndWait(BudsIds.FindStart, []))
             {
+                IBudsLink? unanswered;
+                lock (_gate) unanswered = _linkUp ? _link : null;
+                if (unanswered is not null) TrySend(unanswered, BudsIds.FindStop, []);
                 Problem("The earbuds did not start the beep.");
                 return;
             }
 
+            IBudsLink? stopLink = null;
             lock (_gate)
             {
-                _findActive = true;
-                _writeProblem = null;
-                _findTimer?.Dispose();
-                int gen = _gen;
-                _findTimer = _time.CreateTimer(_ => OnFindLimit(gen), null, FindLimit, Timeout.InfiniteTimeSpan);
+                if (_model.AnyWorn)
+                {
+                    _writeProblem = "Find stopped: an earbud was put in.";
+                    stopLink = _linkUp ? _link : null;
+                }
+                else
+                {
+                    _findActive = true;
+                    _writeProblem = null;
+                    _findTimer?.Dispose();
+                    int gen = _gen;
+                    _findTimer = _time.CreateTimer(_ => OnFindLimit(gen), null, FindLimit, Timeout.InfiniteTimeSpan);
+                }
             }
 
+            if (stopLink is not null) TrySend(stopLink, BudsIds.FindStop, []);
             StateChanged?.Invoke();
         }
     }
