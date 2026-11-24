@@ -42,7 +42,8 @@ public static class BudsView
             BudsSettingDef def = GalaxyBudsSettingsCatalog.All[i];
             BudsSetting? reported = list.FirstOrDefault(s => s.Key == def.Key);
             if (reported is null || Hidden(def, list)) continue;
-            string text = def.IsRange ? reported.Raw.ToString(CultureInfo.InvariantCulture) : def.Text(reported.Raw);
+            string text = def.Key == GalaxyBudsSettingsCatalog.Gestures ? reported.Value
+                : def.IsRange ? reported.Raw.ToString(CultureInfo.InvariantCulture) : def.Text(reported.Raw);
             var row = new BudsRow(def, i, KindOf(def), reported.Raw, text, connected && def.CanSet);
             int at = groups.FindIndex(g => g.Name == def.Group);
             if (at < 0) groups.Add((def.Group, [row]));
@@ -157,11 +158,12 @@ public static class BudsView
         return parts.Count == 0 ? "streaming" : "streaming " + string.Join(" and ", parts);
     }
 
-    /// <summary>The lower of the two buds' levels (the case is not counted) and whether that bud charges; null level when neither is known.</summary>
+    /// <summary>The lower of the two connected buds' levels (a bud reported disconnected and the case are not counted) and whether that bud charges; null level when neither is known.</summary>
     public static (int? Percent, bool Charging) Lowest(BudsState? buds)
     {
         if (buds is null) return (null, false);
-        int? l = buds.BatteryLeft, r = buds.BatteryRight;
+        int? l = buds.PlacementLeft == "disconnected" ? null : buds.BatteryLeft;
+        int? r = buds.PlacementRight == "disconnected" ? null : buds.BatteryRight;
         if (l is null && r is null) return (null, false);
         if (r is null || (l is not null && l <= r)) return (l, buds.ChargingLeft == true);
         return (r, buds.ChargingRight == true);

@@ -224,4 +224,19 @@ public class BudsViewTests
         Assert.Equal("4", row.Text);
         Assert.Equal(GalaxyBudsSettingsCatalog.All.Count - 1, row.CatalogIndex);
     }
+
+    [Fact]
+    public void GesturesRowShowsTheTraysWords()
+    {
+        BudsState state = State(true, new BudsSetting(GalaxyBudsSettingsCatalog.Gestures, GalaxyBudsSettingsCatalog.GroupTouch, "Gestures", "All on", 255));
+        Assert.Equal("All on", Find(state, GalaxyBudsSettingsCatalog.Gestures)!.Text);
+    }
+
+    [Fact]
+    public void LowestLeavesOutADisconnectedBud()
+    {
+        Assert.Equal((80, false), BudsView.Lowest(new BudsState(true, BatteryLeft: 80, BatteryRight: 0, PlacementLeft: "idle", PlacementRight: "disconnected")));
+        Assert.Equal((60, false), BudsView.Lowest(new BudsState(true, BatteryLeft: 0, BatteryRight: 60, PlacementLeft: "disconnected", PlacementRight: "idle")));
+        Assert.Equal((null, false), BudsView.Lowest(new BudsState(true, BatteryLeft: 0, BatteryRight: 0, PlacementLeft: "disconnected", PlacementRight: "disconnected")));
+    }
 }

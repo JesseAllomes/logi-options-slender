@@ -34,6 +34,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     private readonly object _setGate = new();
 
     private bool _started, _linkUp, _attempt, _findActive;
+    private bool _stopFindOnLink;
     private int _gen;
     private IBudsLink? _link;
     private IDisposable? _hint;
@@ -42,6 +43,8 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     private BudsModel _model = new();
     private string? _writeProblem;
     private int _pendingAck = -1;
+    private string? _expectKey;
+    private int _expectRaw;
     private bool _acked;
     private int _threads;
     private DateTimeOffset? _cyclesAskedAt;
@@ -105,6 +108,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             _gen++;
             if (_findActive && _linkUp && _link is { } l) TrySend(l, BudsIds.FindStop, []);
             _findActive = false;
+            _stopFindOnLink = false;
             _link?.Dispose();
             _link = null;
             _attempt = false;
@@ -115,6 +119,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             _linkUp = false;
             _model = KeepIdentity(_model);
             _pendingAck = -1;
+            _expectKey = null;
             Monitor.PulseAll(_gate);
         }
 
@@ -241,13 +246,15 @@ public sealed class BudsModule : IDeviceModule, IDisposable
     /// <summary>False when this connection was stopped meanwhile.</summary>
     private bool HandleFrame(int gen, IBudsLink link, BudsFrame f)
     {
-        bool up = false, changed = false, stopFind = false, askCycles = false;
+        bool up = false, changed = false, stopFind = false, askCycles = false, stopStale = false;
         lock (_gate)
         {
             if (gen != _gen) return false;
             if (!_linkUp)
             {
                 _linkUp = true;
+                stopStale = _stopFindOnLink;
+                _stopFindOnLink = false;
                 _backoff = FirstRetry;
                 up = changed = true;
                 askCycles = TakeCycleAsk();
@@ -265,7 +272,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             else if (BudsStatusParser.Apply(_model, f))
             {
                 changed = true;
-                if (f.Id is BudsIds.StatusUpdated or BudsIds.ExtendedStatusUpdated or BudsIds.NoiseControlsUpdate && _pendingAck >= 0)
+                if (_pendingAck >= 0 && _expectKey is { } key && _model.Get(key) == _expectRaw)
                 {
                     _acked = true;
                     Monitor.PulseAll(_gate);
@@ -277,6 +284,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
 
         if (up)
         {
+            if (stopStale) TrySend(link, BudsIds.FindStop, []);
             // Read requests once per link (the model last); everything else the buds push on their own.
             TrySend(link, BudsIds.MultipointInfo, []);
             if (askCycles) TrySend(link, BudsIds.BatteryCycles, []);
@@ -316,11 +324,13 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             if (ReferenceEquals(_link, link)) _link = null;
             wasUp = _linkUp;
             _linkUp = false;
+            if (_findActive) _stopFindOnLink = true;
             _findActive = false;
             _findTimer?.Dispose();
             _findTimer = null;
             _model = KeepIdentity(_model);
             _pendingAck = -1;
+            _expectKey = null;
             Monitor.PulseAll(_gate);
             if (_started && fault is null)
             {
@@ -374,8 +384,8 @@ public sealed class BudsModule : IDeviceModule, IDisposable
         }
     }
 
-    /// <summary>Sends and waits for the ack of this id or a status update. Caller must hold _setGate.</summary>
-    private bool SendAndWait(byte id, byte[] payload)
+    /// <summary>Sends and waits for the ack of this id, or for a status update that reports the expected value. Caller must hold _setGate.</summary>
+    private bool SendAndWait(byte id, byte[] payload, string? expectKey = null, int expectRaw = 0)
     {
         IBudsLink link;
         lock (_gate)
@@ -383,12 +393,14 @@ public sealed class BudsModule : IDeviceModule, IDisposable
             if (!_linkUp || _link is null) return false;
             link = _link;
             _pendingAck = id;
+            _expectKey = expectKey;
+            _expectRaw = expectRaw;
             _acked = false;
         }
 
         if (!TrySend(link, id, payload))
         {
-            lock (_gate) _pendingAck = -1;
+            lock (_gate) { _pendingAck = -1; _expectKey = null; }
             return false;
         }
 
@@ -400,6 +412,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
                 Monitor.Wait(_gate, (int)Math.Max(1, timeoutMs - sw.ElapsedMilliseconds));
             bool ok = _acked;
             _pendingAck = -1;
+            _expectKey = null;
             return ok;
         }
     }
@@ -456,7 +469,7 @@ public sealed class BudsModule : IDeviceModule, IDisposable
                 return;
             }
 
-            if (!SendAndWait(id, payload))
+            if (!SendAndWait(id, payload, def.Key, (int)raw))
             {
                 Problem("The earbuds did not take that change.");
                 return;

@@ -62,6 +62,14 @@ public sealed class BudsPresenceAndTrayTests
     }
 
     [Fact]
+    public void TrayLowestLeavesOutADisconnectedLeftBud()
+    {
+        var b = new BudsState(true, 40, 98, 95, PlacementLeft: "disconnected", PlacementRight: "in case");
+        Assert.Equal(98, TrayText.BudsLowest(b));
+        Assert.Null(TrayText.BudsLowest(b with { PlacementRight = "disconnected" }));
+    }
+
+    [Fact]
     public void SettingsOpensAtTheBudsPage()
     {
         var info = SettingsLauncher.StartInfo(@"C:\x\Slender.Settings.exe", popover: false, DeviceCatalog.GalaxyBuds4Pro);

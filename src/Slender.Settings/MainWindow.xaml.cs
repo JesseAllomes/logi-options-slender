@@ -379,6 +379,9 @@ public sealed partial class MainWindow : Window
         UpdateInfoBars();
         if (_page == Page.Device)
         {
+            // BuildPage does this for every other page; the device page is laid out without it.
+            StopBudsTimers();
+            _budsAsked = false;
             LayoutStage();
         }
         else

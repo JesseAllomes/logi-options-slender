@@ -110,6 +110,7 @@ public sealed class BudsCodecTests
         var frames = new List<BudsFrame>();
         // A start byte announcing 1000 bytes that never arrive, then the stream keeps flowing.
         reader.Feed([0xFD, 0xE8, 0x03], frames);
+        Assert.Equal(1, reader.Dropped); // refused at once: 1000 is longer than any frame, so the reader does not wait for it
         for (int i = 0; i < 100; i++) reader.Feed(new byte[100], frames);
         reader.Feed(BudsCodec.Encode(97, [1]), frames);
         Assert.Contains(frames, f => f.Id == 97);

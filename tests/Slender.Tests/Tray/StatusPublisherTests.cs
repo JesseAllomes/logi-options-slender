@@ -120,6 +120,43 @@ public sealed class StatusPublisherTests : IDisposable
         Assert.True(here.Connected);
     }
 
+    private static IReadOnlyList<DeviceState> BudsStatus(Slender.Engine.Devices.DevicePresence? buds, BudsState? state = null)
+    {
+        var h = new Harness();
+        if (buds is { } p)
+        {
+            h.Snapshot = h.Snapshot with
+            {
+                Devices =
+                [
+                    new Slender.Engine.Devices.DeviceEntry("mx-master-4", "MX Master 4", Slender.Engine.Devices.DevicePresence.Active, false, null),
+                    new Slender.Engine.Devices.DeviceEntry("ergo-k860", "ERGO K860", Slender.Engine.Devices.DevicePresence.Hidden, false, null),
+                    new Slender.Engine.Devices.DeviceEntry("galaxy-buds4-pro", "Galaxy Buds4 Pro", p, false, null),
+                ],
+                Buds = state,
+            };
+        }
+
+        using StatusPublisher publisher = h.Create();
+        publisher.Changed();
+        return Assert.Single(h.Written).Devices;
+    }
+
+    [Fact]
+    public void Buds_are_listed_once_seen_and_never_without_a_registry_list()
+    {
+        Assert.DoesNotContain(BudsStatus(null), d => d.Id == "galaxy-buds4-pro");
+        Assert.DoesNotContain(BudsStatus(Slender.Engine.Devices.DevicePresence.Hidden), d => d.Id == "galaxy-buds4-pro");
+
+        DeviceState gone = Assert.Single(BudsStatus(Slender.Engine.Devices.DevicePresence.Disconnected), d => d.Id == "galaxy-buds4-pro");
+        Assert.Equal("disconnected", gone.Presence);
+        Assert.False(gone.Connected);
+
+        DeviceState here = Assert.Single(BudsStatus(Slender.Engine.Devices.DevicePresence.Active, new BudsState(true, 100, 98, 95)), d => d.Id == "galaxy-buds4-pro");
+        Assert.True(here.Connected);
+        Assert.Equal(98, here.BatteryPercent);
+    }
+
     [Fact]
     public void The_headset_report_is_published_and_survives_the_json_round_trip()
     {

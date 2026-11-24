@@ -560,6 +560,7 @@ public sealed class BudsModuleTests
         var t = Task.Run(() => m.Find(true));
         Until(() => link.Sent.Any(f => f.Id == BudsIds.FindStart), "find start");
         link.Push(BudsTestData.FrameBytes(96, 4, 100, 100, 1, 1, 0x13, 95, 0));
+        link.Push(BudsTestData.FrameBytes(BudsIds.Ack, BudsIds.FindStart));
         Until(() => t.IsCompleted, "Find to finish");
         var s = m.GetState();
         Assert.False(s.FindActive);
@@ -593,6 +594,57 @@ public sealed class BudsModuleTests
         SendStatus(link);
         Until(() => m.LiveThreads == 0, "thread to end");
         lock (_links) Assert.True(_links.Count == 0 || !_links[^1].EndsWith(":True"), string.Join(",", _links));
+    }
+
+    [Fact]
+    public void AStatusUpdateWithoutTheNewValueIsNotTheAnswer()
+    {
+        using var m = Connected(out var link);
+        link.AutoAck = false;
+        var t = Task.Run(() => m.Set(GalaxyBudsSettingsCatalog.IndexOf(GalaxyBudsSettingsCatalog.NoiseMode), 1));
+        Until(() => link.Sent.Any(f => f.Id == 120), "write");
+        link.Push(BudsTestData.FrameBytes(96, 4, 100, 100, 1, 1, 0x33, 95, 0));
+        SendStatus(link);
+        Until(() => t.IsCompleted, "Set to finish");
+        var s = m.GetState();
+        Assert.Equal("The earbuds did not take that change.", s.WriteProblem);
+        Assert.Equal(0, s.Settings!.First(x => x.Key == GalaxyBudsSettingsCatalog.NoiseMode).Raw);
+    }
+
+    [Fact]
+    public void ADropDuringFindSendsStopOnReconnect()
+    {
+        var m = Connected(out var first);
+        m.Find(true);
+        Assert.True(m.GetState().FindActive);
+        first.Dispose();
+        Until(() => !m.LinkUp, "link down");
+        Until(() => _time.ArmedTimers == 1, "retry timer");
+        _time.Advance(BudsModule.FirstRetry + TimeSpan.FromSeconds(1));
+        Until(() => _transport.Creates == 2, "second attempt");
+        var second = _transport.Last;
+        SendStatus(second);
+        Until(() => m.LinkUp, "link up again");
+        Until(() => second.Sent.Any(f => f.Id == BudsIds.FindStop), "stop on reconnect");
+        Assert.False(m.GetState().FindActive);
+        m.Stop();
+    }
+
+    [Fact]
+    public void ReconnectWithoutFindSendsNoStop()
+    {
+        var m = Connected(out var first);
+        first.Dispose();
+        Until(() => !m.LinkUp, "link down");
+        Until(() => _time.ArmedTimers == 1, "retry timer");
+        _time.Advance(BudsModule.FirstRetry + TimeSpan.FromSeconds(1));
+        Until(() => _transport.Creates == 2, "second attempt");
+        var second = _transport.Last;
+        SendStatus(second);
+        Until(() => m.LinkUp, "link up again");
+        Until(() => second.Sent.Any(f => f.Id == BudsIds.DebugSku), "model request");
+        Assert.DoesNotContain(second.Sent, f => f.Id == BudsIds.FindStop);
+        m.Stop();
     }
 
     [Fact]
